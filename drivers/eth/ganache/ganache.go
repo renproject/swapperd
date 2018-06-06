@@ -112,11 +112,11 @@ func deployContracts(conn eth.Connection, transactor *bind.TransactOpts) error {
 	return nil
 }
 
-func deployEthSwap(ctx context.Context, conn eth.Connection, auth *bind.TransactOpts) (*eth.Arc, common.Address, error) {
-	address, tx, ethArc, err := eth.DeployArc(auth, conn.Client)
+func deployEthSwap(ctx context.Context, conn eth.Connection, auth *bind.TransactOpts) (*eth.Atom, common.Address, error) {
+	address, tx, ethAtom, err := eth.DeployAtom(auth, conn.Client)
 	if err != nil {
-		return nil, common.Address{}, fmt.Errorf("cannot deploy Eth Arc contract: %v", err)
+		return nil, common.Address{}, fmt.Errorf("cannot deploy Eth Atom contract: %v", err)
 	}
 	conn.PatchedWaitDeployed(ctx, tx)
-	return ethArc, address, nil
+	return ethAtom, address, nil
 }

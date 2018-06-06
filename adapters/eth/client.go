@@ -35,18 +35,22 @@ type Connection struct {
 }
 
 // Connect to a URI.
-func Connect(uri string, network Network, ethSwapAddress string) (Connection, error) {
-	if uri == "" {
-		switch network {
-		case NetworkGanache:
-			uri = "http://localhost:8545"
-		case NetworkRopsten:
-			uri = "https://ropsten.infura.io"
-		case NetworkKovan:
-			uri = "https://kovan.infura.io"
-		default:
-			return Connection{}, fmt.Errorf("cannot connect to %s: unsupported", network)
-		}
+func Connect(network Network) (Connection, error) {
+
+	var uri string
+	var ethSwapAddress string
+
+	switch network {
+	case NetworkGanache:
+		uri = "http://localhost:8545"
+	case NetworkRopsten:
+		uri = "https://ropsten.infura.io"
+		ethSwapAddress = ""
+	case NetworkKovan:
+		uri = "https://kovan.infura.io"
+		ethSwapAddress = ""
+	default:
+		return Connection{}, fmt.Errorf("cannot connect to %s: unsupported", network)
 	}
 
 	ethclient, err := ethclient.Dial(uri)

@@ -21,6 +21,8 @@ var _ = Describe("ether", func() {
 	var conn Connection
 	var aliceSwapID [32]byte
 	var bobSwapID [32]byte
+	var aliceOrderID [32]byte
+	var bobOrderID [32]byte
 	var value *big.Int
 	var validity int64
 
@@ -42,33 +44,34 @@ var _ = Describe("ether", func() {
 
 		aliceSwapID[0] = 0x13
 		bobSwapID[0] = 0x1a
+
+		aliceOrderID[0] = 0x33
+		bobOrderID[0] = 0x4a
 	})
 
-	It("can perform ETH-ETH arc swap", func() {
-
-		var aliceArcData, bobArcData []byte
+	It("can perform ETH-ETH atom swap", func() {
 
 		var aliceSecret [32]byte
 		var secretHash [32]byte
 
 		{ // Alice can initiate swap
-			aliceArc, err := NewEthereumArc(context.Background(), conn, alice, aliceSwapID)
+			aliceAtom, err := NewEthereumAtom(context.Background(), conn, alice, aliceSwapID)
 			Expect(err).ShouldNot(HaveOccurred())
 			aliceSecret = [32]byte{1, 3, 3, 7}
 			secretHash = sha256.Sum256(aliceSecret[:])
-			err = aliceArc.Initiate(secretHash, aliceAddr.Bytes(), bobAddr.Bytes(), value, validity)
+			err = aliceAtom.Initiate(secretHash, aliceAddr.Bytes(), bobAddr.Bytes(), value, validity)
 			Expect(err).ShouldNot(HaveOccurred())
-			aliceArcData, err = aliceArc.Serialize()
+			err = aliceAtom.Store(aliceOrderID)
 			Expect(err).ShouldNot(HaveOccurred())
 		}
 
 		{ // Bob can audit Alice's contract and upload his own
-			aliceArc, err := NewEthereumArc(context.Background(), conn, bob, [32]byte{})
+			aliceAtom, err := NewEthereumAtom(context.Background(), conn, bob, [32]byte{})
 			Expect(err).ShouldNot(HaveOccurred())
-			err = aliceArc.Deserialize(aliceArcData)
+			err = aliceAtom.Retrieve(aliceOrderID)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			_secretHash, _from, _to, _value, _expiry, err := aliceArc.Audit()
+			_secretHash, _from, _to, _value, _expiry, err := aliceAtom.Audit()
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(_secretHash).Should(Equal(secretHash))
 			Expect(_from).Should(Equal(aliceAddr.Bytes()))
@@ -76,22 +79,22 @@ var _ = Describe("ether", func() {
 			Expect(_value).Should(Equal(value))
 			Expect(_expiry).Should(Equal(validity))
 
-			bobArc, err := NewEthereumArc(context.Background(), conn, bob, bobSwapID)
+			bobAtom, err := NewEthereumAtom(context.Background(), conn, bob, bobSwapID)
 			Expect(err).ShouldNot(HaveOccurred())
-			err = bobArc.Initiate(_secretHash, bobAddr.Bytes(), aliceAddr.Bytes(), value, validity)
+			err = bobAtom.Initiate(_secretHash, bobAddr.Bytes(), aliceAddr.Bytes(), value, validity)
 			Expect(err).ShouldNot(HaveOccurred())
-			bobArcData, err = bobArc.Serialize()
+			err = bobAtom.Store(bobOrderID)
 			Expect(err).ShouldNot(HaveOccurred())
 
 		}
 
 		{ // Alice can audit Bob's contract and reveal the secret
-			bobArc, err := NewEthereumArc(context.Background(), conn, alice, bobSwapID)
+			bobAtom, err := NewEthereumAtom(context.Background(), conn, alice, bobSwapID)
 			Expect(err).ShouldNot(HaveOccurred())
-			err = bobArc.Deserialize(bobArcData)
+			err = bobAtom.Retrieve(bobOrderID)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			_secretHash, _from, _to, _value, _expiry, err := bobArc.Audit()
+			_secretHash, _from, _to, _value, _expiry, err := bobAtom.Audit()
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(_secretHash).Should(Equal(secretHash))
 			Expect(_from).Should(Equal(bobAddr.Bytes()))
@@ -99,25 +102,25 @@ var _ = Describe("ether", func() {
 			Expect(_value).Should(Equal(value))
 			Expect(_expiry).Should(Equal(validity))
 
-			err = bobArc.Redeem(aliceSecret)
+			err = bobAtom.Redeem(aliceSecret)
 			Expect(err).ShouldNot(HaveOccurred())
 		}
 
 		{ // Bob can retrieve the secret from his contract and complete the swap
-			bobArc, err := NewEthereumArc(context.Background(), conn, bob, bobSwapID)
+			bobAtom, err := NewEthereumAtom(context.Background(), conn, bob, bobSwapID)
 			Expect(err).ShouldNot(HaveOccurred())
-			err = bobArc.Deserialize(bobArcData)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			secret, err := bobArc.AuditSecret()
+			err = bobAtom.Retrieve(bobOrderID)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			aliceArc, err := NewEthereumArc(context.Background(), conn, bob, aliceSwapID)
-			Expect(err).ShouldNot(HaveOccurred())
-			err = aliceArc.Deserialize(aliceArcData)
+			secret, err := bobAtom.AuditSecret()
 			Expect(err).ShouldNot(HaveOccurred())
 
-			err = aliceArc.Redeem(secret)
+			aliceAtom, err := NewEthereumAtom(context.Background(), conn, bob, aliceSwapID)
+			Expect(err).ShouldNot(HaveOccurred())
+			err = aliceAtom.Retrieve(aliceOrderID)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			err = aliceAtom.Redeem(secret)
 			Expect(err).ShouldNot(HaveOccurred())
 		}
 	})
