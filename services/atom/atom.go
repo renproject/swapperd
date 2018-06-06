@@ -1,11 +1,11 @@
-package arc
+package atom
 
 import (
 	"math/big"
 )
 
 /*
- * Steps in an Arc swap:
+ * Steps in our Atomic Swap:
  *
  * 0. (A) and (B) share addresses, (A) creates HASH from SECRET
  * 1. (A) calls Initiate(HASH, details) to ADDR1, gives (HASH, ADDR1) to (B)
@@ -17,13 +17,13 @@ import (
  * 7. (B) calls ADDR1.Redeem(SECRET)
  */
 
-// Arc is the interface defining the Atomic Swap Interface
-type Arc interface {
+// Atom is the interface defining the Atomic Swap Interface
+type Atom interface {
 	Initiate(hash [32]byte, from, to []byte, value *big.Int, expiry int64) error
 	Redeem(secret [32]byte) error
 	Refund() error
 	Audit() (hash [32]byte, from, to []byte, value *big.Int, expiry int64, err error)
 	AuditSecret() (secret [32]byte, err error)
-	Serialize() ([]byte, error)
-	Deserialize([]byte) error
+	Store(orderID [32]byte) error
+	Retrieve(orderID [32]byte) error
 }

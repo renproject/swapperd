@@ -17,63 +17,63 @@ type BitcoinData struct {
 	SecretHash     [32]byte `json:"secret_hash"`
 }
 
-type BitcoinArc struct {
+type BitcoinAtom struct {
 	connection Connection
 	ledgerData BitcoinData
 }
 
-// NewBitcoinArc returns an arc object
-func NewBitcoinArc(connection Connection) *BitcoinArc {
-	return &BitcoinArc{
+// NewBitcoinAtom returns an atom object
+func NewBitcoinAtom(connection Connection) *BitcoinAtom {
+	return &BitcoinAtom{
 		connection: connection,
 	}
 }
 
-func (arc *BitcoinArc) Initiate(hash [32]byte, from, to []byte, value *big.Int, expiry int64) (err error) {
-	result, err := initiate(arc.connection, string(to), value.Int64(), hash[:], expiry)
+func (atom *BitcoinAtom) Initiate(hash [32]byte, from, to []byte, value *big.Int, expiry int64) (err error) {
+	result, err := initiate(atom.connection, string(to), value.Int64(), hash[:], expiry)
 	if err != nil {
 		return err
 	}
-	arc.ledgerData = result
-	arc.ledgerData.SecretHash = hash
+	atom.ledgerData = result
+	atom.ledgerData.SecretHash = hash
 	return nil
 }
 
-func (arc *BitcoinArc) Audit() (hash [32]byte, from, to []byte, value *big.Int, expiry int64, err error) {
-	result, err := read(arc.connection, arc.ledgerData.Contract, arc.ledgerData.ContractTx)
+func (atom *BitcoinAtom) Audit() (hash [32]byte, from, to []byte, value *big.Int, expiry int64, err error) {
+	result, err := read(atom.connection, atom.ledgerData.Contract, atom.ledgerData.ContractTx)
 	if err != nil {
 		return [32]byte{}, []byte{}, []byte{}, big.NewInt(0), 0, err
 	}
 	return result.secretHash, result.refundAddress, result.recipientAddress, big.NewInt(result.amount), result.lockTime, nil
 }
 
-func (arc *BitcoinArc) Redeem(secret [32]byte) error {
-	result, err := redeem(arc.connection, arc.ledgerData.Contract, arc.ledgerData.ContractTx, secret)
+func (atom *BitcoinAtom) Redeem(secret [32]byte) error {
+	result, err := redeem(atom.connection, atom.ledgerData.Contract, atom.ledgerData.ContractTx, secret)
 	if err != nil {
 		return err
 	}
-	arc.ledgerData.RedeemTx = result.redeemTx
-	arc.ledgerData.RedeemTxHash = result.redeemTxHash
+	atom.ledgerData.RedeemTx = result.redeemTx
+	atom.ledgerData.RedeemTxHash = result.redeemTxHash
 	return nil
 }
 
-func (arc *BitcoinArc) AuditSecret() (secret [32]byte, err error) {
-	result, err := readSecret(arc.connection, arc.ledgerData.RedeemTx, arc.ledgerData.SecretHash[:])
+func (atom *BitcoinAtom) AuditSecret() (secret [32]byte, err error) {
+	result, err := readSecret(atom.connection, atom.ledgerData.RedeemTx, atom.ledgerData.SecretHash[:])
 	if err != nil {
 		return [32]byte{}, err
 	}
 	return result, nil
 }
 
-func (arc *BitcoinArc) Refund() error {
-	return refund(arc.connection, arc.ledgerData.Contract, arc.ledgerData.ContractTx)
+func (atom *BitcoinAtom) Refund() error {
+	return refund(atom.connection, atom.ledgerData.Contract, atom.ledgerData.ContractTx)
 }
 
-func (arc *BitcoinArc) Serialize() ([]byte, error) {
-	b, err := json.Marshal(arc.ledgerData)
+func (atom *BitcoinAtom) Serialize() ([]byte, error) {
+	b, err := json.Marshal(atom.ledgerData)
 	return b, err
 }
 
-func (arc *BitcoinArc) Deserialize(b []byte) error {
-	return json.Unmarshal(b, &arc.ledgerData)
+func (atom *BitcoinAtom) Deserialize(b []byte) error {
+	return json.Unmarshal(b, &atom.ledgerData)
 }
