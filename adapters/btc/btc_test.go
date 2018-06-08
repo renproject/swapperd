@@ -88,26 +88,9 @@ var _ = Describe("Bitcoin", func() {
 			BTCAtom := NewBitcoinAtom(connection)
 			err := BTCAtom.Initiate(hashLock, []byte(aliceAddr), []byte(bobAddr), big.NewInt(300000000), time.Now().Unix()+10000)
 			Ω(err).Should(BeNil())
-
-			aliceBalance, err := connection.Client.GetReceivedByAddress(_aliceAddr)
-			Ω(err).Should(BeNil())
-			fmt.Println(aliceAddr, aliceBalance)
-
-			bobBalance, err := connection.Client.GetReceivedByAddress(_bobAddr)
-			Ω(err).Should(BeNil())
-			fmt.Println(bobAddr, bobBalance)
 		})
 
 		It("can redeem a bitcoin atomic swap with correct secret", func() {
-
-			aliceBalance, err := connection.Client.GetReceivedByAddress(_aliceAddr)
-			Ω(err).Should(BeNil())
-			fmt.Println(aliceAddr, aliceBalance)
-
-			bobBalance, err := connection.Client.GetReceivedByAddress(_bobAddr)
-			Ω(err).Should(BeNil())
-			fmt.Println(bobAddr, bobBalance)
-
 			secret := randomBytes32()
 			hashLock := sha256.Sum256(secret[:])
 			BTCAtom := NewBitcoinAtom(connection)
@@ -115,14 +98,6 @@ var _ = Describe("Bitcoin", func() {
 			Ω(err).Should(BeNil())
 			err = BTCAtom.Redeem(secret)
 			Ω(err).Should(BeNil())
-
-			aliceBalance, err = connection.Client.GetReceivedByAddress(_aliceAddr)
-			Ω(err).Should(BeNil())
-			fmt.Println(aliceAddr, aliceBalance)
-
-			bobBalance, err = connection.Client.GetReceivedByAddress(_bobAddr)
-			Ω(err).Should(BeNil())
-			fmt.Println(bobAddr, bobBalance)
 		})
 
 		It("cannot redeem a bitcoin atomic swap with a wrong secret", func() {
@@ -142,24 +117,24 @@ var _ = Describe("Bitcoin", func() {
 			BTCAtom := NewBitcoinAtom(connection)
 			to := []byte(aliceAddr)
 			from := []byte(bobAddr)
-			value := big.NewInt(1000000)
+			value := big.NewInt(300000000)
 			expiry := time.Now().Unix() + 10000
 			err := BTCAtom.Initiate(hashLock, from, to, value, expiry)
 			Ω(err).Should(BeNil())
-			readHashLock, _, readTo, readValue, readExpiry, readErr := BTCAtom.Audit()
+			readHashLock, readFrom, readTo, readValue, readExpiry, readErr := BTCAtom.Audit()
 			Ω(readErr).Should(BeNil())
 			Ω(readHashLock).Should(Equal(hashLock))
 			Ω(readTo).Should(Equal(to))
+			Ω(readFrom).Should(Equal(from))
 			Ω(readValue).Should(Equal(value))
 			Ω(readExpiry).Should(Equal(expiry))
-
 		})
 
 		It("can read the correct secret from a bitcoin atomic swap", func() {
 			secret := randomBytes32()
 			hashLock := sha256.Sum256(secret[:])
 			BTCAtom := NewBitcoinAtom(connection)
-			err := BTCAtom.Initiate(hashLock, []byte(aliceAddr), []byte(bobAddr), big.NewInt(3000000), time.Now().Unix()+10000)
+			err := BTCAtom.Initiate(hashLock, []byte(aliceAddr), []byte(bobAddr), big.NewInt(300000000), time.Now().Unix()+10000)
 			Ω(err).Should(BeNil())
 			err = BTCAtom.Redeem(secret)
 			Ω(err).Should(BeNil())
@@ -172,7 +147,7 @@ var _ = Describe("Bitcoin", func() {
 			secret := randomBytes32()
 			hashLock := sha256.Sum256(secret[:])
 			BTCAtom := NewBitcoinAtom(connection)
-			err := BTCAtom.Initiate(hashLock, []byte(aliceAddr), []byte(bobAddr), big.NewInt(3000000), time.Now().Unix()+10000)
+			err := BTCAtom.Initiate(hashLock, []byte(aliceAddr), []byte(bobAddr), big.NewInt(300000000), time.Now().Unix()+10000)
 			Ω(err).Should(BeNil())
 			err = BTCAtom.Refund()
 			Ω(err).Should(Not(BeNil()))
@@ -182,9 +157,9 @@ var _ = Describe("Bitcoin", func() {
 			secret := randomBytes32()
 			hashLock := sha256.Sum256(secret[:])
 			BTCAtom := NewBitcoinAtom(connection)
-			err := BTCAtom.Initiate(hashLock, []byte(aliceAddr), []byte(bobAddr), big.NewInt(3000000), time.Now().Unix()+10)
+			err := BTCAtom.Initiate(hashLock, []byte(aliceAddr), []byte(bobAddr), big.NewInt(300000000), time.Now().Unix()+10)
 			Ω(err).Should(BeNil())
-			time.Sleep(20 * time.Second)
+			time.Sleep(30 * time.Second)
 			err = BTCAtom.Refund()
 			Ω(err).Should(BeNil())
 		})

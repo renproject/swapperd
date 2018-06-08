@@ -46,7 +46,8 @@ func (atom *BitcoinAtom) Initiate(hash [32]byte, from, to []byte, value *big.Int
 	fmt.Println(hex.EncodeToString(atom.ledgerData.ContractTxHash))
 	atom.ledgerData = result
 	atom.ledgerData.SecretHash = hash
-	atom.myData.Owner = to
+	atom.myData.Owner = from
+	atom.otherData.Owner = to
 	return nil
 }
 
@@ -59,7 +60,7 @@ func (atom *BitcoinAtom) Audit() (hash [32]byte, from, to []byte, value *big.Int
 }
 
 func (atom *BitcoinAtom) Redeem(secret [32]byte) error {
-	result, err := redeem(atom.connection, string(atom.myData.Owner), atom.ledgerData.Contract, atom.ledgerData.ContractTx, secret)
+	result, err := redeem(atom.connection, string(atom.otherData.Owner), atom.ledgerData.Contract, atom.ledgerData.ContractTx, secret)
 	if err != nil {
 		return err
 	}
@@ -77,7 +78,7 @@ func (atom *BitcoinAtom) AuditSecret() (secret [32]byte, err error) {
 }
 
 func (atom *BitcoinAtom) Refund() error {
-	return refund(atom.connection, atom.ledgerData.Contract, atom.ledgerData.ContractTx)
+	return refund(atom.connection, string(atom.myData.Owner), atom.ledgerData.Contract, atom.ledgerData.ContractTx)
 }
 
 func (atom *BitcoinAtom) Serialize() ([]byte, error) {
