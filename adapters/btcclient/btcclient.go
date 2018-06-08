@@ -1,4 +1,4 @@
-package btc
+package btcclient
 
 import (
 	"bytes"
@@ -100,8 +100,7 @@ func (connection Connection) FundRawTransaction(tx *wire.MsgTx) (fundedTx *wire.
 }
 
 func (connection Connection) PromptPublishTx(tx *wire.MsgTx, name string) (*chainhash.Hash, error) {
-	// FIXME: Transaction fees are set to high, change it before deploying to mainnet. By changing the booleon to false.
-	txHash, err := connection.Client.SendRawTransaction(tx, true)
+	txHash, err := connection.Client.SendRawTransaction(tx, false)
 	if err != nil {
 		return nil, fmt.Errorf("sendrawtransaction: %v", err)
 	}

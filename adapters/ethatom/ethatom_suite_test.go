@@ -1,4 +1,4 @@
-package eth_test
+package ethatom_test
 
 import (
 	"testing"

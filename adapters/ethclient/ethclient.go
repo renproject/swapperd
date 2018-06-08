@@ -1,4 +1,4 @@
-package eth
+package ethclient
 
 import (
 	"context"
@@ -29,9 +29,10 @@ const (
 
 // Connection contains the client and the contracts deployed to it
 type Connection struct {
-	Client     *ethclient.Client
-	EthAddress common.Address
-	Network    Network
+	Client         *ethclient.Client
+	EthAddress     common.Address
+	NetworkAddress common.Address
+	Network        Network
 }
 
 // Connect to a URI.

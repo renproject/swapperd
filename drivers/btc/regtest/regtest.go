@@ -2,6 +2,7 @@ package regtest
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"syscall"
@@ -26,14 +27,10 @@ func Stop(cmd *exec.Cmd) {
 }
 
 func Mine(connection btc.Connection) error {
-
-	fmt.Println("initial 100")
 	_, err := connection.Client.Generate(100)
 	if err != nil {
 		return err
 	}
-	fmt.Println("100 done")
-
 	tick := time.NewTicker(2 * time.Second)
 	defer tick.Stop()
 	for {
@@ -45,7 +42,6 @@ func Mine(connection btc.Connection) error {
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -68,6 +64,32 @@ func NewAccount(connection btc.Connection, name string, value btcutil.Amount) (b
 	}
 
 	return addr, nil
+}
+
+func GetAddressForAccount(connection btc.Connection, name string) (btcutil.Address, error) {
+	addresses, err := connection.Client.GetAddressesByAccount(name)
+	newAddress := addresses[2]
+	balance, err := connection.Client.GetReceivedByAddress(newAddress)
+
+	fmt.Println("Balance in regtest :", balance)
+	if balance == 0 {
+		amt := btcutil.Amount(1000000000)
+		log.Println(amt.ToBTC())
+		tx, err := connection.Client.SendFrom("", newAddress, amt)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = connection.Client.Generate(1)
+		log.Println("Mined a block")
+		if err != nil {
+			return nil, err
+		}
+
+		err = connection.WaitForConfirmations(tx, 10)
+	}
+
+	return addresses[2], err
 }
 
 // func NewAccount(conn client.btc.Connection, eth *big.Int) (*bind.TransactOpts, common.Address, error) {

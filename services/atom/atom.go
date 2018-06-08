@@ -19,11 +19,13 @@ import (
 
 // Atom is the interface defining the Atomic Swap Interface
 type Atom interface {
-	Initiate(hash [32]byte, from, to []byte, value *big.Int, expiry int64) error
+	Initiate(hash [32]byte, value *big.Int, expiry int64) error
 	Redeem(secret [32]byte) error
 	Refund() error
 	Audit() (hash [32]byte, from, to []byte, value *big.Int, expiry int64, err error)
 	AuditSecret() (secret [32]byte, err error)
-	Store(orderID [32]byte) error
-	Retrieve(orderID [32]byte) error
+	Serialize() ([]byte, error)
+	Deserialize([]byte) error
+	From() []byte
+	PriorityCode() int64
 }

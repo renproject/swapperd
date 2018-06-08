@@ -1,25 +1,34 @@
 package btc
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math/big"
 )
 
+type NetworkData struct {
+	Owner      []byte `json:"from"`
+	SecretHash []byte `json:"from"`
+}
+
 type BitcoinData struct {
-	ContractHash   string   `json:"contract_hash"`
-	Contract       []byte   `json:"contract"`
-	ContractTxHash []byte   `json:"contract_txhash"`
-	ContractTx     []byte   `json:"contract_tx"`
-	RefundTxHash   [32]byte `json:"refund_txhash"`
-	RefundTx       []byte   `json:"refund_tx"`
-	RedeemTxHash   [32]byte `json:"redeem_txhash"`
-	RedeemTx       []byte   `json:"redeem_tx"`
-	SecretHash     [32]byte `json:"secret_hash"`
+	ContractHash   string
+	Contract       []byte
+	ContractTxHash []byte
+	ContractTx     []byte
+	RefundTxHash   [32]byte
+	RefundTx       []byte
+	RedeemTxHash   [32]byte
+	RedeemTx       []byte
+	SecretHash     [32]byte
 }
 
 type BitcoinAtom struct {
 	connection Connection
 	ledgerData BitcoinData
+	myData     NetworkData
+	otherData  NetworkData
 }
 
 // NewBitcoinAtom returns an atom object
@@ -30,12 +39,14 @@ func NewBitcoinAtom(connection Connection) *BitcoinAtom {
 }
 
 func (atom *BitcoinAtom) Initiate(hash [32]byte, from, to []byte, value *big.Int, expiry int64) (err error) {
-	result, err := initiate(atom.connection, string(to), value.Int64(), hash[:], expiry)
+	result, err := initiate(atom.connection, string(from), string(to), value.Int64(), hash[:], expiry)
 	if err != nil {
 		return err
 	}
+	fmt.Println(hex.EncodeToString(atom.ledgerData.ContractTxHash))
 	atom.ledgerData = result
 	atom.ledgerData.SecretHash = hash
+	atom.myData.Owner = to
 	return nil
 }
 
@@ -48,7 +59,7 @@ func (atom *BitcoinAtom) Audit() (hash [32]byte, from, to []byte, value *big.Int
 }
 
 func (atom *BitcoinAtom) Redeem(secret [32]byte) error {
-	result, err := redeem(atom.connection, atom.ledgerData.Contract, atom.ledgerData.ContractTx, secret)
+	result, err := redeem(atom.connection, string(atom.myData.Owner), atom.ledgerData.Contract, atom.ledgerData.ContractTx, secret)
 	if err != nil {
 		return err
 	}
