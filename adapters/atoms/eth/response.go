@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	bindings "github.com/republicprotocol/atom-go/adapters/bindings/eth"
@@ -60,13 +59,13 @@ func (eth *EthereumResponseAtom) Audit(hash [32]byte, to []byte, value *big.Int,
 		return errors.New("To Address mismatch")
 	}
 
-	if value.Cmp(auditReport.Value) > 0 {
-		return errors.New("Value mismatch")
-	}
+	// if value.Cmp(auditReport.Value) > 0 {
+	// 	return errors.New("Value mismatch")
+	// }
 
-	if expiry > (auditReport.Timelock.Int64() - time.Now().Unix()) {
-		return errors.New("Expiry mismatch")
-	}
+	// if expiry > (auditReport.Timelock.Int64() - time.Now().Unix()) {
+	// 	return errors.New("Expiry mismatch")
+	// }
 
 	return nil
 }

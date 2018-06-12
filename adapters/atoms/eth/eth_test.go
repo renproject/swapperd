@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/republicprotocol/atom-go/adapters/atoms/eth"
@@ -28,6 +29,7 @@ var _ = Describe("ether", func() {
 	var reqAtom, reqAtomFailed atom.RequestAtom
 	var resAtom atom.ResponseAtom
 	var data []byte
+	var bobAddr common.Address
 
 	BeforeSuite(func() {
 		// Setup...
@@ -37,7 +39,7 @@ var _ = Describe("ether", func() {
 		alice, _, err = ganache.NewAccount(conn, big.NewInt(1000000000000000000))
 		Expect(err).ShouldNot(HaveOccurred())
 		alice.GasLimit = 3000000
-		bob, _, err = ganache.NewAccount(conn, big.NewInt(1000000000000000000))
+		bob, bobAddr, err = ganache.NewAccount(conn, big.NewInt(1000000000000000000))
 		Expect(err).ShouldNot(HaveOccurred())
 		bob.GasLimit = 3000000
 
@@ -50,10 +52,10 @@ var _ = Describe("ether", func() {
 		aliceOrderID[0] = 0x33
 		bobOrderID[0] = 0x4a
 
-		reqAtom, err = NewEthereumRequestAtom(context.Background(), conn, alice, swapID)
+		reqAtom, err = NewEthereumRequestAtom(context.Background(), conn, alice, bobAddr, swapID)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		reqAtomFailed, err = NewEthereumRequestAtom(context.Background(), conn, alice, swapIDFailed)
+		reqAtomFailed, err = NewEthereumRequestAtom(context.Background(), conn, alice, bobAddr, swapIDFailed)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		resAtom, err = NewEthereumResponseAtom(context.Background(), conn, bob)
@@ -63,7 +65,7 @@ var _ = Describe("ether", func() {
 	It("can initiate an eth atomic swap", func() {
 		secret = [32]byte{1, 3, 3, 7}
 		secretHash = sha256.Sum256(secret[:])
-		err = reqAtom.Initiate(secretHash, alice.From.Bytes(), bob.From.Bytes(), value, validity)
+		err = reqAtom.Initiate(secretHash, value, validity)
 		Expect(err).ShouldNot(HaveOccurred())
 		data, err = reqAtom.Serialize()
 		Expect(err).ShouldNot(HaveOccurred())
@@ -72,7 +74,7 @@ var _ = Describe("ether", func() {
 	It("can audit an eth atomic swap", func() {
 		err = resAtom.Deserialize(data)
 		Expect(err).ShouldNot(HaveOccurred())
-		err = resAtom.Audit(secretHash, bob.From.Bytes(), value, 60*60)
+		err = resAtom.Audit(secretHash, bobAddr.Bytes(), value, 60*60)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -90,7 +92,7 @@ var _ = Describe("ether", func() {
 	It("can refund an eth atomic swap", func() {
 		secret = [32]byte{1, 3, 3, 7}
 		secretHash = sha256.Sum256(secret[:])
-		err = reqAtomFailed.Initiate(secretHash, alice.From.Bytes(), bob.From.Bytes(), value, 0)
+		err = reqAtomFailed.Initiate(secretHash, value, 0)
 		Expect(err).ShouldNot(HaveOccurred())
 		err = reqAtomFailed.Refund()
 		Expect(err).ShouldNot(HaveOccurred())
