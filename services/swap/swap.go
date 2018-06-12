@@ -1,14 +1,14 @@
 package swap
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
-	"errors"
+	"fmt"
 	"time"
 
 	"github.com/republicprotocol/atom-go/bytesutils"
 	"github.com/republicprotocol/atom-go/services/atom"
+	"github.com/republicprotocol/atom-go/services/axc"
 	"github.com/republicprotocol/atom-go/services/network"
 	"github.com/republicprotocol/atom-go/services/order"
 )
@@ -16,39 +16,36 @@ import (
 // Swap is the interface for an atomic swap object
 type Swap interface {
 	Execute() error
-	initiate() error
-	respond() error
-	store() error
-	retrieve() error
 }
 
 type swap struct {
-	myAtom      atom.Atom
-	tradingAtom atom.Atom
-	order       order.Order
-	network     network.Network
-	expiry      int64
+	personalAtom atom.RequestAtom
+	foreignAtom  atom.ResponseAtom
+	order        order.Order
+	network      network.Network
+	axc          axc.AXC
 }
 
 // NewSwap returns a new Swap instance
-func NewSwap(myAtom atom.Atom, tradingAtom atom.Atom, order order.Order, network network.Network) (Swap, error) {
+func NewSwap(personalAtom atom.RequestAtom, foreignAtom atom.ResponseAtom, axc axc.AXC, order order.Order, network network.Network) Swap {
 	return &swap{
-		myAtom:      myAtom,
-		tradingAtom: tradingAtom,
-		order:       order,
-	}, nil
+		personalAtom: personalAtom,
+		foreignAtom:  foreignAtom,
+		order:        order,
+		axc:          axc,
+		network:      network,
+	}
 }
 
 func (swap *swap) Execute() error {
-	if swap.myAtom.PriorityCode() > swap.tradingAtom.PriorityCode() {
+	if swap.personalAtom.PriorityCode() < swap.foreignAtom.PriorityCode() {
 		return swap.initiate()
 	}
 	return swap.respond()
 }
 
 func (swap *swap) initiate() error {
-	swap.store()
-	swap.retrieve()
+	personalAddr, err := swap.axc.GetOwnerAddress(swap.order.PersonalOrderID())
 
 	expiry := time.Now().Add(48 * time.Hour).Unix()
 
@@ -62,14 +59,44 @@ func (swap *swap) initiate() error {
 
 	secretHash := sha256.Sum256(secret)
 
-	err = swap.myAtom.Initiate(secretHash, swap.order.SendValue(), expiry)
+	fmt.Println("Initiating the atomic Swap")
+	err = swap.personalAtom.Initiate(secretHash, swap.order.SendValue(), expiry)
 	if err != nil {
 		return err
 	}
-	err = swap.wait1()
+	fmt.Println("Initiated the atomic Swap")
+
+	personalSwapDetails, err := swap.personalAtom.Serialize()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Sending swap details")
+	err = swap.network.SendSwapDetails(swap.order.PersonalOrderID(), personalSwapDetails)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Sent swap details")
+
+	foreignSwapDetails, err := swap.network.RecieveSwapDetails(swap.order.ForeignOrderID())
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("deserializing swap details")
+
+	err = swap.foreignAtom.Deserialize(foreignSwapDetails)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("auditing swap details")
+
+	err = swap.foreignAtom.Audit(secretHash, personalAddr, swap.order.RecieveValue(), 60*60)
 
 	if err != nil {
-		err2 := swap.myAtom.Refund()
+		fmt.Println("Initiating a refund")
+		err2 := swap.personalAtom.Refund()
 		if err2 != nil {
 			// Should never happen
 			return err2
@@ -77,108 +104,60 @@ func (swap *swap) initiate() error {
 		return err
 	}
 
-	return swap.tradingAtom.Redeem(secret32)
+	fmt.Println("redeeming swap details")
+
+	return swap.foreignAtom.Redeem(secret32)
 }
 
 func (swap *swap) respond() error {
-	swap.store()
-	swap.retrieve()
+	personalAddr, err := swap.axc.GetOwnerAddress(swap.order.PersonalOrderID())
+
+	fmt.Println("Trying to retrieve swap details")
+
+	foreignSwapDetails, err := swap.network.RecieveSwapDetails(swap.order.ForeignOrderID())
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Retrieved swap details")
+
+	err = swap.foreignAtom.Deserialize(foreignSwapDetails)
+	if err != nil {
+		return err
+	}
+
 	expiry := time.Now().Add(24 * time.Hour).Unix()
-	err := swap.wait2(time.Now().Unix() + 2*60*60)
+
+	hash := swap.foreignAtom.GetSecretHash()
+
+	err = swap.foreignAtom.Audit(hash, personalAddr, swap.order.RecieveValue(), expiry)
 	if err != nil {
 		return err
 	}
 
-	hash, _, _, _, _, err := swap.tradingAtom.Audit()
+	err = swap.personalAtom.Initiate(hash, swap.order.SendValue(), expiry)
 	if err != nil {
 		return err
 	}
 
-	err = swap.myAtom.Initiate(hash, swap.order.SendValue(), expiry)
+	personalSwapDetails, err := swap.personalAtom.Serialize()
 	if err != nil {
 		return err
 	}
 
-	err = swap.wait3()
+	fmt.Println("Sending swap details")
+	err = swap.network.SendSwapDetails(swap.order.PersonalOrderID(), personalSwapDetails)
 	if err != nil {
-		return swap.myAtom.Refund()
+		return err
 	}
 
-	secret, err := swap.myAtom.AuditSecret()
+	time.Sleep(5 * time.Second)
+	secret, err := swap.personalAtom.AuditSecret()
 	if err != nil {
 		// Should never happen.
-		return err
+		fmt.Println("Audit secret failed trying to refund:", err)
+		return swap.personalAtom.Refund()
 	}
 
-	return swap.tradingAtom.Redeem(secret)
-}
-
-func (swap *swap) store() error {
-	myDetails, err := swap.myAtom.Serialize()
-	if err != nil {
-		return err
-	}
-	tradingDetails, err := swap.tradingAtom.Serialize()
-	if err != nil {
-		return err
-	}
-	mySwapDetails := append(myDetails, tradingDetails...)
-	return swap.network.Send(swap.order.MyOrderID(), mySwapDetails)
-}
-
-func (swap *swap) retrieve() error {
-	tradingSwapDetails, err := swap.network.Recieve(swap.order.TradingOrderID())
-	if err != nil {
-		return err
-	}
-	err = swap.tradingAtom.Deserialize(tradingSwapDetails[:52])
-	if err != nil {
-		return err
-	}
-	return swap.myAtom.Deserialize(tradingSwapDetails[52:])
-}
-
-func (swap *swap) wait1() error {
-	for time.Unix(swap.expiry, 0).Sub(time.Now()).Seconds() > 0 {
-		time.Sleep(10 * time.Second)
-		_, _to, _, _value, _expiry, err := swap.tradingAtom.Audit()
-		if err != nil {
-			continue
-		}
-		if bytes.Compare(swap.myAtom.From(), _to) != 0 || swap.order.RecieveValue().Cmp(_value) != 0 || time.Unix(_expiry, 0).Sub(time.Now()).Seconds() < 60*60 {
-			continue
-		}
-		return nil
-	}
-	return errors.New("Timeout")
-}
-
-func (swap *swap) wait2(waitTill int64) error {
-	for time.Unix(waitTill, 0).Sub(time.Now()).Seconds() > 0 {
-		time.Sleep(10 * time.Second)
-		_, _to, _, _value, _expiry, err := swap.tradingAtom.Audit()
-		if err != nil {
-			continue
-		}
-		if bytes.Compare(swap.myAtom.From(), _to) != 0 || swap.order.RecieveValue().Cmp(_value) != 1 || _expiry-time.Now().Unix() < 24*60*60 {
-			continue
-		}
-		return nil
-	}
-	return errors.New("Timeout")
-}
-
-func (swap *swap) wait3() error {
-	for time.Unix(swap.expiry, 0).Sub(time.Now()).Seconds() > 0 {
-		time.Sleep(10 * time.Second)
-		_secret, err := swap.myAtom.AuditSecret()
-		if err != nil {
-			continue
-		}
-		if _secret == [32]byte{} {
-			continue
-		}
-		return nil
-	}
-	return errors.New("Timeout")
+	return swap.foreignAtom.Redeem(secret)
 }
