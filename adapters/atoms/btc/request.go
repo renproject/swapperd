@@ -2,7 +2,9 @@ package btc
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
+	"time"
 
 	bindings "github.com/republicprotocol/atom-go/adapters/bindings/btc"
 	"github.com/republicprotocol/atom-go/adapters/clients/btc"
@@ -27,6 +29,10 @@ func NewBitcoinRequestAtom(connection btc.Connection, personalAddress, foreignAd
 
 // Initiate a new Atom swap by calling Bitcoin
 func (btcAtom *BitcoinRequestAtom) Initiate(hash [32]byte, value *big.Int, expiry int64) error {
+
+	fmt.Println("Expiry:", expiry)
+	fmt.Println("Now:", time.Now().Unix())
+
 	result, err := bindings.Initiate(btcAtom.connection, btcAtom.personalAddress, btcAtom.foreignAddress, value.Int64(), hash[:], expiry)
 	if err != nil {
 		return err

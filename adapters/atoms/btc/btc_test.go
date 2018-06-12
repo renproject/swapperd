@@ -2,7 +2,6 @@ package btc_test
 
 import (
 	"crypto/sha256"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -35,7 +34,6 @@ var _ = Describe("bitcoin", func() {
 	var data []byte
 
 	BeforeSuite(func() {
-		time.Sleep(5 * time.Second)
 		connection, err = btcclient.Connect("regtest", RPC_USERNAME, RPC_PASSWORD)
 		Expect(err).ShouldNot(HaveOccurred())
 
@@ -43,7 +41,6 @@ var _ = Describe("bitcoin", func() {
 			err = regtest.Mine(connection)
 			Expect(err).ShouldNot(HaveOccurred())
 		}()
-
 		time.Sleep(5 * time.Second)
 
 		_aliceAddr, err = regtest.GetAddressForAccount(connection, "alice")
@@ -53,18 +50,7 @@ var _ = Describe("bitcoin", func() {
 		_bobAddr, err = regtest.GetAddressForAccount(connection, "bob")
 		Expect(err).ShouldNot(HaveOccurred())
 		bobAddr = _bobAddr.EncodeAddress()
-
-		Ω(err).Should(BeNil())
-
-		fmt.Println("Alice")
-		aliceBalance, err := connection.Client.GetReceivedByAddress(_aliceAddr)
-		Ω(err).Should(BeNil())
-		fmt.Println(aliceAddr, aliceBalance)
-
-		fmt.Println("Bob")
-		bobBalance, err := connection.Client.GetReceivedByAddress(_bobAddr)
-		Ω(err).Should(BeNil())
-		fmt.Println(bobAddr, bobBalance)
+		Expect(err).Should(BeNil())
 
 		reqAtom = NewBitcoinRequestAtom(connection, aliceAddr, bobAddr)
 		reqAtomFailed = NewBitcoinRequestAtom(connection, aliceAddr, bobAddr)

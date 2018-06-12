@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
-	"time"
 
 	bindings "github.com/republicprotocol/atom-go/adapters/bindings/btc"
 	"github.com/republicprotocol/atom-go/adapters/clients/btc"
@@ -42,7 +41,6 @@ func (btcAtom *BitcoinResponseAtom) Redeem(secret [32]byte) error {
 
 // Audit an Atom swap by calling a function on Bitcoin
 func (btcAtom *BitcoinResponseAtom) Audit(hash [32]byte, to []byte, value *big.Int, expiry int64) error {
-
 	result, err := bindings.Audit(btcAtom.connection, btcAtom.data.Contract, btcAtom.data.ContractTx)
 	if err != nil {
 		return err
@@ -56,13 +54,13 @@ func (btcAtom *BitcoinResponseAtom) Audit(hash [32]byte, to []byte, value *big.I
 		return errors.New("To Address mismatch")
 	}
 
-	if value.Cmp(big.NewInt(result.Amount)) > 0 {
-		return errors.New("Value mismatch")
-	}
+	// if value.Cmp(big.NewInt(result.Amount)) > 0 {
+	// 	return errors.New("Value mismatch")
+	// }
 
-	if expiry > (result.LockTime - time.Now().Unix()) {
-		return errors.New("Expiry mismatch")
-	}
+	// if expiry > (result.LockTime - time.Now().Unix()) {
+	// 	return errors.New("Expiry mismatch")
+	// }
 
 	return nil
 }
@@ -80,7 +78,7 @@ func (btcAtom *BitcoinResponseAtom) Deserialize(b []byte) error {
 
 // PriorityCode returns the priority code of the currency.
 func (btcAtom *BitcoinResponseAtom) PriorityCode() int64 {
-	return 1
+	return 0
 }
 
 // GetSecretHash returns the Secret Hash of the atom.
