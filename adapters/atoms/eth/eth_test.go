@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"math/big"
+	"os/exec"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -13,33 +14,36 @@ import (
 	. "github.com/republicprotocol/atom-go/adapters/atoms/eth"
 	ethclient "github.com/republicprotocol/atom-go/adapters/clients/eth"
 	"github.com/republicprotocol/atom-go/drivers/eth/ganache"
-	"github.com/republicprotocol/atom-go/services/atom"
+	"github.com/republicprotocol/atom-go/services/swap"
 )
 
 var _ = Describe("ether", func() {
 
+	var aliceAddr, bobAddr common.Address
 	var alice, bob *bind.TransactOpts
-	var conn ethclient.Connection
+	var conn ethclient.Conn
 	var swapID, swapIDFailed [32]byte
 	var aliceOrderID, bobOrderID [32]byte
 	var value *big.Int
 	var validity int64
 	var secret, secretHash [32]byte
 	var err error
-	var reqAtom, reqAtomFailed atom.RequestAtom
-	var resAtom atom.ResponseAtom
+	var reqAtom, reqAtomFailed swap.AtomRequester
+	var resAtom swap.AtomResponder
 	var data []byte
-	var bobAddr common.Address
+	var cmd *exec.Cmd
 
 	BeforeSuite(func() {
-		// Setup...
-		conn, err = ganache.Connect("http://localhost:8545")
+
+		cmd = ganache.Start()
+		conn, err = ethclient.NewConn("ganache")
 		Expect(err).ShouldNot(HaveOccurred())
 
-		alice, _, err = ganache.NewAccount(conn, big.NewInt(1000000000000000000))
+		aliceAddr, alice, err = conn.NewAccount(1000000000000000000)
 		Expect(err).ShouldNot(HaveOccurred())
 		alice.GasLimit = 3000000
-		bob, bobAddr, err = ganache.NewAccount(conn, big.NewInt(1000000000000000000))
+
+		bobAddr, bob, err = conn.NewAccount(1000000000000000000)
 		Expect(err).ShouldNot(HaveOccurred())
 		bob.GasLimit = 3000000
 
@@ -60,6 +64,10 @@ var _ = Describe("ether", func() {
 
 		resAtom, err = NewEthereumResponseAtom(context.Background(), conn, bob)
 		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	AfterSuite(func() {
+		ganache.Stop(cmd)
 	})
 
 	It("can initiate an eth atomic swap", func() {
