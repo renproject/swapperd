@@ -6,11 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/republicprotocol/atom-go/bytesutils"
-	"github.com/republicprotocol/atom-go/services/atom"
-	"github.com/republicprotocol/atom-go/services/axc"
-	"github.com/republicprotocol/atom-go/services/network"
-	"github.com/republicprotocol/atom-go/services/order"
+	"github.com/republicprotocol/atom-go/utils"
 )
 
 // Swap is the interface for an atomic swap object
@@ -19,15 +15,15 @@ type Swap interface {
 }
 
 type swap struct {
-	personalAtom atom.RequestAtom
-	foreignAtom  atom.ResponseAtom
-	order        order.Order
-	network      network.Network
-	axc          axc.AXC
+	personalAtom AtomRequester
+	foreignAtom  AtomResponder
+	order        OrderMatch
+	network      Network
+	axc          Contract
 }
 
 // NewSwap returns a new Swap instance
-func NewSwap(personalAtom atom.RequestAtom, foreignAtom atom.ResponseAtom, axc axc.AXC, order order.Order, network network.Network) Swap {
+func NewSwap(personalAtom AtomRequester, foreignAtom AtomResponder, axc Contract, order OrderMatch, network Network) Swap {
 	return &swap{
 		personalAtom: personalAtom,
 		foreignAtom:  foreignAtom,
@@ -52,7 +48,7 @@ func (swap *swap) initiate() error {
 	secret := make([]byte, 32)
 	rand.Read(secret)
 
-	secret32, err := bytesutils.ToBytes32(secret)
+	secret32, err := utils.ToBytes32(secret)
 	if err != nil {
 		return err
 	}

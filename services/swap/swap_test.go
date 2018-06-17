@@ -23,15 +23,11 @@ import (
 	eth "github.com/republicprotocol/atom-go/adapters/atoms/eth"
 	ax "github.com/republicprotocol/atom-go/adapters/axc/mock"
 	btcclient "github.com/republicprotocol/atom-go/adapters/clients/btc"
-	net "github.com/republicprotocol/atom-go/adapters/network/mock"
+	net "github.com/republicprotocol/atom-go/adapters/networks/mock"
 	ord "github.com/republicprotocol/atom-go/adapters/orders/mock"
 )
 
 var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
-
-	const CHAIN = "regtest"
-	const RPC_USERNAME = "testuser"
-	const RPC_PASSWORD = "testpassword"
 
 	var aliceSwap, bobSwap Swap
 
@@ -68,7 +64,7 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		bob.GasLimit = 3000000
 
 		time.Sleep(5 * time.Second)
-		connection, err := btcclient.Connect("regtest", RPC_USERNAME, RPC_PASSWORD)
+		connection, err := btcclient.Connect(CHAIN, RPC_USERNAME, RPC_PASSWORD, BTC_URL)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		aliceSendValue = big.NewInt(10000000)
