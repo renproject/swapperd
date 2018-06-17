@@ -26,7 +26,7 @@ func Stop(cmd *exec.Cmd) {
 	cmd.Wait()
 }
 
-func Mine(connection btcclient.Connection) error {
+func Mine(connection btcclient.Conn) error {
 	_, err := connection.Client.Generate(100)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func Mine(connection btcclient.Connection) error {
 	return nil
 }
 
-func NewAccount(connection btcclient.Connection, name string, value btcutil.Amount) (btcutil.Address, error) {
+func NewAccount(connection btcclient.Conn, name string, value btcutil.Amount) (btcutil.Address, error) {
 	addr, err := connection.Client.GetAccountAddress(name)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func NewAccount(connection btcclient.Connection, name string, value btcutil.Amou
 	return addr, nil
 }
 
-func GetAddressForAccount(connection btcclient.Connection, name string) (btcutil.Address, error) {
+func GetAddressForAccount(connection btcclient.Conn, name string) (btcutil.Address, error) {
 	addresses, err := connection.Client.GetAddressesByAccount(name)
 	newAddress := addresses[2]
 	balance, err := connection.Client.GetReceivedByAddress(newAddress)
@@ -92,7 +92,7 @@ func GetAddressForAccount(connection btcclient.Connection, name string) (btcutil
 	return addresses[2], err
 }
 
-// func NewAccount(conn client.btcclient.Connection, eth *big.Int) (*bind.TransactOpts, common.Address, error) {
+// func NewAccount(conn client.btcclient.Conn, eth *big.Int) (*bind.TransactOpts, common.Address, error) {
 // 	ethereumPair, err := crypto.GenerateKey()
 // 	if err != nil {
 // 		return nil, common.Address{}, err
