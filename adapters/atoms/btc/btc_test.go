@@ -11,16 +11,12 @@ import (
 	. "github.com/republicprotocol/atom-go/adapters/atoms/btc"
 	btcclient "github.com/republicprotocol/atom-go/adapters/clients/btc"
 	"github.com/republicprotocol/atom-go/drivers/btc/regtest"
-	"github.com/republicprotocol/atom-go/services/atom"
+	"github.com/republicprotocol/atom-go/services/swap"
 )
 
 var _ = Describe("bitcoin", func() {
 
-	const CHAIN = "regtest"
-	const RPC_USERNAME = "testuser"
-	const RPC_PASSWORD = "testpassword"
-
-	var connection btcclient.Connection
+	var connection btcclient.Conn
 	// var cmd *exec.Cmd
 	var aliceAddr, bobAddr string // btcutil.Address
 	var _aliceAddr, _bobAddr btcutil.Address
@@ -29,12 +25,12 @@ var _ = Describe("bitcoin", func() {
 	var validity int64
 	var secret, secretHash [32]byte
 	var err error
-	var reqAtom, reqAtomFailed atom.RequestAtom
-	var resAtom atom.ResponseAtom
+	var reqAtom, reqAtomFailed swap.AtomRequester
+	var resAtom swap.AtomResponder
 	var data []byte
 
 	BeforeSuite(func() {
-		connection, err = btcclient.Connect("regtest", RPC_USERNAME, RPC_PASSWORD)
+		connection, err = btcclient.Connect("regtest")
 		Expect(err).ShouldNot(HaveOccurred())
 
 		go func() {
@@ -43,20 +39,19 @@ var _ = Describe("bitcoin", func() {
 		}()
 		time.Sleep(5 * time.Second)
 
-		_aliceAddr, err = regtest.GetAddressForAccount(connection, "alice")
+		_aliceAddr, err = connection.Client.GetAccountAddress("alice")
 		Expect(err).ShouldNot(HaveOccurred())
 		aliceAddr = _aliceAddr.EncodeAddress()
 
-		_bobAddr, err = regtest.GetAddressForAccount(connection, "bob")
+		_bobAddr, err = connection.Client.GetAccountAddress("bob")
 		Expect(err).ShouldNot(HaveOccurred())
 		bobAddr = _bobAddr.EncodeAddress()
-		Expect(err).Should(BeNil())
 
-		reqAtom = NewBitcoinRequestAtom(connection, aliceAddr, bobAddr)
-		reqAtomFailed = NewBitcoinRequestAtom(connection, aliceAddr, bobAddr)
-		resAtom = NewBitcoinResponseAtom(connection, bobAddr, aliceAddr)
+		reqAtom = NewBitcoinAtomRequester(connection, aliceAddr, bobAddr)
+		reqAtomFailed = NewBitcoinAtomRequester(connection, aliceAddr, bobAddr)
+		resAtom = NewBitcoinAtomResponder(connection, bobAddr, aliceAddr)
 
-		value = big.NewInt(100000000)
+		value = big.NewInt(1000000)
 		validity = time.Now().Unix() + 48*60*60
 	})
 
@@ -85,7 +80,7 @@ var _ = Describe("bitcoin", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		data, err = resAtom.Serialize()
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(after - before).Should(Equal(btcutil.Amount(99990000)))
+		Expect(after - before).Should(Equal(btcutil.Amount(990000)))
 	})
 
 	It("can audit secret after a btc atomic swap", func() {
@@ -107,6 +102,6 @@ var _ = Describe("bitcoin", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		after, err := connection.Client.GetReceivedByAddress(_aliceAddr)
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(after - before).Should(Equal(btcutil.Amount(99990000)))
+		Expect(after - before).Should(Equal(btcutil.Amount(990000)))
 	})
 })
