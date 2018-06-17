@@ -2,25 +2,24 @@ package btc
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
-	"time"
 
 	bindings "github.com/republicprotocol/atom-go/adapters/bindings/btc"
 	"github.com/republicprotocol/atom-go/adapters/clients/btc"
-	"github.com/republicprotocol/atom-go/services/atom"
+	"github.com/republicprotocol/atom-go/services/swap"
 )
 
-type BitcoinRequestAtom struct {
+// BitcoinAtomRequester is a struct for Bitcoin AtomRequester
+type BitcoinAtomRequester struct {
 	personalAddress string
 	foreignAddress  string
-	connection      btc.Connection
+	connection      btc.Conn
 	data            BitcoinData
 }
 
-// NewBitcoinRequestAtom returns a new Bitcoin RequestAtom instance
-func NewBitcoinRequestAtom(connection btc.Connection, personalAddress, foreignAddress string) atom.RequestAtom {
-	return &BitcoinRequestAtom{
+// NewBitcoinAtomRequester returns a new Bitcoin AtomRequester instance
+func NewBitcoinAtomRequester(connection btc.Conn, personalAddress, foreignAddress string) swap.AtomRequester {
+	return &BitcoinAtomRequester{
 		personalAddress: personalAddress,
 		foreignAddress:  foreignAddress,
 		connection:      connection,
@@ -28,11 +27,7 @@ func NewBitcoinRequestAtom(connection btc.Connection, personalAddress, foreignAd
 }
 
 // Initiate a new Atom swap by calling Bitcoin
-func (btcAtom *BitcoinRequestAtom) Initiate(hash [32]byte, value *big.Int, expiry int64) error {
-
-	fmt.Println("Expiry:", expiry)
-	fmt.Println("Now:", time.Now().Unix())
-
+func (btcAtom *BitcoinAtomRequester) Initiate(hash [32]byte, value *big.Int, expiry int64) error {
 	result, err := bindings.Initiate(btcAtom.connection, btcAtom.personalAddress, btcAtom.foreignAddress, value.Int64(), hash[:], expiry)
 	if err != nil {
 		return err
@@ -49,12 +44,12 @@ func (btcAtom *BitcoinRequestAtom) Initiate(hash [32]byte, value *big.Int, expir
 }
 
 // Refund an Atom swap by calling Bitcoin
-func (btcAtom *BitcoinRequestAtom) Refund() error {
+func (btcAtom *BitcoinAtomRequester) Refund() error {
 	return bindings.Refund(btcAtom.connection, btcAtom.personalAddress, btcAtom.data.Contract, btcAtom.data.ContractTx)
 }
 
 // AuditSecret audits the secret of an Atom swap by calling Bitcoin
-func (btcAtom *BitcoinRequestAtom) AuditSecret() ([32]byte, error) {
+func (btcAtom *BitcoinAtomRequester) AuditSecret() ([32]byte, error) {
 	result, err := bindings.AuditSecret(btcAtom.connection, btcAtom.data.RedeemTx, btcAtom.data.SecretHash[:])
 	if err != nil {
 		return [32]byte{}, err
@@ -63,22 +58,22 @@ func (btcAtom *BitcoinRequestAtom) AuditSecret() ([32]byte, error) {
 }
 
 // Serialize serializes the atom details into a bytes array
-func (btcAtom *BitcoinRequestAtom) Serialize() ([]byte, error) {
+func (btcAtom *BitcoinAtomRequester) Serialize() ([]byte, error) {
 	b, err := json.Marshal(btcAtom.data)
 	return b, err
 }
 
 // Deserialize deserializes the atom details from a bytes array
-func (btcAtom *BitcoinRequestAtom) Deserialize(b []byte) error {
+func (btcAtom *BitcoinAtomRequester) Deserialize(b []byte) error {
 	return json.Unmarshal(b, &btcAtom.data)
 }
 
 // From returns the address of the sender
-func (btcAtom *BitcoinRequestAtom) From() []byte {
+func (btcAtom *BitcoinAtomRequester) From() []byte {
 	return []byte(btcAtom.personalAddress)
 }
 
 // PriorityCode returns the priority code of the currency.
-func (btcAtom *BitcoinRequestAtom) PriorityCode() int64 {
+func (btcAtom *BitcoinAtomRequester) PriorityCode() int64 {
 	return 0
 }
