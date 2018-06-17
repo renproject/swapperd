@@ -10,20 +10,20 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	bindings "github.com/republicprotocol/atom-go/adapters/bindings/eth"
 	ethclient "github.com/republicprotocol/atom-go/adapters/clients/eth"
-	"github.com/republicprotocol/atom-go/services/atom"
+	"github.com/republicprotocol/atom-go/services/swap"
 )
 
 type EthereumResponseAtom struct {
 	context context.Context
-	client  ethclient.Connection
+	client  ethclient.Conn
 	auth    *bind.TransactOpts
-	binding *bindings.Atom
+	binding *bindings.AtomSwap
 	data    EthereumData
 }
 
 // NewEthereumResponseAtom returns a new Ethereum ResponseAtom instance
-func NewEthereumResponseAtom(context context.Context, client ethclient.Connection, auth *bind.TransactOpts) (atom.ResponseAtom, error) {
-	contract, err := bindings.NewAtom(client.EthAddress, bind.ContractBackend(client.Client))
+func NewEthereumResponseAtom(context context.Context, client ethclient.Conn, auth *bind.TransactOpts) (swap.AtomResponder, error) {
+	contract, err := bindings.NewAtomSwap(client.AtomAddress, bind.ContractBackend(client.Client))
 	if err != nil {
 		return &EthereumResponseAtom{}, err
 	}
