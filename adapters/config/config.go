@@ -7,8 +7,10 @@ import (
 )
 
 type Config struct {
-	Ethereum EthereumConfig `json:"ethereum"`
-	Bitcoin  BitcoinConfig  `json:"bitcoin"`
+	Ethereum            EthereumConfig `json:"ethereum"`
+	Bitcoin             BitcoinConfig  `json:"bitcoin"`
+	Version             string         `json:"version"`
+	SupportedCurrencies []string       `json:"supportedCurrencies"`
 
 	mu   *sync.RWMutex
 	path string
@@ -32,4 +34,12 @@ func (config *Config) Update() error {
 		return err
 	}
 	return ioutil.WriteFile(config.path, data, 700)
+}
+
+func (config *Config) GetVersion() string {
+	return config.Version
+}
+
+func (config *Config) GetSupportedCurrencies() []string {
+	return config.SupportedCurrencies
 }
