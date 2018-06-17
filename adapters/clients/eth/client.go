@@ -2,7 +2,6 @@ package ethclient
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -10,60 +9,177 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+
+	bindings "github.com/republicprotocol/atom-go/adapters/bindings/eth"
 )
 
-// Network is used to represent an Ethereum chain
-type Network string
-
-const (
-	// NetworkMainnet represents the Ethereum mainnet
-	NetworkMainnet Network = "mainnet"
-	// NetworkRopsten represents the Ethereum Ropsten testnet
-	NetworkRopsten Network = "ropsten"
-	// NetworkKovan represents the Ethereum Kovan testnet
-	NetworkKovan Network = "kovan"
-	// NetworkGanache represents a Ganache testrpc server
-	NetworkGanache Network = "ganache"
-)
-
-// Connection contains the client and the contracts deployed to it
-type Connection struct {
+// Conn is the ethereum client connection object
+type Conn struct {
+	Network        string
 	Client         *ethclient.Client
-	EthAddress     common.Address
+	AtomAddress    common.Address
 	NetworkAddress common.Address
-	Network        Network
+	WalletAddress  common.Address
+	InfoAddress    common.Address
 }
 
-// Connect to a URI.
-func Connect(network Network) (Connection, error) {
+// Connect to an ethereum network.
+func Connect(chain string) (Conn, error) {
+	var config Config
 
-	var uri string
-	var ethSwapAddress string
-
-	switch network {
-	case NetworkGanache:
-		uri = "http://localhost:8545"
-	case NetworkRopsten:
-		uri = "https://ropsten.infura.io"
-		ethSwapAddress = ""
-	case NetworkKovan:
-		uri = "https://kovan.infura.io"
-		ethSwapAddress = ""
-	default:
-		return Connection{}, fmt.Errorf("cannot connect to %s: unsupported", network)
-	}
-
-	ethclient, err := ethclient.Dial(uri)
+	config, err := readConfig(chain)
+	ethclient, err := ethclient.Dial(config.URL)
 	if err != nil {
-		return Connection{}, err
+		return Conn{}, err
 	}
 
-	return Connection{
-		Client:     ethclient,
-		EthAddress: common.HexToAddress(ethSwapAddress),
-		Network:    network,
+	return Conn{
+		Network:        config.Chain,
+		Client:         ethclient,
+		AtomAddress:    common.HexToAddress(config.AtomAddress),
+		NetworkAddress: common.HexToAddress(config.NetworkAddress),
+		InfoAddress:    common.HexToAddress(config.InfoAddress),
+		WalletAddress:  common.HexToAddress(config.WalletAddress),
 	}, nil
+}
+
+// NewConn Deploys all the contracts to the given ethereum network and creates a connection.
+func NewConn(chain string) (Conn, error) {
+
+	var conn Conn
+
+	keyStore, err := readKeyStore(chain)
+	if err != nil {
+		return conn, err
+	}
+
+	ethclient, err := ethclient.Dial(keyStore.URL)
+	if err != nil {
+		return conn, err
+	}
+
+	conn = Conn{
+		Network: chain,
+		Client:  ethclient,
+	}
+
+	ownerECDSA, err := crypto.HexToECDSA(keyStore.PrivateKey)
+	if err != nil {
+		return conn, err
+	}
+	owner := bind.NewKeyedTransactor(ownerECDSA)
+
+	// Deploy Atom contract
+	AtomAddress, tx, _, err := bindings.DeployAtomSwap(owner, ethclient)
+	if err != nil {
+		return conn, err
+	}
+
+	_, err = conn.PatchedWaitDeployed(context.Background(), tx)
+	if err != nil {
+		return conn, err
+	}
+
+	// Deploy Network contract
+	NetworkAddress, tx, _, err := bindings.DeployAtomNetwork(owner, ethclient)
+	if err != nil {
+		return conn, err
+	}
+
+	_, err = conn.PatchedWaitDeployed(context.Background(), tx)
+	if err != nil {
+		return conn, err
+	}
+
+	// Deploy Info contract
+	InfoAddress, tx, _, err := bindings.DeployAtomInfo(owner, ethclient)
+	if err != nil {
+		return conn, err
+	}
+
+	_, err = conn.PatchedWaitDeployed(context.Background(), tx)
+	if err != nil {
+		return conn, err
+	}
+
+	// Deploy Wallet contract
+	WalletAddress, tx, _, err := bindings.DeployAtomWallet(owner, ethclient)
+	if err != nil {
+		return conn, err
+	}
+
+	_, err = conn.PatchedWaitDeployed(context.Background(), tx)
+	if err != nil {
+		return conn, err
+	}
+
+	config := Config{
+		Chain:          keyStore.Chain,
+		URL:            keyStore.URL,
+		AtomAddress:    AtomAddress.Hex(),
+		NetworkAddress: NetworkAddress.Hex(),
+		InfoAddress:    InfoAddress.Hex(),
+		WalletAddress:  WalletAddress.Hex(),
+	}
+
+	err = writeConfig(config)
+
+	return Conn{
+		Network:        keyStore.Chain,
+		Client:         ethclient,
+		AtomAddress:    AtomAddress,
+		NetworkAddress: NetworkAddress,
+		WalletAddress:  WalletAddress,
+		InfoAddress:    InfoAddress,
+	}, err
+}
+
+// NewAccount creates a new account and funds it wit ether
+func (b *Conn) NewAccount(value int64) (common.Address, *bind.TransactOpts, error) {
+	account, err := crypto.GenerateKey()
+	if err != nil {
+		return common.Address{}, &bind.TransactOpts{}, err
+	}
+
+	accountAddress := crypto.PubkeyToAddress(account.PublicKey)
+	accountAuth := bind.NewKeyedTransactor(account)
+
+	return accountAddress, accountAuth, b.Transfer(accountAddress, value)
+}
+
+// Transfer is a helper function for sending ETH to an address
+func (b *Conn) Transfer(to common.Address, value int64) error {
+	fromKeyStore, err := readKeyStore(b.Network)
+	if err != nil {
+		return err
+	}
+
+	fromECDSA, err := crypto.HexToECDSA(fromKeyStore.PrivateKey)
+	if err != nil {
+		return err
+	}
+	from := bind.NewKeyedTransactor(fromECDSA)
+
+	transactor := &bind.TransactOpts{
+		From:     from.From,
+		Nonce:    from.Nonce,
+		Signer:   from.Signer,
+		Value:    big.NewInt(value),
+		GasPrice: from.GasPrice,
+		GasLimit: 30000,
+		Context:  from.Context,
+	}
+
+	// Why is there no ethclient.Transfer?
+	bound := bind.NewBoundContract(to, abi.ABI{}, nil, b.Client, nil)
+	tx, err := bound.Transfer(transactor)
+	if err != nil {
+		return err
+	}
+	_, err = b.PatchedWaitMined(context.Background(), tx)
+	return err
 }
 
 // PatchedWaitMined waits for tx to be mined on the blockchain.
@@ -71,9 +187,9 @@ func Connect(network Network) (Connection, error) {
 //
 // TODO: THIS DOES NOT WORK WITH PARITY, WHICH SENDS A TRANSACTION RECEIPT UPON
 // RECEIVING A TX, NOT AFTER IT'S MINED
-func (b *Connection) PatchedWaitMined(ctx context.Context, tx *types.Transaction) (*types.Receipt, error) {
+func (b *Conn) PatchedWaitMined(ctx context.Context, tx *types.Transaction) (*types.Receipt, error) {
 	switch b.Network {
-	case NetworkGanache:
+	case "ganache":
 		time.Sleep(100 * time.Millisecond)
 		return nil, nil
 	default:
@@ -86,34 +202,12 @@ func (b *Connection) PatchedWaitMined(ctx context.Context, tx *types.Transaction
 //
 // TODO: THIS DOES NOT WORK WITH PARITY, WHICH SENDS A TRANSACTION RECEIPT UPON
 // RECEIVING A TX, NOT AFTER IT'S MINED
-func (b *Connection) PatchedWaitDeployed(ctx context.Context, tx *types.Transaction) (common.Address, error) {
+func (b *Conn) PatchedWaitDeployed(ctx context.Context, tx *types.Transaction) (common.Address, error) {
 	switch b.Network {
-	case NetworkGanache:
+	case "ganache":
 		time.Sleep(100 * time.Millisecond)
 		return common.Address{}, nil
 	default:
 		return bind.WaitDeployed(ctx, b.Client, tx)
 	}
-}
-
-// TransferEth is a helper function for sending ETH to an address
-func (b *Connection) TransferEth(ctx context.Context, from *bind.TransactOpts, to common.Address, value *big.Int) error {
-	transactor := &bind.TransactOpts{
-		From:     from.From,
-		Nonce:    from.Nonce,
-		Signer:   from.Signer,
-		Value:    value,
-		GasPrice: from.GasPrice,
-		GasLimit: 30000,
-		Context:  from.Context,
-	}
-
-	// Why is there no ethclient.Transfer?
-	bound := bind.NewBoundContract(to, abi.ABI{}, nil, b.Client, nil)
-	tx, err := bound.Transfer(transactor)
-	if err != nil {
-		return err
-	}
-	_, err = b.PatchedWaitMined(ctx, tx)
-	return err
 }
