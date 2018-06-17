@@ -9,21 +9,21 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	bindings "github.com/republicprotocol/atom-go/adapters/bindings/eth"
 	ethclient "github.com/republicprotocol/atom-go/adapters/clients/eth"
-	"github.com/republicprotocol/atom-go/services/atom"
+	"github.com/republicprotocol/atom-go/services/swap"
 )
 
 type EthereumRequestAtom struct {
 	context context.Context
-	client  ethclient.Connection
+	client  ethclient.Conn
 	auth    *bind.TransactOpts
 	to      common.Address
-	binding *bindings.Atom
+	binding *bindings.AtomSwap
 	data    EthereumData
 }
 
 // NewEthereumRequestAtom returns a new Ethereum RequestAtom instance
-func NewEthereumRequestAtom(context context.Context, client ethclient.Connection, auth *bind.TransactOpts, to common.Address, swapID [32]byte) (atom.RequestAtom, error) {
-	contract, err := bindings.NewAtom(client.EthAddress, bind.ContractBackend(client.Client))
+func NewEthereumRequestAtom(context context.Context, client ethclient.Conn, auth *bind.TransactOpts, to common.Address, swapID [32]byte) (swap.AtomRequester, error) {
+	contract, err := bindings.NewAtomSwap(client.AtomAddress, bind.ContractBackend(client.Client))
 	if err != nil {
 		return &EthereumRequestAtom{}, err
 	}
