@@ -65,7 +65,8 @@ func PostOrdersHandler(boxHttpAdapter BoxHttpAdapter) http.HandlerFunc {
 
 func WhoAmIHandler(adapter BoxHttpAdapter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		whoami, err := adapter.WhoAmI("")
+		params := mux.Vars(r)
+		whoami, err := adapter.WhoAmI(params["challenge"])
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get the woami information: %v", err))
 			return

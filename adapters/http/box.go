@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/republicprotocol/atom-go/adapters/config"
 	"github.com/republicprotocol/atom-go/utils"
 	repCrypto "github.com/republicprotocol/republic-go/crypto"
 	"github.com/republicprotocol/republic-go/order"
@@ -16,6 +17,7 @@ var ErrInvalidOrderIDLength = errors.New("invalid order id length")
 
 type boxHttpAdapter struct {
 	signer repCrypto.Signer
+	config config.Config
 }
 
 func NewBoxHttpAdapter() BoxHttpAdapter {
@@ -24,8 +26,9 @@ func NewBoxHttpAdapter() BoxHttpAdapter {
 
 func (adapter *boxHttpAdapter) WhoAmI(challenge string) (WhoAmI, error) {
 
-	version := getVersion()
-	suppCurrencies := getSupportedCurrencies()
+	version := adapter.config.GetVersion()
+
+	suppCurrencies := adapter.config.GetSupportedCurrencies()
 
 	boxInfo := BoxInfo{
 		challenge:           challenge,
@@ -129,13 +132,6 @@ func UnmarshalBoxInfo(boxInfo []byte) (BoxInfo, error) {
 	}
 
 	return box, nil
-}
-
-func getVersion() string {
-	return ""
-}
-func getSupportedCurrencies() []string {
-	return []string{}
 }
 
 func validate(id order.ID, signature [65]byte) error {
