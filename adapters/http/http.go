@@ -11,17 +11,17 @@ import (
 
 // opening of an order.
 func NewServer(adapter BoxHttpAdapter) http.Handler {
-	r := mux.NewRouter().StrictSlash(true)
+
+	r := mux.NewRouter()
 	r.HandleFunc("/orders", PostOrdersHandler(adapter)).Methods("POST")
 	r.HandleFunc("/whoami/{challenge}", WhoAmIHandler(adapter)).Methods("GET")
-	// r.Use(RecoveryHandler)
+	r.Use(RecoveryHandler)
 
 	handler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowCredentials: true,
 		AllowedMethods:   []string{"GET", "POST"},
 	}).Handler(r)
-
 	return handler
 }
 
@@ -46,11 +46,23 @@ func PostOrdersHandler(boxHttpAdapter BoxHttpAdapter) http.HandlerFunc {
 		}
 
 		processedOrder, err := boxHttpAdapter.PostOrder(postOrder)
-
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot process the order: %v", err))
 			return
 		}
+
+		processedOrderID, err := UnmarshalOrderID(processedOrder.OrderID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot process the order: %v", err))
+			return
+		}
+
+		atomWatcher, err := boxHttpAdapter.BuildWatcher()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to start the atomic swap process: %v", err))
+			return
+		}
+		go atomWatcher.Run(processedOrderID)
 
 		orderJSON, err := json.Marshal(processedOrder)
 		if err != nil {
@@ -77,6 +89,7 @@ func WhoAmIHandler(adapter BoxHttpAdapter) http.HandlerFunc {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot marshal who am i information: %v", err))
 			return
 		}
+
 		w.WriteHeader(http.StatusOK)
 		w.Write(whoamiJSON)
 	}
