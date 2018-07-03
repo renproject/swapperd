@@ -1,10 +1,11 @@
 package watch
 
-import "github.com/republicprotocol/atom-go/services/swap"
+import (
+	"github.com/republicprotocol/atom-go/domains/match"
+)
 
 // Wallet is an interface for the Atom Wallet Contract
 type Wallet interface {
-	WaitForMatch([32]byte) ([32]byte, error)
-
-	GetMatch([32]byte, [32]byte) (swap.OrderMatch, error)
+	GetMatch([32]byte) (match.Match, error)
+	SetMatch(match.Match) error
 }
