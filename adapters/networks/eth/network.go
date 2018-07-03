@@ -1,42 +1,56 @@
 package ethnetwork
 
 import (
+	"bytes"
 	"context"
+	"errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	client "github.com/republicprotocol/atom-go/adapters/ethclient"
-	"github.com/republicprotocol/atom-go/services/network"
+	bindings "github.com/republicprotocol/atom-go/adapters/bindings/eth"
+	client "github.com/republicprotocol/atom-go/adapters/clients/eth"
+	"github.com/republicprotocol/atom-go/services/swap"
 )
 
-type EthereumNetwork struct {
-	conn client.Connection
+type ethereumNetwork struct {
+	conn client.Conn
 	auth *bind.TransactOpts
-	net  *Network
+	net  *bindings.AtomNetwork
 	ctx  context.Context
 }
 
-func NewEthereumNetwork(context context.Context, conn client.Connection, auth *bind.TransactOpts) (network.Network, error) {
-	net, err := NewNetwork(conn.NetworkAddress, bind.ContractBackend(conn.Client))
+func NewEthereumNetwork(conn client.Conn, auth *bind.TransactOpts) (swap.Network, error) {
+	net, err := bindings.NewAtomNetwork(conn.NetworkAddress(), bind.ContractBackend(conn.Client()))
 	if err != nil {
-		return &EthereumNetwork{}, err
+		return &ethereumNetwork{}, err
 	}
-	return &EthereumNetwork{
+	return &ethereumNetwork{
 		conn: conn,
 		auth: auth,
 		net:  net,
-		ctx:  context,
+		ctx:  context.Background(),
 	}, nil
 }
 
-func (net EthereumNetwork) Send(orderID [32]byte, swapDetails []byte) error {
+func (net *ethereumNetwork) SendSwapDetails(orderID [32]byte, swapDetails []byte) error {
+	net.auth.GasLimit = 3000000
 	tx, err := net.net.SubmitDetails(net.auth, orderID, swapDetails)
 	if err != nil {
 		return err
 	}
+
 	_, err = net.conn.PatchedWaitMined(net.ctx, tx)
 	return err
 }
 
-func (net EthereumNetwork) Recieve(orderID [32]byte) ([]byte, error) {
-	return net.net.SwapDetails(&bind.CallOpts{}, orderID)
+func (net *ethereumNetwork) RecieveSwapDetails(orderID [32]byte) ([]byte, error) {
+	for {
+		swap, err := net.net.SwapDetails(&bind.CallOpts{}, orderID)
+		if err != nil {
+			break
+		}
+		if bytes.Compare(swap, []byte{}) != 0 {
+			return net.net.SwapDetails(&bind.CallOpts{}, orderID)
+		}
+	}
+	return []byte{}, errors.New("Failed to get swap details")
 }
