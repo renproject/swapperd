@@ -1,46 +1,59 @@
 package ethwallet
 
 import (
-	"errors"
-	"math/big"
+	"context"
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	bindings "github.com/republicprotocol/atom-go/adapters/bindings/eth"
-	ethclient "github.com/republicprotocol/atom-go/adapters/clients/eth"
-	"github.com/republicprotocol/atom-go/services/swap"
+	client "github.com/republicprotocol/atom-go/adapters/clients/eth"
+	"github.com/republicprotocol/atom-go/domains/match"
 	"github.com/republicprotocol/atom-go/services/watch"
 )
 
-type EthWallet struct {
-	wallet bindings.AtomWallet
+type ethereumWallet struct {
+	wallet *bindings.AtomWallet
 	auth   bind.TransactOpts
+	conn   client.Conn
 }
 
-func NewEthereumWallet(conn ethclient.Conn, auth bind.TransactOpts) watch.Wallet {
-	wallet, err := bindings.NewAtomWallet(conn.WalletAddress, conn.Client)
+func NewEthereumWallet(conn client.Conn, auth bind.TransactOpts) (watch.Wallet, error) {
+	wallet, err := bindings.NewAtomWallet(conn.WalletAddress(), bind.ContractBackend(conn.Client()))
 
-	return EthWallet{
+	if err != nil {
+		return nil, err
+	}
+	return &ethereumWallet{
 		wallet: wallet,
 		auth:   auth,
-	}
+		conn:   conn,
+	}, nil
 }
 
-func (wallet *EthWallet) WaitForMatch(orderID [32]byte) ([32]byte, error) {
-	now := time.Now()
-	for time.Now().After(now.Add(48 * time.Hour)) {
-		foreignOrderID, err := wallet.wallet.Matches(&bind.CallOpts{}, orderID)
-		if foreignOrderID != [32]byte{} {
-			return foreignOrderID, nil
+func (wallet *ethereumWallet) GetMatch(personalOrderID [32]byte) (match.Match, error) {
+	for {
+		time.Sleep(2 * time.Second)
+		buyID, sellID, buyToken, sellToken, buyValue, sellValue, err := wallet.wallet.GetSettlementDetails(&bind.CallOpts{}, personalOrderID)
+		if err != nil {
+			fmt.Println(err)
+			continue
 		}
-		time.Sleep(5 * time.Second)
+		if buyID == [32]byte{} {
+			continue
+		}
+		return match.NewMatch(buyID, sellID, sellValue, buyValue, sellToken, buyToken), nil
 	}
-	return [32]byte{}, errors.New("Order Expired")
+	// return nil, errors.New("Failed to get match")
 }
 
-func (wallet *EthWallet) GetMatch(personalOrderID [32]byte, foreignOrderID [32]byte) (swap.OrderMatch, error) {
-	personalOrder, err := wallet.wallet.Orders(&bind.CallOpts{}, personalOrderID)
-	foreignOrder, err := wallet.wallet.Orders(&bind.CallOpts{}, foreignOrderID)
-
-	personalPrice, personalVolume, 
+func (wallet *ethereumWallet) SetMatch(match match.Match) error {
+	wallet.auth.GasLimit = 3000000
+	fmt.Println(match.PersonalOrderID(), match.ForeignOrderID())
+	tx, err := wallet.wallet.SetSettlementDetails(&wallet.auth, match.PersonalOrderID(), match.ForeignOrderID(), match.RecieveCurrency(), match.SendCurrency(), match.RecieveValue(), match.SendValue())
+	if err != nil {
+		return err
+	}
+	_, err = wallet.conn.PatchedWaitMined(context.Background(), tx)
+	return err
 }
