@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	bindings "github.com/republicprotocol/atom-go/adapters/bindings/eth"
@@ -22,13 +24,14 @@ type EthereumResponseAtom struct {
 }
 
 // NewEthereumResponseAtom returns a new Ethereum ResponseAtom instance
-func NewEthereumResponseAtom(context context.Context, client ethclient.Conn, auth *bind.TransactOpts) (swap.AtomResponder, error) {
-	contract, err := bindings.NewAtomSwap(client.AtomAddress, bind.ContractBackend(client.Client))
+func NewEthereumResponseAtom(client ethclient.Conn, auth *bind.TransactOpts) (swap.AtomResponder, error) {
+	contract, err := bindings.NewAtomSwap(client.AtomAddress(), bind.ContractBackend(client.Client()))
 	if err != nil {
 		return &EthereumResponseAtom{}, err
 	}
+
 	return &EthereumResponseAtom{
-		context: context,
+		context: context.Background(),
 		client:  client,
 		auth:    auth,
 		binding: contract,
@@ -46,28 +49,37 @@ func (eth *EthereumResponseAtom) Redeem(secret [32]byte) error {
 
 // Audit an Atom swap by calling a function on ethereum
 func (eth *EthereumResponseAtom) Audit(hash [32]byte, to []byte, value *big.Int, expiry int64) error {
-	auditReport, err := eth.binding.Audit(&bind.CallOpts{}, eth.data.SwapID)
-	if err != nil {
-		return err
+	for start := time.Now(); time.Since(start) < 24*time.Hour; {
+
+		auditReport, err := eth.binding.Audit(&bind.CallOpts{}, eth.data.SwapID)
+		if auditReport.SecretLock == [32]byte{} {
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		if err != nil {
+			return err
+		}
+
+		if hash != auditReport.SecretLock {
+			eth.data.HashLock = auditReport.SecretLock
+			// return fmt.Errorf("HashLock mismatch %v %v", hash, auditReport.SecretLock)
+		}
+
+		if bytes.Compare(to, auditReport.To.Bytes()) != 0 {
+			return fmt.Errorf("Eth: To Address mismatch %v %v", to, auditReport.To.Bytes())
+		}
+
+		// if value.Cmp(auditReport.Value) > 0 {
+		// 	return errors.New("Value mismatch")
+		// }
+
+		// if expiry > (auditReport.Timelock.Int64() - time.Now().Unix()) {
+		// 	return errors.New("Expiry mismatch")
+		// }
+		return nil
 	}
-
-	if hash != auditReport.SecretLock {
-		return errors.New("HashLock mismatch")
-	}
-
-	if bytes.Compare(to, auditReport.To.Bytes()) != 0 {
-		return errors.New("To Address mismatch")
-	}
-
-	// if value.Cmp(auditReport.Value) > 0 {
-	// 	return errors.New("Value mismatch")
-	// }
-
-	// if expiry > (auditReport.Timelock.Int64() - time.Now().Unix()) {
-	// 	return errors.New("Expiry mismatch")
-	// }
-
-	return nil
+	return errors.New("Audit failed")
 }
 
 // Serialize serializes the atom details into a bytes array
