@@ -12,132 +12,37 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	bindings "github.com/republicprotocol/atom-go/adapters/bindings/eth"
+	"github.com/republicprotocol/atom-go/adapters/config"
 )
 
-// Conn is the ethereum client connection object
 type Conn struct {
-	Network        string
-	Client         *ethclient.Client
-	AtomAddress    common.Address
-	NetworkAddress common.Address
-	WalletAddress  common.Address
-	InfoAddress    common.Address
+	network        string
+	client         *ethclient.Client
+	atomAddress    common.Address
+	networkAddress common.Address
+	walletAddress  common.Address
+	infoAddress    common.Address
 }
 
 // Connect to an ethereum network.
-func Connect(chain string) (Conn, error) {
-	var config Config
-
-	config, err := readConfig(chain)
-	ethclient, err := ethclient.Dial(config.URL)
+func Connect(config config.Config) (Conn, error) {
+	ethclient, err := ethclient.Dial(config.Ethereum.URL)
 	if err != nil {
 		return Conn{}, err
 	}
 
 	return Conn{
-		Network:        config.Chain,
-		Client:         ethclient,
-		AtomAddress:    common.HexToAddress(config.AtomAddress),
-		NetworkAddress: common.HexToAddress(config.NetworkAddress),
-		InfoAddress:    common.HexToAddress(config.InfoAddress),
-		WalletAddress:  common.HexToAddress(config.WalletAddress),
+		client:         ethclient,
+		network:        config.Ethereum.Chain,
+		atomAddress:    common.HexToAddress(config.Ethereum.AtomAddress),
+		networkAddress: common.HexToAddress(config.Ethereum.NetworkAddress),
+		infoAddress:    common.HexToAddress(config.Ethereum.InfoAddress),
+		walletAddress:  common.HexToAddress(config.Ethereum.WalletAddress),
 	}, nil
 }
 
-// NewConn Deploys all the contracts to the given ethereum network and creates a connection.
-func NewConn(chain string) (Conn, error) {
-
-	var conn Conn
-
-	keyStore, err := readKeyStore(chain)
-	if err != nil {
-		return conn, err
-	}
-
-	ethclient, err := ethclient.Dial(keyStore.URL)
-	if err != nil {
-		return conn, err
-	}
-
-	conn = Conn{
-		Network: chain,
-		Client:  ethclient,
-	}
-
-	ownerECDSA, err := crypto.HexToECDSA(keyStore.PrivateKey)
-	if err != nil {
-		return conn, err
-	}
-	owner := bind.NewKeyedTransactor(ownerECDSA)
-
-	// Deploy Atom contract
-	AtomAddress, tx, _, err := bindings.DeployAtomSwap(owner, ethclient)
-	if err != nil {
-		return conn, err
-	}
-
-	_, err = conn.PatchedWaitDeployed(context.Background(), tx)
-	if err != nil {
-		return conn, err
-	}
-
-	// Deploy Network contract
-	NetworkAddress, tx, _, err := bindings.DeployAtomNetwork(owner, ethclient)
-	if err != nil {
-		return conn, err
-	}
-
-	_, err = conn.PatchedWaitDeployed(context.Background(), tx)
-	if err != nil {
-		return conn, err
-	}
-
-	// Deploy Info contract
-	InfoAddress, tx, _, err := bindings.DeployAtomInfo(owner, ethclient)
-	if err != nil {
-		return conn, err
-	}
-
-	_, err = conn.PatchedWaitDeployed(context.Background(), tx)
-	if err != nil {
-		return conn, err
-	}
-
-	// Deploy Wallet contract
-	WalletAddress, tx, _, err := bindings.DeployAtomWallet(owner, ethclient)
-	if err != nil {
-		return conn, err
-	}
-
-	_, err = conn.PatchedWaitDeployed(context.Background(), tx)
-	if err != nil {
-		return conn, err
-	}
-
-	config := Config{
-		Chain:          keyStore.Chain,
-		URL:            keyStore.URL,
-		AtomAddress:    AtomAddress.Hex(),
-		NetworkAddress: NetworkAddress.Hex(),
-		InfoAddress:    InfoAddress.Hex(),
-		WalletAddress:  WalletAddress.Hex(),
-	}
-
-	err = writeConfig(config)
-
-	return Conn{
-		Network:        keyStore.Chain,
-		Client:         ethclient,
-		AtomAddress:    AtomAddress,
-		NetworkAddress: NetworkAddress,
-		WalletAddress:  WalletAddress,
-		InfoAddress:    InfoAddress,
-	}, err
-}
-
-// NewAccount creates a new account and funds it wit ether
-func (b *Conn) NewAccount(value int64) (common.Address, *bind.TransactOpts, error) {
+// NewAccount creates a new account and funds it with ether
+func (b *Conn) NewAccount(value int64, from *bind.TransactOpts) (common.Address, *bind.TransactOpts, error) {
 	account, err := crypto.GenerateKey()
 	if err != nil {
 		return common.Address{}, &bind.TransactOpts{}, err
@@ -146,22 +51,11 @@ func (b *Conn) NewAccount(value int64) (common.Address, *bind.TransactOpts, erro
 	accountAddress := crypto.PubkeyToAddress(account.PublicKey)
 	accountAuth := bind.NewKeyedTransactor(account)
 
-	return accountAddress, accountAuth, b.Transfer(accountAddress, value)
+	return accountAddress, accountAuth, b.Transfer(accountAddress, from, value)
 }
 
 // Transfer is a helper function for sending ETH to an address
-func (b *Conn) Transfer(to common.Address, value int64) error {
-	fromKeyStore, err := readKeyStore(b.Network)
-	if err != nil {
-		return err
-	}
-
-	fromECDSA, err := crypto.HexToECDSA(fromKeyStore.PrivateKey)
-	if err != nil {
-		return err
-	}
-	from := bind.NewKeyedTransactor(fromECDSA)
-
+func (b *Conn) Transfer(to common.Address, from *bind.TransactOpts, value int64) error {
 	transactor := &bind.TransactOpts{
 		From:     from.From,
 		Nonce:    from.Nonce,
@@ -173,7 +67,7 @@ func (b *Conn) Transfer(to common.Address, value int64) error {
 	}
 
 	// Why is there no ethclient.Transfer?
-	bound := bind.NewBoundContract(to, abi.ABI{}, nil, b.Client, nil)
+	bound := bind.NewBoundContract(to, abi.ABI{}, nil, b.client, nil)
 	tx, err := bound.Transfer(transactor)
 	if err != nil {
 		return err
@@ -188,12 +82,12 @@ func (b *Conn) Transfer(to common.Address, value int64) error {
 // TODO: THIS DOES NOT WORK WITH PARITY, WHICH SENDS A TRANSACTION RECEIPT UPON
 // RECEIVING A TX, NOT AFTER IT'S MINED
 func (b *Conn) PatchedWaitMined(ctx context.Context, tx *types.Transaction) (*types.Receipt, error) {
-	switch b.Network {
+	switch b.network {
 	case "ganache":
 		time.Sleep(100 * time.Millisecond)
 		return nil, nil
 	default:
-		return bind.WaitMined(ctx, b.Client, tx)
+		return bind.WaitMined(ctx, b.client, tx)
 	}
 }
 
@@ -203,11 +97,35 @@ func (b *Conn) PatchedWaitMined(ctx context.Context, tx *types.Transaction) (*ty
 // TODO: THIS DOES NOT WORK WITH PARITY, WHICH SENDS A TRANSACTION RECEIPT UPON
 // RECEIVING A TX, NOT AFTER IT'S MINED
 func (b *Conn) PatchedWaitDeployed(ctx context.Context, tx *types.Transaction) (common.Address, error) {
-	switch b.Network {
+	switch b.network {
 	case "ganache":
 		time.Sleep(100 * time.Millisecond)
 		return common.Address{}, nil
 	default:
-		return bind.WaitDeployed(ctx, b.Client, tx)
+		return bind.WaitDeployed(ctx, b.client, tx)
 	}
+}
+
+func (conn *Conn) AtomAddress() common.Address {
+	return conn.atomAddress
+}
+
+func (conn *Conn) NetworkAddress() common.Address {
+	return conn.networkAddress
+}
+
+func (conn *Conn) WalletAddress() common.Address {
+	return conn.walletAddress
+}
+
+func (conn *Conn) InfoAddress() common.Address {
+	return conn.infoAddress
+}
+
+func (conn *Conn) Network() string {
+	return conn.network
+}
+
+func (conn *Conn) Client() *ethclient.Client {
+	return conn.client
 }
