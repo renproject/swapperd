@@ -49,8 +49,10 @@
   packages = ["."]
   revision = "31079b6807923eb23992c421b114992b95131b55"
 
-[[projects]]
+[[prune.project]]
   name = "github.com/ethereum/go-ethereum"
+  non-go = false
+  unused-packages = false
   packages = [
     ".",
     "accounts",
@@ -195,19 +197,6 @@
   packages = ["."]
   revision = "e790cca94e6cc75c7064b1332e63811d4aae1a53"
   version = "v1.1"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/republicprotocol/republic-go"
-  packages = [
-    "crypto",
-    "identity",
-    "order",
-    "shamir",
-    "stackint",
-    "stackint/asm"
-  ]
-  revision = "0459026fa35d332e76585086289c98aedb4c1fb8"
 
 [[projects]]
   branch = "master"
