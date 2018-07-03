@@ -14,10 +14,10 @@ import (
 )
 
 // AtomWalletABI is the input ABI used to generate the binding from.
-const AtomWalletABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"_id\",\"type\":\"bytes32\"},{\"name\":\"_orderType\",\"type\":\"uint8\"},{\"name\":\"_parity\",\"type\":\"uint8\"},{\"name\":\"_expiry\",\"type\":\"uint64\"},{\"name\":\"_tokens\",\"type\":\"uint64\"},{\"name\":\"_priceC\",\"type\":\"uint16\"},{\"name\":\"_priceQ\",\"type\":\"uint16\"},{\"name\":\"_volumeC\",\"type\":\"uint16\"},{\"name\":\"_volumeQ\",\"type\":\"uint16\"},{\"name\":\"_minimumVolumeC\",\"type\":\"uint16\"},{\"name\":\"_minimumVolumeQ\",\"type\":\"uint16\"},{\"name\":\"_nonceHash\",\"type\":\"uint256\"}],\"name\":\"submitOrder\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_buy\",\"type\":\"bytes32\"},{\"name\":\"_sell\",\"type\":\"bytes32\"}],\"name\":\"submitMatch\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"withdraw\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"orders\",\"outputs\":[{\"name\":\"parity\",\"type\":\"uint8\"},{\"name\":\"orderType\",\"type\":\"uint8\"},{\"name\":\"expiry\",\"type\":\"uint64\"},{\"name\":\"tokens\",\"type\":\"uint64\"},{\"name\":\"priceC\",\"type\":\"uint256\"},{\"name\":\"priceQ\",\"type\":\"uint256\"},{\"name\":\"volumeC\",\"type\":\"uint256\"},{\"name\":\"volumeQ\",\"type\":\"uint256\"},{\"name\":\"minimumVolumeC\",\"type\":\"uint256\"},{\"name\":\"minimumVolumeQ\",\"type\":\"uint256\"},{\"name\":\"nonceHash\",\"type\":\"uint256\"},{\"name\":\"trader\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"matches\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"bonds\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"}]"
+const AtomWalletABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"_buyID\",\"type\":\"bytes32\"},{\"name\":\"_sellID\",\"type\":\"bytes32\"},{\"name\":\"_buyToken\",\"type\":\"uint32\"},{\"name\":\"_sellToken\",\"type\":\"uint32\"},{\"name\":\"_buyValue\",\"type\":\"uint256\"},{\"name\":\"_sellValue\",\"type\":\"uint256\"}],\"name\":\"setSettlementDetails\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"orderID\",\"type\":\"bytes32\"}],\"name\":\"getSettlementDetails\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"},{\"name\":\"\",\"type\":\"bytes32\"},{\"name\":\"\",\"type\":\"uint32\"},{\"name\":\"\",\"type\":\"uint32\"},{\"name\":\"\",\"type\":\"uint256\"},{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // AtomWalletBin is the compiled bytecode used for deploying new contracts.
-const AtomWalletBin = `0x608060405234801561001057600080fd5b50610545806100206000396000f3006080604052600436106100775763ffffffff7c0100000000000000000000000000000000000000000000000000000000600035041663177d19c3811461008e5780632a337d30146100f35780632e1a7d4d1461010e5780639c3f1e90146101265780639fe9ada3146101c6578063fe10d774146101f0575b336000908152600260205260409020805434019055005b34801561009a57600080fd5b506100f160043560ff6024358116906044351667ffffffffffffffff6064358116906084351661ffff60a43581169060c43581169060e435811690610104358116906101243581169061014435166101643561021e565b005b3480156100ff57600080fd5b506100f1600435602435610416565b34801561011a57600080fd5b506100f160043561042f565b34801561013257600080fd5b5061013e600435610464565b6040805160ff9d8e1681529b909c1660208c015267ffffffffffffffff998a168b8d01529790981660608a0152608089019590955260a088019390935260c087019190915260e086015261010085015261012084015261014083019190915273ffffffffffffffffffffffffffffffffffffffff166101608201529051908190036101800190f35b3480156101d257600080fd5b506101de6004356104f5565b60408051918252519081900360200190f35b3480156101fc57600080fd5b506101de73ffffffffffffffffffffffffffffffffffffffff60043516610507565b610180604051908101604052808b60ff1681526020018c60ff1681526020018a67ffffffffffffffff1681526020018967ffffffffffffffff1681526020018861ffff1681526020018761ffff1681526020018661ffff1681526020018561ffff1681526020018461ffff1681526020018361ffff168152602001828152602001600073ffffffffffffffffffffffffffffffffffffffff168152506000808e6000191660001916815260200190815260200160002060008201518160000160006101000a81548160ff021916908360ff16021790555060208201518160000160016101000a81548160ff021916908360ff16021790555060408201518160000160026101000a81548167ffffffffffffffff021916908367ffffffffffffffff160217905550606082015181600001600a6101000a81548167ffffffffffffffff021916908367ffffffffffffffff1602179055506080820151816001015560a0820151816002015560c0820151816003015560e082015181600401556101008201518160050155610120820151816006015561014082015181600701556101608201518160080160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550905050505050505050505050505050565b6000828152600160205260408082208390559181522055565b3360009081526002602052604090205481111561044b57600080fd5b3360009081526002602052604090208054919091039055565b60006020819052908152604090208054600182015460028301546003840154600485015460058601546006870154600788015460089098015460ff808916996101008a049091169867ffffffffffffffff6201000082048116996a010000000000000000000090920416979096909590949093909290919073ffffffffffffffffffffffffffffffffffffffff168c565b60016020526000908152604090205481565b600260205260009081526040902054815600a165627a7a72305820acdafd20a9a9fb97b6d823efefa00b06a540efd2543e62eeb6d6d5444324b4ef0029`
+const AtomWalletBin = `0x608060405234801561001057600080fd5b5061030e806100206000396000f30060806040526004361061004b5763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416634150281d81146100505780636b195d3714610082575b600080fd5b34801561005c57600080fd5b5061008060043560243563ffffffff6044358116906064351660843560a4356100d6565b005b34801561008e57600080fd5b5061009a6004356102a0565b60408051968752602087019590955263ffffffff93841686860152919092166060850152608084019190915260a0830152519081900360c00190f35b60c06040519081016040528087600019168152602001866000191681526020018563ffffffff1681526020018463ffffffff168152602001838152602001828152506000808860001916600019168152602001908152602001600020600082015181600001906000191690556020820151816001019060001916905560408201518160020160006101000a81548163ffffffff021916908363ffffffff16021790555060608201518160020160046101000a81548163ffffffff021916908363ffffffff1602179055506080820151816003015560a0820151816004015590505060c06040519081016040528086600019168152602001876000191681526020018463ffffffff1681526020018563ffffffff168152602001828152602001838152506000808760001916600019168152602001908152602001600020600082015181600001906000191690556020820151816001019060001916905560408201518160020160006101000a81548163ffffffff021916908363ffffffff16021790555060608201518160020160046101000a81548163ffffffff021916908363ffffffff1602179055506080820151816003015560a08201518160040155905050505050505050565b600090815260208190526040902080546001820154600283015460038401546004909401549294919363ffffffff8083169464010000000090930416929091905600a165627a7a723058203f79d43d1c79a7ccef7bea2aa54a5f00aace7dcb9ac2cba4f53d0c5a53a299ae0029`
 
 // DeployAtomWallet deploys a new Ethereum contract, binding an instance of AtomWallet to it.
 func DeployAtomWallet(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *AtomWallet, error) {
@@ -174,193 +174,61 @@ func (_AtomWallet *AtomWalletTransactorRaw) Transact(opts *bind.TransactOpts, me
 	return _AtomWallet.Contract.contract.Transact(opts, method, params...)
 }
 
-// Bonds is a free data retrieval call binding the contract method 0xfe10d774.
+// GetSettlementDetails is a free data retrieval call binding the contract method 0x6b195d37.
 //
-// Solidity: function bonds( address) constant returns(uint256)
-func (_AtomWallet *AtomWalletCaller) Bonds(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _AtomWallet.contract.Call(opts, out, "bonds", arg0)
-	return *ret0, err
-}
-
-// Bonds is a free data retrieval call binding the contract method 0xfe10d774.
-//
-// Solidity: function bonds( address) constant returns(uint256)
-func (_AtomWallet *AtomWalletSession) Bonds(arg0 common.Address) (*big.Int, error) {
-	return _AtomWallet.Contract.Bonds(&_AtomWallet.CallOpts, arg0)
-}
-
-// Bonds is a free data retrieval call binding the contract method 0xfe10d774.
-//
-// Solidity: function bonds( address) constant returns(uint256)
-func (_AtomWallet *AtomWalletCallerSession) Bonds(arg0 common.Address) (*big.Int, error) {
-	return _AtomWallet.Contract.Bonds(&_AtomWallet.CallOpts, arg0)
-}
-
-// Matches is a free data retrieval call binding the contract method 0x9fe9ada3.
-//
-// Solidity: function matches( bytes32) constant returns(bytes32)
-func (_AtomWallet *AtomWalletCaller) Matches(opts *bind.CallOpts, arg0 [32]byte) ([32]byte, error) {
+// Solidity: function getSettlementDetails(orderID bytes32) constant returns(bytes32, bytes32, uint32, uint32, uint256, uint256)
+func (_AtomWallet *AtomWalletCaller) GetSettlementDetails(opts *bind.CallOpts, orderID [32]byte) ([32]byte, [32]byte, uint32, uint32, *big.Int, *big.Int, error) {
 	var (
 		ret0 = new([32]byte)
+		ret1 = new([32]byte)
+		ret2 = new(uint32)
+		ret3 = new(uint32)
+		ret4 = new(*big.Int)
+		ret5 = new(*big.Int)
 	)
-	out := ret0
-	err := _AtomWallet.contract.Call(opts, out, "matches", arg0)
-	return *ret0, err
+	out := &[]interface{}{
+		ret0,
+		ret1,
+		ret2,
+		ret3,
+		ret4,
+		ret5,
+	}
+	err := _AtomWallet.contract.Call(opts, out, "getSettlementDetails", orderID)
+	return *ret0, *ret1, *ret2, *ret3, *ret4, *ret5, err
 }
 
-// Matches is a free data retrieval call binding the contract method 0x9fe9ada3.
+// GetSettlementDetails is a free data retrieval call binding the contract method 0x6b195d37.
 //
-// Solidity: function matches( bytes32) constant returns(bytes32)
-func (_AtomWallet *AtomWalletSession) Matches(arg0 [32]byte) ([32]byte, error) {
-	return _AtomWallet.Contract.Matches(&_AtomWallet.CallOpts, arg0)
+// Solidity: function getSettlementDetails(orderID bytes32) constant returns(bytes32, bytes32, uint32, uint32, uint256, uint256)
+func (_AtomWallet *AtomWalletSession) GetSettlementDetails(orderID [32]byte) ([32]byte, [32]byte, uint32, uint32, *big.Int, *big.Int, error) {
+	return _AtomWallet.Contract.GetSettlementDetails(&_AtomWallet.CallOpts, orderID)
 }
 
-// Matches is a free data retrieval call binding the contract method 0x9fe9ada3.
+// GetSettlementDetails is a free data retrieval call binding the contract method 0x6b195d37.
 //
-// Solidity: function matches( bytes32) constant returns(bytes32)
-func (_AtomWallet *AtomWalletCallerSession) Matches(arg0 [32]byte) ([32]byte, error) {
-	return _AtomWallet.Contract.Matches(&_AtomWallet.CallOpts, arg0)
+// Solidity: function getSettlementDetails(orderID bytes32) constant returns(bytes32, bytes32, uint32, uint32, uint256, uint256)
+func (_AtomWallet *AtomWalletCallerSession) GetSettlementDetails(orderID [32]byte) ([32]byte, [32]byte, uint32, uint32, *big.Int, *big.Int, error) {
+	return _AtomWallet.Contract.GetSettlementDetails(&_AtomWallet.CallOpts, orderID)
 }
 
-// Orders is a free data retrieval call binding the contract method 0x9c3f1e90.
+// SetSettlementDetails is a paid mutator transaction binding the contract method 0x4150281d.
 //
-// Solidity: function orders( bytes32) constant returns(parity uint8, orderType uint8, expiry uint64, tokens uint64, priceC uint256, priceQ uint256, volumeC uint256, volumeQ uint256, minimumVolumeC uint256, minimumVolumeQ uint256, nonceHash uint256, trader address)
-func (_AtomWallet *AtomWalletCaller) Orders(opts *bind.CallOpts, arg0 [32]byte) (struct {
-	Parity         uint8
-	OrderType      uint8
-	Expiry         uint64
-	Tokens         uint64
-	PriceC         *big.Int
-	PriceQ         *big.Int
-	VolumeC        *big.Int
-	VolumeQ        *big.Int
-	MinimumVolumeC *big.Int
-	MinimumVolumeQ *big.Int
-	NonceHash      *big.Int
-	Trader         common.Address
-}, error) {
-	ret := new(struct {
-		Parity         uint8
-		OrderType      uint8
-		Expiry         uint64
-		Tokens         uint64
-		PriceC         *big.Int
-		PriceQ         *big.Int
-		VolumeC        *big.Int
-		VolumeQ        *big.Int
-		MinimumVolumeC *big.Int
-		MinimumVolumeQ *big.Int
-		NonceHash      *big.Int
-		Trader         common.Address
-	})
-	out := ret
-	err := _AtomWallet.contract.Call(opts, out, "orders", arg0)
-	return *ret, err
+// Solidity: function setSettlementDetails(_buyID bytes32, _sellID bytes32, _buyToken uint32, _sellToken uint32, _buyValue uint256, _sellValue uint256) returns()
+func (_AtomWallet *AtomWalletTransactor) SetSettlementDetails(opts *bind.TransactOpts, _buyID [32]byte, _sellID [32]byte, _buyToken uint32, _sellToken uint32, _buyValue *big.Int, _sellValue *big.Int) (*types.Transaction, error) {
+	return _AtomWallet.contract.Transact(opts, "setSettlementDetails", _buyID, _sellID, _buyToken, _sellToken, _buyValue, _sellValue)
 }
 
-// Orders is a free data retrieval call binding the contract method 0x9c3f1e90.
+// SetSettlementDetails is a paid mutator transaction binding the contract method 0x4150281d.
 //
-// Solidity: function orders( bytes32) constant returns(parity uint8, orderType uint8, expiry uint64, tokens uint64, priceC uint256, priceQ uint256, volumeC uint256, volumeQ uint256, minimumVolumeC uint256, minimumVolumeQ uint256, nonceHash uint256, trader address)
-func (_AtomWallet *AtomWalletSession) Orders(arg0 [32]byte) (struct {
-	Parity         uint8
-	OrderType      uint8
-	Expiry         uint64
-	Tokens         uint64
-	PriceC         *big.Int
-	PriceQ         *big.Int
-	VolumeC        *big.Int
-	VolumeQ        *big.Int
-	MinimumVolumeC *big.Int
-	MinimumVolumeQ *big.Int
-	NonceHash      *big.Int
-	Trader         common.Address
-}, error) {
-	return _AtomWallet.Contract.Orders(&_AtomWallet.CallOpts, arg0)
+// Solidity: function setSettlementDetails(_buyID bytes32, _sellID bytes32, _buyToken uint32, _sellToken uint32, _buyValue uint256, _sellValue uint256) returns()
+func (_AtomWallet *AtomWalletSession) SetSettlementDetails(_buyID [32]byte, _sellID [32]byte, _buyToken uint32, _sellToken uint32, _buyValue *big.Int, _sellValue *big.Int) (*types.Transaction, error) {
+	return _AtomWallet.Contract.SetSettlementDetails(&_AtomWallet.TransactOpts, _buyID, _sellID, _buyToken, _sellToken, _buyValue, _sellValue)
 }
 
-// Orders is a free data retrieval call binding the contract method 0x9c3f1e90.
+// SetSettlementDetails is a paid mutator transaction binding the contract method 0x4150281d.
 //
-// Solidity: function orders( bytes32) constant returns(parity uint8, orderType uint8, expiry uint64, tokens uint64, priceC uint256, priceQ uint256, volumeC uint256, volumeQ uint256, minimumVolumeC uint256, minimumVolumeQ uint256, nonceHash uint256, trader address)
-func (_AtomWallet *AtomWalletCallerSession) Orders(arg0 [32]byte) (struct {
-	Parity         uint8
-	OrderType      uint8
-	Expiry         uint64
-	Tokens         uint64
-	PriceC         *big.Int
-	PriceQ         *big.Int
-	VolumeC        *big.Int
-	VolumeQ        *big.Int
-	MinimumVolumeC *big.Int
-	MinimumVolumeQ *big.Int
-	NonceHash      *big.Int
-	Trader         common.Address
-}, error) {
-	return _AtomWallet.Contract.Orders(&_AtomWallet.CallOpts, arg0)
-}
-
-// SubmitMatch is a paid mutator transaction binding the contract method 0x2a337d30.
-//
-// Solidity: function submitMatch(_buy bytes32, _sell bytes32) returns()
-func (_AtomWallet *AtomWalletTransactor) SubmitMatch(opts *bind.TransactOpts, _buy [32]byte, _sell [32]byte) (*types.Transaction, error) {
-	return _AtomWallet.contract.Transact(opts, "submitMatch", _buy, _sell)
-}
-
-// SubmitMatch is a paid mutator transaction binding the contract method 0x2a337d30.
-//
-// Solidity: function submitMatch(_buy bytes32, _sell bytes32) returns()
-func (_AtomWallet *AtomWalletSession) SubmitMatch(_buy [32]byte, _sell [32]byte) (*types.Transaction, error) {
-	return _AtomWallet.Contract.SubmitMatch(&_AtomWallet.TransactOpts, _buy, _sell)
-}
-
-// SubmitMatch is a paid mutator transaction binding the contract method 0x2a337d30.
-//
-// Solidity: function submitMatch(_buy bytes32, _sell bytes32) returns()
-func (_AtomWallet *AtomWalletTransactorSession) SubmitMatch(_buy [32]byte, _sell [32]byte) (*types.Transaction, error) {
-	return _AtomWallet.Contract.SubmitMatch(&_AtomWallet.TransactOpts, _buy, _sell)
-}
-
-// SubmitOrder is a paid mutator transaction binding the contract method 0x177d19c3.
-//
-// Solidity: function submitOrder(_id bytes32, _orderType uint8, _parity uint8, _expiry uint64, _tokens uint64, _priceC uint16, _priceQ uint16, _volumeC uint16, _volumeQ uint16, _minimumVolumeC uint16, _minimumVolumeQ uint16, _nonceHash uint256) returns()
-func (_AtomWallet *AtomWalletTransactor) SubmitOrder(opts *bind.TransactOpts, _id [32]byte, _orderType uint8, _parity uint8, _expiry uint64, _tokens uint64, _priceC uint16, _priceQ uint16, _volumeC uint16, _volumeQ uint16, _minimumVolumeC uint16, _minimumVolumeQ uint16, _nonceHash *big.Int) (*types.Transaction, error) {
-	return _AtomWallet.contract.Transact(opts, "submitOrder", _id, _orderType, _parity, _expiry, _tokens, _priceC, _priceQ, _volumeC, _volumeQ, _minimumVolumeC, _minimumVolumeQ, _nonceHash)
-}
-
-// SubmitOrder is a paid mutator transaction binding the contract method 0x177d19c3.
-//
-// Solidity: function submitOrder(_id bytes32, _orderType uint8, _parity uint8, _expiry uint64, _tokens uint64, _priceC uint16, _priceQ uint16, _volumeC uint16, _volumeQ uint16, _minimumVolumeC uint16, _minimumVolumeQ uint16, _nonceHash uint256) returns()
-func (_AtomWallet *AtomWalletSession) SubmitOrder(_id [32]byte, _orderType uint8, _parity uint8, _expiry uint64, _tokens uint64, _priceC uint16, _priceQ uint16, _volumeC uint16, _volumeQ uint16, _minimumVolumeC uint16, _minimumVolumeQ uint16, _nonceHash *big.Int) (*types.Transaction, error) {
-	return _AtomWallet.Contract.SubmitOrder(&_AtomWallet.TransactOpts, _id, _orderType, _parity, _expiry, _tokens, _priceC, _priceQ, _volumeC, _volumeQ, _minimumVolumeC, _minimumVolumeQ, _nonceHash)
-}
-
-// SubmitOrder is a paid mutator transaction binding the contract method 0x177d19c3.
-//
-// Solidity: function submitOrder(_id bytes32, _orderType uint8, _parity uint8, _expiry uint64, _tokens uint64, _priceC uint16, _priceQ uint16, _volumeC uint16, _volumeQ uint16, _minimumVolumeC uint16, _minimumVolumeQ uint16, _nonceHash uint256) returns()
-func (_AtomWallet *AtomWalletTransactorSession) SubmitOrder(_id [32]byte, _orderType uint8, _parity uint8, _expiry uint64, _tokens uint64, _priceC uint16, _priceQ uint16, _volumeC uint16, _volumeQ uint16, _minimumVolumeC uint16, _minimumVolumeQ uint16, _nonceHash *big.Int) (*types.Transaction, error) {
-	return _AtomWallet.Contract.SubmitOrder(&_AtomWallet.TransactOpts, _id, _orderType, _parity, _expiry, _tokens, _priceC, _priceQ, _volumeC, _volumeQ, _minimumVolumeC, _minimumVolumeQ, _nonceHash)
-}
-
-// Withdraw is a paid mutator transaction binding the contract method 0x2e1a7d4d.
-//
-// Solidity: function withdraw(_amount uint256) returns()
-func (_AtomWallet *AtomWalletTransactor) Withdraw(opts *bind.TransactOpts, _amount *big.Int) (*types.Transaction, error) {
-	return _AtomWallet.contract.Transact(opts, "withdraw", _amount)
-}
-
-// Withdraw is a paid mutator transaction binding the contract method 0x2e1a7d4d.
-//
-// Solidity: function withdraw(_amount uint256) returns()
-func (_AtomWallet *AtomWalletSession) Withdraw(_amount *big.Int) (*types.Transaction, error) {
-	return _AtomWallet.Contract.Withdraw(&_AtomWallet.TransactOpts, _amount)
-}
-
-// Withdraw is a paid mutator transaction binding the contract method 0x2e1a7d4d.
-//
-// Solidity: function withdraw(_amount uint256) returns()
-func (_AtomWallet *AtomWalletTransactorSession) Withdraw(_amount *big.Int) (*types.Transaction, error) {
-	return _AtomWallet.Contract.Withdraw(&_AtomWallet.TransactOpts, _amount)
+// Solidity: function setSettlementDetails(_buyID bytes32, _sellID bytes32, _buyToken uint32, _sellToken uint32, _buyValue uint256, _sellValue uint256) returns()
+func (_AtomWallet *AtomWalletTransactorSession) SetSettlementDetails(_buyID [32]byte, _sellID [32]byte, _buyToken uint32, _sellToken uint32, _buyValue *big.Int, _sellValue *big.Int) (*types.Transaction, error) {
+	return _AtomWallet.Contract.SetSettlementDetails(&_AtomWallet.TransactOpts, _buyID, _sellID, _buyToken, _sellToken, _buyValue, _sellValue)
 }
