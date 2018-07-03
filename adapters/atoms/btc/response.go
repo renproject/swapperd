@@ -14,16 +14,14 @@ import (
 // BitcoinAtomResponder is a struct for Bitcoin AtomResponder
 type BitcoinAtomResponder struct {
 	personalAddress string
-	foreignAddress  string
 	connection      btc.Conn
 	data            BitcoinData
 }
 
 // NewBitcoinAtomResponder returns a new Bitcoin AtomResponder instance
-func NewBitcoinAtomResponder(connection btc.Conn, personalAddress, foreignAddress string) swap.AtomResponder {
+func NewBitcoinAtomResponder(connection btc.Conn, address string) swap.AtomResponder {
 	return &BitcoinAtomResponder{
-		personalAddress: personalAddress,
-		foreignAddress:  foreignAddress,
+		personalAddress: address,
 		connection:      connection,
 	}
 }
@@ -41,18 +39,17 @@ func (btcAtom *BitcoinAtomResponder) Redeem(secret [32]byte) error {
 }
 
 // Audit an Atom swap by calling a function on Bitcoin
-func (btcAtom *BitcoinAtomResponder) Audit(hash [32]byte, to []byte, value *big.Int, expiry int64) error {
+func (btcAtom *BitcoinAtomResponder) Audit(hashLock [32]byte, to []byte, value *big.Int, expiry int64) error {
+
 	result, err := bindings.Audit(btcAtom.connection, btcAtom.data.Contract, btcAtom.data.ContractTx)
 	if err != nil {
 		return err
 	}
 
-	if hash != result.SecretHash {
-		return errors.New("HashLock mismatch")
-	}
+	btcAtom.data.HashLock = result.SecretHash
 
 	if bytes.Compare(to, result.RecipientAddress) != 0 {
-		return errors.New("To Address mismatch")
+		return errors.New("Btc: To Address mismatch")
 	}
 
 	// if value.Cmp(big.NewInt(result.Amount)) > 0 {
@@ -62,7 +59,7 @@ func (btcAtom *BitcoinAtomResponder) Audit(hash [32]byte, to []byte, value *big.
 	// if expiry > (result.LockTime - time.Now().Unix()) {
 	// 	return errors.New("Expiry mismatch")
 	// }
-
+	println("Audit Successful")
 	return nil
 }
 

@@ -2,6 +2,7 @@ package btc
 
 import (
 	"encoding/json"
+	"errors"
 	"math/big"
 
 	bindings "github.com/republicprotocol/atom-go/adapters/bindings/btc"
@@ -12,23 +13,21 @@ import (
 // BitcoinAtomRequester is a struct for Bitcoin AtomRequester
 type BitcoinAtomRequester struct {
 	personalAddress string
-	foreignAddress  string
 	connection      btc.Conn
 	data            BitcoinData
 }
 
 // NewBitcoinAtomRequester returns a new Bitcoin AtomRequester instance
-func NewBitcoinAtomRequester(connection btc.Conn, personalAddress, foreignAddress string) swap.AtomRequester {
+func NewBitcoinAtomRequester(connection btc.Conn, address string) swap.AtomRequester {
 	return &BitcoinAtomRequester{
-		personalAddress: personalAddress,
-		foreignAddress:  foreignAddress,
+		personalAddress: address,
 		connection:      connection,
 	}
 }
 
 // Initiate a new Atom swap by calling Bitcoin
-func (btcAtom *BitcoinAtomRequester) Initiate(hash [32]byte, value *big.Int, expiry int64) error {
-	result, err := bindings.Initiate(btcAtom.connection, btcAtom.personalAddress, btcAtom.foreignAddress, value.Int64(), hash[:], expiry)
+func (btcAtom *BitcoinAtomRequester) Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error {
+	result, err := bindings.Initiate(btcAtom.connection, btcAtom.personalAddress, string(to), value.Int64(), hash[:], expiry)
 	if err != nil {
 		return err
 	}
@@ -52,9 +51,12 @@ func (btcAtom *BitcoinAtomRequester) Refund() error {
 func (btcAtom *BitcoinAtomRequester) AuditSecret() ([32]byte, error) {
 	result, err := bindings.AuditSecret(btcAtom.connection, btcAtom.data.RedeemTx, btcAtom.data.SecretHash[:])
 	if err != nil {
-		return [32]byte{}, err
+		return [32]byte{}, errors.New("Cannot read the secret")
 	}
-	return result, nil
+	if result != [32]byte{} {
+		return result, nil
+	}
+	return [32]byte{}, errors.New("Cannot read the secret")
 }
 
 // Serialize serializes the atom details into a bytes array
