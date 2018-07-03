@@ -3,7 +3,7 @@ package swap
 import "math/big"
 
 type AtomRequester interface {
-	Initiate(hash [32]byte, value *big.Int, expiry int64) error
+	Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error
 	Refund() error
 	AuditSecret() (secret [32]byte, err error)
 	Serialize() ([]byte, error)
