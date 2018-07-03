@@ -1,30 +1,30 @@
 package swap_test
 
 import (
-	"context"
+	"crypto/rand"
 	"fmt"
 	"math/big"
 	"sync"
 	"time"
 
+	"github.com/republicprotocol/atom-go/domains/match"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/republicprotocol/atom-go/drivers/btc/regtest"
-	"github.com/republicprotocol/atom-go/drivers/eth/ganache"
-	"github.com/republicprotocol/atom-go/services/axc"
-	"github.com/republicprotocol/atom-go/services/network"
-	"github.com/republicprotocol/atom-go/services/order"
 	. "github.com/republicprotocol/atom-go/services/swap"
 
-	btc "github.com/republicprotocol/atom-go/adapters/atoms/btc"
-	eth "github.com/republicprotocol/atom-go/adapters/atoms/eth"
-	ax "github.com/republicprotocol/atom-go/adapters/axc/mock"
+	"github.com/republicprotocol/atom-go/adapters/atoms/btc"
+	"github.com/republicprotocol/atom-go/adapters/atoms/eth"
 	btcclient "github.com/republicprotocol/atom-go/adapters/clients/btc"
-	net "github.com/republicprotocol/atom-go/adapters/networks/mock"
-	ord "github.com/republicprotocol/atom-go/adapters/orders/mock"
+	ethclient "github.com/republicprotocol/atom-go/adapters/clients/eth"
+	"github.com/republicprotocol/atom-go/adapters/config"
+	"github.com/republicprotocol/atom-go/adapters/keystore"
+
+	ax "github.com/republicprotocol/atom-go/adapters/info/eth"
+	net "github.com/republicprotocol/atom-go/adapters/networks/eth"
 )
 
 var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
@@ -33,38 +33,48 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 
 	BeforeSuite(func() {
 
-		var mockAXC axc.AXC
-		var mockNetwork network.Network
-		var aliceOrder, bobOrder order.Order
+		var aliceInfo, bobInfo Info
+		var aliceNet, bobNet Network
+		var aliceOrder, bobOrder match.Match
 		var aliceOrderID, bobOrderID [32]byte
 		var aliceSendValue, bobSendValue *big.Int
 		var aliceRecieveValue, bobRecieveValue *big.Int
-		var aliceCurrency, bobCurrency string
+		var aliceCurrency, bobCurrency uint32
 		var alice, bob *bind.TransactOpts
 		var aliceBitcoinAddress, bobBitcoinAddress string
-		var bobEthereumAddress common.Address
 		var swapID [32]byte
-		aliceOrderID[0] = 0x12
-		bobOrderID[0] = 0x13
 
-		swapID[0] = 0x14
+		rand.Read(aliceOrderID[:])
+		rand.Read(bobOrderID[:])
 
-		aliceCurrency = "ETHEREUM"
-		bobCurrency = "BITCOIN"
+		rand.Read(swapID[:])
 
-		conn, err := ganache.Connect("http://localhost:8545")
+		aliceCurrency = 1
+		bobCurrency = 0
+
+		var confPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/config.json"
+		var ksPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/keystore.json"
+		config, err := config.LoadConfig(confPath)
+		Expect(err).ShouldNot(HaveOccurred())
+		keystore := keystore.NewKeystore(ksPath)
+
+		ganache, err := ethclient.Connect(config)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		alice, _, err = ganache.NewAccount(conn, big.NewInt(1000000000000000000))
+		ownerECDSA, err := keystore.LoadKeypair("ethereum")
+		Expect(err).ShouldNot(HaveOccurred())
+		owner := bind.NewKeyedTransactor(ownerECDSA)
+
+		_, alice, err = ganache.NewAccount(1000000000000000000, owner)
 		Expect(err).ShouldNot(HaveOccurred())
 		alice.GasLimit = 3000000
 
-		bob, bobEthereumAddress, err = ganache.NewAccount(conn, big.NewInt(1000000000000000000))
+		_, bob, err = ganache.NewAccount(1000000000000000000, owner)
 		Expect(err).ShouldNot(HaveOccurred())
 		bob.GasLimit = 3000000
 
 		time.Sleep(5 * time.Second)
-		connection, err := btcclient.Connect(CHAIN, RPC_USERNAME, RPC_PASSWORD, BTC_URL)
+		connection, err := btcclient.Connect(config)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		aliceSendValue = big.NewInt(10000000)
@@ -88,26 +98,35 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		bobBitcoinAddress = bobAddr.EncodeAddress()
 		Expect(err).Should(BeNil())
 
-		mockNetwork = net.NewMockNetwork()
-		mockAXC = ax.NewMockAXC()
-		aliceOrder = ord.NewMockOrder(aliceOrderID, bobOrderID, aliceSendValue, aliceRecieveValue, aliceCurrency, bobCurrency)
-		bobOrder = ord.NewMockOrder(bobOrderID, aliceOrderID, bobSendValue, bobRecieveValue, bobCurrency, aliceCurrency)
-
-		mockAXC.SetOwnerAddress(aliceOrderID, []byte(aliceBitcoinAddress))
-		mockAXC.SetOwnerAddress(bobOrderID, bob.From.Bytes())
-
-		reqAlice, err := eth.NewEthereumRequestAtom(context.Background(), conn, alice, bobEthereumAddress, swapID)
+		aliceNet, err = net.NewEthereumNetwork(ganache, alice)
 		Expect(err).Should(BeNil())
 
-		reqBob := btc.NewBitcoinRequestAtom(connection, bobBitcoinAddress, aliceBitcoinAddress)
-		resAlice := btc.NewBitcoinResponseAtom(connection, aliceBitcoinAddress, bobBitcoinAddress)
-
-		resBob, err := eth.NewEthereumResponseAtom(context.Background(), conn, bob)
+		bobNet, err = net.NewEthereumNetwork(ganache, bob)
 		Expect(err).Should(BeNil())
 
-		aliceSwap = NewSwap(reqAlice, resAlice, mockAXC, aliceOrder, mockNetwork)
-		bobSwap = NewSwap(reqBob, resBob, mockAXC, bobOrder, mockNetwork)
+		aliceInfo, err = ax.NewEtereumAtomInfo(ganache, alice)
+		Expect(err).Should(BeNil())
 
+		bobInfo, err = ax.NewEtereumAtomInfo(ganache, bob)
+		Expect(err).Should(BeNil())
+
+		aliceOrder = match.NewMatch(aliceOrderID, bobOrderID, aliceSendValue, aliceRecieveValue, aliceCurrency, bobCurrency)
+		bobOrder = match.NewMatch(bobOrderID, aliceOrderID, bobSendValue, bobRecieveValue, bobCurrency, aliceCurrency)
+
+		aliceInfo.SetOwnerAddress(aliceOrderID, []byte(aliceBitcoinAddress))
+		bobInfo.SetOwnerAddress(bobOrderID, bob.From.Bytes())
+
+		reqAlice, err := eth.NewEthereumRequestAtom(ganache, alice)
+		Expect(err).Should(BeNil())
+
+		reqBob := btc.NewBitcoinAtomRequester(connection, bobBitcoinAddress)
+		resAlice := btc.NewBitcoinAtomResponder(connection, aliceBitcoinAddress)
+
+		resBob, err := eth.NewEthereumResponseAtom(ganache, bob)
+		Expect(err).Should(BeNil())
+
+		aliceSwap = NewSwap(reqAlice, resAlice, aliceInfo, aliceOrder, aliceNet)
+		bobSwap = NewSwap(reqBob, resBob, bobInfo, bobOrder, bobNet)
 	})
 
 	It("can do an eth - btc atomic swap", func() {
