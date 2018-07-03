@@ -1,28 +1,27 @@
 package eth_test
 
 import (
-	"context"
 	"crypto/sha256"
 	"math/big"
-	"os/exec"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
 	"github.com/ethereum/go-ethereum/common"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/republicprotocol/atom-go/adapters/atoms/eth"
 	ethclient "github.com/republicprotocol/atom-go/adapters/clients/eth"
-	"github.com/republicprotocol/atom-go/drivers/eth/ganache"
+	"github.com/republicprotocol/atom-go/adapters/config"
+	"github.com/republicprotocol/atom-go/adapters/keystore"
 	"github.com/republicprotocol/atom-go/services/swap"
 )
 
 var _ = Describe("ether", func() {
 
-	var aliceAddr, bobAddr common.Address
+	var bobAddr, aliceAddr common.Address
 	var alice, bob *bind.TransactOpts
 	var conn ethclient.Conn
-	var swapID, swapIDFailed [32]byte
 	var aliceOrderID, bobOrderID [32]byte
 	var value *big.Int
 	var validity int64
@@ -31,49 +30,40 @@ var _ = Describe("ether", func() {
 	var reqAtom, reqAtomFailed swap.AtomRequester
 	var resAtom swap.AtomResponder
 	var data []byte
-	var cmd *exec.Cmd
+	var confPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/config.json"
+	var ksPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/keystore.json"
 
 	BeforeSuite(func() {
-
-		cmd = ganache.Start()
-		conn, err = ethclient.NewConn("ganache")
+		config, err := config.LoadConfig(confPath)
+		Expect(err).ShouldNot(HaveOccurred())
+		keystore := keystore.NewKeystore(ksPath)
+		conn, err = ethclient.Connect(config)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		aliceAddr, alice, err = conn.NewAccount(1000000000000000000)
+		pk, err := keystore.LoadKeypair("ethereum")
 		Expect(err).ShouldNot(HaveOccurred())
+		owner := bind.NewKeyedTransactor(pk)
+		aliceAddr, alice, err = conn.NewAccount(1000000000000000000, owner)
 		alice.GasLimit = 3000000
-
-		bobAddr, bob, err = conn.NewAccount(1000000000000000000)
-		Expect(err).ShouldNot(HaveOccurred())
+		bobAddr, bob, err = conn.NewAccount(1000000000000000000, owner)
 		bob.GasLimit = 3000000
-
+		Expect(err).ShouldNot(HaveOccurred())
 		value = big.NewInt(10)
 		validity = int64(time.Hour * 24)
-
-		swapID[0] = 0x13
-		swapIDFailed[0] = 0x23
-
 		aliceOrderID[0] = 0x33
 		bobOrderID[0] = 0x4a
-
-		reqAtom, err = NewEthereumRequestAtom(context.Background(), conn, alice, bobAddr, swapID)
+		reqAtom, err = NewEthereumRequestAtom(conn, alice)
 		Expect(err).ShouldNot(HaveOccurred())
-
-		reqAtomFailed, err = NewEthereumRequestAtom(context.Background(), conn, alice, bobAddr, swapIDFailed)
+		reqAtomFailed, err = NewEthereumRequestAtom(conn, alice)
 		Expect(err).ShouldNot(HaveOccurred())
-
-		resAtom, err = NewEthereumResponseAtom(context.Background(), conn, bob)
+		resAtom, err = NewEthereumResponseAtom(conn, bob)
 		Expect(err).ShouldNot(HaveOccurred())
-	})
-
-	AfterSuite(func() {
-		ganache.Stop(cmd)
 	})
 
 	It("can initiate an eth atomic swap", func() {
 		secret = [32]byte{1, 3, 3, 7}
 		secretHash = sha256.Sum256(secret[:])
-		err = reqAtom.Initiate(secretHash, value, validity)
+		err = reqAtom.Initiate(bobAddr.Bytes(), secretHash, value, validity)
 		Expect(err).ShouldNot(HaveOccurred())
 		data, err = reqAtom.Serialize()
 		Expect(err).ShouldNot(HaveOccurred())
@@ -100,7 +90,7 @@ var _ = Describe("ether", func() {
 	It("can refund an eth atomic swap", func() {
 		secret = [32]byte{1, 3, 3, 7}
 		secretHash = sha256.Sum256(secret[:])
-		err = reqAtomFailed.Initiate(secretHash, value, 0)
+		err = reqAtomFailed.Initiate(bobAddr.Bytes(), secretHash, value, 0)
 		Expect(err).ShouldNot(HaveOccurred())
 		err = reqAtomFailed.Refund()
 		Expect(err).ShouldNot(HaveOccurred())
