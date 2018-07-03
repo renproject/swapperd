@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/republicprotocol/atom-go/services/network"
+	"github.com/republicprotocol/atom-go/services/swap"
 )
 
 type MockNetwork struct {
@@ -13,7 +13,7 @@ type MockNetwork struct {
 	SwapDetails map[[32]byte]chan []byte
 }
 
-func NewMockNetwork() network.Network {
+func NewMockNetwork() swap.Network {
 	return &MockNetwork{
 		mu:          new(sync.RWMutex),
 		SwapDetails: map[[32]byte]chan []byte{},
