@@ -1,27 +1,35 @@
 package http
 
 import (
+	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/republicprotocol/atom-go/adapters/atoms/btc"
+	"github.com/republicprotocol/atom-go/adapters/atoms/eth"
 	"github.com/republicprotocol/atom-go/adapters/config"
+	"github.com/republicprotocol/atom-go/services/watch"
 	"github.com/republicprotocol/atom-go/utils"
-	repCrypto "github.com/republicprotocol/republic-go/crypto"
-	"github.com/republicprotocol/republic-go/order"
 )
 
 var ErrInvalidSignatureLength = errors.New("invalid signature length")
 var ErrInvalidOrderIDLength = errors.New("invalid order id length")
 
 type boxHttpAdapter struct {
-	signer repCrypto.Signer
 	config config.Config
+	key    *ecdsa.PrivateKey
 }
 
-func NewBoxHttpAdapter() BoxHttpAdapter {
-	return &boxHttpAdapter{}
+func NewBoxHttpAdapter(config config.Config, key *ecdsa.PrivateKey) BoxHttpAdapter {
+	return &boxHttpAdapter{
+		config: config,
+		key:    key,
+	}
 }
 
 func (adapter *boxHttpAdapter) WhoAmI(challenge string) (WhoAmI, error) {
@@ -30,19 +38,22 @@ func (adapter *boxHttpAdapter) WhoAmI(challenge string) (WhoAmI, error) {
 
 	suppCurrencies := adapter.config.GetSupportedCurrencies()
 
+	authorizedAddresses := adapter.config.AuthorizedAddresses
+
 	boxInfo := BoxInfo{
-		challenge:           challenge,
-		version:             version,
-		supportedCurrencies: suppCurrencies,
+		Challenge:           challenge,
+		Version:             version,
+		SupportedCurrencies: suppCurrencies,
+		AuthorizedAddresses: authorizedAddresses,
 	}
 
 	boxBytes, err := MarshalBoxInfo(boxInfo)
 	if err != nil {
 		return WhoAmI{}, err
 	}
-	boxHash := repCrypto.Keccak256(boxBytes)
+	boxHash := ethCrypto.Keccak256(boxBytes)
 
-	signature, err := adapter.signer.Sign(boxHash)
+	signature, err := ethCrypto.Sign(boxHash, adapter.key)
 	if err != nil {
 		return WhoAmI{}, err
 	}
@@ -53,8 +64,8 @@ func (adapter *boxHttpAdapter) WhoAmI(challenge string) (WhoAmI, error) {
 	}
 
 	return WhoAmI{
-		signature: MarshalSignature(sig65),
-		boxInfo:   boxInfo,
+		Signature: MarshalSignature(sig65),
+		BoxInfo:   boxInfo,
 	}, nil
 }
 
@@ -68,20 +79,72 @@ func (adapter *boxHttpAdapter) PostOrder(order PostOrder) (PostOrder, error) {
 		return PostOrder{}, err
 	}
 
-	err = validate(orderID, sigIn)
+	addrs := adapter.config.GetAuthorizedAddresses()
+
+	err = validate(orderID, sigIn, addrs)
 	if err != nil {
 		return PostOrder{}, err
 	}
 
-	signOut, err := sign(orderID)
+	signOut, err := ethCrypto.Sign(orderID[:], adapter.key)
+
+	if err != nil {
+		return PostOrder{}, err
+	}
+
+	sig65, err := utils.ToBytes65(signOut)
 	if err != nil {
 		return PostOrder{}, err
 	}
 
 	return PostOrder{
 		order.OrderID,
-		MarshalSignature(signOut),
+		MarshalSignature(sig65),
 	}, nil
+}
+
+func (adapter *boxHttpAdapter) BuildWatcher() (watch.Watch, error) {
+	ethConn, err := ethclient.Connect(adapter.config)
+	if err != nil {
+		return watch.Watch{}, err
+	}
+
+	btcConn, err := btcclient.Connect(config)
+	if err != nil {
+		return watch.Watch{}, err
+	}
+
+	ownerECDSA, err := keystore.LoadKeypair("ethereum")
+	if err != nil {
+		return watch.Watch{}, err
+	}
+	owner := bind.NewKeyedTransactor(ownerECDSA)
+	owner.GasLimit = 3000000
+
+	ethNet, err = net.NewEthereumNetwork(ethConn, owner)
+	if err != nil {
+		return watch.Watch{}, err
+	}
+
+	ethInfo, err = ax.NewEtereumAtomInfo(ethConn, owner)
+	if err != nil {
+		return watch.Watch{}, err
+	}
+
+	ethWallet, err := wal.NewEthereumWallet(ethConn, *owner)
+	if err != nil {
+		return watch.Watch{}, err
+	}
+
+	reqAtom, err := eth.NewEthereumRequestAtom(ethConn, owner)
+	if err != nil {
+		return watch.Watch{}, err
+	}
+	resAtom := btc.NewBitcoinAtomResponder(btcConn, bobBitcoinAddress)
+
+	watcher = NewWatch(ethNet, ethInfo, ethWallet, reqAtom, resAtom)
+
+	return watcher, nil
 }
 
 func MarshalSignature(signatureIn [65]byte) string {
@@ -101,12 +164,12 @@ func UnmarshalSignature(signatureIn string) ([65]byte, error) {
 	return signature, nil
 }
 
-func MarshalOrderID(orderIDIn order.ID) string {
+func MarshalOrderID(orderIDIn [32]byte) string {
 	return base64.StdEncoding.EncodeToString(orderIDIn[:])
 }
 
-func UnmarshalOrderID(orderIDIn string) (order.ID, error) {
-	orderID := order.ID{}
+func UnmarshalOrderID(orderIDIn string) ([32]byte, error) {
+	orderID := [32]byte{}
 	orderIDBytes, err := base64.StdEncoding.DecodeString(orderIDIn)
 	if err != nil {
 		return orderID, fmt.Errorf("cannot decode order id %v: %v", orderIDIn, err)
@@ -134,10 +197,18 @@ func UnmarshalBoxInfo(boxInfo []byte) (BoxInfo, error) {
 	return box, nil
 }
 
-func validate(id order.ID, signature [65]byte) error {
-	return nil
-}
+func validate(id [32]byte, signature [65]byte, addresses []common.Address) error {
+	upubKey, err := ethCrypto.Ecrecover(id[:], signature[:])
+	if err != nil {
+		return err
+	}
+	addr := ethCrypto.PubkeyToAddress(*ethCrypto.ToECDSAPub(upubKey))
 
-func sign(id order.ID) ([65]byte, error) {
-	return [65]byte{}, nil
+	for _, j := range addresses {
+		if j == addr {
+			return nil
+		}
+	}
+
+	return errors.New("Unauthorized Public Key")
 }
