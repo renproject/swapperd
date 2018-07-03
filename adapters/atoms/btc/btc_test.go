@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/republicprotocol/atom-go/adapters/atoms/btc"
 	btcclient "github.com/republicprotocol/atom-go/adapters/clients/btc"
+	"github.com/republicprotocol/atom-go/adapters/config"
 	"github.com/republicprotocol/atom-go/drivers/btc/regtest"
 	"github.com/republicprotocol/atom-go/services/swap"
 )
@@ -28,9 +29,12 @@ var _ = Describe("bitcoin", func() {
 	var reqAtom, reqAtomFailed swap.AtomRequester
 	var resAtom swap.AtomResponder
 	var data []byte
+	var confPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/config.json"
 
 	BeforeSuite(func() {
-		connection, err = btcclient.Connect("regtest")
+		config, err := config.LoadConfig(confPath)
+		Expect(err).ShouldNot(HaveOccurred())
+		connection, err = btcclient.Connect(config)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		go func() {
@@ -47,9 +51,9 @@ var _ = Describe("bitcoin", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		bobAddr = _bobAddr.EncodeAddress()
 
-		reqAtom = NewBitcoinAtomRequester(connection, aliceAddr, bobAddr)
-		reqAtomFailed = NewBitcoinAtomRequester(connection, aliceAddr, bobAddr)
-		resAtom = NewBitcoinAtomResponder(connection, bobAddr, aliceAddr)
+		reqAtom = NewBitcoinAtomRequester(connection, aliceAddr)
+		reqAtomFailed = NewBitcoinAtomRequester(connection, aliceAddr)
+		resAtom = NewBitcoinAtomResponder(connection, bobAddr)
 
 		value = big.NewInt(1000000)
 		validity = time.Now().Unix() + 48*60*60
@@ -58,7 +62,7 @@ var _ = Describe("bitcoin", func() {
 	It("can initiate a btc atomic swap", func() {
 		secret = [32]byte{1, 3, 3, 7}
 		secretHash = sha256.Sum256(secret[:])
-		err = reqAtom.Initiate(secretHash, value, validity)
+		err = reqAtom.Initiate([]byte(bobAddr), secretHash, value, validity)
 		Expect(err).ShouldNot(HaveOccurred())
 		data, err = reqAtom.Serialize()
 		Expect(err).ShouldNot(HaveOccurred())
@@ -94,7 +98,7 @@ var _ = Describe("bitcoin", func() {
 	It("can refund a btc atomic swap", func() {
 		secret = [32]byte{1, 3, 3, 7}
 		secretHash = sha256.Sum256(secret[:])
-		err = reqAtomFailed.Initiate(secretHash, value, 0)
+		err = reqAtomFailed.Initiate([]byte(aliceAddr), secretHash, value, 0)
 		Expect(err).ShouldNot(HaveOccurred())
 		before, err := connection.Client.GetReceivedByAddress(_aliceAddr)
 		Expect(err).ShouldNot(HaveOccurred())
