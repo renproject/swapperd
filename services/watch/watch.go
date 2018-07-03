@@ -1,31 +1,35 @@
 package watch
 
-import "github.com/republicprotocol/atom-go/services/swap"
+import (
+	"github.com/republicprotocol/atom-go/services/swap"
+)
 
 type Watch struct {
 	network swap.Network
-	axc     swap.Contract
+	info    swap.Info
+	reqAtom swap.AtomRequester
+	resAtom swap.AtomResponder
 	wallet  Wallet
+}
+
+func NewWatch(network swap.Network, info swap.Info, wallet Wallet, reqAtom swap.AtomRequester, resAtom swap.AtomResponder) Watch {
+	return Watch{
+		network: network,
+		info:    info,
+		wallet:  wallet,
+		reqAtom: reqAtom,
+		resAtom: resAtom,
+	}
 }
 
 // Run runs the watch object on the given order id
 func (watch *Watch) Run(orderID [32]byte) error {
-	orderID2, err := watch.wallet.WaitForMatch(orderID)
+	match, err := watch.wallet.GetMatch(orderID)
 	if err != nil {
 		return err
 	}
-
-	_, err = watch.wallet.GetMatch(orderID, orderID2)
-	if err != nil {
-		return err
-	}
-
-	// atomicSwap := swap.NewSwap(personalAtom, foreignAtom, watch.axc, match, watch.network)
-
-	// err = atomicSwap.Execute()
-	// if err != nil {
-	// 	return err
-	// }
-
-	return nil
+	// watch.info.SetOwnerAddress()
+	atomicSwap := swap.NewSwap(watch.reqAtom, watch.resAtom, watch.info, match, watch.network)
+	err = atomicSwap.Execute()
+	return err
 }
