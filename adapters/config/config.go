@@ -2,8 +2,11 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"sync"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type Config struct {
@@ -11,10 +14,13 @@ type Config struct {
 	Bitcoin             BitcoinConfig  `json:"bitcoin"`
 	Version             string         `json:"version"`
 	SupportedCurrencies []string       `json:"supportedCurrencies"`
+	AuthorizedAddresses []string       `json:"authorizedAddresses"`
 
 	mu   *sync.RWMutex
 	path string
 }
+
+var ErrUnSupportedPriorityCode = errors.New("Un Supported Priority Code")
 
 func LoadConfig(path string) (Config, error) {
 	var config Config
@@ -42,4 +48,12 @@ func (config *Config) GetVersion() string {
 
 func (config *Config) GetSupportedCurrencies() []string {
 	return config.SupportedCurrencies
+}
+
+func (config *Config) GetAuthorizedAddresses() []common.Address {
+	addrs := []common.Address{}
+	for _, j := range config.AuthorizedAddresses {
+		addrs = append(addrs, common.HexToAddress(j))
+	}
+	return addrs
 }
