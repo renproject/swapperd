@@ -14,13 +14,11 @@ import (
 func main() {
 	keystr := keystore.NewKeystore("/Users/susruth/go/src/github.com/republicprotocol/atom-go/drivers/httpclient/keystore.json")
 
-	keys, err := keystr.LoadECDSA()
-
+	key, err := keystr.LoadKeypair("ethereum")
 	if err != nil {
 		panic(err)
 	}
 
-	key := keys[0]
 	orderID := [32]byte{}
 
 	_, err = rand.Read(orderID[:])
