@@ -25,6 +25,7 @@ import (
 
 	ax "github.com/republicprotocol/atom-go/adapters/info/eth"
 	net "github.com/republicprotocol/atom-go/adapters/networks/eth"
+	"github.com/republicprotocol/atom-go/adapters/store/leveldb"
 )
 
 var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
@@ -116,17 +117,20 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		aliceInfo.SetOwnerAddress(aliceOrderID, []byte(aliceBitcoinAddress))
 		bobInfo.SetOwnerAddress(bobOrderID, bob.From.Bytes())
 
-		reqAlice, err := eth.NewEthereumRequestAtom(ganache, alice)
+		reqAlice, err := eth.NewEthereumAtom(ganache, alice)
 		Expect(err).Should(BeNil())
 
-		reqBob := btc.NewBitcoinAtomRequester(connection, bobBitcoinAddress)
-		resAlice := btc.NewBitcoinAtomResponder(connection, aliceBitcoinAddress)
+		reqBob := btc.NewBitcoinAtom(connection, bobBitcoinAddress)
+		resAlice := btc.NewBitcoinAtom(connection, aliceBitcoinAddress)
 
-		resBob, err := eth.NewEthereumResponseAtom(ganache, bob)
+		resBob, err := eth.NewEthereumAtom(ganache, bob)
 		Expect(err).Should(BeNil())
 
-		aliceSwap = NewSwap(reqAlice, resAlice, aliceInfo, aliceOrder, aliceNet)
-		bobSwap = NewSwap(reqBob, resBob, bobInfo, bobOrder, bobNet)
+		aliceStr := NewSwapStore(leveldb.NewLDBStore("/db"))
+		bobStr := NewSwapStore(leveldb.NewLDBStore("/db"))
+
+		aliceSwap = NewSwap(reqAlice, resAlice, aliceInfo, aliceOrder, aliceNet, aliceStr)
+		bobSwap = NewSwap(reqBob, resBob, bobInfo, bobOrder, bobNet, bobStr)
 	})
 
 	It("can do an eth - btc atomic swap", func() {
