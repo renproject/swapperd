@@ -17,6 +17,7 @@ import (
 	ethclient "github.com/republicprotocol/atom-go/adapters/clients/eth"
 	"github.com/republicprotocol/atom-go/adapters/config"
 	"github.com/republicprotocol/atom-go/adapters/keystore"
+	"github.com/republicprotocol/atom-go/adapters/store/leveldb"
 	"github.com/republicprotocol/atom-go/drivers/btc/regtest"
 	"github.com/republicprotocol/atom-go/services/swap"
 	. "github.com/republicprotocol/atom-go/services/watch"
@@ -114,26 +115,20 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		aliceInfo.SetOwnerAddress(aliceOrderID, []byte(aliceBitcoinAddress))
 		bobInfo.SetOwnerAddress(bobOrderID, bob.From.Bytes())
 
-		reqAlice, err := eth.NewEthereumRequestAtom(ganache, alice)
+		reqAlice, err := eth.NewEthereumAtom(ganache, alice)
 		Expect(err).Should(BeNil())
 
-		reqBob := btc.NewBitcoinAtomRequester(connection, bobBitcoinAddress)
-		resAlice := btc.NewBitcoinAtomResponder(connection, aliceBitcoinAddress)
+		reqBob := btc.NewBitcoinAtom(connection, bobBitcoinAddress)
+		resAlice := btc.NewBitcoinAtom(connection, aliceBitcoinAddress)
 
-		resBob, err := eth.NewEthereumResponseAtom(ganache, bob)
+		resBob, err := eth.NewEthereumAtom(ganache, bob)
 		Expect(err).Should(BeNil())
 
-		reqAlice, err = eth.NewEthereumRequestAtom(ganache, alice)
-		Expect(err).Should(BeNil())
+		aliceStr := swap.NewSwapStore(leveldb.NewLDBStore("/db"))
+		bobStr := swap.NewSwapStore(leveldb.NewLDBStore("/db"))
 
-		reqBob = btc.NewBitcoinAtomRequester(connection, bobBitcoinAddress)
-		resAlice = btc.NewBitcoinAtomResponder(connection, aliceBitcoinAddress)
-
-		resBob, err = eth.NewEthereumResponseAtom(ganache, bob)
-		Expect(err).Should(BeNil())
-
-		aliceWatch = NewWatch(aliceNet, aliceInfo, mockWallet, reqAlice, resAlice)
-		bobWatch = NewWatch(bobNet, bobInfo, mockWallet, reqBob, resBob)
+		aliceWatch = NewWatch(aliceNet, aliceInfo, mockWallet, reqAlice, resAlice, aliceStr)
+		bobWatch = NewWatch(bobNet, bobInfo, mockWallet, reqBob, resBob, bobStr)
 	})
 
 	It("can do an eth - btc atomic swap", func() {
