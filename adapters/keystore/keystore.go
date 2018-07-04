@@ -71,7 +71,6 @@ func (keystore *keystore) UpdateEtherumKeyString(pk string) error {
 
 	keystore.Ethereum = pk
 
-	println(keystore.Ethereum)
 	data, err := json.Marshal(&keystore)
 	if err != nil {
 		return err
@@ -117,13 +116,14 @@ func (keystore *keystore) RandomBitcoinKey() error {
 	return keystore.UpdateBitcoinKey(keyPair)
 }
 
-func (keystore *keystore) loadFromFile() error {
-	keystore.mu.Lock()
-	defer keystore.mu.Unlock()
+func (kstr *keystore) loadFromFile() error {
+	kstr.mu.Lock()
+	defer kstr.mu.Unlock()
 
-	raw, err := ioutil.ReadFile(keystore.path)
+	raw, err := ioutil.ReadFile(kstr.path)
 	if err != nil {
 		return nil
 	}
-	return json.Unmarshal(raw, keystore)
+
+	return json.Unmarshal(raw, kstr)
 }
