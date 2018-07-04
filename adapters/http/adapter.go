@@ -1,7 +1,5 @@
 package http
 
-import "github.com/republicprotocol/atom-go/services/watch"
-
 type BoxInfo struct {
 	Challenge           string   `json:"challenge"`
 	Version             string   `json:"version"`
@@ -14,6 +12,11 @@ type WhoAmI struct {
 	Signature string  `json:"signature"`
 }
 
+type Status struct {
+	OrderID string `json:"orderID"`
+	Status  string `json:"status"`
+}
+
 type PostOrder struct {
 	OrderID   string `json:"orderID"`
 	Signature string `json:"signature"`
@@ -22,5 +25,5 @@ type PostOrder struct {
 type BoxHttpAdapter interface {
 	WhoAmI(challenge string) (WhoAmI, error)
 	PostOrder(order PostOrder) (PostOrder, error)
-	BuildWatcher() (watch.Watch, error)
+	GetStatus(orderID string) (Status, error)
 }
