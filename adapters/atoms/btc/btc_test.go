@@ -26,8 +26,8 @@ var _ = Describe("bitcoin", func() {
 	var validity int64
 	var secret, secretHash [32]byte
 	var err error
-	var reqAtom, reqAtomFailed swap.AtomRequester
-	var resAtom swap.AtomResponder
+	var reqAtom, reqAtomFailed swap.Atom
+	var resAtom swap.Atom
 	var data []byte
 	var confPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/config.json"
 
@@ -51,9 +51,9 @@ var _ = Describe("bitcoin", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		bobAddr = _bobAddr.EncodeAddress()
 
-		reqAtom = NewBitcoinAtomRequester(connection, aliceAddr)
-		reqAtomFailed = NewBitcoinAtomRequester(connection, aliceAddr)
-		resAtom = NewBitcoinAtomResponder(connection, bobAddr)
+		reqAtom = NewBitcoinAtom(connection, aliceAddr)
+		reqAtomFailed = NewBitcoinAtom(connection, aliceAddr)
+		resAtom = NewBitcoinAtom(connection, bobAddr)
 
 		value = big.NewInt(1000000)
 		validity = time.Now().Unix() + 48*60*60
