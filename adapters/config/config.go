@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"os"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -56,4 +57,8 @@ func (config *Config) GetAuthorizedAddresses() []common.Address {
 		addrs = append(addrs, common.HexToAddress(j))
 	}
 	return addrs
+}
+
+func (config *Config) StoreLocation() string {
+	return os.Getenv("HOME") + "/db"
 }
