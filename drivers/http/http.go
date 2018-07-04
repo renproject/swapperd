@@ -27,7 +27,11 @@ func main() {
 		panic(err)
 	}
 
-	httpAdapter := http.NewBoxHttpAdapter(conf, key)
+	httpAdapter, err := http.NewBoxHttpAdapter(conf, key)
+	if err != nil {
+		panic(err)
+	}
+
 	log.Println("Listening on 0.0.0.0:18516")
 
 	log.Fatal(netHttp.ListenAndServe(":18516", http.NewServer(httpAdapter)))
