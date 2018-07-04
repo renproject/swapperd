@@ -16,25 +16,36 @@ type Swap interface {
 }
 
 type swap struct {
-	personalAtom AtomRequester
-	foreignAtom  AtomResponder
+	personalAtom Atom
+	foreignAtom  Atom
 	order        match.Match
 	network      Network
 	info         Info
+	swapStr      SwapStore
 }
 
 // NewSwap returns a new Swap instance
-func NewSwap(personalAtom AtomRequester, foreignAtom AtomResponder, info Info, order match.Match, network Network) Swap {
+func NewSwap(atom1 Atom, atom2 Atom, info Info, order match.Match, network Network, swapStr SwapStore) Swap {
+	personalAtom := atom2
+	foreignAtom := atom1
+
+	if atom1.PriorityCode() == order.SendCurrency() {
+		personalAtom = atom1
+		foreignAtom = atom2
+	}
+
 	return &swap{
 		personalAtom: personalAtom,
 		foreignAtom:  foreignAtom,
 		order:        order,
 		info:         info,
 		network:      network,
+		swapStr:      swapStr,
 	}
 }
 
 func (swap *swap) Execute() error {
+	swap.swapStr.UpdateStatus(swap.order.PersonalOrderID(), "MATCHED")
 	if swap.personalAtom.PriorityCode() < swap.foreignAtom.PriorityCode() {
 		return swap.initiate()
 	}
@@ -64,6 +75,8 @@ func (swap *swap) initiate() error {
 	if err != nil {
 		return err
 	}
+	swap.swapStr.UpdateStatus(swap.order.PersonalOrderID(), "INITIATED")
+
 	fmt.Println("Initiated the atomic Swap")
 
 	personalSwapDetails, err := swap.personalAtom.Serialize()
@@ -75,6 +88,9 @@ func (swap *swap) initiate() error {
 	if err != nil {
 		return err
 	}
+
+	swap.swapStr.UpdateStatus(swap.order.PersonalOrderID(), "WAITING_FOR_INITIATION")
+
 	fmt.Println("Sent swap details")
 	foreignSwapDetails, err := swap.network.RecieveSwapDetails(swap.order.ForeignOrderID())
 	if err != nil {
@@ -98,8 +114,14 @@ func (swap *swap) initiate() error {
 		return err
 	}
 
-	fmt.Println("redeeming swap details")
-	return swap.foreignAtom.Redeem(secret32)
+	err = swap.foreignAtom.Redeem(secret32)
+	if err != nil {
+		return err
+	}
+
+	swap.swapStr.UpdateStatus(swap.order.PersonalOrderID(), "REDEEMED")
+	fmt.Println("redeemed swap details")
+	return nil
 }
 
 func (swap *swap) respond() error {
@@ -152,3 +174,11 @@ func (swap *swap) respond() error {
 
 	return swap.foreignAtom.Redeem(secret)
 }
+
+// func (swap *swap) store() error {
+
+// }
+
+// func (swap *swap) retrieve() error {
+
+// }
