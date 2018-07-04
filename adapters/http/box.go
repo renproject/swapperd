@@ -12,7 +12,14 @@ import (
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/republicprotocol/atom-go/adapters/atoms/btc"
 	"github.com/republicprotocol/atom-go/adapters/atoms/eth"
+	btcClient "github.com/republicprotocol/atom-go/adapters/clients/btc"
+	ethClient "github.com/republicprotocol/atom-go/adapters/clients/eth"
 	"github.com/republicprotocol/atom-go/adapters/config"
+	ax "github.com/republicprotocol/atom-go/adapters/info/eth"
+	net "github.com/republicprotocol/atom-go/adapters/networks/eth"
+	"github.com/republicprotocol/atom-go/adapters/store/leveldb"
+	wal "github.com/republicprotocol/atom-go/adapters/wallet/eth"
+	"github.com/republicprotocol/atom-go/services/swap"
 	"github.com/republicprotocol/atom-go/services/watch"
 	"github.com/republicprotocol/atom-go/utils"
 )
@@ -23,13 +30,20 @@ var ErrInvalidOrderIDLength = errors.New("invalid order id length")
 type boxHttpAdapter struct {
 	config config.Config
 	key    *ecdsa.PrivateKey
+	watch  watch.Watch
 }
 
-func NewBoxHttpAdapter(config config.Config, key *ecdsa.PrivateKey) BoxHttpAdapter {
+func NewBoxHttpAdapter(config config.Config, key *ecdsa.PrivateKey) (BoxHttpAdapter, error) {
+	watcher, err := BuildWatcher(config, key)
+	if err != nil {
+		return nil, err
+	}
+
 	return &boxHttpAdapter{
 		config: config,
 		key:    key,
-	}
+		watch:  watcher,
+	}, nil
 }
 
 func (adapter *boxHttpAdapter) WhoAmI(challenge string) (WhoAmI, error) {
@@ -86,6 +100,13 @@ func (adapter *boxHttpAdapter) PostOrder(order PostOrder) (PostOrder, error) {
 		return PostOrder{}, err
 	}
 
+	go func() {
+		err := adapter.watch.Run(orderID)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
 	signOut, err := ethCrypto.Sign(orderID[:], adapter.key)
 
 	if err != nil {
@@ -103,48 +124,63 @@ func (adapter *boxHttpAdapter) PostOrder(order PostOrder) (PostOrder, error) {
 	}, nil
 }
 
-func (adapter *boxHttpAdapter) BuildWatcher() (watch.Watch, error) {
-	ethConn, err := ethclient.Connect(adapter.config)
+func BuildWatcher(config config.Config, key *ecdsa.PrivateKey) (watch.Watch, error) {
+	ethConn, err := ethClient.Connect(config)
 	if err != nil {
-		return watch.Watch{}, err
+		return nil, err
 	}
 
-	btcConn, err := btcclient.Connect(config)
+	btcConn, err := btcClient.Connect(config)
 	if err != nil {
-		return watch.Watch{}, err
+		return nil, err
 	}
 
-	ownerECDSA, err := keystore.LoadKeypair("ethereum")
-	if err != nil {
-		return watch.Watch{}, err
-	}
-	owner := bind.NewKeyedTransactor(ownerECDSA)
+	owner := bind.NewKeyedTransactor(key)
 	owner.GasLimit = 3000000
 
-	ethNet, err = net.NewEthereumNetwork(ethConn, owner)
+	ethNet, err := net.NewEthereumNetwork(ethConn, owner)
 	if err != nil {
-		return watch.Watch{}, err
+		return nil, err
 	}
 
-	ethInfo, err = ax.NewEtereumAtomInfo(ethConn, owner)
+	ethInfo, err := ax.NewEtereumAtomInfo(ethConn, owner)
 	if err != nil {
-		return watch.Watch{}, err
+		return nil, err
 	}
 
 	ethWallet, err := wal.NewEthereumWallet(ethConn, *owner)
 	if err != nil {
-		return watch.Watch{}, err
+		return nil, err
 	}
 
-	reqAtom, err := eth.NewEthereumRequestAtom(ethConn, owner)
+	ethAtom, err := eth.NewEthereumAtom(ethConn, owner)
 	if err != nil {
-		return watch.Watch{}, err
+		return nil, err
 	}
-	resAtom := btc.NewBitcoinAtomResponder(btcConn, bobBitcoinAddress)
+	btcAtom := btc.NewBitcoinAtom(btcConn, "")
 
-	watcher = NewWatch(ethNet, ethInfo, ethWallet, reqAtom, resAtom)
+	loc := config.StoreLocation()
+	str := swap.NewSwapStore(leveldb.NewLDBStore(loc))
 
+	watcher := watch.NewWatch(ethNet, ethInfo, ethWallet, ethAtom, btcAtom, str)
 	return watcher, nil
+}
+
+func (adapter *boxHttpAdapter) GetStatus(orderID string) (Status, error) {
+	id, err := UnmarshalOrderID(orderID)
+	if err != nil {
+		return Status{}, err
+	}
+
+	status, err := adapter.watch.Status(id)
+	if err != nil {
+		return Status{}, err
+	}
+
+	return Status{
+		OrderID: orderID,
+		Status:  status,
+	}, nil
 }
 
 func MarshalSignature(signatureIn [65]byte) string {
