@@ -14,6 +14,7 @@ func NewServer(adapter BoxHttpAdapter) http.Handler {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/orders", PostOrdersHandler(adapter)).Methods("POST")
+	r.HandleFunc("/status/{orderId}", GetStatusHandler(adapter)).Methods("GET")
 	r.HandleFunc("/whoami/{challenge}", WhoAmIHandler(adapter)).Methods("GET")
 	r.Use(RecoveryHandler)
 
@@ -51,19 +52,6 @@ func PostOrdersHandler(boxHttpAdapter BoxHttpAdapter) http.HandlerFunc {
 			return
 		}
 
-		processedOrderID, err := UnmarshalOrderID(processedOrder.OrderID)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot process the order: %v", err))
-			return
-		}
-
-		atomWatcher, err := boxHttpAdapter.BuildWatcher()
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to start the atomic swap process: %v", err))
-			return
-		}
-		go atomWatcher.Run(processedOrderID)
-
 		orderJSON, err := json.Marshal(processedOrder)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot marshal the processed order: %v", err))
@@ -92,6 +80,26 @@ func WhoAmIHandler(adapter BoxHttpAdapter) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusOK)
 		w.Write(whoamiJSON)
+	}
+}
+
+func GetStatusHandler(adapter BoxHttpAdapter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		params := mux.Vars(r)
+		status, err := adapter.GetStatus(params["orderId"])
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get the status information: %v", err))
+			return
+		}
+
+		statusJSON, err := json.Marshal(status)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot marshal status information: %v", err))
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(statusJSON)
 	}
 }
 
