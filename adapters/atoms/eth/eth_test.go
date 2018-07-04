@@ -27,8 +27,8 @@ var _ = Describe("ether", func() {
 	var validity int64
 	var secret, secretHash [32]byte
 	var err error
-	var reqAtom, reqAtomFailed swap.AtomRequester
-	var resAtom swap.AtomResponder
+	var reqAtom, reqAtomFailed swap.Atom
+	var resAtom swap.Atom
 	var data []byte
 	var confPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/config.json"
 	var ksPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/keystore.json"
@@ -52,11 +52,11 @@ var _ = Describe("ether", func() {
 		validity = int64(time.Hour * 24)
 		aliceOrderID[0] = 0x33
 		bobOrderID[0] = 0x4a
-		reqAtom, err = NewEthereumRequestAtom(conn, alice)
+		reqAtom, err = NewEthereumAtom(conn, alice)
 		Expect(err).ShouldNot(HaveOccurred())
-		reqAtomFailed, err = NewEthereumRequestAtom(conn, alice)
+		reqAtomFailed, err = NewEthereumAtom(conn, alice)
 		Expect(err).ShouldNot(HaveOccurred())
-		resAtom, err = NewEthereumResponseAtom(conn, bob)
+		resAtom, err = NewEthereumAtom(conn, bob)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
