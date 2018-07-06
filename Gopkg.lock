@@ -49,8 +49,11 @@
   packages = ["."]
   revision = "31079b6807923eb23992c421b114992b95131b55"
 
-[[projects]]
+[[prune.project]]
   name = "github.com/ethereum/go-ethereum"
+  non-go = false
+  unused-packages = false
+
   packages = [
     ".",
     "accounts",
