@@ -1,7 +1,6 @@
 package ethwallet
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -13,13 +12,13 @@ import (
 )
 
 type ethereumWallet struct {
-	wallet *bindings.AtomWallet
+	wallet *bindings.RenExAtomicSettlement
 	auth   bind.TransactOpts
 	conn   client.Conn
 }
 
 func NewEthereumWallet(conn client.Conn, auth bind.TransactOpts) (watch.Wallet, error) {
-	wallet, err := bindings.NewAtomWallet(conn.WalletAddress(), bind.ContractBackend(conn.Client()))
+	wallet, err := bindings.NewRenExAtomicSettlement(conn.WalletAddress(), bind.ContractBackend(conn.Client()))
 
 	if err != nil {
 		return nil, err
@@ -34,26 +33,27 @@ func NewEthereumWallet(conn client.Conn, auth bind.TransactOpts) (watch.Wallet, 
 func (wallet *ethereumWallet) GetMatch(personalOrderID [32]byte) (match.Match, error) {
 	for {
 		time.Sleep(2 * time.Second)
-		buyID, sellID, buyToken, sellToken, buyValue, sellValue, err := wallet.wallet.GetSettlementDetails(&bind.CallOpts{}, personalOrderID)
+		matchDetails, err := wallet.wallet.GetMatchDetails(&bind.CallOpts{}, personalOrderID)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		if buyID == [32]byte{} {
+		if matchDetails.PersonalOrder == [32]byte{} {
 			continue
 		}
-		return match.NewMatch(buyID, sellID, sellValue, buyValue, sellToken, buyToken), nil
+		return match.NewMatch(matchDetails.PersonalOrder, matchDetails.ForeignOrder, matchDetails.SendValue, matchDetails.RecieveValue, matchDetails.SendCurrency, matchDetails.RecieveCurrency), nil
 	}
 	// return nil, errors.New("Failed to get match")
 }
 
 func (wallet *ethereumWallet) SetMatch(match match.Match) error {
-	wallet.auth.GasLimit = 3000000
-	fmt.Println(match.PersonalOrderID(), match.ForeignOrderID())
-	tx, err := wallet.wallet.SetSettlementDetails(&wallet.auth, match.PersonalOrderID(), match.ForeignOrderID(), match.RecieveCurrency(), match.SendCurrency(), match.RecieveValue(), match.SendValue())
-	if err != nil {
-		return err
-	}
-	_, err = wallet.conn.PatchedWaitMined(context.Background(), tx)
-	return err
+	// wallet.auth.GasLimit = 3000000
+	// fmt.Println(match.PersonalOrderID(), match.ForeignOrderID())
+	// tx, err := wallet.wallet.SetMatchDetails(&wallet.auth, match.PersonalOrderID(), match.ForeignOrderID(), match.RecieveCurrency(), match.SendCurrency(), match.RecieveValue(), match.SendValue())
+	// if err != nil {
+	// 	return err
+	// }
+	// _, err = wallet.conn.PatchedWaitMined(context.Background(), tx)
+	// return err
+	return nil
 }
