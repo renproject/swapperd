@@ -26,22 +26,26 @@ type BitcoinData struct {
 
 // BitcoinAtom is a struct for Bitcoin Atom
 type BitcoinAtom struct {
-	personalAddress string
-	connection      btc.Conn
-	data            BitcoinData
+	key        swap.Key
+	connection btc.Conn
+	data       BitcoinData
 }
 
 // NewBitcoinAtom returns a new Bitcoin Atom instance
-func NewBitcoinAtom(connection btc.Conn, address string) swap.Atom {
+func NewBitcoinAtom(connection btc.Conn, key swap.Key) swap.Atom {
 	return &BitcoinAtom{
-		personalAddress: address,
-		connection:      connection,
+		key:        key,
+		connection: connection,
 	}
 }
 
 // Initiate a new Atom swap by calling Bitcoin
 func (btcAtom *BitcoinAtom) Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error {
-	result, err := bindings.Initiate(btcAtom.connection, btcAtom.personalAddress, string(to), value.Int64(), hash[:], expiry)
+	from, err := btcAtom.From()
+	if err != nil {
+		return err
+	}
+	result, err := bindings.Initiate(btcAtom.connection, string(from), string(to), value.Int64(), hash[:], expiry)
 	if err != nil {
 		return err
 	}
@@ -58,8 +62,11 @@ func (btcAtom *BitcoinAtom) Initiate(to []byte, hash [32]byte, value *big.Int, e
 
 // Redeem an Atom swap by calling a function on Bitcoin
 func (btcAtom *BitcoinAtom) Redeem(secret [32]byte) error {
-
-	result, err := bindings.Redeem(btcAtom.connection, btcAtom.personalAddress, btcAtom.data.Contract, btcAtom.data.ContractTx, secret)
+	from, err := btcAtom.From()
+	if err != nil {
+		return err
+	}
+	result, err := bindings.Redeem(btcAtom.connection, string(from), btcAtom.data.Contract, btcAtom.data.ContractTx, secret)
 	if err != nil {
 		return err
 	}
@@ -70,7 +77,11 @@ func (btcAtom *BitcoinAtom) Redeem(secret [32]byte) error {
 
 // Refund an Atom swap by calling Bitcoin
 func (btcAtom *BitcoinAtom) Refund() error {
-	return bindings.Refund(btcAtom.connection, btcAtom.personalAddress, btcAtom.data.Contract, btcAtom.data.ContractTx)
+	from, err := btcAtom.From()
+	if err != nil {
+		return err
+	}
+	return bindings.Refund(btcAtom.connection, string(from), btcAtom.data.Contract, btcAtom.data.ContractTx)
 }
 
 // Audit an Atom swap by calling a function on Bitcoin
@@ -123,7 +134,7 @@ func (btcAtom *BitcoinAtom) Deserialize(b []byte) error {
 
 // PriorityCode returns the priority code of the currency.
 func (btcAtom *BitcoinAtom) PriorityCode() uint32 {
-	return 0
+	return btcAtom.key.PriorityCode()
 }
 
 // GetSecretHash returns the Secret Hash of the atom.
@@ -132,6 +143,11 @@ func (btcAtom *BitcoinAtom) GetSecretHash() [32]byte {
 }
 
 // From returns the address of the sender
-func (btcAtom *BitcoinAtom) From() []byte {
-	return []byte(btcAtom.personalAddress)
+func (btcAtom *BitcoinAtom) From() ([]byte, error) {
+	return btcAtom.key.GetAddress()
+}
+
+// GetKey returns the key of the atom.
+func (btcAtom *BitcoinAtom) GetKey() swap.Key {
+	return btcAtom.key
 }
