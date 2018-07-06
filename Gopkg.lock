@@ -3,12 +3,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/anaskhan96/base58check"
-  packages = ["."]
-  revision = "fcff33ba49dde3181fa69fb346f45582e52a3815"
-
-[[projects]]
-  branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
   revision = "59944ff78bc1de686b0aba1444dfd380f48f03d4"
@@ -55,10 +49,8 @@
   packages = ["."]
   revision = "31079b6807923eb23992c421b114992b95131b55"
 
-[[prune.project]]
+[[projects]]
   name = "github.com/ethereum/go-ethereum"
-  non-go = false
-  unused-packages = false
   packages = [
     ".",
     "accounts",
@@ -85,8 +77,8 @@
     "rpc",
     "trie"
   ]
-  revision = "dea1ce052a10cd7d401a5c04f83f371a06fe293c"
-  version = "v1.8.11"
+  revision = "37685930d953bcbe023f9bc65b135a8d8b8f1488"
+  version = "v1.8.12"
 
 [[projects]]
   name = "github.com/go-stack/stack"
@@ -281,6 +273,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7806041ba61ca9bfb5626a8e9c1df6dc907246f0150fe58e1476860e96d09f66"
+  inputs-digest = "749513c652811d2ea9943eea105d0c2517513a10859597177c280a3649f850fa"
   solver-name = "gps-cdcl"
   solver-version = 1

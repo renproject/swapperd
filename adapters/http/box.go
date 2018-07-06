@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/btcsuite/btcutil"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
@@ -15,7 +16,6 @@ import (
 	ethClient "github.com/republicprotocol/atom-go/adapters/clients/eth"
 	"github.com/republicprotocol/atom-go/adapters/config"
 	ax "github.com/republicprotocol/atom-go/adapters/info/eth"
-	"github.com/republicprotocol/atom-go/adapters/keystore"
 	net "github.com/republicprotocol/atom-go/adapters/networks/eth"
 	"github.com/republicprotocol/atom-go/adapters/store/leveldb"
 	wal "github.com/republicprotocol/atom-go/adapters/wallet/eth"
@@ -29,12 +29,12 @@ var ErrInvalidOrderIDLength = errors.New("invalid order id length")
 
 type boxHttpAdapter struct {
 	config config.Config
-	keystr keystore.Keystore
+	keystr swap.Keystore
 	watch  watch.Watch
 }
 
-func NewBoxHttpAdapter(config config.Config, keystr keystore.Keystore) (BoxHttpAdapter, error) {
-	watcher, err := BuildWatcher(config, keystr)
+func NewBoxHttpAdapter(config config.Config, keystr swap.Keystore) (BoxHttpAdapter, error) {
+	watcher, err := buildWatcher(config, keystr)
 	if err != nil {
 		return nil, err
 	}
@@ -67,10 +67,11 @@ func (adapter *boxHttpAdapter) WhoAmI(challenge string) (WhoAmI, error) {
 	}
 	boxHash := ethCrypto.Keccak256(boxBytes)
 
-	key, err := adapter.keystr.LoadKeypair("ethereum")
+	keys, err := adapter.keystr.LoadKeys()
 	if err != nil {
 		return WhoAmI{}, err
 	}
+	key := keys[0].GetKey()
 
 	signature, err := ethCrypto.Sign(boxHash, key)
 	if err != nil {
@@ -112,7 +113,12 @@ func (adapter *boxHttpAdapter) PostOrder(order PostOrder) (PostOrder, error) {
 		}
 	}()
 
-	key, err := adapter.keystr.LoadKeypair("ethereum")
+	keys, err := adapter.keystr.LoadKeys()
+	if err != nil {
+		return PostOrder{}, err
+	}
+	key := keys[0].GetKey()
+
 	if err != nil {
 		return PostOrder{}, err
 	}
@@ -134,7 +140,7 @@ func (adapter *boxHttpAdapter) PostOrder(order PostOrder) (PostOrder, error) {
 	}, nil
 }
 
-func BuildWatcher(config config.Config, kstr keystore.Keystore) (watch.Watch, error) {
+func buildWatcher(config config.Config, kstr swap.Keystore) (watch.Watch, error) {
 	ethConn, err := ethClient.Connect(config)
 	if err != nil {
 		return nil, err
@@ -145,12 +151,30 @@ func BuildWatcher(config config.Config, kstr keystore.Keystore) (watch.Watch, er
 		return nil, err
 	}
 
-	key, err := kstr.LoadKeypair("ethereum")
+	keys, err := kstr.LoadKeys()
 	if err != nil {
 		return nil, err
 	}
 
-	owner := bind.NewKeyedTransactor(key)
+	ethKey := keys[0]
+	btcKey := keys[1]
+
+	_WIF, err := btcKey.GetKeyString()
+	if err != nil {
+		return nil, err
+	}
+
+	WIF, err := btcutil.DecodeWIF(_WIF)
+	if err != nil {
+		return nil, err
+	}
+
+	err = btcConn.Client.ImportPrivKey(WIF)
+	if err != nil {
+		return nil, err
+	}
+
+	owner := bind.NewKeyedTransactor(ethKey.GetKey())
 	owner.GasLimit = 3000000
 
 	ethNet, err := net.NewEthereumNetwork(ethConn, owner)
@@ -168,17 +192,12 @@ func BuildWatcher(config config.Config, kstr keystore.Keystore) (watch.Watch, er
 		return nil, err
 	}
 
-	ethAtom, err := eth.NewEthereumAtom(ethConn, owner)
+	ethAtom, err := eth.NewEthereumAtom(ethConn, ethKey)
 	if err != nil {
 		return nil, err
 	}
 
-	btcAddr, err := kstr.GetBitcoinAddress()
-	if err != nil {
-		return nil, err
-	}
-
-	btcAtom := btc.NewBitcoinAtom(btcConn, btcAddr)
+	btcAtom := btc.NewBitcoinAtom(btcConn, btcKey)
 
 	loc := config.StoreLocation()
 	str := swap.NewSwapStore(leveldb.NewLDBStore(loc))
