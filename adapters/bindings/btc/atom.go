@@ -630,6 +630,7 @@ func buildRefund(connection btc.Conn, refundAddress btcutil.Address, contract []
 		e, err := txscript.NewEngine(contractTx.TxOut[contractOutPoint.Index].PkScript,
 			refundTx, 0, txscript.StandardVerifyFlags, txscript.NewSigCache(10),
 			txscript.NewTxSigHashes(refundTx), contractTx.TxOut[contractOutPoint.Index].Value)
+
 		if err != nil {
 			return nil, err
 		}
@@ -668,5 +669,6 @@ func createSig(connection btc.Conn, tx *wire.MsgTx, idx int,
 	if err != nil {
 		return nil, nil, err
 	}
-	return sig, wif.PrivKey.PubKey().SerializeCompressed(), nil
+
+	return sig, wif.PrivKey.PubKey().SerializeUncompressed(), nil
 }
