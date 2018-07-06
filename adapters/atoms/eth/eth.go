@@ -26,13 +26,14 @@ type EthereumData struct {
 type EthereumAtom struct {
 	context context.Context
 	client  ethclient.Conn
-	auth    *bind.TransactOpts
+	key     swap.Key
 	binding *bindings.AtomSwap
 	data    EthereumData
 }
 
 // NewEthereumAtom returns a new Ethereum RequestAtom instance
-func NewEthereumAtom(client ethclient.Conn, auth *bind.TransactOpts) (swap.Atom, error) {
+func NewEthereumAtom(client ethclient.Conn, key swap.Key) (swap.Atom, error) {
+
 	contract, err := bindings.NewAtomSwap(client.AtomAddress(), bind.ContractBackend(client.Client()))
 	if err != nil {
 		return &EthereumAtom{}, err
@@ -44,7 +45,7 @@ func NewEthereumAtom(client ethclient.Conn, auth *bind.TransactOpts) (swap.Atom,
 	return &EthereumAtom{
 		context: context.Background(),
 		client:  client,
-		auth:    auth,
+		key:     key,
 		binding: contract,
 		data: EthereumData{
 			SwapID: swapID,
@@ -54,11 +55,11 @@ func NewEthereumAtom(client ethclient.Conn, auth *bind.TransactOpts) (swap.Atom,
 
 // Initiate a new Atom swap by calling a function on ethereum
 func (ethAtom *EthereumAtom) Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error {
-	ethAtom.auth.Value = value
+	auth := bind.NewKeyedTransactor(ethAtom.key.GetKey())
+	auth.Value = value
+	auth.GasLimit = 3000000
 	ethAtom.data.HashLock = hash
-
-	tx, err := ethAtom.binding.Initiate(ethAtom.auth, ethAtom.data.SwapID, common.BytesToAddress(to), hash, big.NewInt(expiry))
-	ethAtom.auth.Value = big.NewInt(0)
+	tx, err := ethAtom.binding.Initiate(auth, ethAtom.data.SwapID, common.BytesToAddress(to), hash, big.NewInt(expiry))
 	if err != nil {
 		return err
 	}
@@ -68,7 +69,9 @@ func (ethAtom *EthereumAtom) Initiate(to []byte, hash [32]byte, value *big.Int, 
 
 // Refund an Atom swap by calling a function on ethereum
 func (ethAtom *EthereumAtom) Refund() error {
-	tx, err := ethAtom.binding.Refund(ethAtom.auth, ethAtom.data.SwapID)
+	auth := bind.NewKeyedTransactor(ethAtom.key.GetKey())
+	auth.GasLimit = 3000000
+	tx, err := ethAtom.binding.Refund(auth, ethAtom.data.SwapID)
 	if err == nil {
 		_, err = ethAtom.client.PatchedWaitMined(ethAtom.context, tx)
 	}
@@ -76,19 +79,21 @@ func (ethAtom *EthereumAtom) Refund() error {
 }
 
 // Redeem an Atom swap by calling a function on ethereum
-func (eth *EthereumAtom) Redeem(secret [32]byte) error {
-	tx, err := eth.binding.Redeem(eth.auth, eth.data.SwapID, secret)
+func (ethAtom *EthereumAtom) Redeem(secret [32]byte) error {
+	auth := bind.NewKeyedTransactor(ethAtom.key.GetKey())
+	auth.GasLimit = 3000000
+	tx, err := ethAtom.binding.Redeem(auth, ethAtom.data.SwapID, secret)
 	if err == nil {
-		_, err = eth.client.PatchedWaitMined(eth.context, tx)
+		_, err = ethAtom.client.PatchedWaitMined(ethAtom.context, tx)
 	}
 	return err
 }
 
 // Audit an Atom swap by calling a function on ethereum
-func (eth *EthereumAtom) Audit(hash [32]byte, to []byte, value *big.Int, expiry int64) error {
+func (ethAtom *EthereumAtom) Audit(hash [32]byte, to []byte, value *big.Int, expiry int64) error {
 	for start := time.Now(); time.Since(start) < 24*time.Hour; {
 
-		auditReport, err := eth.binding.Audit(&bind.CallOpts{}, eth.data.SwapID)
+		auditReport, err := ethAtom.binding.Audit(&bind.CallOpts{}, ethAtom.data.SwapID)
 		if auditReport.SecretLock == [32]byte{} {
 			time.Sleep(2 * time.Second)
 			continue
@@ -99,7 +104,7 @@ func (eth *EthereumAtom) Audit(hash [32]byte, to []byte, value *big.Int, expiry 
 		}
 
 		if hash != auditReport.SecretLock {
-			eth.data.HashLock = auditReport.SecretLock
+			ethAtom.data.HashLock = auditReport.SecretLock
 			// return fmt.Errorf("HashLock mismatch %v %v", hash, auditReport.SecretLock)
 		}
 
@@ -149,16 +154,21 @@ func (ethAtom *EthereumAtom) Deserialize(b []byte) error {
 }
 
 // From returns the address of the sender
-func (ethAtom *EthereumAtom) From() []byte {
-	return ethAtom.auth.From.Bytes()
+func (ethAtom *EthereumAtom) From() ([]byte, error) {
+	return ethAtom.key.GetAddress()
 }
 
 // PriorityCode returns the priority code of the currency.
 func (ethAtom *EthereumAtom) PriorityCode() uint32 {
-	return 1
+	return ethAtom.key.PriorityCode()
 }
 
 // GetSecretHash returns the Secret Hash of the atom.
 func (eth *EthereumAtom) GetSecretHash() [32]byte {
 	return eth.data.HashLock
+}
+
+// GetKey returns the key of the atom.
+func (eth *EthereumAtom) GetKey() swap.Key {
+	return eth.key
 }
