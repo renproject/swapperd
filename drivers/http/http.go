@@ -22,12 +22,7 @@ func main() {
 
 	keystr := keystore.NewKeystore(*keystrPath)
 
-	key, err := keystr.LoadKeypair("ethereum")
-	if err != nil {
-		panic(err)
-	}
-
-	httpAdapter, err := http.NewBoxHttpAdapter(conf, key)
+	httpAdapter, err := http.NewBoxHttpAdapter(conf, keystr)
 	if err != nil {
 		panic(err)
 	}

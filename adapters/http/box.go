@@ -281,6 +281,7 @@ func validate(id [32]byte, signature [65]byte, addresses []common.Address) error
 	if err != nil {
 		return err
 	}
+
 	ecdsaPubKey, err := ethCrypto.UnmarshalPubkey(upubKey)
 	if err != nil {
 		return err
