@@ -27,7 +27,7 @@ import (
 
 	ax "github.com/republicprotocol/atom-go/adapters/info/eth"
 	net "github.com/republicprotocol/atom-go/adapters/networks/eth"
-	wal "github.com/republicprotocol/atom-go/adapters/wallet/eth"
+	wal "github.com/republicprotocol/atom-go/adapters/wallet/mock"
 	"github.com/republicprotocol/atom-go/domains/match"
 )
 
@@ -153,8 +153,7 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		Expect(err).Should(BeNil())
 
 		atomMatch := match.NewMatch(aliceOrderID, bobOrderID, aliceSendValue, bobSendValue, aliceCurrency, bobCurrency)
-		mockWallet, err := wal.NewEthereumWallet(ganache, *owner)
-		Expect(err).Should(BeNil())
+		mockWallet := wal.NewMockWallet()
 
 		err = mockWallet.SetMatch(atomMatch)
 		Expect(err).Should(BeNil())
