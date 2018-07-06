@@ -274,11 +274,18 @@ func UnmarshalBoxInfo(boxInfo []byte) (BoxInfo, error) {
 }
 
 func validate(id [32]byte, signature [65]byte, addresses []common.Address) error {
-	upubKey, err := ethCrypto.Ecrecover(id[:], signature[:])
+	message := append([]byte("Republic Protocol: open: "), id[:]...)
+	signatureData := ethCrypto.Keccak256([]byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d", len(message))), message)
+
+	upubKey, err := ethCrypto.Ecrecover(signatureData, signature[:])
 	if err != nil {
 		return err
 	}
-	addr := ethCrypto.PubkeyToAddress(*ethCrypto.ToECDSAPub(upubKey))
+	ecdsaPubKey, err := ethCrypto.UnmarshalPubkey(upubKey)
+	if err != nil {
+		return err
+	}
+	addr := ethCrypto.PubkeyToAddress(*ecdsaPubKey)
 
 	for _, j := range addresses {
 		if j == addr {

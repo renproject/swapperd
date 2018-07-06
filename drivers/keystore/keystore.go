@@ -9,8 +9,8 @@ import (
 )
 
 func main() {
-	keyPath := "/Users/susruth/go/src/github.com/republicprotocol/atom-go/drivers/keystore/keys.json"
-	ksPath := "/Users/susruth/go/src/github.com/republicprotocol/atom-go/drivers/keystore/keystore.json"
+	keyPath := "keys.json"
+	ksPath := "keystore.json"
 
 	ethNet := flag.String("ethereum", "ganache", "Ethereum Network")
 	btcNet := flag.String("bitcoin", "regtest", "Bitcoin Network")
