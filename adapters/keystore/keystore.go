@@ -1,119 +1,65 @@
 package keystore
 
 import (
-	"crypto/ecdsa"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"sync"
 
-	ethCrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/republicprotocol/atom-go/adapters/key/btc"
+	"github.com/republicprotocol/atom-go/adapters/key/eth"
+	"github.com/republicprotocol/atom-go/services/swap"
 )
 
 var ErrUnknownChain = errors.New("unknown chain")
 
-type Keystore interface {
-	LoadKeypair(string) (*ecdsa.PrivateKey, error)
-	UpdateEtherumKey(*ecdsa.PrivateKey) error
-	UpdateEtherumKeyString(string) error
-	RandomEtherumKey() error
-	UpdateBitcoinKey(*ecdsa.PrivateKey) error
-	UpdateBitcoinKeyString(string) error
-	RandomBitcoinKey() error
+type keyJSON struct {
+	PrivateKey   string `json:"privateKey"`
+	Chain        string `json:"chain"`
+	PriorityCode uint32 `json:"priorityCode"`
 }
-
 type keystore struct {
-	Ethereum string `json:"ethereum"`
-	Bitcoin  string `json:"bitcoin"`
-
+	Keys []keyJSON `json:"keys"`
 	path string
 	mu   *sync.RWMutex
 }
 
-func NewKeystore(path string) Keystore {
+func NewKeystore(path string) swap.Keystore {
 	return &keystore{
 		path: path,
 		mu:   new(sync.RWMutex),
 	}
 }
 
-func (keystore *keystore) LoadKeypair(chain string) (*ecdsa.PrivateKey, error) {
-	err := keystore.loadFromFile()
+func (kstr *keystore) LoadKeys() ([]swap.Key, error) {
+	err := kstr.loadFromFile()
 	if err != nil {
 		return nil, err
 	}
-	keystore.mu.RLock()
-	defer keystore.mu.RUnlock()
+	kstr.mu.RLock()
+	defer kstr.mu.RUnlock()
 
-	switch chain {
-	case "ethereum":
-		return ethCrypto.HexToECDSA(keystore.Ethereum)
-	case "bitcoin":
-		return ethCrypto.HexToECDSA(keystore.Bitcoin)
-	default:
-		return nil, errors.New("Unknown blockchain")
+	keys := []swap.Key{}
+
+	for _, key := range kstr.Keys {
+		switch key.PriorityCode {
+		case uint32(0):
+			btcKey, err := btc.NewBitcoinKey(key.PrivateKey, key.Chain)
+			if err != nil {
+				return nil, errors.New("Failed to initialize bitcoin key")
+			}
+			keys = append(keys, btcKey)
+		case uint32(1):
+			ethKey, err := eth.NewEthereumKey(key.PrivateKey, key.Chain)
+			if err != nil {
+				return nil, errors.New("Failed to initialize ethereum key")
+			}
+			keys = append(keys, ethKey)
+		default:
+			return nil, errors.New("Unknown blockchain")
+		}
 	}
-}
-
-func (keystore *keystore) UpdateEtherumKey(pk *ecdsa.PrivateKey) error {
-	return keystore.UpdateEtherumKeyString(hex.EncodeToString(ethCrypto.FromECDSA(pk)))
-}
-
-func (keystore *keystore) UpdateEtherumKeyString(pk string) error {
-	err := keystore.loadFromFile()
-	if err != nil {
-		return err
-	}
-	keystore.mu.Lock()
-	defer keystore.mu.Unlock()
-
-	keystore.Ethereum = pk
-
-	data, err := json.Marshal(&keystore)
-	if err != nil {
-		return err
-	}
-	fmt.Println("Updated ethereum key string")
-	return ioutil.WriteFile(keystore.path, data, 0777)
-}
-
-func (keystore *keystore) RandomEtherumKey() error {
-	keyPair, err := ethCrypto.GenerateKey()
-	if err != nil {
-		return err
-	}
-	return keystore.UpdateEtherumKey(keyPair)
-}
-
-func (keystore *keystore) UpdateBitcoinKey(pk *ecdsa.PrivateKey) error {
-	return keystore.UpdateBitcoinKeyString(hex.EncodeToString(ethCrypto.FromECDSA(pk)))
-}
-
-func (keystore *keystore) UpdateBitcoinKeyString(pk string) error {
-	err := keystore.loadFromFile()
-	if err != nil {
-		return err
-	}
-	keystore.mu.Lock()
-	defer keystore.mu.Unlock()
-
-	keystore.Bitcoin = pk
-	data, err := json.Marshal(keystore)
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(keystore.path, data, 0777)
-}
-
-func (keystore *keystore) RandomBitcoinKey() error {
-	keyPair, err := ethCrypto.GenerateKey()
-	if err != nil {
-		return err
-	}
-	return keystore.UpdateBitcoinKey(keyPair)
+	return keys, nil
 }
 
 func (kstr *keystore) loadFromFile() error {
@@ -124,6 +70,5 @@ func (kstr *keystore) loadFromFile() error {
 	if err != nil {
 		return nil
 	}
-
-	return json.Unmarshal(raw, kstr)
+	return json.Unmarshal(raw, &kstr)
 }
