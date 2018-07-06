@@ -27,14 +27,14 @@ type EthereumAtom struct {
 	context context.Context
 	client  ethclient.Conn
 	key     swap.Key
-	binding *bindings.AtomSwap
+	binding *bindings.AtomicSwap
 	data    EthereumData
 }
 
 // NewEthereumAtom returns a new Ethereum RequestAtom instance
 func NewEthereumAtom(client ethclient.Conn, key swap.Key) (swap.Atom, error) {
 
-	contract, err := bindings.NewAtomSwap(client.AtomAddress(), bind.ContractBackend(client.Client()))
+	contract, err := bindings.NewAtomicSwap(client.AtomAddress(), bind.ContractBackend(client.Client()))
 	if err != nil {
 		return &EthereumAtom{}, err
 	}
