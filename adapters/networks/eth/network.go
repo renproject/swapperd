@@ -14,12 +14,12 @@ import (
 type ethereumNetwork struct {
 	conn client.Conn
 	auth *bind.TransactOpts
-	net  *bindings.AtomNetwork
+	net  *bindings.AtomicInfo
 	ctx  context.Context
 }
 
 func NewEthereumNetwork(conn client.Conn, auth *bind.TransactOpts) (swap.Network, error) {
-	net, err := bindings.NewAtomNetwork(conn.NetworkAddress(), bind.ContractBackend(conn.Client()))
+	net, err := bindings.NewAtomicInfo(conn.NetworkAddress(), bind.ContractBackend(conn.Client()))
 	if err != nil {
 		return &ethereumNetwork{}, err
 	}
