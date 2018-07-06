@@ -1,6 +1,8 @@
 package swap
 
-import "math/big"
+import (
+	"math/big"
+)
 
 type Atom interface {
 	Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error
@@ -12,5 +14,5 @@ type Atom interface {
 	Serialize() ([]byte, error)
 	Deserialize([]byte) error
 	PriorityCode() uint32
-	From() []byte
+	GetKey() Key
 }
