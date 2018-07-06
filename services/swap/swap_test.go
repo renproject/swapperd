@@ -1,7 +1,9 @@
 package swap_test
 
 import (
+	"crypto/ecdsa"
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"sync"
@@ -10,18 +12,23 @@ import (
 	"github.com/republicprotocol/atom-go/domains/match"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/republicprotocol/atom-go/drivers/btc/regtest"
 	. "github.com/republicprotocol/atom-go/services/swap"
+	"github.com/republicprotocol/atom-go/services/watch"
 
 	"github.com/republicprotocol/atom-go/adapters/atoms/btc"
 	"github.com/republicprotocol/atom-go/adapters/atoms/eth"
+
+	ethKey "github.com/republicprotocol/atom-go/adapters/key/eth"
+
 	btcclient "github.com/republicprotocol/atom-go/adapters/clients/btc"
 	ethclient "github.com/republicprotocol/atom-go/adapters/clients/eth"
 	"github.com/republicprotocol/atom-go/adapters/config"
-	"github.com/republicprotocol/atom-go/adapters/keystore"
 
 	ax "github.com/republicprotocol/atom-go/adapters/info/eth"
 	net "github.com/republicprotocol/atom-go/adapters/networks/eth"
@@ -41,7 +48,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		var aliceSendValue, bobSendValue *big.Int
 		var aliceRecieveValue, bobRecieveValue *big.Int
 		var aliceCurrency, bobCurrency uint32
-		var alice, bob *bind.TransactOpts
+		var alice, bob *ecdsa.PrivateKey
+		var aliceKey, bobKey swap.Key
 		var aliceBitcoinAddress, bobBitcoinAddress string
 		var swapID [32]byte
 
@@ -54,25 +62,36 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		bobCurrency = 0
 
 		var confPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/config.json"
-		var ksPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/keystore.json"
 		config, err := config.LoadConfig(confPath)
 		Expect(err).ShouldNot(HaveOccurred())
-		keystore := keystore.NewKeystore(ksPath)
 
 		ganache, err := ethclient.Connect(config)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		ownerECDSA, err := keystore.LoadKeypair("ethereum")
+		pk, err := crypto.HexToECDSA("2aba04ee8a322b8648af2a784144181a0c793f1a2e80519418f3d20bbfb22249")
 		Expect(err).ShouldNot(HaveOccurred())
-		owner := bind.NewKeyedTransactor(ownerECDSA)
+		owner := bind.NewKeyedTransactor(pk)
 
-		_, alice, err = ganache.NewAccount(1000000000000000000, owner)
+		alice, err = crypto.GenerateKey()
 		Expect(err).ShouldNot(HaveOccurred())
-		alice.GasLimit = 3000000
+		aliceKey, err = ethKey.NewEthereumKey(hex.EncodeToString(crypto.FromECDSA(alice)), "ganache")
+		Expect(err).ShouldNot(HaveOccurred())
 
-		_, bob, err = ganache.NewAccount(1000000000000000000, owner)
+		bob, err = crypto.GenerateKey()
 		Expect(err).ShouldNot(HaveOccurred())
-		bob.GasLimit = 3000000
+		bobKey, err = ethKey.NewEthereumKey(hex.EncodeToString(crypto.FromECDSA(bob)), "ganache")
+		Expect(err).ShouldNot(HaveOccurred())
+
+		aliceAddrBytes, err := aliceKey.GetAddress()
+		Expect(err).ShouldNot(HaveOccurred())
+		bobAddrBytes, err := bobKey.GetAddress()
+		Expect(err).ShouldNot(HaveOccurred())
+
+		err = ganache.Transfer(common.BytesToAddress(aliceAddrBytes), owner, 1000000000000000000)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		err = ganache.Transfer(common.BytesToAddress(bobAddrBytes), owner, 1000000000000000000)
+		Expect(err).ShouldNot(HaveOccurred())
 
 		time.Sleep(5 * time.Second)
 		connection, err := btcclient.Connect(config)
@@ -99,16 +118,16 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		bobBitcoinAddress = bobAddr.EncodeAddress()
 		Expect(err).Should(BeNil())
 
-		aliceNet, err = net.NewEthereumNetwork(ganache, alice)
+		aliceNet, err = net.NewEthereumNetwork(ganache, aliceAuth)
 		Expect(err).Should(BeNil())
 
-		bobNet, err = net.NewEthereumNetwork(ganache, bob)
+		bobNet, err = net.NewEthereumNetwork(ganache, bobAuth)
 		Expect(err).Should(BeNil())
 
-		aliceInfo, err = ax.NewEtereumAtomInfo(ganache, alice)
+		aliceInfo, err = ax.NewEtereumAtomInfo(ganache, aliceAuth)
 		Expect(err).Should(BeNil())
 
-		bobInfo, err = ax.NewEtereumAtomInfo(ganache, bob)
+		bobInfo, err = ax.NewEtereumAtomInfo(ganache, bobAuth)
 		Expect(err).Should(BeNil())
 
 		aliceOrder = match.NewMatch(aliceOrderID, bobOrderID, aliceSendValue, aliceRecieveValue, aliceCurrency, bobCurrency)
