@@ -1,7 +1,6 @@
 package http
 
 import (
-	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -16,6 +15,7 @@ import (
 	ethClient "github.com/republicprotocol/atom-go/adapters/clients/eth"
 	"github.com/republicprotocol/atom-go/adapters/config"
 	ax "github.com/republicprotocol/atom-go/adapters/info/eth"
+	"github.com/republicprotocol/atom-go/adapters/keystore"
 	net "github.com/republicprotocol/atom-go/adapters/networks/eth"
 	"github.com/republicprotocol/atom-go/adapters/store/leveldb"
 	wal "github.com/republicprotocol/atom-go/adapters/wallet/eth"
@@ -29,19 +29,19 @@ var ErrInvalidOrderIDLength = errors.New("invalid order id length")
 
 type boxHttpAdapter struct {
 	config config.Config
-	key    *ecdsa.PrivateKey
+	keystr keystore.Keystore
 	watch  watch.Watch
 }
 
-func NewBoxHttpAdapter(config config.Config, key *ecdsa.PrivateKey) (BoxHttpAdapter, error) {
-	watcher, err := BuildWatcher(config, key)
+func NewBoxHttpAdapter(config config.Config, keystr keystore.Keystore) (BoxHttpAdapter, error) {
+	watcher, err := BuildWatcher(config, keystr)
 	if err != nil {
 		return nil, err
 	}
 
 	return &boxHttpAdapter{
 		config: config,
-		key:    key,
+		keystr: keystr,
 		watch:  watcher,
 	}, nil
 }
@@ -67,7 +67,12 @@ func (adapter *boxHttpAdapter) WhoAmI(challenge string) (WhoAmI, error) {
 	}
 	boxHash := ethCrypto.Keccak256(boxBytes)
 
-	signature, err := ethCrypto.Sign(boxHash, adapter.key)
+	key, err := adapter.keystr.LoadKeypair("ethereum")
+	if err != nil {
+		return WhoAmI{}, err
+	}
+
+	signature, err := ethCrypto.Sign(boxHash, key)
 	if err != nil {
 		return WhoAmI{}, err
 	}
@@ -107,7 +112,12 @@ func (adapter *boxHttpAdapter) PostOrder(order PostOrder) (PostOrder, error) {
 		}
 	}()
 
-	signOut, err := ethCrypto.Sign(orderID[:], adapter.key)
+	key, err := adapter.keystr.LoadKeypair("ethereum")
+	if err != nil {
+		return PostOrder{}, err
+	}
+
+	signOut, err := ethCrypto.Sign(orderID[:], key)
 
 	if err != nil {
 		return PostOrder{}, err
@@ -124,13 +134,18 @@ func (adapter *boxHttpAdapter) PostOrder(order PostOrder) (PostOrder, error) {
 	}, nil
 }
 
-func BuildWatcher(config config.Config, key *ecdsa.PrivateKey) (watch.Watch, error) {
+func BuildWatcher(config config.Config, kstr keystore.Keystore) (watch.Watch, error) {
 	ethConn, err := ethClient.Connect(config)
 	if err != nil {
 		return nil, err
 	}
 
 	btcConn, err := btcClient.Connect(config)
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := kstr.LoadKeypair("ethereum")
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +172,13 @@ func BuildWatcher(config config.Config, key *ecdsa.PrivateKey) (watch.Watch, err
 	if err != nil {
 		return nil, err
 	}
-	btcAtom := btc.NewBitcoinAtom(btcConn, "")
+
+	btcAddr, err := kstr.GetBitcoinAddress()
+	if err != nil {
+		return nil, err
+	}
+
+	btcAtom := btc.NewBitcoinAtom(btcConn, btcAddr)
 
 	loc := config.StoreLocation()
 	str := swap.NewSwapStore(leveldb.NewLDBStore(loc))
