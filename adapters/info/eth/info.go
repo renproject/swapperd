@@ -14,12 +14,12 @@ import (
 type ethereumAtomInfo struct {
 	conn client.Conn
 	auth *bind.TransactOpts
-	info *bindings.AtomInfo
+	info *bindings.AtomicInfo
 	ctx  context.Context
 }
 
 func NewEtereumAtomInfo(conn client.Conn, auth *bind.TransactOpts) (swap.Info, error) {
-	info, err := bindings.NewAtomInfo(conn.InfoAddress(), bind.ContractBackend(conn.Client()))
+	info, err := bindings.NewAtomicInfo(conn.InfoAddress(), bind.ContractBackend(conn.Client()))
 	if err != nil {
 		return &ethereumAtomInfo{}, err
 	}
