@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/republicprotocol/atom-go/adapters/keystore"
 	"github.com/republicprotocol/atom-go/utils"
@@ -9,7 +10,7 @@ import (
 
 func main() {
 
-	ksPath := "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/keystore.json"
+	ksPath := os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/keystore.json"
 	ks := keystore.NewKeystore(ksPath)
 
 	key, err := ks.LoadKeypair("bitcoin")
