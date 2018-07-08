@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/btcsuite/btcutil"
@@ -15,7 +16,6 @@ import (
 	btcclient "github.com/republicprotocol/atom-go/adapters/clients/btc"
 	"github.com/republicprotocol/atom-go/adapters/config"
 	"github.com/republicprotocol/atom-go/adapters/key/btc"
-	"github.com/republicprotocol/atom-go/drivers/btc/regtest"
 	"github.com/republicprotocol/atom-go/services/swap"
 )
 
@@ -34,7 +34,8 @@ var _ = Describe("bitcoin", func() {
 	var reqAtom, reqAtomFailed swap.Atom
 	var resAtom swap.Atom
 	var data []byte
-	var confPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/config.json"
+	//	var confLocal = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/configLocal.json" // Bitcoin Regtest
+	var confPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/configTestnet.json" // Bitcoin Testnet
 
 	BeforeSuite(func() {
 		config, err := config.LoadConfig(confPath)
@@ -42,20 +43,20 @@ var _ = Describe("bitcoin", func() {
 		connection, err = btcclient.Connect(config)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		go func() {
-			err = regtest.Mine(connection)
-			Expect(err).ShouldNot(HaveOccurred())
-		}()
-		time.Sleep(5 * time.Second)
+		// go func() {
+		// 	err = regtest.Mine(connection)
+		// 	Expect(err).ShouldNot(HaveOccurred())
+		// }()
+		// time.Sleep(5 * time.Second)
 
 		alice, err := crypto.GenerateKey()
 		Expect(err).ShouldNot(HaveOccurred())
-		aliceKey, err := btc.NewBitcoinKey(hex.EncodeToString(crypto.FromECDSA(alice)), "regtest")
+		aliceKey, err := btc.NewBitcoinKey(hex.EncodeToString(crypto.FromECDSA(alice)), "testnet")
 		Expect(err).ShouldNot(HaveOccurred())
 
 		bob, err := crypto.GenerateKey()
 		Expect(err).ShouldNot(HaveOccurred())
-		bobKey, err := btc.NewBitcoinKey(hex.EncodeToString(crypto.FromECDSA(bob)), "regtest")
+		bobKey, err := btc.NewBitcoinKey(hex.EncodeToString(crypto.FromECDSA(bob)), "testnet")
 		Expect(err).ShouldNot(HaveOccurred())
 
 		aliceAddrBytes, err = aliceKey.GetAddress()
@@ -71,7 +72,7 @@ var _ = Describe("bitcoin", func() {
 		_bobAddr, err = btcutil.DecodeAddress(bobAddr, connection.ChainParams)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		btcvalue, err := btcutil.NewAmount(5.0)
+		btcvalue, err := btcutil.NewAmount(0.05)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		connection.Client.SendToAddress(_aliceAddr, btcvalue)
