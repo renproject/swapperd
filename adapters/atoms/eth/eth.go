@@ -128,7 +128,6 @@ func (ethAtom *EthereumAtom) Audit(hash [32]byte, to []byte, value *big.Int, exp
 func (ethAtom *EthereumAtom) AuditSecret() ([32]byte, error) {
 	for start := time.Now(); time.Since(start) < 24*time.Hour; {
 		secret, err := ethAtom.binding.AuditSecret(&bind.CallOpts{}, ethAtom.data.SwapID)
-		fmt.Println("Audit Secret Tried", secret)
 		if err != nil {
 			time.Sleep(2 * time.Second)
 			continue
