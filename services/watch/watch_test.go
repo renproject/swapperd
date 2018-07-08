@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"os"
 	"sync"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	ethclient "github.com/republicprotocol/atom-go/adapters/clients/eth"
 	"github.com/republicprotocol/atom-go/adapters/config"
 	"github.com/republicprotocol/atom-go/adapters/keystore"
+	"github.com/republicprotocol/atom-go/adapters/owner"
 	"github.com/republicprotocol/atom-go/adapters/store/leveldb"
 	"github.com/republicprotocol/atom-go/drivers/btc/regtest"
 	"github.com/republicprotocol/atom-go/services/swap"
@@ -27,7 +29,7 @@ import (
 
 	ax "github.com/republicprotocol/atom-go/adapters/info/eth"
 	net "github.com/republicprotocol/atom-go/adapters/networks/eth"
-	wal "github.com/republicprotocol/atom-go/adapters/wallet/mock"
+	wal "github.com/republicprotocol/atom-go/adapters/wallet/eth"
 	"github.com/republicprotocol/atom-go/domains/match"
 )
 
@@ -52,9 +54,9 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		aliceCurrency = 1
 		bobCurrency = 0
 
-		var confPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/config.json"
-		var ksPathA = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/keystoreA.json"
-		var ksPathB = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/keystoreB.json"
+		var confPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/configLocal.json"
+		var ksPathA = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/keystoreA.json"
+		var ksPathB = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/keystoreB.json"
 
 		config, err := config.LoadConfig(confPath)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -83,17 +85,23 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		aliceAddr := string(aliceAddrBytes)
 		bobAddr := string(bobAddrBytes)
 
-		ownerECDSA, err := crypto.HexToECDSA("2aba04ee8a322b8648af2a784144181a0c793f1a2e80519418f3d20bbfb22249")
+		var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/owner.json"
+
+		own, err := owner.LoadOwner(ownPath)
 		Expect(err).ShouldNot(HaveOccurred())
-		owner := bind.NewKeyedTransactor(ownerECDSA)
+
+		pk, err := crypto.HexToECDSA(own.Ganache)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		owner := bind.NewKeyedTransactor(pk)
 
 		aliceEthAddr, err := aliceEthKey.GetAddress()
 		Expect(err).ShouldNot(HaveOccurred())
-		ganache.Transfer(common.BytesToAddress(aliceEthAddr), owner, 1000000000000000000)
+		ganache.Transfer(common.BytesToAddress(aliceEthAddr), owner, 1000000000000000)
 
 		bobEthAddr, err := bobEthKey.GetAddress()
 		Expect(err).ShouldNot(HaveOccurred())
-		ganache.Transfer(common.BytesToAddress(bobEthAddr), owner, 1000000000000000000)
+		ganache.Transfer(common.BytesToAddress(bobEthAddr), owner, 1000000000000000)
 
 		time.Sleep(5 * time.Second)
 		connection, err := btcclient.Connect(config)
@@ -153,7 +161,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		Expect(err).Should(BeNil())
 
 		atomMatch := match.NewMatch(aliceOrderID, bobOrderID, aliceSendValue, bobSendValue, aliceCurrency, bobCurrency)
-		mockWallet := wal.NewMockWallet()
+		mockWallet, err := wal.NewEthereumWallet(ganache, *owner)
+		Expect(err).Should(BeNil())
 
 		err = mockWallet.SetMatch(atomMatch)
 		Expect(err).Should(BeNil())
@@ -204,3 +213,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		wg.Wait()
 	})
 })
+
+// "chain": "testnet",
+// "username": "testnetuser",
+// "password": "testnetpassword",
+// "url": "54.145.88.100:5000"
