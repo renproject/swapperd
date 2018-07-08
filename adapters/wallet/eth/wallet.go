@@ -1,6 +1,7 @@
 package ethwallet
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -47,13 +48,18 @@ func (wallet *ethereumWallet) GetMatch(personalOrderID [32]byte) (match.Match, e
 }
 
 func (wallet *ethereumWallet) SetMatch(match match.Match) error {
-	// wallet.auth.GasLimit = 3000000
-	// fmt.Println(match.PersonalOrderID(), match.ForeignOrderID())
-	// tx, err := wallet.wallet.SetMatchDetails(&wallet.auth, match.PersonalOrderID(), match.ForeignOrderID(), match.RecieveCurrency(), match.SendCurrency(), match.RecieveValue(), match.SendValue())
-	// if err != nil {
-	// 	return err
-	// }
-	// _, err = wallet.conn.PatchedWaitMined(context.Background(), tx)
-	// return err
-	return nil
+	wallet.auth.GasLimit = 3000000
+	tx, err := wallet.wallet.SetMatchDetails(&wallet.auth, match.PersonalOrderID(), match.ForeignOrderID(), match.RecieveCurrency(), match.SendCurrency(), match.RecieveValue(), match.SendValue())
+	if err != nil {
+		return err
+	}
+	_, err = wallet.conn.PatchedWaitMined(context.Background(), tx)
+	return err
 }
+
+// func (wallet *ethereumWallet) SubmitOrder(order order.Order) error {
+// 	wallet.auth.GasLimit = 3000000
+
+// 	tx, err := wallet.wallet.SubmitOrder(&wallet.auth, order.Type(), order.Parity(), order.Expiry(), order.Tokens(), order.PriceC(), order.PriceQ(), order.VolumeC(), order.VolumeQ(), order.MinimumVolumeC(), order.MinimumVolumeQ(), order.NonceHash())
+
+// }
