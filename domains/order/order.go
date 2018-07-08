@@ -6,10 +6,19 @@ import (
 
 type Order interface {
 	Price() *big.Int
+	PriceC() *big.Int
+	PriceQ() *big.Int
 	Volume() *big.Int
+	VolumeC() *big.Int
+	VolumeQ() *big.Int
 	Type() uint8
+	Parity() uint8
 	MinimumVolume() *big.Int
+	MinimumVolumeC() *big.Int
+	MinimumVolumeQ() *big.Int
 	Expiry() uint64
+	Tokens() uint64
+	NonceHash() *big.Int
 	SendCurrency() uint32
 	RecieveCurrency() uint32
 	Trader() []byte
@@ -50,21 +59,52 @@ func NewOrder(parity, orderType uint8, expiry, tokens uint64, priceC, priceQ, vo
 func (order *order) Price() *big.Int {
 	return decodePrice(order.priceC, order.priceQ)
 }
+func (order *order) PriceC() *big.Int {
+	return order.priceC
+}
+func (order *order) PriceQ() *big.Int {
+	return order.priceQ
+}
 
 func (order *order) Volume() *big.Int {
 	return decodeVolume(order.volumeC, order.volumeQ)
+}
+func (order *order) VolumeC() *big.Int {
+	return order.volumeC
+}
+func (order *order) VolumeQ() *big.Int {
+	return order.volumeQ
 }
 
 func (order *order) MinimumVolume() *big.Int {
 	return decodeVolume(order.minimumVolumeC, order.minimumVolumeQ)
 }
 
+func (order *order) MinimumVolumeC() *big.Int {
+	return order.minimumVolumeC
+}
+func (order *order) MinimumVolumeQ() *big.Int {
+	return order.minimumVolumeQ
+}
+
+func (order *order) NonceHash() *big.Int {
+	return order.nonceHash
+}
+
 func (order *order) Type() uint8 {
 	return order.orderType
 }
 
+func (order *order) Parity() uint8 {
+	return order.parity
+}
+
 func (order *order) Expiry() uint64 {
 	return order.expiry
+}
+
+func (order *order) Tokens() uint64 {
+	return order.tokens
 }
 
 func (order *order) SendCurrency() uint32 {
