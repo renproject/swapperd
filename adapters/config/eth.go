@@ -1,13 +1,18 @@
 package config
 
-// Config are the parameters required to create an ethereum client
+// EthereumConfig are the parameters required to create an ethereum client
 type EthereumConfig struct {
-	Chain          string `json:"chain"`
-	URL            string `json:"url"`
-	AtomAddress    string `json:"atom_address"`
-	NetworkAddress string `json:"network_address"`
-	InfoAddress    string `json:"info_address"`
-	WalletAddress  string `json:"wallet_address"`
+	Chain                   string `json:"chain"`
+	URL                     string `json:"url"`
+	AtomAddress             string `json:"atom_address"`
+	InfoAddress             string `json:"info_address"`
+	WalletAddress           string `json:"wallet_address"`
+	RenExTokens             string `json:"renex_tokens"`
+	RenExBalances           string `json:"renex_balances"`
+	RewardVault             string `json:"reward_vault"`
+	DarkNodeRegistryAddress string `json:"dnr_address"`
+	RepublicTokenAddress    string `json:"ren_address"`
+	OrderBookAddress        string `json:"ob_address"`
 }
 
 func (config *Config) GetEthereumConfig() EthereumConfig {
