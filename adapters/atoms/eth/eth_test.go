@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -16,11 +17,11 @@ import (
 	ethclient "github.com/republicprotocol/atom-go/adapters/clients/eth"
 	"github.com/republicprotocol/atom-go/adapters/config"
 	"github.com/republicprotocol/atom-go/adapters/key/eth"
+	"github.com/republicprotocol/atom-go/adapters/owner"
 	"github.com/republicprotocol/atom-go/services/swap"
 )
 
 var _ = Describe("ether", func() {
-
 	var conn ethclient.Conn
 	var aliceOrderID, bobOrderID [32]byte
 	var aliceKey, bobKey swap.Key
@@ -31,7 +32,8 @@ var _ = Describe("ether", func() {
 	var reqAtom, reqAtomFailed swap.Atom
 	var resAtom swap.Atom
 	var data []byte
-	var confPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/config.json"
+	var confPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/configLocal.json"
+	var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/owner.json"
 
 	BeforeSuite(func() {
 		config, err := config.LoadConfig(confPath)
@@ -39,7 +41,10 @@ var _ = Describe("ether", func() {
 		conn, err = ethclient.Connect(config)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		pk, err := crypto.HexToECDSA("2aba04ee8a322b8648af2a784144181a0c793f1a2e80519418f3d20bbfb22249")
+		own, err := owner.LoadOwner(ownPath)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		pk, err := crypto.HexToECDSA(own.Ganache)
 		Expect(err).ShouldNot(HaveOccurred())
 		owner := bind.NewKeyedTransactor(pk)
 
