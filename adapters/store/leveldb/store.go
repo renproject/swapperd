@@ -17,6 +17,8 @@ func NewLDBStore(path string) store.Store {
 
 func (ldb *ldbStore) Read(key []byte) ([]byte, error) {
 	db, err := leveldb.OpenFile(ldb.path, nil)
+	defer db.Close()
+
 	if err != nil {
 		return []byte{}, err
 	}
@@ -25,8 +27,11 @@ func (ldb *ldbStore) Read(key []byte) ([]byte, error) {
 
 func (ldb *ldbStore) Write(key []byte, value []byte) error {
 	db, err := leveldb.OpenFile(ldb.path, nil)
+	defer db.Close()
+
 	if err != nil {
 		return err
 	}
+
 	return db.Put(key, value, nil)
 }
