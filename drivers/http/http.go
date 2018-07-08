@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	netHttp "net/http"
 
@@ -12,8 +13,11 @@ import (
 
 func main() {
 
+	port := flag.String("port", "18516", "HTTP Atom port")
 	confPath := flag.String("config", "./config.json", "Location of the config file")
 	keystrPath := flag.String("keystore", "./keystore.json", "Location of the keystore file")
+
+	flag.Parse()
 
 	conf, err := config.LoadConfig(*confPath)
 	if err != nil {
@@ -26,8 +30,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	log.Println("Listening on 0.0.0.0:18516")
-
-	log.Fatal(netHttp.ListenAndServe(":18516", http.NewServer(httpAdapter)))
+	log.Println(fmt.Sprintf("0.0.0.0:%s", *port))
+	log.Fatal(netHttp.ListenAndServe(fmt.Sprintf(":%s", *port), http.NewServer(httpAdapter)))
 }
