@@ -19,7 +19,7 @@ type ethereumNetwork struct {
 }
 
 func NewEthereumNetwork(conn client.Conn, auth *bind.TransactOpts) (swap.Network, error) {
-	net, err := bindings.NewAtomicInfo(conn.NetworkAddress(), bind.ContractBackend(conn.Client()))
+	net, err := bindings.NewAtomicInfo(conn.InfoAddress(), bind.ContractBackend(conn.Client()))
 	if err != nil {
 		return &ethereumNetwork{}, err
 	}
