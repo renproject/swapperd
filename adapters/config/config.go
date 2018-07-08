@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"os"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -16,6 +15,7 @@ type Config struct {
 	Version             string         `json:"version"`
 	SupportedCurrencies []string       `json:"supportedCurrencies"`
 	AuthorizedAddresses []string       `json:"authorizedAddresses"`
+	StoreLoc            string         `json:"storeLocation"`
 
 	mu   *sync.RWMutex
 	path string
@@ -60,5 +60,5 @@ func (config *Config) GetAuthorizedAddresses() []common.Address {
 }
 
 func (config *Config) StoreLocation() string {
-	return os.Getenv("HOME") + "/db"
+	return config.StoreLoc
 }
