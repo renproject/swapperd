@@ -16,12 +16,11 @@ import (
 )
 
 type Conn struct {
-	network        string
-	client         *ethclient.Client
-	atomAddress    common.Address
-	networkAddress common.Address
-	walletAddress  common.Address
-	infoAddress    common.Address
+	network       string
+	client        *ethclient.Client
+	atomAddress   common.Address
+	walletAddress common.Address
+	infoAddress   common.Address
 }
 
 // Connect to an ethereum network.
@@ -32,12 +31,11 @@ func Connect(config config.Config) (Conn, error) {
 	}
 
 	return Conn{
-		client:         ethclient,
-		network:        config.Ethereum.Chain,
-		atomAddress:    common.HexToAddress(config.Ethereum.AtomAddress),
-		networkAddress: common.HexToAddress(config.Ethereum.NetworkAddress),
-		infoAddress:    common.HexToAddress(config.Ethereum.InfoAddress),
-		walletAddress:  common.HexToAddress(config.Ethereum.WalletAddress),
+		client:        ethclient,
+		network:       config.Ethereum.Chain,
+		atomAddress:   common.HexToAddress(config.Ethereum.AtomAddress),
+		infoAddress:   common.HexToAddress(config.Ethereum.InfoAddress),
+		walletAddress: common.HexToAddress(config.Ethereum.WalletAddress),
 	}, nil
 }
 
@@ -108,10 +106,6 @@ func (b *Conn) PatchedWaitDeployed(ctx context.Context, tx *types.Transaction) (
 
 func (conn *Conn) AtomAddress() common.Address {
 	return conn.atomAddress
-}
-
-func (conn *Conn) NetworkAddress() common.Address {
-	return conn.networkAddress
 }
 
 func (conn *Conn) WalletAddress() common.Address {
