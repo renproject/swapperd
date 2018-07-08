@@ -1,7 +1,7 @@
 package http
 
 import (
-	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -224,12 +224,12 @@ func (adapter *boxHttpAdapter) GetStatus(orderID string) (Status, error) {
 }
 
 func MarshalSignature(signatureIn [65]byte) string {
-	return base64.StdEncoding.EncodeToString(signatureIn[:])
+	return hex.EncodeToString(signatureIn[:])
 }
 
 func UnmarshalSignature(signatureIn string) ([65]byte, error) {
 	signature := [65]byte{}
-	signatureBytes, err := base64.StdEncoding.DecodeString(signatureIn)
+	signatureBytes, err := hex.DecodeString(signatureIn)
 	if err != nil {
 		return signature, fmt.Errorf("cannot decode signature %v: %v", signatureIn, err)
 	}
@@ -241,12 +241,12 @@ func UnmarshalSignature(signatureIn string) ([65]byte, error) {
 }
 
 func MarshalOrderID(orderIDIn [32]byte) string {
-	return base64.StdEncoding.EncodeToString(orderIDIn[:])
+	return hex.EncodeToString(orderIDIn[:])
 }
 
 func UnmarshalOrderID(orderIDIn string) ([32]byte, error) {
 	orderID := [32]byte{}
-	orderIDBytes, err := base64.StdEncoding.DecodeString(orderIDIn)
+	orderIDBytes, err := hex.DecodeString(orderIDIn)
 	if err != nil {
 		return orderID, fmt.Errorf("cannot decode order id %v: %v", orderIDIn, err)
 	}
@@ -289,10 +289,9 @@ func validate(id [32]byte, signature [65]byte, addresses []common.Address) error
 	addr := ethCrypto.PubkeyToAddress(*ecdsaPubKey)
 
 	for _, j := range addresses {
-		if j == addr {
+		if j.String() == addr.String() {
 			return nil
 		}
 	}
-
 	return errors.New("Unauthorized Public Key")
 }
