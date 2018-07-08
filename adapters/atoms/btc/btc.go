@@ -105,7 +105,6 @@ func (btcAtom *BitcoinAtom) Audit(hashLock [32]byte, to []byte, value *big.Int, 
 	// if expiry > (result.LockTime - time.Now().Unix()) {
 	// 	return errors.New("Expiry mismatch")
 	// }
-	println("Audit Successful")
 	return nil
 }
 
