@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"os"
 	"sync"
 	"time"
 
@@ -19,10 +20,10 @@ import (
 
 	"github.com/republicprotocol/atom-go/drivers/btc/regtest"
 	. "github.com/republicprotocol/atom-go/services/swap"
-	"github.com/republicprotocol/atom-go/services/watch"
 
 	"github.com/republicprotocol/atom-go/adapters/atoms/btc"
 	"github.com/republicprotocol/atom-go/adapters/atoms/eth"
+	"github.com/republicprotocol/atom-go/adapters/owner"
 
 	ethKey "github.com/republicprotocol/atom-go/adapters/key/eth"
 
@@ -61,15 +62,21 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		aliceCurrency = 1
 		bobCurrency = 0
 
-		var confPath = "/Users/susruth/go/src/github.com/republicprotocol/atom-go/secrets/config.json"
+		var confPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/config.json"
 		config, err := config.LoadConfig(confPath)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		ganache, err := ethclient.Connect(config)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		pk, err := crypto.HexToECDSA("2aba04ee8a322b8648af2a784144181a0c793f1a2e80519418f3d20bbfb22249")
+		var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/owner.json"
+
+		own, err := owner.LoadOwner(ownPath)
 		Expect(err).ShouldNot(HaveOccurred())
+
+		pk, err := crypto.HexToECDSA(own.Ganache)
+		Expect(err).ShouldNot(HaveOccurred())
+
 		owner := bind.NewKeyedTransactor(pk)
 
 		alice, err = crypto.GenerateKey()
