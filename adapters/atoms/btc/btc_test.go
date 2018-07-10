@@ -34,8 +34,8 @@ var _ = Describe("bitcoin", func() {
 	var reqAtom, reqAtomFailed swap.Atom
 	var resAtom swap.Atom
 	var data []byte
-	//	var confLocal = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/configLocal.json" // Bitcoin Regtest
-	var confPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/configTestnet.json" // Bitcoin Testnet
+	//	var confLocal = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/configLocal.json" // Bitcoin Regtest
+	var confPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/configTestnet.json" // Bitcoin Testnet
 
 	BeforeSuite(func() {
 		config, err := config.LoadConfig(confPath)

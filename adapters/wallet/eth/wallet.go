@@ -42,14 +42,14 @@ func (wallet *ethereumWallet) GetMatch(personalOrderID [32]byte) (match.Match, e
 		if matchDetails.PersonalOrder == [32]byte{} {
 			continue
 		}
-		return match.NewMatch(matchDetails.PersonalOrder, matchDetails.ForeignOrder, matchDetails.SendValue, matchDetails.RecieveValue, matchDetails.SendCurrency, matchDetails.RecieveCurrency), nil
+		return match.NewMatch(matchDetails.PersonalOrder, matchDetails.ForeignOrder, matchDetails.SendValue, matchDetails.ReceiveValue, matchDetails.SendCurrency, matchDetails.ReceiveCurrency), nil
 	}
 	// return nil, errors.New("Failed to get match")
 }
 
 func (wallet *ethereumWallet) SetMatch(match match.Match) error {
 	wallet.auth.GasLimit = 3000000
-	tx, err := wallet.wallet.SetMatchDetails(&wallet.auth, match.PersonalOrderID(), match.ForeignOrderID(), match.RecieveCurrency(), match.SendCurrency(), match.RecieveValue(), match.SendValue())
+	tx, err := wallet.wallet.SetMatchDetails(&wallet.auth, match.PersonalOrderID(), match.ForeignOrderID(), match.ReceiveCurrency(), match.SendCurrency(), match.ReceiveValue(), match.SendValue())
 	if err != nil {
 		return err
 	}

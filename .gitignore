@@ -2,3 +2,4 @@ vendor
 secrets
 *.json
 .DS_Store
+db*

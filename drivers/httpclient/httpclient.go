@@ -32,10 +32,10 @@ func main() {
 
 	var aliceOrderID, bobOrderID [32]byte
 
-	var conf = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/local/configA.json"
-	var keyA = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/local/keystoreA.json"
-	var keyB = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/local/keystoreB.json"
-	var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/owner.json"
+	var conf = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/local/configA.json"
+	var keyA = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/local/keystoreA.json"
+	var keyB = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/local/keystoreB.json"
+	var ownPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/owner.json"
 
 	ksA := keystore.NewKeystore(keyA)
 	ksB := keystore.NewKeystore(keyB)

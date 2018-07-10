@@ -47,7 +47,7 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		var aliceOrder, bobOrder match.Match
 		var aliceOrderID, bobOrderID [32]byte
 		var aliceSendValue, bobSendValue *big.Int
-		var aliceRecieveValue, bobRecieveValue *big.Int
+		var aliceReceiveValue, bobReceiveValue *big.Int
 		var aliceCurrency, bobCurrency uint32
 		var alice, bob *ecdsa.PrivateKey
 		var aliceKey, bobKey swap.Key
@@ -62,14 +62,14 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		aliceCurrency = 1
 		bobCurrency = 0
 
-		var confPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/config.json"
+		var confPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/config.json"
 		config, err := config.LoadConfig(confPath)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		ganache, err := ethclient.Connect(config)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/owner.json"
+		var ownPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/owner.json"
 
 		own, err := owner.LoadOwner(ownPath)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -107,8 +107,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		aliceSendValue = big.NewInt(10000000)
 		bobSendValue = big.NewInt(10000000)
 
-		aliceRecieveValue = big.NewInt(99990000)
-		bobRecieveValue = big.NewInt(8000000)
+		aliceReceiveValue = big.NewInt(99990000)
+		bobReceiveValue = big.NewInt(8000000)
 
 		go func() {
 			err = regtest.Mine(connection)
@@ -137,8 +137,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		bobInfo, err = ax.NewEtereumAtomInfo(ganache, bobAuth)
 		Expect(err).Should(BeNil())
 
-		aliceOrder = match.NewMatch(aliceOrderID, bobOrderID, aliceSendValue, aliceRecieveValue, aliceCurrency, bobCurrency)
-		bobOrder = match.NewMatch(bobOrderID, aliceOrderID, bobSendValue, bobRecieveValue, bobCurrency, aliceCurrency)
+		aliceOrder = match.NewMatch(aliceOrderID, bobOrderID, aliceSendValue, aliceReceiveValue, aliceCurrency, bobCurrency)
+		bobOrder = match.NewMatch(bobOrderID, aliceOrderID, bobSendValue, bobReceiveValue, bobCurrency, aliceCurrency)
 
 		aliceInfo.SetOwnerAddress(aliceOrderID, []byte(aliceBitcoinAddress))
 		bobInfo.SetOwnerAddress(bobOrderID, bob.From.Bytes())

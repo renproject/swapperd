@@ -54,9 +54,9 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		aliceCurrency = 1
 		bobCurrency = 0
 
-		var confPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/configLocal.json"
-		var ksPathA = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/keystoreA.json"
-		var ksPathB = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/keystoreB.json"
+		var confPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/configLocal.json"
+		var ksPathA = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/keystoreA.json"
+		var ksPathB = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/keystoreB.json"
 
 		config, err := config.LoadConfig(confPath)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -85,7 +85,7 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		aliceAddr := string(aliceAddrBytes)
 		bobAddr := string(bobAddrBytes)
 
-		var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/owner.json"
+		var ownPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/owner.json"
 
 		own, err := owner.LoadOwner(ownPath)
 		Expect(err).ShouldNot(HaveOccurred())

@@ -32,8 +32,8 @@ var _ = Describe("ether", func() {
 	var reqAtom, reqAtomFailed swap.Atom
 	var resAtom swap.Atom
 	var data []byte
-	var confPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/configLocal.json"
-	var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/owner.json"
+	var confPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/configLocal.json"
+	var ownPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/owner.json"
 
 	BeforeSuite(func() {
 		config, err := config.LoadConfig(confPath)

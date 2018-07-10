@@ -32,7 +32,7 @@ func (net *MockNetwork) SendSwapDetails(orderID [32]byte, swapDetails []byte) er
 	return nil
 }
 
-func (net *MockNetwork) RecieveSwapDetails(orderID [32]byte) ([]byte, error) {
+func (net *MockNetwork) ReceiveSwapDetails(orderID [32]byte) ([]byte, error) {
 	fmt.Println("Reading from channel")
 
 	for {
