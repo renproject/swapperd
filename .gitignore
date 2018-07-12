@@ -1,4 +1,5 @@
 vendor
 secrets
+db*/*
 *.json
 .DS_Store
