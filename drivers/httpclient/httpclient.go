@@ -5,8 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"sync"
-	"time"
 
 	"github.com/btcsuite/btcutil"
 
@@ -24,18 +22,17 @@ import (
 	"github.com/republicprotocol/atom-go/adapters/owner"
 	wal "github.com/republicprotocol/atom-go/adapters/wallet/eth"
 	"github.com/republicprotocol/atom-go/domains/match"
-	"github.com/republicprotocol/atom-go/drivers/btc/regtest"
 	"github.com/republicprotocol/atom-go/services/swap"
 )
 
 func main() {
 
 	var aliceOrderID, bobOrderID [32]byte
-
-	var conf = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/local/configA.json"
-	var keyA = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/local/keystoreA.json"
-	var keyB = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/local/keystoreB.json"
-	var ownPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/owner.json"
+	
+	var conf = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/test/configA.json"
+	var keyA = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/test/keystoreA.json"
+	var keyB = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/test/keystoreB.json"
+	var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/owner.json"
 
 	ksA := keystore.NewKeystore(keyA)
 	ksB := keystore.NewKeystore(keyB)
@@ -45,7 +42,7 @@ func main() {
 		panic(err)
 	}
 
-	ownerECDSA, err := crypto.HexToECDSA(own.Ganache)
+	ownerECDSA, err := crypto.HexToECDSA(own.Kovan)
 	if err != nil {
 		panic(err)
 	}
@@ -65,18 +62,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	wg := new(sync.WaitGroup)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err = regtest.Mine(btcConn)
-		if err != nil {
-			panic(err)
-		}
-	}()
-	time.Sleep(5 * time.Second)
 
 	err = deposit(ksA, ksB, owner, ethConn, btcConn)
 	if err != nil {
@@ -122,7 +107,6 @@ func main() {
 	fmt.Println("Signer:", owner.From.String())
 	fmt.Println("Alice:", hex.EncodeToString(aliceOrderID[:]), "Signature:", hex.EncodeToString(sigAlice))
 	fmt.Println("Bob:", hex.EncodeToString(bobOrderID[:]), "Signature:", hex.EncodeToString(sigBob))
-	wg.Wait()
 }
 
 func deposit(ksA, ksB swap.Keystore, auth *bind.TransactOpts, ethConn ethclient.Conn, btcConn btcclient.Conn) error {
@@ -130,15 +114,27 @@ func deposit(ksA, ksB swap.Keystore, auth *bind.TransactOpts, ethConn ethclient.
 	if err != nil {
 		return err
 	}
-	Bob, err := ksA.LoadKeys()
+	Bob, err := ksB.LoadKeys()
 	if err != nil {
 		return err
 	}
 
 	aEth := Alice[0]
+	aBtc := Alice[1]
+	bEth := Bob[0]
 	bBtc := Bob[1]
 
 	aliceEth, err := aEth.GetAddress()
+	if err != nil {
+		return err
+	}
+
+	aliceBtc, err := aBtc.GetAddress()
+	if err != nil {
+		return err
+	}
+
+	bobEth, err := bEth.GetAddress()
 	if err != nil {
 		return err
 	}
@@ -148,19 +144,31 @@ func deposit(ksA, ksB swap.Keystore, auth *bind.TransactOpts, ethConn ethclient.
 		return err
 	}
 
-	aliceAddr := common.BytesToAddress(aliceEth)
-	ethConn.Transfer(aliceAddr, auth, 1000000000000)
+	aliceEthAddr := common.BytesToAddress(aliceEth)
+	bobEthAddr := common.BytesToAddress(bobEth)
+	// ethConn.Transfer(aliceAddr, auth, 1000000000000)
 
-	bobAddr, err := btcutil.DecodeAddress(string(bobBtc), btcConn.ChainParams)
+	bobBtcAddr, err := btcutil.DecodeAddress(string(bobBtc), btcConn.ChainParams)
 	if err != nil {
 		return err
 	}
 
-	bobVal, err := btcutil.NewAmount(0.05)
+	aliceBtcAddr, err := btcutil.DecodeAddress(string(aliceBtc), btcConn.ChainParams)
 	if err != nil {
 		return err
 	}
 
-	_, err = btcConn.Client.SendToAddress(bobAddr, bobVal)
-	return err
+	// bobVal, err := btcutil.NewAmount(0.05)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// _, err = btcConn.Client.SendToAddress(bobAddr, bobVal)
+
+	fmt.Println("Deposit Ether to Alice:", aliceEthAddr.String())
+	fmt.Println("Deposit Ether to Bob:", bobEthAddr.String())
+	fmt.Println("Deposit Bitcoin to Alice:", aliceBtcAddr)
+	fmt.Println("Deposit Bitcoin to Bob:", bobBtcAddr)
+
+	return nil
 }

@@ -31,6 +31,11 @@ func NewWatch(network swap.Network, info swap.Info, wallet Wallet, reqAtom swap.
 
 // Run runs the watch object on the given order id
 func (watch *watch) Run(orderID [32]byte) error {
+	err := watch.str.UpdateStatus(orderID, "PENDING")
+	if err != nil {
+		return err
+	}
+
 	match, err := watch.wallet.GetMatch(orderID)
 	if err != nil {
 		return err
