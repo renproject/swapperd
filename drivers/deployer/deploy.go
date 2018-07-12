@@ -17,10 +17,16 @@ import (
 
 func main() {
 
-	var kovanPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/configLocal.json"
+	var aPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/test/configA.json"
+	var bPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/test/configB.json"
 	var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/owner.json"
 
-	configTest, err := config.LoadConfig(kovanPath)
+	aTest, err := config.LoadConfig(aPath)
+	if err != nil {
+		panic(err)
+	}
+
+	bTest, err := config.LoadConfig(bPath)
 	if err != nil {
 		panic(err)
 	}
@@ -30,16 +36,17 @@ func main() {
 		panic(err)
 	}
 
-	key, err := crypto.HexToECDSA(own.Ganache)
+	key, err := crypto.HexToECDSA(own.Kovan)
 	if err != nil {
 		panic(err)
 	}
 
 	auth := bind.NewKeyedTransactor(key)
-	err = deployContracts(configTest, auth)
+	err = deployContracts(aTest, auth)
 	if err != nil {
 		panic(err)
 	}
+	bTest.SetEthereumConfig(aTest.GetEthereumConfig())
 }
 
 func deployContracts(config config.Config, owner *bind.TransactOpts) error {
