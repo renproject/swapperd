@@ -42,7 +42,7 @@ func (net *ethereumNetwork) SendSwapDetails(orderID [32]byte, swapDetails []byte
 	return err
 }
 
-func (net *ethereumNetwork) RecieveSwapDetails(orderID [32]byte) ([]byte, error) {
+func (net *ethereumNetwork) ReceiveSwapDetails(orderID [32]byte) ([]byte, error) {
 	for {
 		swap, err := net.net.SwapDetails(&bind.CallOpts{}, orderID)
 		if err != nil {

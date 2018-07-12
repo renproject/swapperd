@@ -10,7 +10,7 @@ import (
 
 func main() {
 
-	ksPath := os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/keystore.json"
+	ksPath := os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/keystore.json"
 	ks := keystore.NewKeystore(ksPath)
 
 	key, err := ks.LoadKeypair("bitcoin")

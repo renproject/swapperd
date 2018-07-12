@@ -58,7 +58,13 @@ func (swap *swap) Execute() error {
 
 func (swap *swap) initiate() error {
 	personalAddr, err := swap.info.GetOwnerAddress(swap.order.PersonalOrderID())
+	if err != nil {
+		return err
+	}
 	foreignAddr, err := swap.info.GetOwnerAddress(swap.order.ForeignOrderID())
+	if err != nil {
+		return err
+	}
 
 	expiry := time.Now().Add(48 * time.Hour).Unix()
 
@@ -91,7 +97,7 @@ func (swap *swap) initiate() error {
 		return err
 	}
 
-	foreignSwapDetails, err := swap.network.RecieveSwapDetails(swap.order.ForeignOrderID())
+	foreignSwapDetails, err := swap.network.ReceiveSwapDetails(swap.order.ForeignOrderID())
 	if err != nil {
 		return err
 	}
@@ -100,7 +106,7 @@ func (swap *swap) initiate() error {
 		return err
 	}
 
-	err = swap.foreignAtom.Audit(secretHash, personalAddr, swap.order.RecieveValue(), 60*60)
+	err = swap.foreignAtom.Audit(secretHash, personalAddr, swap.order.ReceiveValue(), 60*60)
 	if err != nil {
 		err2 := swap.personalAtom.Refund()
 		if err2 != nil {
@@ -131,7 +137,7 @@ func (swap *swap) respond() error {
 	personalAddr, err := swap.info.GetOwnerAddress(swap.order.PersonalOrderID())
 	foreignAddr, err := swap.info.GetOwnerAddress(swap.order.ForeignOrderID())
 
-	foreignSwapDetails, err := swap.network.RecieveSwapDetails(swap.order.ForeignOrderID())
+	foreignSwapDetails, err := swap.network.ReceiveSwapDetails(swap.order.ForeignOrderID())
 	if err != nil {
 		return err
 	}
@@ -144,7 +150,7 @@ func (swap *swap) respond() error {
 	expiry := time.Now().Add(24 * time.Hour).Unix()
 	hash := swap.foreignAtom.GetSecretHash()
 
-	err = swap.foreignAtom.Audit(hash, personalAddr, swap.order.RecieveValue(), expiry)
+	err = swap.foreignAtom.Audit(hash, personalAddr, swap.order.ReceiveValue(), expiry)
 	if err != nil {
 		return err
 	}

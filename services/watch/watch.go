@@ -41,18 +41,22 @@ func (watch *watch) Run(orderID [32]byte) error {
 		return err
 	}
 
-	if watch.reqAtom.PriorityCode() == match.RecieveCurrency() {
+	if watch.reqAtom.PriorityCode() == match.ReceiveCurrency() {
 		addr, err := watch.reqAtom.GetKey().GetAddress()
 		if err != nil {
 			return err
 		}
-		watch.info.SetOwnerAddress(orderID, addr)
+		if err = watch.info.SetOwnerAddress(orderID, addr); err != nil {
+			return err
+		}
 	} else {
 		addr, err := watch.resAtom.GetKey().GetAddress()
 		if err != nil {
 			return err
 		}
-		watch.info.SetOwnerAddress(orderID, addr)
+		if err = watch.info.SetOwnerAddress(orderID, addr); err != nil {
+			return err
+		}
 	}
 
 	atomicSwap := swap.NewSwap(watch.reqAtom, watch.resAtom, watch.info, match, watch.network, watch.str)

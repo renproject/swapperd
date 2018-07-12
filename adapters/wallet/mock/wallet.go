@@ -24,8 +24,8 @@ func NewMockWallet() watch.Wallet {
 func (wallet *MockWallet) SetMatch(m match.Match) error {
 	wallet.mu.Lock()
 	defer wallet.mu.Unlock()
-	wallet.matches[m.PersonalOrderID()] = match.NewMatch(m.PersonalOrderID(), m.ForeignOrderID(), m.SendValue(), m.RecieveValue().Sub(m.RecieveValue(), big.NewInt(10000)), m.SendCurrency(), m.RecieveCurrency())
-	wallet.matches[m.ForeignOrderID()] = match.NewMatch(m.ForeignOrderID(), m.PersonalOrderID(), m.RecieveValue(), m.SendValue().Sub(m.SendValue(), big.NewInt(10000)), m.RecieveCurrency(), m.SendCurrency())
+	wallet.matches[m.PersonalOrderID()] = match.NewMatch(m.PersonalOrderID(), m.ForeignOrderID(), m.SendValue(), m.ReceiveValue().Sub(m.ReceiveValue(), big.NewInt(10000)), m.SendCurrency(), m.ReceiveCurrency())
+	wallet.matches[m.ForeignOrderID()] = match.NewMatch(m.ForeignOrderID(), m.PersonalOrderID(), m.ReceiveValue(), m.SendValue().Sub(m.SendValue(), big.NewInt(10000)), m.ReceiveCurrency(), m.SendCurrency())
 	return nil
 }
 

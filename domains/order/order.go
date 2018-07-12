@@ -20,7 +20,7 @@ type Order interface {
 	Tokens() uint64
 	NonceHash() *big.Int
 	SendCurrency() uint32
-	RecieveCurrency() uint32
+	ReceiveCurrency() uint32
 	Trader() []byte
 }
 
@@ -114,7 +114,7 @@ func (order *order) SendCurrency() uint32 {
 	return nonPriorityToken(order.tokens)
 }
 
-func (order *order) RecieveCurrency() uint32 {
+func (order *order) ReceiveCurrency() uint32 {
 	if order.parity == uint8(1) {
 		return priorityToken(order.tokens)
 	}
