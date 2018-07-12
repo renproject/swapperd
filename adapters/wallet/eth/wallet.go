@@ -1,7 +1,6 @@
 package ethwallet
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -13,13 +12,13 @@ import (
 )
 
 type ethereumWallet struct {
-	wallet *bindings.RenExAtomicSettlement
+	wallet *bindings.RenExSettlement
 	auth   bind.TransactOpts
 	conn   client.Conn
 }
 
 func NewEthereumWallet(conn client.Conn, auth bind.TransactOpts) (watch.Wallet, error) {
-	wallet, err := bindings.NewRenExAtomicSettlement(conn.WalletAddress(), bind.ContractBackend(conn.Client()))
+	wallet, err := bindings.NewRenExSettlement(conn.WalletAddress(), bind.ContractBackend(conn.Client()))
 
 	if err != nil {
 		return nil, err
@@ -34,27 +33,27 @@ func NewEthereumWallet(conn client.Conn, auth bind.TransactOpts) (watch.Wallet, 
 func (wallet *ethereumWallet) GetMatch(personalOrderID [32]byte) (match.Match, error) {
 	for {
 		time.Sleep(2 * time.Second)
-		matchDetails, err := wallet.wallet.GetMatchDetails(&bind.CallOpts{}, personalOrderID)
+		PersonalOrder, ForeignOrder, ReceiveValue, SendValue, ReceiveCurrency, SendCurrency, err := wallet.wallet.GetMatchDetails(&bind.CallOpts{}, personalOrderID)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		if matchDetails.PersonalOrder == [32]byte{} {
+		if PersonalOrder == [32]byte{} {
 			continue
 		}
-		return match.NewMatch(matchDetails.PersonalOrder, matchDetails.ForeignOrder, matchDetails.SendValue, matchDetails.ReceiveValue, matchDetails.SendCurrency, matchDetails.ReceiveCurrency), nil
+		return match.NewMatch(PersonalOrder, ForeignOrder, SendValue, ReceiveValue, SendCurrency, ReceiveCurrency), nil
 	}
 	// return nil, errors.New("Failed to get match")
 }
 
 func (wallet *ethereumWallet) SetMatch(match match.Match) error {
-	wallet.auth.GasLimit = 3000000
-	tx, err := wallet.wallet.SetMatchDetails(&wallet.auth, match.PersonalOrderID(), match.ForeignOrderID(), match.ReceiveCurrency(), match.SendCurrency(), match.ReceiveValue(), match.SendValue())
-	if err != nil {
-		return err
-	}
-	_, err = wallet.conn.PatchedWaitMined(context.Background(), tx)
-	return err
+	// wallet.auth.GasLimit = 3000000
+	// tx, err := wallet.wallet.SetMatchDetails(&wallet.auth, match.PersonalOrderID(), match.ForeignOrderID(), match.ReceiveCurrency(), match.SendCurrency(), match.ReceiveValue(), match.SendValue())
+	// if err != nil {
+	// 	return err
+	// }
+	// _, err = wallet.conn.PatchedWaitMined(context.Background(), tx)
+	return nil
 }
 
 // func (wallet *ethereumWallet) SubmitOrder(order order.Order) error {
