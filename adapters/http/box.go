@@ -214,7 +214,10 @@ func (adapter *boxHttpAdapter) GetStatus(orderID string) (Status, error) {
 
 	status, err := adapter.watch.Status(id)
 	if err != nil {
-		return Status{}, err
+		return Status{
+			OrderID: orderID,
+			Status:  "UNKNOWN",
+		}, nil
 	}
 
 	return Status{
