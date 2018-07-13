@@ -1,7 +1,10 @@
 package swap
 
 import (
+	"fmt"
+
 	"github.com/republicprotocol/atom-go/services/store"
+	"github.com/republicprotocol/republic-go/order"
 )
 
 type SwapStore interface {
@@ -20,6 +23,7 @@ func NewSwapStore(store store.Store) SwapStore {
 }
 
 func (str *swapStore) UpdateStatus(orderID [32]byte, status string) error {
+	fmt.Printf("Order %v updated to status %v\n", order.ID(orderID), status)
 	return str.Write(append([]byte("status:"), orderID[:]...), []byte(status))
 }
 

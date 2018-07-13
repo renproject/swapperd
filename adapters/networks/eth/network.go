@@ -3,7 +3,7 @@ package ethnetwork
 import (
 	"bytes"
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	bindings "github.com/republicprotocol/atom-go/adapters/bindings/eth"
@@ -46,11 +46,10 @@ func (net *ethereumNetwork) ReceiveSwapDetails(orderID [32]byte) ([]byte, error)
 	for {
 		swap, err := net.net.SwapDetails(&bind.CallOpts{}, orderID)
 		if err != nil {
-			break
+			return []byte{}, fmt.Errorf("Failed to get swap details: %v", err)
 		}
 		if bytes.Compare(swap, []byte{}) != 0 {
 			return net.net.SwapDetails(&bind.CallOpts{}, orderID)
 		}
 	}
-	return []byte{}, errors.New("Failed to get swap details")
 }

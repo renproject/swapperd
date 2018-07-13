@@ -3,7 +3,7 @@ package eth
 import (
 	"bytes"
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	bindings "github.com/republicprotocol/atom-go/adapters/bindings/eth"
@@ -41,15 +41,13 @@ func (info *ethereumAtomInfo) SetOwnerAddress(orderID [32]byte, address []byte) 
 }
 
 func (info *ethereumAtomInfo) GetOwnerAddress(orderID [32]byte) ([]byte, error) {
-
 	for {
 		owner, err := info.info.GetOwnerAddress(&bind.CallOpts{}, orderID)
 		if err != nil {
-			break
+			return []byte{}, fmt.Errorf("Failed to get owner details: %v", err)
 		}
 		if bytes.Compare(owner, []byte{}) != 0 {
 			return owner, nil
 		}
 	}
-	return []byte{}, errors.New("Failed to get owner details")
 }
