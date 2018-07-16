@@ -38,9 +38,14 @@ func (wallet *ethereumWallet) GetMatch(personalOrderID [32]byte) (match.Match, e
 			fmt.Println(err)
 			continue
 		}
-		if PersonalOrder == [32]byte{} {
+		// TODO: When contract is updated to throw error in GetMatchDetails if
+		// details aren't available, checking PersonalOrder is better
+		if SendCurrency == ReceiveCurrency {
 			continue
 		}
+		// if PersonalOrder == [32]byte{} {
+		// 	continue
+		// }
 		return match.NewMatch(PersonalOrder, ForeignOrder, SendValue, ReceiveValue, SendCurrency, ReceiveCurrency), nil
 	}
 	// return nil, errors.New("Failed to get match")

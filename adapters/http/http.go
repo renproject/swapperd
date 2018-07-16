@@ -16,6 +16,7 @@ func NewServer(adapter BoxHttpAdapter) http.Handler {
 	r.HandleFunc("/orders", PostOrdersHandler(adapter)).Methods("POST")
 	r.HandleFunc("/status/{orderId}", GetStatusHandler(adapter)).Methods("GET")
 	r.HandleFunc("/whoami/{challenge}", WhoAmIHandler(adapter)).Methods("GET")
+	r.HandleFunc("/balances", GetBalancesHandler(adapter)).Methods("GET")
 	r.Use(RecoveryHandler)
 
 	handler := cors.New(cors.Options{
@@ -103,7 +104,7 @@ func GetStatusHandler(adapter BoxHttpAdapter) http.HandlerFunc {
 	}
 }
 
-func GetBalances(adapter BoxHttpAdapter) http.HandlerFunc {
+func GetBalancesHandler(adapter BoxHttpAdapter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		balances, err := adapter.GetBalances()
 		if err != nil {
