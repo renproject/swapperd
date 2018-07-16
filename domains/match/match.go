@@ -4,6 +4,7 @@ import (
 	"math/big"
 )
 
+// Match is the order match interface
 type Match interface {
 	PersonalOrderID() [32]byte
 	ForeignOrderID() [32]byte
@@ -22,6 +23,7 @@ type match struct {
 	receiveCurrency uint32
 }
 
+// NewMatch creates a new Match interface
 func NewMatch(personalOrderID, foreignOrderID [32]byte, sendValue, receiveValue *big.Int, sendCurrency, receiveCurrency uint32) Match {
 	return &match{
 		personalOrderID: personalOrderID,
@@ -33,21 +35,32 @@ func NewMatch(personalOrderID, foreignOrderID [32]byte, sendValue, receiveValue 
 	}
 }
 
+// PersonalOrderID returns the personal (caller's) order id of the order match.
 func (match *match) PersonalOrderID() [32]byte {
 	return match.personalOrderID
 }
+
+// ForeignOrderID returns the foreign (counter party's) order id of the order match.
 func (match *match) ForeignOrderID() [32]byte {
 	return match.foreignOrderID
 }
+
+// SendValue returns the value the caller has to send according to this order match.
 func (match *match) SendValue() *big.Int {
 	return match.sendValue
 }
+
+// ReceiveValue returns the value the caller has to recieve according to this order match.
 func (match *match) ReceiveValue() *big.Int {
 	return match.receiveValue
 }
+
+// SendCurrency returns the currency the caller has to send according to this order match.
 func (match *match) SendCurrency() uint32 {
 	return match.sendCurrency
 }
+
+// SendCurrency returns the currency the caller has to send according to this order match.
 func (match *match) ReceiveCurrency() uint32 {
 	return match.receiveCurrency
 }
