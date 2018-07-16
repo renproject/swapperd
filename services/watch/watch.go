@@ -17,7 +17,7 @@ type watch struct {
 
 type Watch interface {
 	Run([32]byte) error
-	Status([32]byte) (string, error)
+	Status([32]byte) string
 }
 
 func NewWatch(network swap.Network, info swap.Info, wallet Wallet, reqAtom swap.Atom, resAtom swap.Atom, str store.State) Watch {
@@ -42,21 +42,23 @@ func (watch *watch) Run(orderID [32]byte) error {
 
 	var match match.Match
 	if watch.str.ReadStatus(orderID) == "PENDING" {
+		var err error
 		match, err = watch.wallet.GetMatch(orderID)
 		if err != nil {
 			return err
 		}
 
-		err := watch.str.SetMatch(orderID, match)
+		err = watch.str.SetMatch(orderID, match)
 		if err != nil {
 			return err
 		}
 
-		err := watch.str.UpdateStatus(orderID, "MATCHED")
+		err = watch.str.UpdateStatus(orderID, "MATCHED")
 		if err != nil {
 			return err
 		}
 	} else {
+		var err error
 		match, err = watch.str.GetMatch(orderID)
 		if err != nil {
 			return err
@@ -88,10 +90,10 @@ func (watch *watch) Run(orderID [32]byte) error {
 	}
 
 	atomicSwap := swap.NewSwap(watch.reqAtom, watch.resAtom, watch.info, match, watch.network, watch.str)
-	err = atomicSwap.Execute()
+	err := atomicSwap.Execute()
 	return err
 }
 
-func (watch *watch) Status(orderID [32]byte) (string, error) {
+func (watch *watch) Status(orderID [32]byte) string {
 	return watch.str.ReadStatus(orderID)
 }

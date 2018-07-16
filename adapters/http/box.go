@@ -21,6 +21,7 @@ import (
 	net "github.com/republicprotocol/atom-go/adapters/networks/eth"
 	"github.com/republicprotocol/atom-go/adapters/store/leveldb"
 	wal "github.com/republicprotocol/atom-go/adapters/wallet/eth"
+	"github.com/republicprotocol/atom-go/services/store"
 	"github.com/republicprotocol/atom-go/services/swap"
 	"github.com/republicprotocol/atom-go/services/watch"
 	"github.com/republicprotocol/atom-go/utils"
@@ -205,8 +206,7 @@ func buildWatcher(config config.Config, kstr swap.Keystore) (watch.Watch, error)
 	if err != nil {
 		return nil, err
 	}
-	str := swap.NewSwapStore(db)
-
+	str := store.NewSwapStore(db)
 	watcher := watch.NewWatch(ethNet, ethInfo, ethWallet, ethAtom, btcAtom, str)
 	return watcher, nil
 }
@@ -217,13 +217,7 @@ func (adapter *boxHttpAdapter) GetStatus(orderID string) (Status, error) {
 		return Status{}, err
 	}
 
-	status, err := adapter.watch.Status(id)
-	if err != nil {
-		return Status{
-			OrderID: orderID,
-			Status:  "UNKNOWN",
-		}, nil
-	}
+	status := adapter.watch.Status(id)
 
 	return Status{
 		OrderID: orderID,
