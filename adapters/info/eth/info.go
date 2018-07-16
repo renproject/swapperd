@@ -44,7 +44,7 @@ func (info *ethereumAtomInfo) GetOwnerAddress(orderID [32]byte) ([]byte, error) 
 	for {
 		owner, err := info.info.GetOwnerAddress(&bind.CallOpts{}, orderID)
 		if err != nil {
-			return []byte{}, fmt.Errorf("Failed to get owner details %s", err.Error())
+			return []byte{}, fmt.Errorf("Failed to get owner details: %v", err)
 		}
 		if bytes.Compare(owner, []byte{}) != 0 {
 			return owner, nil
