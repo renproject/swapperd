@@ -23,8 +23,9 @@ type PostOrder struct {
 }
 
 type Balance struct {
-	Address string `json:"address"`
-	Amount  uint64 `json:"amount"`
+	Address      string `json:"address"`
+	Amount       uint64 `json:"amount"`
+	PriorityCode uint32 `json:"priorityCode"`
 }
 
 type Balances []Balance

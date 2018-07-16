@@ -267,8 +267,9 @@ func bitcoinBalance(conf config.Config, key swap.Key) (Balance, error) {
 	amt, err := conn.Client.GetBalance(string(addr))
 
 	return Balance{
-		Address: string(addr),
-		Amount:  uint64(amt.ToUnit(btcutil.AmountSatoshi)),
+		PriorityCode: key.PriorityCode(),
+		Address:      string(addr),
+		Amount:       uint64(amt.ToUnit(btcutil.AmountSatoshi)),
 	}, nil
 }
 
@@ -289,8 +290,9 @@ func ethereumBalance(conf config.Config, key swap.Key) (Balance, error) {
 	}
 
 	return Balance{
-		Address: address.String(),
-		Amount:  bal.Uint64(),
+		PriorityCode: key.PriorityCode(),
+		Address:      address.String(),
+		Amount:       bal.Uint64(),
 	}, nil
 }
 
