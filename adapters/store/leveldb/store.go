@@ -6,42 +6,27 @@ import (
 )
 
 type ldbStore struct {
-	path string
+	db *leveldb.DB
 }
 
-func NewLDBStore(path string) store.Store {
-	return &ldbStore{
-		path: path,
+func NewLDBStore(path string) (store.Store, error) {
+	db, err := leveldb.OpenFile(path, nil)
+	if err != nil {
+		return nil, err
 	}
+	return &ldbStore{
+		db: db,
+	}, nil
 }
 
 func (ldb *ldbStore) Read(key []byte) ([]byte, error) {
-	db, err := leveldb.OpenFile(ldb.path, nil)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	value, err := db.Get(key, nil)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	db.Close()
-	return value, nil
+	return ldb.db.Get(key, nil)
 }
 
 func (ldb *ldbStore) Write(key []byte, value []byte) error {
-	db, err := leveldb.OpenFile(ldb.path, nil)
+	return ldb.db.Put(key, value, nil)
+}
 
-	if err != nil {
-		return err
-	}
-
-	err = db.Put(key, value, nil)
-	if err != nil {
-		return err
-	}
-
-	db.Close()
-	return nil
+func (ldb *ldbStore) Close() error {
+	return ldb.db.Close()
 }
