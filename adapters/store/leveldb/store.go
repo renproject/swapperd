@@ -37,8 +37,7 @@ func (ldb *ldbStore) Write(key []byte, value []byte) error {
 		return err
 	}
 
-	err := db.Put(key, value, nil)
-
+	err = db.Put(key, value, nil)
 	if err != nil {
 		return err
 	}
