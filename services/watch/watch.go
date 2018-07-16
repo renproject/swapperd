@@ -1,6 +1,8 @@
 package watch
 
 import (
+	"github.com/republicprotocol/atom-go/domains/match"
+	"github.com/republicprotocol/atom-go/services/store"
 	"github.com/republicprotocol/atom-go/services/swap"
 )
 
@@ -10,7 +12,7 @@ type watch struct {
 	reqAtom swap.Atom
 	resAtom swap.Atom
 	wallet  Wallet
-	str     swap.SwapStore
+	str     store.State
 }
 
 type Watch interface {
@@ -18,7 +20,7 @@ type Watch interface {
 	Status([32]byte) (string, error)
 }
 
-func NewWatch(network swap.Network, info swap.Info, wallet Wallet, reqAtom swap.Atom, resAtom swap.Atom, str swap.SwapStore) Watch {
+func NewWatch(network swap.Network, info swap.Info, wallet Wallet, reqAtom swap.Atom, resAtom swap.Atom, str store.State) Watch {
 	return &watch{
 		network: network,
 		info:    info,
@@ -31,30 +33,56 @@ func NewWatch(network swap.Network, info swap.Info, wallet Wallet, reqAtom swap.
 
 // Run runs the watch object on the given order id
 func (watch *watch) Run(orderID [32]byte) error {
-	err := watch.str.UpdateStatus(orderID, "PENDING")
-	if err != nil {
-		return err
-	}
-
-	match, err := watch.wallet.GetMatch(orderID)
-	if err != nil {
-		return err
-	}
-
-	if watch.reqAtom.PriorityCode() == match.ReceiveCurrency() {
-		addr, err := watch.reqAtom.GetKey().GetAddress()
+	if watch.str.ReadStatus(orderID) == "UNKNOWN" {
+		err := watch.str.UpdateStatus(orderID, "PENDING")
 		if err != nil {
 			return err
 		}
-		if err = watch.info.SetOwnerAddress(orderID, addr); err != nil {
+	}
+
+	var match match.Match
+	if watch.str.ReadStatus(orderID) == "PENDING" {
+		match, err = watch.wallet.GetMatch(orderID)
+		if err != nil {
+			return err
+		}
+
+		err := watch.str.SetMatch(orderID, match)
+		if err != nil {
+			return err
+		}
+
+		err := watch.str.UpdateStatus(orderID, "MATCHED")
+		if err != nil {
 			return err
 		}
 	} else {
-		addr, err := watch.resAtom.GetKey().GetAddress()
+		match, err = watch.str.GetMatch(orderID)
 		if err != nil {
 			return err
 		}
-		if err = watch.info.SetOwnerAddress(orderID, addr); err != nil {
+	}
+
+	if watch.str.ReadStatus(orderID) == "MATCHED" {
+		if watch.reqAtom.PriorityCode() == match.ReceiveCurrency() {
+			addr, err := watch.reqAtom.GetKey().GetAddress()
+			if err != nil {
+				return err
+			}
+			if err = watch.info.SetOwnerAddress(orderID, addr); err != nil {
+				return err
+			}
+		} else {
+			addr, err := watch.resAtom.GetKey().GetAddress()
+			if err != nil {
+				return err
+			}
+			if err = watch.info.SetOwnerAddress(orderID, addr); err != nil {
+				return err
+			}
+		}
+		err := watch.str.UpdateStatus(orderID, "INFO_SUBMITTED")
+		if err != nil {
 			return err
 		}
 	}
