@@ -17,21 +17,31 @@ func NewLDBStore(path string) store.Store {
 
 func (ldb *ldbStore) Read(key []byte) ([]byte, error) {
 	db, err := leveldb.OpenFile(ldb.path, nil)
-	defer db.Close()
-
 	if err != nil {
 		return []byte{}, err
 	}
-	return db.Get(key, nil)
+
+	value, err := db.Get(key, nil)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	db.Close()
+	return value, nil
 }
 
 func (ldb *ldbStore) Write(key []byte, value []byte) error {
 	db, err := leveldb.OpenFile(ldb.path, nil)
-	defer db.Close()
 
 	if err != nil {
 		return err
 	}
 
-	return db.Put(key, value, nil)
+	err = db.Put(key, value, nil)
+	if err != nil {
+		return err
+	}
+
+	db.Close()
+	return nil
 }

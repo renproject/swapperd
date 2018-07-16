@@ -22,8 +22,16 @@ type PostOrder struct {
 	Signature string `json:"signature"`
 }
 
+type Balance struct {
+	Address string `json:"address"`
+	Amount  uint64 `json:"amount"`
+}
+
+type Balances []Balance
+
 type BoxHttpAdapter interface {
 	WhoAmI(challenge string) (WhoAmI, error)
 	PostOrder(order PostOrder) (PostOrder, error)
 	GetStatus(orderID string) (Status, error)
+	GetBalances() (Balances, error)
 }

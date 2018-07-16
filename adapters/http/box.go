@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/republicprotocol/atom-go/adapters/atoms/btc"
 	"github.com/republicprotocol/atom-go/adapters/atoms/eth"
 	btcClient "github.com/republicprotocol/atom-go/adapters/clients/btc"
@@ -223,6 +225,72 @@ func (adapter *boxHttpAdapter) GetStatus(orderID string) (Status, error) {
 	return Status{
 		OrderID: orderID,
 		Status:  status,
+	}, nil
+}
+
+func (adapter *boxHttpAdapter) GetBalances() (Balances, error) {
+	balances := Balances{}
+	keys, err := adapter.keystr.LoadKeys()
+	if err != nil {
+		return balances, err
+	}
+	for _, key := range keys {
+		bal, err := getBalance(adapter.config, key)
+		if err != nil {
+			return balances, err
+		}
+		balances = append(balances, bal)
+	}
+	return balances, nil
+}
+
+func getBalance(conf config.Config, key swap.Key) (Balance, error) {
+	switch key.PriorityCode() {
+	case 0:
+		return bitcoinBalance(conf, key)
+	case 1:
+		return ethereumBalance(conf, key)
+	default:
+		return Balance{}, errors.New("Unknown priority code")
+	}
+}
+
+func bitcoinBalance(conf config.Config, key swap.Key) (Balance, error) {
+	conn, err := btcClient.Connect(conf)
+	if err != nil {
+		return Balance{}, err
+	}
+	addr, err := key.GetAddress()
+	if err != nil {
+		return Balance{}, err
+	}
+	amt, err := conn.Client.GetBalance(string(addr))
+
+	return Balance{
+		Address: string(addr),
+		Amount:  uint64(amt.ToUnit(btcutil.AmountSatoshi)),
+	}, nil
+}
+
+func ethereumBalance(conf config.Config, key swap.Key) (Balance, error) {
+	conn, err := ethClient.Connect(conf)
+	if err != nil {
+		return Balance{}, err
+	}
+	addr, err := key.GetAddress()
+	if err != nil {
+		return Balance{}, err
+	}
+
+	address := common.BytesToAddress(addr)
+	bal, err := conn.Client().PendingBalanceAt(context.Background(), address)
+	if err != nil {
+		return Balance{}, err
+	}
+
+	return Balance{
+		Address: address.String(),
+		Amount:  bal.Uint64(),
 	}, nil
 }
 

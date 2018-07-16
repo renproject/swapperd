@@ -4,6 +4,7 @@ import (
 	"math/big"
 )
 
+// Order is the interface of an order.
 type Order interface {
 	Price() *big.Int
 	PriceC() *big.Int
@@ -39,6 +40,7 @@ type order struct {
 	trader         []byte
 }
 
+// NewOrder creates a new order interface
 func NewOrder(parity, orderType uint8, expiry, tokens uint64, priceC, priceQ, volumC, volumeQ, minimumVolumeC, minimumVolumeQ, nonceHash *big.Int, trader []byte) Order {
 	return &order{
 		parity:         parity,
@@ -56,12 +58,17 @@ func NewOrder(parity, orderType uint8, expiry, tokens uint64, priceC, priceQ, vo
 	}
 }
 
+// Price returns the order's decoded price
 func (order *order) Price() *big.Int {
 	return decodePrice(order.priceC, order.priceQ)
 }
+
+// PriceC returns the order's encoded price's C value
 func (order *order) PriceC() *big.Int {
 	return order.priceC
 }
+
+// PriceQ returns the order's encoded price's Q value
 func (order *order) PriceQ() *big.Int {
 	return order.priceQ
 }

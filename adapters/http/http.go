@@ -103,6 +103,25 @@ func GetStatusHandler(adapter BoxHttpAdapter) http.HandlerFunc {
 	}
 }
 
+func GetBalances(adapter BoxHttpAdapter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		balances, err := adapter.GetBalances()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get the balances: %v", err))
+			return
+		}
+
+		balancesJSON, err := json.Marshal(balances)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot marshal the balance information: %v", err))
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(balancesJSON)
+	}
+}
+
 func writeError(w http.ResponseWriter, statusCode int, err string) {
 	w.WriteHeader(statusCode)
 	w.Write([]byte(err))
