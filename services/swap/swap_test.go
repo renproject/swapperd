@@ -50,7 +50,7 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		var aliceReceiveValue, bobReceiveValue *big.Int
 		var aliceCurrency, bobCurrency uint32
 		var alice, bob *ecdsa.PrivateKey
-		var aliceKey, bobKey swap.Key
+		var aliceKey, bobKey Key
 		var aliceBitcoinAddress, bobBitcoinAddress string
 		var swapID [32]byte
 

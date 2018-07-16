@@ -201,8 +201,11 @@ func buildWatcher(config config.Config, kstr swap.Keystore) (watch.Watch, error)
 
 	btcAtom := btc.NewBitcoinAtom(btcConn, btcKey)
 
-	loc := config.StoreLocation()
-	str := swap.NewSwapStore(leveldb.NewLDBStore(loc))
+	db, err := leveldb.NewLDBStore(config.StoreLocation())
+	if err != nil {
+		return nil, err
+	}
+	str := swap.NewSwapStore(db)
 
 	watcher := watch.NewWatch(ethNet, ethInfo, ethWallet, ethAtom, btcAtom, str)
 	return watcher, nil
@@ -264,7 +267,19 @@ func bitcoinBalance(conf config.Config, key swap.Key) (Balance, error) {
 	if err != nil {
 		return Balance{}, err
 	}
-	amt, err := conn.Client.GetBalance(string(addr))
+	btcAddr, err := btcutil.DecodeAddress(string(addr), conn.ChainParams)
+	if err != nil {
+		return Balance{}, err
+	}
+	acc, err := conn.Client.GetAccount(btcAddr)
+	if err != nil {
+		return Balance{}, err
+	}
+	amt, err := conn.Client.GetBalance(acc)
+	if err != nil {
+		fmt.Println(err)
+		return Balance{}, err
+	}
 
 	return Balance{
 		PriorityCode: key.PriorityCode(),
