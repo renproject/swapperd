@@ -3,10 +3,12 @@ package swap
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/republicprotocol/atom-go/domains/match"
+	"github.com/republicprotocol/atom-go/services/store"
 	"github.com/republicprotocol/atom-go/utils"
 )
 
@@ -21,11 +23,11 @@ type swap struct {
 	order        match.Match
 	network      Network
 	info         Info
-	swapStr      SwapStore
+	stateStr     store.State
 }
 
 // NewSwap returns a new Swap instance
-func NewSwap(atom1 Atom, atom2 Atom, info Info, order match.Match, network Network, swapStr SwapStore) Swap {
+func NewSwap(atom1 Atom, atom2 Atom, info Info, order match.Match, network Network, stateStr store.State) Swap {
 	personalAtom := atom2
 	foreignAtom := atom1
 
@@ -40,16 +42,11 @@ func NewSwap(atom1 Atom, atom2 Atom, info Info, order match.Match, network Netwo
 		order:        order,
 		info:         info,
 		network:      network,
-		swapStr:      swapStr,
+		stateStr:     stateStr,
 	}
 }
 
 func (swap *swap) Execute() error {
-	err := swap.swapStr.UpdateStatus(swap.order.PersonalOrderID(), "MATCHED")
-	if err != nil {
-		return err
-	}
-
 	if swap.personalAtom.PriorityCode() < swap.foreignAtom.PriorityCode() {
 		return swap.initiate()
 	}
@@ -57,147 +54,230 @@ func (swap *swap) Execute() error {
 }
 
 func (swap *swap) initiate() error {
-	personalAddr, err := swap.info.GetOwnerAddress(swap.order.PersonalOrderID())
-	if err != nil {
-		return err
-	}
-	foreignAddr, err := swap.info.GetOwnerAddress(swap.order.ForeignOrderID())
-	if err != nil {
-		return err
+	type initInfo struct {
+		PersonalAddr []byte   `json:"personalAddr"`
+		Secret32     [32]byte `json:"secret32"`
+		SecretHash   [32]byte `json:"secretHash"`
 	}
 
-	expiry := time.Now().Add(48 * time.Hour).Unix()
+	var info initInfo
 
-	secret := make([]byte, 32)
-	rand.Read(secret)
-
-	secret32, err := utils.ToBytes32(secret)
-	if err != nil {
-		return err
-	}
-	secretHash := sha256.Sum256(secret)
-
-	err = swap.personalAtom.Initiate(foreignAddr, secretHash, swap.order.SendValue(), expiry)
-	if err != nil {
-		fmt.Println(err.Error())
-		return err
-	}
-
-	err = swap.swapStr.UpdateStatus(swap.order.PersonalOrderID(), "INITIATED")
-	if err != nil {
-		return err
-	}
-
-	personalSwapDetails, err := swap.personalAtom.Serialize()
-	if err != nil {
-		return err
-	}
-	err = swap.network.SendSwapDetails(swap.order.PersonalOrderID(), personalSwapDetails)
-	if err != nil {
-		return err
-	}
-
-	foreignSwapDetails, err := swap.network.ReceiveSwapDetails(swap.order.ForeignOrderID())
-	if err != nil {
-		return err
-	}
-	err = swap.foreignAtom.Deserialize(foreignSwapDetails)
-	if err != nil {
-		return err
-	}
-
-	err = swap.foreignAtom.Audit(secretHash, personalAddr, swap.order.ReceiveValue(), 60*60)
-	if err != nil {
-		err2 := swap.personalAtom.Refund()
-		if err2 != nil {
-			// Should never happen
-			return err2
+	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "INFO_SUBMITTED" {
+		var err error
+		info.PersonalAddr, err = swap.info.GetOwnerAddress(swap.order.PersonalOrderID())
+		if err != nil {
+			return err
 		}
-		err2 = swap.swapStr.UpdateStatus(swap.order.PersonalOrderID(), "REFUNDED")
-		if err2 != nil {
-			return err2
+		foreignAddr, err := swap.info.GetOwnerAddress(swap.order.ForeignOrderID())
+		if err != nil {
+			return err
 		}
-		return err
+
+		expiry := time.Now().Add(48 * time.Hour).Unix()
+
+		secret := make([]byte, 32)
+		rand.Read(secret)
+
+		info.Secret32, err = utils.ToBytes32(secret)
+		if err != nil {
+			return err
+		}
+		info.SecretHash = sha256.Sum256(secret)
+
+		initStr, err := json.Marshal(info)
+		if err != nil {
+			return err
+		}
+
+		orderID := swap.order.PersonalOrderID()
+		if err := swap.stateStr.Write(append([]byte("INIT INFO:"), orderID[:]...), initStr); err != nil {
+			return err
+		}
+
+		err = swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "INITIATED")
+		if err != nil {
+			return err
+		}
+
+		err = swap.personalAtom.Initiate(foreignAddr, info.SecretHash, swap.order.SendValue(), expiry)
+		if err != nil {
+			fmt.Println(err.Error())
+			return err
+		}
+	} else {
+		orderID := swap.order.PersonalOrderID()
+		data, err := swap.stateStr.Read(append([]byte("INIT INFO:"), orderID[:]...))
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(data, &info); err != nil {
+			return err
+		}
 	}
 
-	err = swap.foreignAtom.Redeem(secret32)
-	if err != nil {
-		return err
+	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "INITIATED" {
+		personalSwapDetails, err := swap.personalAtom.Serialize()
+		if err != nil {
+			return err
+		}
+		err = swap.network.SendSwapDetails(swap.order.PersonalOrderID(), personalSwapDetails)
+		if err != nil {
+			return err
+		}
+		err = swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "WAITING_FOR_SWAP_DETAILS")
+		if err != nil {
+			return err
+		}
 	}
 
-	err = swap.swapStr.UpdateStatus(swap.order.PersonalOrderID(), "REDEEMED")
-	if err != nil {
-		return err
+	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "WAITING_FOR_SWAP_DETAILS" {
+		foreignSwapDetails, err := swap.network.ReceiveSwapDetails(swap.order.ForeignOrderID())
+		if err != nil {
+			return err
+		}
+		err = swap.foreignAtom.Deserialize(foreignSwapDetails)
+		if err != nil {
+			return err
+		}
+		err = swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "RECIEVED_SWAP_DETAILS")
+		if err != nil {
+			return err
+		}
+	}
+
+	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "RECIEVED_SWAP_DETAILS" {
+		err := swap.foreignAtom.Audit(info.SecretHash, info.PersonalAddr, swap.order.ReceiveValue(), 60*60)
+		if err != nil {
+			err2 := swap.personalAtom.Refund()
+			if err2 != nil {
+				// Should never happen
+				return err2
+			}
+			err2 = swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "REFUNDED")
+			if err2 != nil {
+				return err2
+			}
+			return err
+		}
+		if err := swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "AUDITED"); err != nil {
+			return err
+		}
+	}
+
+	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "AUDITED" {
+		err := swap.foreignAtom.Redeem(info.Secret32)
+		if err != nil {
+			return err
+		}
+
+		err = swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "REDEEMED")
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 func (swap *swap) respond() error {
-	personalAddr, err := swap.info.GetOwnerAddress(swap.order.PersonalOrderID())
-	foreignAddr, err := swap.info.GetOwnerAddress(swap.order.ForeignOrderID())
+	var personalSwapDetails []byte
+	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "INFO_SUBMITTED" {
+		personalAddr, err := swap.info.GetOwnerAddress(swap.order.PersonalOrderID())
+		foreignAddr, err := swap.info.GetOwnerAddress(swap.order.ForeignOrderID())
 
-	foreignSwapDetails, err := swap.network.ReceiveSwapDetails(swap.order.ForeignOrderID())
-	if err != nil {
-		return err
-	}
-
-	err = swap.foreignAtom.Deserialize(foreignSwapDetails)
-	if err != nil {
-		return err
-	}
-
-	expiry := time.Now().Add(24 * time.Hour).Unix()
-	hash := swap.foreignAtom.GetSecretHash()
-
-	err = swap.foreignAtom.Audit(hash, personalAddr, swap.order.ReceiveValue(), expiry)
-	if err != nil {
-		return err
-	}
-
-	err = swap.personalAtom.Initiate(foreignAddr, hash, swap.order.SendValue(), expiry)
-	if err != nil {
-		return err
-	}
-
-	err = swap.swapStr.UpdateStatus(swap.order.PersonalOrderID(), "INITIATED")
-	if err != nil {
-		return err
-	}
-
-	personalSwapDetails, err := swap.personalAtom.Serialize()
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Sending swap details")
-	err = swap.network.SendSwapDetails(swap.order.PersonalOrderID(), personalSwapDetails)
-	if err != nil {
-		return err
-	}
-
-	secret, err := swap.personalAtom.AuditSecret()
-	if err != nil {
-		err1 := swap.personalAtom.Refund()
-		if err1 != nil {
-			// SHOULD NEVER HAPPEN
+		foreignSwapDetails, err := swap.network.ReceiveSwapDetails(swap.order.ForeignOrderID())
+		if err != nil {
 			return err
 		}
-		err1 = swap.swapStr.UpdateStatus(swap.order.PersonalOrderID(), "REFUNDED")
-		if err1 != nil {
-			return err1
+
+		err = swap.foreignAtom.Deserialize(foreignSwapDetails)
+		if err != nil {
+			return err
 		}
-		return err
+
+		expiry := time.Now().Add(24 * time.Hour).Unix()
+		hash := swap.foreignAtom.GetSecretHash()
+
+		err = swap.foreignAtom.Audit(hash, personalAddr, swap.order.ReceiveValue(), expiry)
+		if err != nil {
+			return err
+		}
+
+		if err := swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "INITIATED"); err != nil {
+			return err
+		}
+
+		if err = swap.personalAtom.Initiate(foreignAddr, hash, swap.order.SendValue(), expiry); err != nil {
+			return err
+		}
+
+		personalSwapDetails, err = swap.personalAtom.Serialize()
+		if err != nil {
+			return err
+		}
+
+		orderID := swap.order.PersonalOrderID()
+		swap.stateStr.Write(append([]byte("RESPOND INITIATED:"), orderID[:]...), personalSwapDetails)
+	} else {
+		var err error
+		orderID := swap.order.PersonalOrderID()
+		personalSwapDetails, err = swap.stateStr.Read(append([]byte("RESPOND INITIATED:"), orderID[:]...))
+		if err != nil {
+			return err
+		}
 	}
 
-	err = swap.foreignAtom.Redeem(secret)
-	if err != nil {
-		return err
+	var secret [32]byte
+	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "INITIATED" {
+		var err error
+		fmt.Println("Sending swap details")
+		if err := swap.network.SendSwapDetails(swap.order.PersonalOrderID(), personalSwapDetails); err != nil {
+			return err
+		}
+
+		secret, err = swap.personalAtom.AuditSecret()
+		if err != nil {
+			err1 := swap.personalAtom.Refund()
+			if err1 != nil {
+				// SHOULD NEVER HAPPEN
+				return err
+			}
+			err1 = swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "REFUNDED")
+			if err1 != nil {
+				return err1
+			}
+			return err
+		}
+
+		orderID := swap.order.PersonalOrderID()
+		err = swap.stateStr.Write(append([]byte("secret:"), orderID[:]...), secret[:])
+		if err != nil {
+			return err
+		}
+		err = swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "AUDITED")
+		if err != nil {
+			return err
+		}
+	} else {
+		orderID := swap.order.PersonalOrderID()
+		secretBytes, err := swap.stateStr.Read(append([]byte("secret:"), orderID[:]...))
+		if err != nil {
+			return err
+		}
+		secret, err = utils.ToBytes32(secretBytes)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = swap.swapStr.UpdateStatus(swap.order.PersonalOrderID(), "REDEEMED")
-	if err != nil {
-		return err
+	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "AUDITED" {
+		if err := swap.foreignAtom.Redeem(secret); err != nil {
+			return err
+		}
+
+		if err := swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "REDEEMED"); err != nil {
+			return err
+		}
 	}
 
 	return nil
