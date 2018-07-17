@@ -3,7 +3,6 @@ package swap
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,6 +11,7 @@ import (
 	"github.com/republicprotocol/atom-go/domains/match"
 	"github.com/republicprotocol/atom-go/services/store"
 	"github.com/republicprotocol/atom-go/utils"
+	"github.com/republicprotocol/republic-go/order"
 )
 
 // Swap is the interface for an atomic swap object
@@ -66,7 +66,7 @@ func (swap *swap) initiate() error {
 
 	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "INFO_SUBMITTED" {
 		orderID := swap.order.PersonalOrderID()
-		log.Println("Initiating the atomic swap for ", base64.StdEncoding.EncodeToString(orderID[:]))
+		log.Println("Initiating the atomic swap for ", order.ID(orderID))
 
 		var err error
 		info.PersonalAddr, err = swap.info.GetOwnerAddress(swap.order.PersonalOrderID())
@@ -109,7 +109,7 @@ func (swap *swap) initiate() error {
 			return err
 		}
 
-		log.Println("Initiated the atomic swap for ", base64.StdEncoding.EncodeToString(orderID[:]))
+		log.Println("Initiated the atomic swap for ", order.ID(orderID))
 
 	} else {
 		orderID := swap.order.PersonalOrderID()
@@ -156,7 +156,7 @@ func (swap *swap) initiate() error {
 		err := swap.foreignAtom.Audit(info.SecretHash, info.PersonalAddr, swap.order.ReceiveValue(), 60*60)
 		if err != nil {
 			orderID := swap.order.PersonalOrderID()
-			log.Println("Refunding the atomic swap for ", base64.StdEncoding.EncodeToString(orderID[:]))
+			log.Println("Refunding the atomic swap for ", order.ID(orderID))
 			err2 := swap.personalAtom.Refund()
 			if err2 != nil {
 				// Should never happen
@@ -166,7 +166,7 @@ func (swap *swap) initiate() error {
 			if err2 != nil {
 				return err2
 			}
-			log.Println("Refunded the atomic swap for ", base64.StdEncoding.EncodeToString(orderID[:]))
+			log.Println("Refunded the atomic swap for ", order.ID(orderID))
 			return err
 		}
 		if err := swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "AUDITED"); err != nil {
@@ -177,7 +177,7 @@ func (swap *swap) initiate() error {
 	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "AUDITED" {
 
 		orderID := swap.order.PersonalOrderID()
-		log.Println("Redeeming the atomic swap for ", base64.StdEncoding.EncodeToString(orderID[:]))
+		log.Println("Redeeming the atomic swap for ", order.ID(orderID))
 
 		err := swap.foreignAtom.Redeem(info.Secret32)
 		if err != nil {
@@ -189,7 +189,7 @@ func (swap *swap) initiate() error {
 			return err
 		}
 
-		log.Println("Redeemed the atomic swap for ", base64.StdEncoding.EncodeToString(orderID[:]))
+		log.Println("Redeemed the atomic swap for ", order.ID(orderID))
 	}
 
 	return nil
@@ -197,7 +197,11 @@ func (swap *swap) initiate() error {
 
 func (swap *swap) respond() error {
 	var personalSwapDetails []byte
+	orderID := swap.order.PersonalOrderID()
+
 	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "INFO_SUBMITTED" {
+		log.Println("Waiting for other trader to initiate for ", order.ID(orderID))
+
 		personalAddr, err := swap.info.GetOwnerAddress(swap.order.PersonalOrderID())
 		foreignAddr, err := swap.info.GetOwnerAddress(swap.order.ForeignOrderID())
 
@@ -214,10 +218,14 @@ func (swap *swap) respond() error {
 		expiry := time.Now().Add(24 * time.Hour).Unix()
 		hash := swap.foreignAtom.GetSecretHash()
 
+		log.Println("Auditing the swap for ", order.ID(orderID))
+
 		err = swap.foreignAtom.Audit(hash, personalAddr, swap.order.ReceiveValue(), expiry)
 		if err != nil {
 			return err
 		}
+
+		log.Println("Initiating the swap for ", order.ID(orderID))
 
 		if err := swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "INITIATED"); err != nil {
 			return err
@@ -226,6 +234,8 @@ func (swap *swap) respond() error {
 		if err = swap.personalAtom.Initiate(foreignAddr, hash, swap.order.SendValue(), expiry); err != nil {
 			return err
 		}
+
+		log.Println("Atomic Swap Initiated for", order.ID(orderID))
 
 		personalSwapDetails, err = swap.personalAtom.Serialize()
 		if err != nil {
@@ -245,14 +255,16 @@ func (swap *swap) respond() error {
 
 	var secret [32]byte
 	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "INITIATED" {
+
+		log.Println("Waiting for the other trader to redeem", order.ID(orderID))
 		var err error
-		fmt.Println("Sending swap details")
 		if err := swap.network.SendSwapDetails(swap.order.PersonalOrderID(), personalSwapDetails); err != nil {
 			return err
 		}
 
 		secret, err = swap.personalAtom.AuditSecret()
 		if err != nil {
+			log.Println("Refunding the atomic swap", order.ID(orderID))
 			err1 := swap.personalAtom.Refund()
 			if err1 != nil {
 				// SHOULD NEVER HAPPEN
@@ -262,6 +274,8 @@ func (swap *swap) respond() error {
 			if err1 != nil {
 				return err1
 			}
+			log.Println("Refunded the atomic swap", order.ID(orderID))
+
 			return err
 		}
 
@@ -270,8 +284,8 @@ func (swap *swap) respond() error {
 		if err != nil {
 			return err
 		}
-		err = swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "AUDITED")
-		if err != nil {
+
+		if err := swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "AUDITED"); err != nil {
 			return err
 		}
 	} else {
@@ -286,6 +300,8 @@ func (swap *swap) respond() error {
 		}
 	}
 
+	log.Println("Redeeming the atomic swap", order.ID(orderID))
+
 	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "AUDITED" {
 		if err := swap.foreignAtom.Redeem(secret); err != nil {
 			return err
@@ -295,6 +311,8 @@ func (swap *swap) respond() error {
 			return err
 		}
 	}
+
+	log.Println("Redeemed the atomic swap", order.ID(orderID))
 
 	return nil
 }
