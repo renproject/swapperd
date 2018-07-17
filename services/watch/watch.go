@@ -1,6 +1,9 @@
 package watch
 
 import (
+	"encoding/base64"
+	"log"
+
 	"github.com/republicprotocol/atom-go/domains/match"
 	"github.com/republicprotocol/atom-go/services/store"
 	"github.com/republicprotocol/atom-go/services/swap"
@@ -33,6 +36,7 @@ func NewWatch(network swap.Network, info swap.Info, wallet Wallet, reqAtom swap.
 
 // Run runs the watch object on the given order id
 func (watch *watch) Run(orderID [32]byte) error {
+	log.Println("Waiting for a matching order for ", base64.StdEncoding.EncodeToString(orderID[:]))
 	if watch.str.ReadStatus(orderID) == "UNKNOWN" {
 		err := watch.str.UpdateStatus(orderID, "PENDING")
 		if err != nil {
@@ -64,6 +68,8 @@ func (watch *watch) Run(orderID [32]byte) error {
 			return err
 		}
 	}
+
+	log.Println("Match found for ", base64.StdEncoding.EncodeToString(orderID[:]))
 
 	if watch.str.ReadStatus(orderID) == "MATCHED" {
 		if watch.reqAtom.PriorityCode() == match.ReceiveCurrency() {

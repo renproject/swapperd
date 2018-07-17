@@ -3,8 +3,10 @@ package swap
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/republicprotocol/atom-go/domains/match"
@@ -63,6 +65,9 @@ func (swap *swap) initiate() error {
 	var info initInfo
 
 	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "INFO_SUBMITTED" {
+		orderID := swap.order.PersonalOrderID()
+		log.Println("Initiating the atomic swap for ", base64.StdEncoding.EncodeToString(orderID[:]))
+
 		var err error
 		info.PersonalAddr, err = swap.info.GetOwnerAddress(swap.order.PersonalOrderID())
 		if err != nil {
@@ -89,7 +94,6 @@ func (swap *swap) initiate() error {
 			return err
 		}
 
-		orderID := swap.order.PersonalOrderID()
 		if err := swap.stateStr.Write(append([]byte("INIT INFO:"), orderID[:]...), initStr); err != nil {
 			return err
 		}
@@ -104,6 +108,9 @@ func (swap *swap) initiate() error {
 			fmt.Println(err.Error())
 			return err
 		}
+
+		log.Println("Initiated the atomic swap for ", base64.StdEncoding.EncodeToString(orderID[:]))
+
 	} else {
 		orderID := swap.order.PersonalOrderID()
 		data, err := swap.stateStr.Read(append([]byte("INIT INFO:"), orderID[:]...))
@@ -148,6 +155,8 @@ func (swap *swap) initiate() error {
 	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "RECIEVED_SWAP_DETAILS" {
 		err := swap.foreignAtom.Audit(info.SecretHash, info.PersonalAddr, swap.order.ReceiveValue(), 60*60)
 		if err != nil {
+			orderID := swap.order.PersonalOrderID()
+			log.Println("Refunding the atomic swap for ", base64.StdEncoding.EncodeToString(orderID[:]))
 			err2 := swap.personalAtom.Refund()
 			if err2 != nil {
 				// Should never happen
@@ -157,6 +166,7 @@ func (swap *swap) initiate() error {
 			if err2 != nil {
 				return err2
 			}
+			log.Println("Refunded the atomic swap for ", base64.StdEncoding.EncodeToString(orderID[:]))
 			return err
 		}
 		if err := swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "AUDITED"); err != nil {
@@ -165,6 +175,10 @@ func (swap *swap) initiate() error {
 	}
 
 	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "AUDITED" {
+
+		orderID := swap.order.PersonalOrderID()
+		log.Println("Redeeming the atomic swap for ", base64.StdEncoding.EncodeToString(orderID[:]))
+
 		err := swap.foreignAtom.Redeem(info.Secret32)
 		if err != nil {
 			return err
@@ -174,6 +188,8 @@ func (swap *swap) initiate() error {
 		if err != nil {
 			return err
 		}
+
+		log.Println("Redeemed the atomic swap for ", base64.StdEncoding.EncodeToString(orderID[:]))
 	}
 
 	return nil
