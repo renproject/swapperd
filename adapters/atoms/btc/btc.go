@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
+	"time"
 
 	bindings "github.com/republicprotocol/atom-go/adapters/bindings/btc"
 	"github.com/republicprotocol/atom-go/adapters/clients/btc"
@@ -85,27 +86,33 @@ func (btcAtom *BitcoinAtom) Refund() error {
 }
 
 // Audit an Atom swap by calling a function on Bitcoin
-func (btcAtom *BitcoinAtom) Audit(hashLock [32]byte, to []byte, value *big.Int, expiry int64) error {
+func (btcAtom *BitcoinAtom) Audit(hash [32]byte, to []byte, value *big.Int, expiry int64) error {
+	for start := time.Now(); time.Since(start) < 24*time.Hour; {
 
-	result, err := bindings.Audit(btcAtom.connection, btcAtom.data.Contract, btcAtom.data.ContractTx)
-	if err != nil {
-		return err
+		result, err := bindings.Audit(btcAtom.connection, btcAtom.data.Contract, btcAtom.data.ContractTx)
+		if err != nil {
+			return err
+		}
+
+		if hash != result.SecretHash {
+			btcAtom.data.HashLock = result.SecretHash
+			// return fmt.Errorf("HashLock mismatch %v %v", hash, auditReport.SecretLock)
+		}
+
+		if bytes.Compare(to, result.RecipientAddress) != 0 {
+			return errors.New("Btc: To Address mismatch")
+		}
+
+		// if value.Cmp(auditReport.Value) > 0 {
+		// 	return errors.New("Value mismatch")
+		// }
+
+		// if expiry > (auditReport.Timelock.Int64() - time.Now().Unix()) {
+		// 	return errors.New("Expiry mismatch")
+		// }
+		return nil
 	}
-
-	btcAtom.data.HashLock = result.SecretHash
-
-	if bytes.Compare(to, result.RecipientAddress) != 0 {
-		return errors.New("Btc: To Address mismatch")
-	}
-
-	// if value.Cmp(big.NewInt(result.Amount)) > 0 {
-	// 	return errors.New("Value mismatch")
-	// }
-
-	// if expiry > (result.LockTime - time.Now().Unix()) {
-	// 	return errors.New("Expiry mismatch")
-	// }
-	return nil
+	return errors.New("Audit failed")
 }
 
 // AuditSecret audits the secret of an Atom swap by calling Bitcoin
