@@ -257,19 +257,13 @@ func bitcoinBalance(conf config.Config, key swap.Key) (Balance, error) {
 	if err != nil {
 		return Balance{}, err
 	}
+
 	addr, err := key.GetAddress()
 	if err != nil {
 		return Balance{}, err
 	}
-	btcAddr, err := btcutil.DecodeAddress(string(addr), conn.ChainParams)
-	if err != nil {
-		return Balance{}, err
-	}
-	acc, err := conn.Client.GetAccount(btcAddr)
-	if err != nil {
-		return Balance{}, err
-	}
-	amt, err := conn.Client.GetBalance(acc)
+
+	amt, err := conn.Client.GetBalance("*")
 	if err != nil {
 		fmt.Println(err)
 		return Balance{}, err
