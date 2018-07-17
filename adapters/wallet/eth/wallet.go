@@ -1,7 +1,6 @@
 package ethwallet
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -35,7 +34,6 @@ func (wallet *ethereumWallet) GetMatch(personalOrderID [32]byte) (match.Match, e
 		time.Sleep(2 * time.Second)
 		PersonalOrder, ForeignOrder, ReceiveValue, SendValue, ReceiveCurrency, SendCurrency, err := wallet.wallet.GetMatchDetails(&bind.CallOpts{}, personalOrderID)
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
 		// TODO: When contract is updated to throw error in GetMatchDetails if
