@@ -24,6 +24,7 @@ import (
 	"github.com/republicprotocol/atom-go/adapters/owner"
 	"github.com/republicprotocol/atom-go/adapters/store/leveldb"
 	"github.com/republicprotocol/atom-go/drivers/btc/regtest"
+	"github.com/republicprotocol/atom-go/services/store"
 	"github.com/republicprotocol/atom-go/services/swap"
 	. "github.com/republicprotocol/atom-go/services/watch"
 
@@ -54,16 +55,21 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		aliceCurrency = 1
 		bobCurrency = 0
 
-		var confPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/configLocal.json"
-		var ksPathA = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/keystoreA.json"
-		var ksPathB = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/keystoreB.json"
+		var confPathA = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/local/configA.json"
+		var confPathB = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/local/configB.json"
+		var ksPathA = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/local/keystoreA.json"
+		var ksPathB = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/local/keystoreB.json"
 
-		config, err := config.LoadConfig(confPath)
+		configA, err := config.LoadConfig(confPathA)
 		Expect(err).ShouldNot(HaveOccurred())
+
+		_, err = config.LoadConfig(confPathB)
+		Expect(err).ShouldNot(HaveOccurred())
+
 		keystoreA := keystore.NewKeystore(ksPathA)
 		keystoreB := keystore.NewKeystore(ksPathB)
 
-		ganache, err := ethclient.Connect(config)
+		ganache, err := ethclient.Connect(configA)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		keysA, err := keystoreA.LoadKeys()
@@ -104,7 +110,7 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		ganache.Transfer(common.BytesToAddress(bobEthAddr), owner, 1000000000000000)
 
 		time.Sleep(5 * time.Second)
-		connection, err := btcclient.Connect(config)
+		connection, err := btcclient.Connect(configA)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		aliceSendValue = big.NewInt(10000000)
@@ -176,8 +182,11 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		resBob, err := eth.NewEthereumAtom(ganache, bobEthKey)
 		Expect(err).Should(BeNil())
 
-		aliceStr := swap.NewSwapStore(leveldb.NewLDBStore("/db"))
-		bobStr := swap.NewSwapStore(leveldb.NewLDBStore("/db"))
+		db, err := leveldb.NewLDBStore(configA.StoreLocation())
+		Expect(err).Should(BeNil())
+
+		aliceStr := store.NewSwapStore(db)
+		bobStr := store.NewSwapStore(db)
 
 		aliceWatch = NewWatch(aliceNet, aliceInfo, mockWallet, reqAlice, resAlice, aliceStr)
 		bobWatch = NewWatch(bobNet, bobInfo, mockWallet, reqBob, resBob, bobStr)

@@ -64,6 +64,8 @@ func (swap *swap) initiate() error {
 
 	var info initInfo
 
+	// TODO: Be defensive when checking statuses. Do not assume that an invalid
+	// status cannot happen.
 	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "INFO_SUBMITTED" {
 		orderID := swap.order.PersonalOrderID()
 		log.Println("Initiating the atomic swap for ", order.ID(orderID))
@@ -89,6 +91,8 @@ func (swap *swap) initiate() error {
 		}
 		info.SecretHash = sha256.Sum256(secret)
 
+		// TODO: Change all references to "str" to "store" because "str" means
+		// string.
 		initStr, err := json.Marshal(info)
 		if err != nil {
 			return err
@@ -103,6 +107,11 @@ func (swap *swap) initiate() error {
 			return err
 		}
 
+		// TODO: Detect failure to initiate and retry, but ensure that retrying
+		// never happens if funds were deposited. Self audit to see whether the
+		// previous attempt actually *did* make it to the blockchain so that we
+		// always initiate exactly once. (we can use the store to help with
+		// this.)
 		err = swap.personalAtom.Initiate(foreignAddr, info.SecretHash, swap.order.SendValue(), expiry)
 		if err != nil {
 			fmt.Println(err.Error())
@@ -146,6 +155,9 @@ func (swap *swap) initiate() error {
 		if err != nil {
 			return err
 		}
+
+		// TODO: Persistent storage of the swap details is required in case of
+		// crashing the system.
 		err = swap.stateStr.UpdateStatus(swap.order.PersonalOrderID(), "RECIEVED_SWAP_DETAILS")
 		if err != nil {
 			return err
@@ -153,10 +165,15 @@ func (swap *swap) initiate() error {
 	}
 
 	if swap.stateStr.ReadStatus(swap.order.PersonalOrderID()) == "RECIEVED_SWAP_DETAILS" {
+		// TODO: What does "Audit" do if we are already refunded? Its probably
+		// correct for it to return an error. To prevent that being an issue
+		// though, we need to have better state management.
 		err := swap.foreignAtom.Audit(info.SecretHash, info.PersonalAddr, swap.order.ReceiveValue(), 60*60)
 		if err != nil {
 			orderID := swap.order.PersonalOrderID()
 			log.Println("Refunding the atomic swap for ", order.ID(orderID))
+			// TODO: Using prefix states (e.g. "REFUNDING" not "REFUNDED") will
+			// allow a more tolerant, and easier to understand, state machine.
 			err2 := swap.personalAtom.Refund()
 			if err2 != nil {
 				// Should never happen

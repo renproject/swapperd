@@ -14,8 +14,8 @@ import (
 func main() {
 
 	port := flag.String("port", "18516", "HTTP Atom port")
-	confPath := flag.String("config", "./config.json", "Location of the config file")
-	keystrPath := flag.String("keystore", "./keystore.json", "Location of the keystore file")
+	confPath := flag.String("config", "../config.json", "Location of the config file")
+	keystrPath := flag.String("keystore", "../keystore.json", "Location of the keystore file")
 
 	flag.Parse()
 

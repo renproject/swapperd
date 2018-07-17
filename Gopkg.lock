@@ -156,6 +156,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/republicprotocol/co-go"
+  packages = ["."]
+  revision = "173f46076b0a510e5136b0a791c6af48b3d85f92"
+
+[[projects]]
+  branch = "master"
   name = "github.com/rjeczalik/notify"
   packages = ["."]
   revision = "d152f3ce359a5464dc41e84a8919fc67e55bbbf0"
@@ -273,6 +279,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7a6b6b6c13e0e3dd16b88af6cd3c5a536cdf372c6328d6892863a58e806a00c2"
+  inputs-digest = "808514e2fa177ad8a648053cc7caf9e48ab8825c9b51c9d2f9122ffe1e43db03"
   solver-name = "gps-cdcl"
   solver-version = 1

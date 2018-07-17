@@ -17,8 +17,8 @@ import (
 
 func main() {
 
-	var aPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/test/configA.json"
-	var bPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/test/configB.json"
+	var aPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/local/configA.json"
+	var bPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/local/configB.json"
 	var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/owner.json"
 
 	aTest, err := config.LoadConfig(aPath)
@@ -36,7 +36,7 @@ func main() {
 		panic(err)
 	}
 
-	key, err := crypto.HexToECDSA(own.Kovan)
+	key, err := crypto.HexToECDSA(own.Ganache)
 	if err != nil {
 		panic(err)
 	}
@@ -139,7 +139,7 @@ func deployContracts(config config.Config, owner *bind.TransactOpts) error {
 	}
 
 	// Deploy Wallet contract
-	WalletAddress, tx, _, err := bindings.DeployRenExAtomicSettlement(owner, ethclient, OBAddress, RenExTokensAddress, RenExBalancesAddress, big.NewInt(100))
+	WalletAddress, tx, _, err := bindings.DeployRenExSettlement(owner, ethclient, OBAddress, RenExTokensAddress, RenExBalancesAddress, big.NewInt(100))
 	if err != nil {
 		return err
 	}
