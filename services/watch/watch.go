@@ -1,139 +1,154 @@
 package watch
 
 import (
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/republicprotocol/atom-go/domains/match"
 	"github.com/republicprotocol/atom-go/services/store"
 	"github.com/republicprotocol/atom-go/services/swap"
-	"github.com/republicprotocol/republic-go/order"
 	"github.com/republicprotocol/co-go"
+	"github.com/republicprotocol/republic-go/order"
 )
 
 type watch struct {
 	network swap.Network
 	info    swap.Info
-	reqAtom swap.Atom
-	resAtom swap.Atom
+	builder swap.AtomBuilder
 	wallet  Wallet
-	str     store.State
+	state   store.SwapState
 }
 
 type Watch interface {
 	Run(<-chan struct{}, <-chan struct{}) <-chan error
 	Add([32]byte) error
 	Status([32]byte) string
+	Swap([32]byte) error
 }
 
-func NewWatch(network swap.Network, info swap.Info, wallet Wallet, reqAtom swap.Atom, resAtom swap.Atom, str store.State) Watch {
+func NewWatch(network swap.Network, info swap.Info, wallet Wallet, builder swap.AtomBuilder, state store.SwapState) Watch {
 	return &watch{
 		network: network,
 		info:    info,
+		builder: builder,
 		wallet:  wallet,
-		reqAtom: reqAtom,
-		resAtom: resAtom,
-		str:     str,
+		state:   state,
 	}
 }
 
 // Run runs the watch object on the given order id
 func (watch *watch) Run(done <-chan struct{}, notification <-chan struct{}) <-chan error {
 	errs := make(chan error)
+	log.Println("Starting the watcher......")
 	go func() {
-		// TODO: Remove spin lock.
 		for {
 			select {
 			case <-done:
 				return
 			case <-notification:
-				swaps := watch.str.GetSwaps()
+				swaps, err := watch.state.PendingSwaps()
+				fmt.Println("Getting Pending Swaps")
+				if err != nil {
+					fmt.Println(err.Error())
+					errs <- err
+					return
+				}
 				co.ParForAll(swaps, func(i int) {
-					if err := watch.doSwap(swaps[i]); err != nil {
+					fmt.Println("Inside Par for all")
+					if err := watch.Swap(swaps[i]); err != nil {
 						errs <- err
 						return
 					}
-					watch.str.DeleteSwap(swaps[i])
+					watch.state.DeleteSwap(swaps[i])
 				})
 			}
+			time.Sleep(10 * time.Second)
 		}
 	}()
 	return errs
 }
 
 func (watch *watch) Add(orderID [32]byte) error {
-	return watch.str.AddSwap(orderID)
+	return watch.state.AddSwap(orderID)
 }
 
 func (watch *watch) Status(orderID [32]byte) string {
-	return watch.str.ReadStatus(orderID)
+	return watch.state.Status(orderID)
 }
 
-func (watch *watch) doSwap(orderID [32]byte) error {
-	// TODO: All statuses should be defined as enumerated constants.
-	if watch.str.ReadStatus(orderID) == "UNKNOWN" {
-		err := watch.str.UpdateStatus(orderID, "PENDING")
+func (watch *watch) Swap(orderID [32]byte) error {
+	if watch.state.Status(orderID) == "UNKNOWN" {
+		err := watch.state.PutStatus(orderID, "PENDING")
 		if err != nil {
 			return err
 		}
+		log.Println("Initiated the Atomic Swap")
 	}
 
 	var match match.Match
-	if watch.str.ReadStatus(orderID) == "PENDING" {
+	if watch.state.Status(orderID) == "PENDING" {
 		var err error
 		match, err = watch.wallet.GetMatch(orderID)
 		if err != nil {
 			return err
 		}
 
-		err = watch.str.SetMatch(orderID, match)
+		err = watch.state.PutMatch(orderID, match)
 		if err != nil {
 			return err
 		}
 
-		err = watch.str.UpdateStatus(orderID, "MATCHED")
+		err = watch.state.PutStatus(orderID, "MATCHED")
 		if err != nil {
 			return err
 		}
+
+		log.Println("Match found for ", order.ID(orderID))
 	} else {
 		var err error
-		match, err = watch.str.GetMatch(orderID)
+		match, err = watch.state.Match(orderID)
 		if err != nil {
 			return err
 		}
 	}
 
-	log.Println("Match found for ", order.ID(orderID))
-
-	if watch.str.ReadStatus(orderID) == "MATCHED" {
-		if watch.reqAtom.PriorityCode() == match.ReceiveCurrency() {
-			addr, err := watch.reqAtom.GetKey().GetAddress()
-			if err != nil {
-				return err
-			}
-			if err := watch.info.SetOwnerAddress(orderID, addr); err != nil {
-				return err
-			}
-		} else {
-			addr, err := watch.resAtom.GetKey().GetAddress()
-			if err != nil {
-				return err
-			}
-			if err := watch.info.SetOwnerAddress(orderID, addr); err != nil {
-				return err
-			}
-		}
-		if err := watch.str.UpdateStatus(orderID, "INFO_SUBMITTED"); err != nil {
-			return err
-		}
+	personalAtom, foreignAtom, err := watch.builder.BuildAtoms(watch.state, match)
+	if err != nil {
+		return err
 	}
 
-	if watch.str.ReadStatus(orderID) != "REDEEMED" && watch.str.ReadStatus(orderID) != "REFUNDED" {
-		atomicSwap := swap.NewSwap(watch.reqAtom, watch.resAtom, watch.info, match, watch.network, watch.str)
+	if watch.state.Status(orderID) == "MATCHED" {
+		addr, err := foreignAtom.GetKey().GetAddress()
+		if err != nil {
+			return err
+		}
+		log.Println("Setting owner address for ", order.ID(orderID))
+		if err := watch.info.SetOwnerAddress(orderID, addr); err != nil {
+			fmt.Println(err)
+			return err
+		}
+		log.Println("...done", order.ID(orderID))
+
+		log.Println("Put status for ", order.ID(orderID))
+		if err := watch.state.PutStatus(orderID, "INFO_SUBMITTED"); err != nil {
+			return err
+		}
+		log.Println("...done", order.ID(orderID))
+
+		log.Println("Info Submitted for ", order.ID(orderID))
+	} else {
+		log.Println("Skipping Info Submission for ", order.ID(orderID))
+	}
+
+	fmt.Printf("Personal Code -> %d Foreign Code -> %d", personalAtom.PriorityCode(), foreignAtom.PriorityCode())
+	if watch.state.Status(orderID) != "REDEEMED" && watch.state.Status(orderID) != "REFUNDED" {
+		atomicSwap := swap.NewSwap(personalAtom, foreignAtom, watch.info, match, watch.network, watch.state)
 		err := atomicSwap.Execute()
 		if err != nil {
+			fmt.Println(err)
 			return err
 		}
 	}
-
 	return nil
 }
