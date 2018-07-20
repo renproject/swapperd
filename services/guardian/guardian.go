@@ -50,12 +50,11 @@ func (g *guardian) Run(done <-chan struct{}, notification <-chan struct{}) {
 }
 
 func (g *guardian) refund(orderID [32]byte) error {
-	atom, err := g.buildAtom()
+	atom, err := g.buildAtom(orderID)
 	if err != nil {
 		return errors.ErrAtomBuildFailed(err)
 	}
-	atomData, err := g.state.PersonalAtomDetails(orderID)
-	atom.Deserialize(atomData)
+
 	if err := atom.Refund(); err != nil {
 		return errors.ErrRefundAfterRedeem(err)
 	}
@@ -81,5 +80,10 @@ func (g *guardian) expiredSwaps() ([][32]byte, error) {
 }
 
 func (g *guardian) buildAtom(orderID [32]byte) (swap.Atom, error) {
-	return g.builder.BuildAtom(orderID)
+	m, err := g.state.Match(orderID)
+	if err != nil {
+		return nil, err
+	}
+	atom, _, err := g.builder.BuildAtoms(g.state, m)
+	return atom, err
 }
