@@ -1,14 +1,13 @@
 package eth
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"math/big"
 	"time"
+
+	"github.com/republicprotocol/atom-go/services/store"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -24,6 +23,7 @@ type EthereumData struct {
 }
 
 type EthereumAtom struct {
+	orderID [32]byte
 	context context.Context
 	client  ethclient.Conn
 	key     swap.Key
@@ -32,8 +32,7 @@ type EthereumAtom struct {
 }
 
 // NewEthereumAtom returns a new Ethereum RequestAtom instance
-func NewEthereumAtom(client ethclient.Conn, key swap.Key) (swap.Atom, error) {
-
+func NewEthereumAtom(client ethclient.Conn, key swap.Key, orderID [32]byte) (swap.Atom, error) {
 	contract, err := bindings.NewAtomicSwap(client.AtomAddress(), bind.ContractBackend(client.Client()))
 	if err != nil {
 		return &EthereumAtom{}, err
@@ -47,6 +46,7 @@ func NewEthereumAtom(client ethclient.Conn, key swap.Key) (swap.Atom, error) {
 		client:  client,
 		key:     key,
 		binding: contract,
+		orderID: orderID,
 		data: EthereumData{
 			SwapID: swapID,
 		},
@@ -54,120 +54,167 @@ func NewEthereumAtom(client ethclient.Conn, key swap.Key) (swap.Atom, error) {
 }
 
 // Initiate a new Atom swap by calling a function on ethereum
-func (ethAtom *EthereumAtom) Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error {
-	auth := bind.NewKeyedTransactor(ethAtom.key.GetKey())
-	auth.Value = value
-	auth.GasLimit = 3000000
-	ethAtom.data.HashLock = hash
-	tx, err := ethAtom.binding.Initiate(auth, ethAtom.data.SwapID, common.BytesToAddress(to), hash, big.NewInt(expiry))
+func (atom *EthereumAtom) Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error {
+	initiatable, err := atom.initiatable()
 	if err != nil {
 		return err
 	}
-	_, err = ethAtom.client.PatchedWaitMined(ethAtom.context, tx)
-	return err
-}
-
-// Refund an Atom swap by calling a function on ethereum
-func (ethAtom *EthereumAtom) Refund() error {
-	auth := bind.NewKeyedTransactor(ethAtom.key.GetKey())
-	auth.GasLimit = 3000000
-	tx, err := ethAtom.binding.Refund(auth, ethAtom.data.SwapID)
-	if err == nil {
-		_, err = ethAtom.client.PatchedWaitMined(ethAtom.context, tx)
+	if !initiatable {
+		return nil
 	}
+
+	auth := bind.NewKeyedTransactor(atom.key.GetKey())
+	auth.Value = value
+	auth.GasLimit = 3000000
+	atom.data.HashLock = hash
+
+	tx, err := atom.binding.Initiate(auth, atom.data.SwapID, common.BytesToAddress(to), hash, big.NewInt(expiry))
+	if err != nil {
+		return err
+	}
+	_, err = atom.client.PatchedWaitMined(atom.context, tx)
 	return err
 }
 
 // Redeem an Atom swap by calling a function on ethereum
-func (ethAtom *EthereumAtom) Redeem(secret [32]byte) error {
-	auth := bind.NewKeyedTransactor(ethAtom.key.GetKey())
+func (atom *EthereumAtom) Redeem(secret [32]byte) error {
+	// redeemable, err := atom.redeemable()
+	// if err != nil {
+	// 	return err
+	// }
+	// if !redeemable {
+	// 	return nil
+	// }
+
+	auth := bind.NewKeyedTransactor(atom.key.GetKey())
 	auth.GasLimit = 3000000
-	tx, err := ethAtom.binding.Redeem(auth, ethAtom.data.SwapID, secret)
+	tx, err := atom.binding.Redeem(auth, atom.data.SwapID, secret)
 	if err == nil {
-		_, err = ethAtom.client.PatchedWaitMined(ethAtom.context, tx)
+		_, err = atom.client.PatchedWaitMined(atom.context, tx)
 	}
 	return err
 }
 
-// Audit an Atom swap by calling a function on ethereum
-func (ethAtom *EthereumAtom) Audit(hash [32]byte, to []byte, value *big.Int, expiry int64) error {
-	for start := time.Now(); time.Since(start) < 24*time.Hour; {
-
-		auditReport, err := ethAtom.binding.Audit(&bind.CallOpts{}, ethAtom.data.SwapID)
-		if auditReport.SecretLock == [32]byte{} {
-			time.Sleep(2 * time.Second)
-			continue
-		}
-
+// WaitForCounterRedemption waits for the counter-party to initiate.
+func (atom *EthereumAtom) WaitForCounterRedemption() error {
+	for {
+		refundable, err := atom.refundable()
 		if err != nil {
 			return err
 		}
 
-		if hash != auditReport.SecretLock {
-			ethAtom.data.HashLock = auditReport.SecretLock
-			// return fmt.Errorf("HashLock mismatch %v %v", hash, auditReport.SecretLock)
+		secret, err := atom.binding.AuditSecret(&bind.CallOpts{}, atom.data.SwapID)
+		if (err != nil || secret == [32]byte{}) && !refundable {
+			time.Sleep(1 * time.Second)
+			continue
 		}
 
-		if bytes.Compare(to, auditReport.To.Bytes()) != 0 {
-			return fmt.Errorf("Eth: To Address mismatch %v %v", to, auditReport.To.Bytes())
+		if refundable {
+			// TODO: Complain to Watchdog
+			auth := bind.NewKeyedTransactor(atom.key.GetKey())
+			auth.GasLimit = 3000000
+			tx, err := atom.binding.Refund(auth, atom.data.SwapID)
+			if err == nil {
+				_, err := atom.client.PatchedWaitMined(atom.context, tx)
+				return err
+			}
+			return err
 		}
 
-		// if value.Cmp(auditReport.Value) > 0 {
-		// 	return errors.New("Value mismatch")
-		// }
-
-		// if expiry > (auditReport.Timelock.Int64() - time.Now().Unix()) {
-		// 	return errors.New("Expiry mismatch")
-		// }
 		return nil
 	}
-	return errors.New("Audit failed")
+}
+
+// Refund an Atom swap by calling a function on ethereum
+func (atom *EthereumAtom) Refund() error {
+	for {
+		redeemable, err := atom.redeemable()
+		if err != nil {
+			return err
+		}
+
+		refundable, err := atom.refundable()
+		if err != nil {
+			return err
+		}
+
+		if !(redeemable && refundable) {
+			time.Sleep(1 * time.Minute)
+			continue
+		}
+		if !refundable {
+			return nil
+		}
+		auth := bind.NewKeyedTransactor(atom.key.GetKey())
+		auth.GasLimit = 3000000
+		tx, err := atom.binding.Refund(auth, atom.data.SwapID)
+		if err == nil {
+			_, err = atom.client.PatchedWaitMined(atom.context, tx)
+		}
+		return err
+	}
+}
+
+// Audit an Atom swap by calling a function on ethereum
+func (atom *EthereumAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
+	auditReport, err := atom.binding.Audit(&bind.CallOpts{}, atom.data.SwapID)
+	if err != nil {
+		return [32]byte{}, nil, nil, 0, err
+	}
+	return auditReport.SecretLock, auditReport.From.Bytes(), auditReport.Value, auditReport.Timelock.Int64(), nil
 }
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
-func (ethAtom *EthereumAtom) AuditSecret() ([32]byte, error) {
-	for start := time.Now(); time.Since(start) < 24*time.Hour; {
-		secret, err := ethAtom.binding.AuditSecret(&bind.CallOpts{}, ethAtom.data.SwapID)
-		if err != nil {
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		if secret == [32]byte{} {
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		return secret, nil
+func (atom *EthereumAtom) AuditSecret() ([32]byte, error) {
+	return atom.binding.AuditSecret(&bind.CallOpts{}, atom.data.SwapID)
+}
+
+// Store stores the atom details
+func (atom *EthereumAtom) Store(state store.SwapState) error {
+	b, err := json.Marshal(atom.data)
+	if err != nil {
+		return err
 	}
-	return [32]byte{}, errors.New("Failed to audit the secret")
+	return state.PutAtomDetails(atom.orderID, b)
 }
 
-// Serialize serializes the atom details into a bytes array
-func (ethAtom *EthereumAtom) Serialize() ([]byte, error) {
-	b, err := json.Marshal(ethAtom.data)
-	return b, err
-}
-
-// Deserialize deserializes the atom details from a bytes array
-func (ethAtom *EthereumAtom) Deserialize(b []byte) error {
-	return json.Unmarshal(b, &ethAtom.data)
+// Restore restores the atom details
+func (atom *EthereumAtom) Restore(state store.SwapState) error {
+	b, err := state.AtomDetails(atom.orderID)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, &atom.data)
 }
 
 // From returns the address of the sender
-func (ethAtom *EthereumAtom) From() ([]byte, error) {
-	return ethAtom.key.GetAddress()
+func (atom *EthereumAtom) From() ([]byte, error) {
+	return atom.key.GetAddress()
 }
 
 // PriorityCode returns the priority code of the currency.
-func (ethAtom *EthereumAtom) PriorityCode() uint32 {
-	return ethAtom.key.PriorityCode()
+func (atom *EthereumAtom) PriorityCode() uint32 {
+	return atom.key.PriorityCode()
 }
 
 // GetSecretHash returns the Secret Hash of the atom.
-func (eth *EthereumAtom) GetSecretHash() [32]byte {
-	return eth.data.HashLock
+func (atom *EthereumAtom) GetSecretHash() [32]byte {
+	return atom.data.HashLock
 }
 
 // GetKey returns the key of the atom.
-func (eth *EthereumAtom) GetKey() swap.Key {
-	return eth.key
+func (atom *EthereumAtom) GetKey() swap.Key {
+	return atom.key
+}
+
+func (atom *EthereumAtom) redeemable() (bool, error) {
+	return atom.binding.Redeemable(&bind.CallOpts{}, atom.data.SwapID)
+}
+
+func (atom *EthereumAtom) initiatable() (bool, error) {
+	return atom.binding.Initiatable(&bind.CallOpts{}, atom.data.SwapID)
+}
+
+func (atom *EthereumAtom) refundable() (bool, error) {
+	return atom.binding.Refundable(&bind.CallOpts{}, atom.data.SwapID)
 }
