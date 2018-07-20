@@ -7,13 +7,13 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/republicprotocol/atom-go/adapters/atoms"
+
 	"github.com/btcsuite/btcutil"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/republicprotocol/atom-go/adapters/atoms/btc"
-	"github.com/republicprotocol/atom-go/adapters/atoms/eth"
 	btcClient "github.com/republicprotocol/atom-go/adapters/clients/btc"
 	ethClient "github.com/republicprotocol/atom-go/adapters/clients/eth"
 	"github.com/republicprotocol/atom-go/adapters/config"
@@ -110,7 +110,7 @@ func (adapter *boxHttpAdapter) PostOrder(order PostOrder) (PostOrder, error) {
 	}
 
 	go func() {
-		err := adapter.watch.Run(orderID)
+		err := adapter.watch.Swap(orderID)
 		if err != nil {
 			panic(err)
 		}
@@ -185,7 +185,7 @@ func buildWatcher(config config.Config, kstr swap.Keystore) (watch.Watch, error)
 		return nil, err
 	}
 
-	ethInfo, err := ax.NewEtereumAtomInfo(ethConn, owner)
+	ethInfo, err := ax.NewEthereumAtomInfo(ethConn, owner)
 	if err != nil {
 		return nil, err
 	}
@@ -195,19 +195,14 @@ func buildWatcher(config config.Config, kstr swap.Keystore) (watch.Watch, error)
 		return nil, err
 	}
 
-	ethAtom, err := eth.NewEthereumAtom(ethConn, ethKey)
-	if err != nil {
-		return nil, err
-	}
-
-	btcAtom := btc.NewBitcoinAtom(btcConn, btcKey)
+	atomBuilder := atoms.NewAtomBuilder(config, keys)
 
 	db, err := leveldb.NewLDBStore(config.StoreLocation())
 	if err != nil {
 		return nil, err
 	}
-	str := store.NewSwapStore(db)
-	watcher := watch.NewWatch(ethNet, ethInfo, ethWallet, ethAtom, btcAtom, str)
+	str := store.NewSwapState(db)
+	watcher := watch.NewWatch(ethNet, ethInfo, ethWallet, atomBuilder, str)
 	return watcher, nil
 }
 
