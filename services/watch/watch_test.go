@@ -32,6 +32,7 @@ import (
 
 	ax "github.com/republicprotocol/atom-go/adapters/info/eth"
 	net "github.com/republicprotocol/atom-go/adapters/networks/eth"
+
 	wal "github.com/republicprotocol/atom-go/adapters/wallet/mock"
 	"github.com/republicprotocol/atom-go/domains/match"
 )
@@ -188,7 +189,7 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		bobWatch = NewWatch(bobNet, bobInfo, mockWallet, bobAtomBuilder, bobState)
 	})
 
-	It("can do an eth - btc atomic swap", func() {
+	It("can do an eth - btc atomic swap (eth implementations)", func() {
 
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
@@ -211,4 +212,5 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		wg.Wait()
 
 	})
+
 })
