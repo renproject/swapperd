@@ -18,7 +18,7 @@ type ethereumAtomInfo struct {
 	ctx  context.Context
 }
 
-func NewEtereumAtomInfo(conn client.Conn, auth *bind.TransactOpts) (swap.Info, error) {
+func NewEthereumAtomInfo(conn client.Conn, auth *bind.TransactOpts) (swap.Info, error) {
 	info, err := bindings.NewAtomicInfo(conn.InfoAddress(), bind.ContractBackend(conn.Client()))
 	if err != nil {
 		return &ethereumAtomInfo{}, err
@@ -32,6 +32,7 @@ func NewEtereumAtomInfo(conn client.Conn, auth *bind.TransactOpts) (swap.Info, e
 }
 
 func (info *ethereumAtomInfo) SetOwnerAddress(orderID [32]byte, address []byte) error {
+	info.auth.GasLimit = 3000000
 	tx, err := info.info.SetOwnerAddress(info.auth, orderID, address)
 	if err != nil {
 		return err
