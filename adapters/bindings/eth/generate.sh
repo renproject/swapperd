@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cd ../../../drivers/atom-sol
+cd ../../../drivers/renex-sol
 
 if [ $1 -e "--branch" ]
 then
