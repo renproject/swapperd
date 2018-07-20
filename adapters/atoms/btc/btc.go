@@ -1,19 +1,17 @@
 package btc
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"math/big"
-	"time"
 
 	bindings "github.com/republicprotocol/atom-go/adapters/bindings/btc"
 	"github.com/republicprotocol/atom-go/adapters/clients/btc"
+	"github.com/republicprotocol/atom-go/services/store"
 	"github.com/republicprotocol/atom-go/services/swap"
 )
 
 type BitcoinData struct {
-	HashLock       [32]byte `json:"hash_lock"`
 	ContractHash   string   `json:"contract_hash"`
 	Contract       []byte   `json:"contract"`
 	ContractTxHash []byte   `json:"contract_tx_hash"`
@@ -28,132 +26,124 @@ type BitcoinData struct {
 // BitcoinAtom is a struct for Bitcoin Atom
 type BitcoinAtom struct {
 	key        swap.Key
+	orderID    [32]byte
 	connection btc.Conn
 	data       BitcoinData
 }
 
 // NewBitcoinAtom returns a new Bitcoin Atom instance
-func NewBitcoinAtom(connection btc.Conn, key swap.Key) swap.Atom {
+func NewBitcoinAtom(connection btc.Conn, key swap.Key, orderID [32]byte) swap.Atom {
 	return &BitcoinAtom{
+		orderID:    orderID,
 		key:        key,
 		connection: connection,
 	}
 }
 
 // Initiate a new Atom swap by calling Bitcoin
-func (btcAtom *BitcoinAtom) Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error {
-	from, err := btcAtom.From()
+func (atom *BitcoinAtom) Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error {
+	from, err := atom.From()
 	if err != nil {
 		return err
 	}
-	result, err := bindings.Initiate(btcAtom.connection, string(from), string(to), value.Int64(), hash[:], expiry)
+	result, err := bindings.Initiate(atom.connection, string(from), string(to), value.Int64(), hash[:], expiry)
 	if err != nil {
 		return err
 	}
-	btcAtom.data.HashLock = hash
-	btcAtom.data.Contract = result.Contract
-	btcAtom.data.ContractHash = result.ContractHash
-	btcAtom.data.ContractTx = result.ContractTx
-	btcAtom.data.ContractTxHash = result.ContractTxHash
-	btcAtom.data.RefundTx = result.RefundTx
-	btcAtom.data.RefundTxHash = result.RefundTxHash
-	btcAtom.data.SecretHash = hash
+
+	atom.data.Contract = result.Contract
+	atom.data.ContractHash = result.ContractHash
+	atom.data.ContractTx = result.ContractTx
+	atom.data.ContractTxHash = result.ContractTxHash
+	atom.data.RefundTx = result.RefundTx
+	atom.data.RefundTxHash = result.RefundTxHash
+	atom.data.SecretHash = hash
 	return nil
 }
 
 // Redeem an Atom swap by calling a function on Bitcoin
-func (btcAtom *BitcoinAtom) Redeem(secret [32]byte) error {
-	from, err := btcAtom.From()
+func (atom *BitcoinAtom) Redeem(secret [32]byte) error {
+	from, err := atom.From()
 	if err != nil {
 		return err
 	}
-	result, err := bindings.Redeem(btcAtom.connection, string(from), btcAtom.data.Contract, btcAtom.data.ContractTx, secret)
+
+	result, err := bindings.Redeem(atom.connection, string(from), atom.data.Contract, atom.data.ContractTx, secret)
 	if err != nil {
 		return err
 	}
-	btcAtom.data.RedeemTx = result.RedeemTx
-	btcAtom.data.RedeemTxHash = result.RedeemTxHash
+	atom.data.RedeemTx = result.RedeemTx
+	atom.data.RedeemTxHash = result.RedeemTxHash
+	return nil
+}
+
+// WaitForCounterRedemption waits for the counter party to initiate
+func (atom *BitcoinAtom) WaitForCounterRedemption() error {
+	panic("unimplemented")
 	return nil
 }
 
 // Refund an Atom swap by calling Bitcoin
-func (btcAtom *BitcoinAtom) Refund() error {
-	from, err := btcAtom.From()
+func (atom *BitcoinAtom) Refund() error {
+	from, err := atom.From()
 	if err != nil {
 		return err
 	}
-	return bindings.Refund(btcAtom.connection, string(from), btcAtom.data.Contract, btcAtom.data.ContractTx)
+	return bindings.Refund(atom.connection, string(from), atom.data.Contract, atom.data.ContractTx)
 }
 
 // Audit an Atom swap by calling a function on Bitcoin
-func (btcAtom *BitcoinAtom) Audit(hash [32]byte, to []byte, value *big.Int, expiry int64) error {
-	for start := time.Now(); time.Since(start) < 24*time.Hour; {
-
-		result, err := bindings.Audit(btcAtom.connection, btcAtom.data.Contract, btcAtom.data.ContractTx)
-		if err != nil {
-			return err
-		}
-
-		if hash != result.SecretHash {
-			btcAtom.data.HashLock = result.SecretHash
-			// return fmt.Errorf("HashLock mismatch %v %v", hash, auditReport.SecretLock)
-		}
-
-		if bytes.Compare(to, result.RecipientAddress) != 0 {
-			return errors.New("Btc: To Address mismatch")
-		}
-
-		// if value.Cmp(auditReport.Value) > 0 {
-		// 	return errors.New("Value mismatch")
-		// }
-
-		// if expiry > (auditReport.Timelock.Int64() - time.Now().Unix()) {
-		// 	return errors.New("Expiry mismatch")
-		// }
-		return nil
+func (atom *BitcoinAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
+	result, err := bindings.Audit(atom.connection, atom.data.Contract, atom.data.ContractTx)
+	if err != nil {
+		return [32]byte{}, nil, nil, 0, err
 	}
-	return errors.New("Audit failed")
+	return result.SecretHash, result.RecipientAddress, big.NewInt(result.Amount), result.LockTime, nil
 }
 
 // AuditSecret audits the secret of an Atom swap by calling Bitcoin
-func (btcAtom *BitcoinAtom) AuditSecret() ([32]byte, error) {
-	result, err := bindings.AuditSecret(btcAtom.connection, btcAtom.data.RedeemTx, btcAtom.data.SecretHash[:])
+func (atom *BitcoinAtom) AuditSecret() ([32]byte, error) {
+	result, err := bindings.AuditSecret(atom.connection, atom.data.RedeemTx, atom.data.SecretHash[:])
 	if err != nil {
 		return [32]byte{}, errors.New("Cannot read the secret")
 	}
-	if result != [32]byte{} {
-		return result, nil
+	return result, nil
+}
+
+// Store stores the atom details
+func (atom *BitcoinAtom) Store(state store.SwapState) error {
+	b, err := json.Marshal(atom.data)
+	if err != nil {
+		return err
 	}
-	return [32]byte{}, errors.New("Cannot read the secret")
+	return state.PutAtomDetails(atom.orderID, b)
 }
 
-// Serialize serializes the atom details into a bytes array
-func (btcAtom *BitcoinAtom) Serialize() ([]byte, error) {
-	b, err := json.Marshal(btcAtom.data)
-	return b, err
-}
-
-// Deserialize deserializes the atom details from a bytes array
-func (btcAtom *BitcoinAtom) Deserialize(b []byte) error {
-	return json.Unmarshal(b, &btcAtom.data)
+// Restore restores the atom details
+func (atom *BitcoinAtom) Restore(state store.SwapState) error {
+	b, err := state.AtomDetails(atom.orderID)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, &atom.data)
 }
 
 // PriorityCode returns the priority code of the currency.
-func (btcAtom *BitcoinAtom) PriorityCode() uint32 {
-	return btcAtom.key.PriorityCode()
+func (atom *BitcoinAtom) PriorityCode() uint32 {
+	return atom.key.PriorityCode()
 }
 
 // GetSecretHash returns the Secret Hash of the atom.
-func (btcAtom *BitcoinAtom) GetSecretHash() [32]byte {
-	return btcAtom.data.HashLock
+func (atom *BitcoinAtom) GetSecretHash() [32]byte {
+	return atom.data.SecretHash
 }
 
 // From returns the address of the sender
-func (btcAtom *BitcoinAtom) From() ([]byte, error) {
-	return btcAtom.key.GetAddress()
+func (atom *BitcoinAtom) From() ([]byte, error) {
+	return atom.key.GetAddress()
 }
 
 // GetKey returns the key of the atom.
-func (btcAtom *BitcoinAtom) GetKey() swap.Key {
-	return btcAtom.key
+func (atom *BitcoinAtom) GetKey() swap.Key {
+	return atom.key
 }
