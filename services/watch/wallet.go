@@ -11,5 +11,5 @@ type Wallet interface {
 	GetMatch([32]byte) (match.Match, error)
 
 	// TODO: These methods should be commented.
-	SetMatch(match.Match) error
+	SetMatch([32]byte, match.Match) error
 }
