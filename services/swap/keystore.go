@@ -2,7 +2,6 @@ package swap
 
 import (
 	"crypto/ecdsa"
-	"errors"
 )
 
 type Keystore interface {
@@ -16,11 +15,11 @@ type Key interface {
 	PriorityCode() uint32
 }
 
-func GetAddress(kstrs []Key, cc uint32) ([]byte, error) {
-	for _, kstr := range kstrs {
-		if kstr.PriorityCode() == cc {
-			return kstr.GetAddress()
-		}
-	}
-	return []byte{}, errors.New("Unknown Currency Code")
-}
+// func GetAddress(kstrs []Key, cc uint32) ([]byte, error) {
+// 	for _, kstr := range kstrs {
+// 		if kstr.PriorityCode() == cc {
+// 			return kstr.GetAddress()
+// 		}
+// 	}
+// 	return []byte{}, errors.New("Unknown Currency Code")
+// }
