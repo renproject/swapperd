@@ -17,23 +17,23 @@ type Match interface {
 }
 
 type match struct {
-	JSONpersonalOrderID [32]byte `json:"personalOrderID"`
-	JSONforeignOrderID  [32]byte `json:"foreignOrderID"`
-	JSONsendValue       *big.Int `json:"sendValue"`
-	JSONreceiveValue    *big.Int `json:"receiveValue"`
-	JSONsendCurrency    uint32   `json:"sendCurrency"`
-	JSONreceiveCurrency uint32   `json:"receiveCurrency"`
+	personalOrderID [32]byte
+	foreignOrderID  [32]byte
+	sendValue       *big.Int
+	receiveValue    *big.Int
+	sendCurrency    uint32
+	receiveCurrency uint32
 }
 
 // NewMatch creates a new Match interface
 func NewMatch(personalOrderID, foreignOrderID [32]byte, sendValue, receiveValue *big.Int, sendCurrency, receiveCurrency uint32) Match {
 	return &match{
-		JSONpersonalOrderID: personalOrderID,
-		JSONforeignOrderID:  foreignOrderID,
-		JSONsendValue:       sendValue,
-		JSONreceiveValue:    receiveValue,
-		JSONsendCurrency:    sendCurrency,
-		JSONreceiveCurrency: receiveCurrency,
+		personalOrderID: personalOrderID,
+		foreignOrderID:  foreignOrderID,
+		sendValue:       sendValue,
+		receiveValue:    receiveValue,
+		sendCurrency:    sendCurrency,
+		receiveCurrency: receiveCurrency,
 	}
 }
 
@@ -46,32 +46,32 @@ func NewMatchFromBytes(data []byte) (Match, error) {
 
 // PersonalOrderID returns the personal (caller's) order id of the order match.
 func (match *match) PersonalOrderID() [32]byte {
-	return match.JSONpersonalOrderID
+	return match.personalOrderID
 }
 
 // ForeignOrderID returns the foreign (counter party's) order id of the order match.
 func (match *match) ForeignOrderID() [32]byte {
-	return match.JSONforeignOrderID
+	return match.foreignOrderID
 }
 
 // SendValue returns the value the caller has to send according to this order match.
 func (match *match) SendValue() *big.Int {
-	return match.JSONsendValue
+	return match.sendValue
 }
 
 // ReceiveValue returns the value the caller has to recieve according to this order match.
 func (match *match) ReceiveValue() *big.Int {
-	return match.JSONreceiveValue
+	return match.receiveValue
 }
 
 // SendCurrency returns the currency the caller has to send according to this order match.
 func (match *match) SendCurrency() uint32 {
-	return match.JSONsendCurrency
+	return match.sendCurrency
 }
 
 // SendCurrency returns the currency the caller has to send according to this order match.
 func (match *match) ReceiveCurrency() uint32 {
-	return match.JSONreceiveCurrency
+	return match.receiveCurrency
 }
 
 // Serialize serializes the match object into a byte array.
