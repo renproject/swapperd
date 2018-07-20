@@ -11,7 +11,7 @@ type MockAXC struct {
 	owners map[[32]byte][]byte
 }
 
-func NewMockAXC() swap.Contract {
+func NewMockAXC() swap.Info {
 	return &MockAXC{
 		mu:     &sync.RWMutex{},
 		owners: make(map[[32]byte][]byte),
