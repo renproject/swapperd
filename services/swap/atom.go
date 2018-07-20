@@ -2,6 +2,9 @@ package swap
 
 import (
 	"math/big"
+
+	"github.com/republicprotocol/atom-go/domains/match"
+	"github.com/republicprotocol/atom-go/services/store"
 )
 
 type Atom interface {
@@ -9,10 +12,16 @@ type Atom interface {
 	Refund() error
 	AuditSecret() (secret [32]byte, err error)
 	Redeem(secret [32]byte) error
-	Audit(hash [32]byte, to []byte, value *big.Int, delay int64) error
-	GetSecretHash() [32]byte
-	Serialize() ([]byte, error)
-	Deserialize([]byte) error
+	Audit() ([32]byte, []byte, *big.Int, int64, error)
+	WaitForCounterRedemption() error
+	Store(store.SwapState) error
+	Restore(store.SwapState) error
+
 	PriorityCode() uint32
+	GetSecretHash() [32]byte
 	GetKey() Key
+}
+
+type AtomBuilder interface {
+	BuildAtoms(store.SwapState, match.Match) (Atom, Atom, error)
 }
