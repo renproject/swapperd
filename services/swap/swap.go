@@ -53,76 +53,109 @@ func (swap *swap) Execute() error {
 
 func (swap *swap) request() error {
 	log.Println("Requestor ", order.ID(swap.order.PersonalOrderID()))
-	for {
-		switch swap.state.Status(swap.order.PersonalOrderID()) {
-		case StatusInfoSubmitted:
-			if err := swap.generateDetails(); err != nil {
-				return err
-			}
-		case StatusInitateDetailsAcquired:
-			if err := swap.initiate(); err != nil {
-				return err
-			}
-		case StatusInitiated:
-			if err := swap.sendDetails(); err != nil {
-				return err
-			}
-		case StatusSentSwapDetails:
-			if err := swap.recieveDetails(); err != nil {
-				return err
-			}
-		case StatusRecievedSwapDetails:
-			if err := swap.requestorAudit(); err != nil {
-				return err
-			}
-		case StatusAudited:
-			if err := swap.redeem(); err != nil {
-				return err
-			}
-		case StatusRefunded:
-		case StatusRedeemed:
-			return nil
-		default:
-			return errors.New("Unknown state while processing an atomic swap")
+
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusInfoSubmitted {
+		if err := swap.generateDetails(); err != nil {
+			return err
 		}
+	} else {
+		log.Println("Skipping generate details")
 	}
+
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusInitateDetailsAcquired {
+		if err := swap.initiate(); err != nil {
+			return err
+		}
+	} else {
+		log.Println("Skipping initiate")
+	}
+
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusInitiated {
+		if err := swap.sendDetails(); err != nil {
+			return err
+		}
+	} else {
+		log.Println("Skipping send details")
+	}
+
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusSentSwapDetails {
+		if err := swap.recieveDetails(); err != nil {
+			return err
+		}
+	} else {
+		log.Println("Skipping recieve details")
+	}
+
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusRecievedSwapDetails {
+		if err := swap.requestorAudit(); err != nil {
+			return err
+		}
+	} else {
+		log.Println("Skipping requestor audit")
+	}
+
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusAudited {
+		if err := swap.redeem(); err != nil {
+			return err
+		}
+	} else {
+		log.Println("Skipping redeem")
+	}
+	return nil
 }
 
 func (swap *swap) respond() error {
 	log.Println("Responder ", order.ID(swap.order.PersonalOrderID()))
-	for {
-		switch swap.state.Status(swap.order.PersonalOrderID()) {
-		case StatusInfoSubmitted:
-			if err := swap.recieveDetails(); err != nil {
-				return err
-			}
-		case StatusRecievedSwapDetails:
-			if err := swap.responderAudit(); err != nil {
-				return err
-			}
-		case StatusAudited:
-			if err := swap.initiate(); err != nil {
-				return err
-			}
-		case StatusInitiated:
-			if err := swap.sendDetails(); err != nil {
-				return err
-			}
-		case StatusSentSwapDetails:
-			if err := swap.getRedeemDetails(); err != nil {
-				return err
-			}
-		case StatusRedeemDetailsAcquired:
-			if err := swap.redeem(); err != nil {
-				return err
-			}
-		case StatusRefunded:
-		case StatusRedeemed:
-			return nil
-		default:
-			return errors.New("Unknown state while processing an atomic swap")
+
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusInfoSubmitted {
+		if err := swap.recieveDetails(); err != nil {
+			return err
 		}
+	} else {
+		log.Println("Skipping generate details")
 	}
+
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusRecievedSwapDetails {
+		if err := swap.responderAudit(); err != nil {
+			return err
+		}
+	} else {
+		log.Println("Skipping audit")
+	}
+
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusAudited {
+		if err := swap.initiate(); err != nil {
+			return err
+		}
+	} else {
+		log.Println("Skipping initiate")
+	}
+
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusInitiated {
+		if err := swap.sendDetails(); err != nil {
+			return err
+		}
+	} else {
+		log.Println("Skipping send details")
+	}
+
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusSentSwapDetails {
+		if err := swap.getRedeemDetails(); err != nil {
+			return err
+		}
+	} else {
+		log.Println("Skipping get redeem details audit")
+	}
+
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusRedeemDetailsAcquired {
+		if err := swap.redeem(); err != nil {
+			return err
+		}
+	} else {
+		log.Println("Skipping redeem")
+	}
+
+	return nil
 }
 
 func (swap *swap) generateDetails() error {
