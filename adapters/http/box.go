@@ -93,12 +93,10 @@ func (adapter *boxHttpAdapter) PostOrder(order PostOrder) (PostOrder, error) {
 		return PostOrder{}, err
 	}
 
-	go func() {
-		err := adapter.watch.Swap(orderID)
-		if err != nil {
-			panic(err)
-		}
-	}()
+	if err := adapter.watch.Add(orderID); err != nil {
+		return PostOrder{}, err
+	}
+	adapter.watch.Notify()
 
 	keys, err := adapter.keystr.LoadKeys()
 	if err != nil {

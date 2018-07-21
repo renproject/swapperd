@@ -194,11 +194,9 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		wg := &sync.WaitGroup{}
 		doneChAlice := make(chan struct{}, 1)
 		doneChBob := make(chan struct{}, 1)
-		notifyChAlice := make(chan struct{}, 1)
-		notifyChBob := make(chan struct{}, 1)
 
-		errChAlice := aliceWatch.Run(doneChAlice, notifyChAlice)
-		errChBob := bobWatch.Run(doneChBob, notifyChBob)
+		errChAlice := aliceWatch.Run(doneChAlice)
+		errChBob := bobWatch.Run(doneChBob)
 
 		wg.Add(1)
 		go func() {
@@ -233,8 +231,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		Expect(aliceWatch.Add(aliceOrderID)).ShouldNot(HaveOccurred())
 		Expect(bobWatch.Add(bobOrderID)).ShouldNot(HaveOccurred())
 
-		notifyChAlice <- struct{}{}
-		notifyChBob <- struct{}{}
+		aliceWatch.Notify()
+		bobWatch.Notify()
 
 		go func() {
 			defer func() { doneChAlice <- struct{}{} }()

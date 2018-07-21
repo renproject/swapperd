@@ -24,7 +24,6 @@ import (
 )
 
 func main() {
-
 	port := flag.String("port", "18516", "HTTP Atom port")
 	confPath := flag.String("config", "../config.json", "Location of the config file")
 	keystrPath := flag.String("keystore", "../keystore.json", "Location of the keystore file")
@@ -43,9 +42,20 @@ func main() {
 		panic(err)
 	}
 
+	doneCh := make(chan struct{}, 1)
+
+	errCh := watcher.Run(doneCh)
+	watcher.Notify()
+
+	go func() {
+		err := <-errCh
+		panic(err)
+	}()
+
 	httpAdapter := http.NewBoxHttpAdapter(conf, keystr, watcher)
 	log.Println(fmt.Sprintf("0.0.0.0:%s", *port))
 	log.Fatal(netHttp.ListenAndServe(fmt.Sprintf(":%s", *port), http.NewServer(httpAdapter)))
+	doneCh <- struct{}{}
 }
 
 func buildWatcher(config config.Config, kstr swap.Keystore) (watch.Watch, error) {
