@@ -77,13 +77,12 @@ func (state *state) AddSwap(orderID [32]byte) error {
 	state.swapMu.Lock()
 	defer state.swapMu.Unlock()
 	pendingSwapsRawBytes, err := state.Read([]byte("Pending Swaps:"))
-	if err != nil {
-		return err
-	}
-
 	pendingSwaps := PendingSwaps{}
-	if err := json.Unmarshal(pendingSwapsRawBytes, &pendingSwaps); err != nil {
-		return err
+
+	if err == nil {
+		if err := json.Unmarshal(pendingSwapsRawBytes, &pendingSwaps); err != nil {
+			return err
+		}
 	}
 
 	pendingSwaps.Swaps = append(pendingSwaps.Swaps, orderID)
@@ -112,6 +111,10 @@ func (state *state) DeleteSwap(orderID [32]byte) error {
 
 	for i, swap := range pendingSwaps.Swaps {
 		if swap == orderID {
+			if i == 0 {
+				pendingSwaps.Swaps = pendingSwaps.Swaps[i:]
+				break
+			}
 			pendingSwaps.Swaps = append(pendingSwaps.Swaps[:i-1], pendingSwaps.Swaps[i:]...)
 			break
 		}
@@ -126,10 +129,14 @@ func (state *state) DeleteSwap(orderID [32]byte) error {
 }
 
 func (state *state) PendingSwaps() ([][32]byte, error) {
+	state.swapMu.Lock()
+	defer state.swapMu.Unlock()
+
 	pendingSwapsBytes, err := state.Read([]byte("Pending Swaps:"))
 	if err != nil {
-		return nil, err
+		return [][32]byte{}, nil
 	}
+
 	pendingSwaps := PendingSwaps{}
 	if err := json.Unmarshal(pendingSwapsBytes, &pendingSwaps); err != nil {
 		return nil, err

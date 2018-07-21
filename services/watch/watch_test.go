@@ -192,25 +192,63 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 	It("can do an eth - btc atomic swap (eth implementations)", func() {
 
 		wg := &sync.WaitGroup{}
+		doneChAlice := make(chan struct{}, 1)
+		doneChBob := make(chan struct{}, 1)
+		notifyChAlice := make(chan struct{}, 1)
+		notifyChBob := make(chan struct{}, 1)
+
+		errChAlice := aliceWatch.Run(doneChAlice, notifyChAlice)
+		errChBob := bobWatch.Run(doneChBob, notifyChBob)
+
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			defer GinkgoRecover()
-
-			err := aliceWatch.Swap(aliceOrderID)
-			Expect(err).ShouldNot(HaveOccurred())
+			for {
+				select {
+				case err, ok := <-errChAlice:
+					if !ok {
+						return
+					}
+					Expect(err).ShouldNot(HaveOccurred())
+				}
+			}
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			defer GinkgoRecover()
-
-			err := bobWatch.Swap(bobOrderID)
-			Expect(err).ShouldNot(HaveOccurred())
+			for {
+				select {
+				case err, ok := <-errChBob:
+					if !ok {
+						return
+					}
+					Expect(err).ShouldNot(HaveOccurred())
+				}
+			}
 		}()
+
+		Expect(aliceWatch.Add(aliceOrderID)).ShouldNot(HaveOccurred())
+		Expect(bobWatch.Add(bobOrderID)).ShouldNot(HaveOccurred())
+
+		notifyChAlice <- struct{}{}
+		notifyChBob <- struct{}{}
+
+		go func() {
+			defer func() { doneChAlice <- struct{}{} }()
+			defer func() { doneChBob <- struct{}{} }()
+
+			for {
+				if aliceWatch.Status(aliceOrderID) == swap.StatusRedeemed && bobWatch.Status(bobOrderID) == swap.StatusRedeemed {
+					break
+				}
+				time.Sleep(1 * time.Second)
+			}
+		}()
+
 		wg.Wait()
-
 	})
 
 })
