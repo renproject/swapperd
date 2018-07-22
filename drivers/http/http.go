@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	netHttp "net/http"
+	"os"
+	"os/signal"
 
 	"github.com/btcsuite/btcutil"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -18,6 +20,7 @@ import (
 	net "github.com/republicprotocol/atom-go/adapters/networks/eth"
 	"github.com/republicprotocol/atom-go/adapters/store/leveldb"
 	wal "github.com/republicprotocol/atom-go/adapters/wallet/eth"
+	"github.com/republicprotocol/atom-go/services/guardian"
 	"github.com/republicprotocol/atom-go/services/store"
 	"github.com/republicprotocol/atom-go/services/swap"
 	"github.com/republicprotocol/atom-go/services/watch"
@@ -37,28 +40,70 @@ func main() {
 
 	keystr := keystore.NewKeystore(*keystrPath)
 
-	watcher, err := buildWatcher(conf, keystr)
+	db, err := leveldb.NewLDBStore(conf.StoreLocation())
+	if err != nil {
+		panic(err)
+	}
+	swapState := store.NewSwapState(db)
+
+	watcher, err := buildWatcher(conf, keystr, swapState)
 	if err != nil {
 		panic(err)
 	}
 
-	doneCh := make(chan struct{}, 1)
+	guardian, err := buildGuardian(conf, keystr, swapState)
+	if err != nil {
+		panic(err)
+	}
 
-	errCh := watcher.Run(doneCh)
+	errCh1 := watcher.Run()
 	watcher.Notify()
 
+	errCh2 := guardian.Run()
+	guardian.Notify()
+
 	go func() {
-		err := <-errCh
-		panic(err)
+		err := <-errCh1
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	go func() {
+		err := <-errCh2
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		_ = <-c
+		log.Println("Stopping the swapper service")
+		watcher.Done()
+		log.Println("Stopping the guardian service")
+		guardian.Done()
+		log.Println("Stopping the atom box safely")
+		os.Exit(1)
 	}()
 
 	httpAdapter := http.NewBoxHttpAdapter(conf, keystr, watcher)
 	log.Println(fmt.Sprintf("0.0.0.0:%s", *port))
 	log.Fatal(netHttp.ListenAndServe(fmt.Sprintf(":%s", *port), http.NewServer(httpAdapter)))
-	doneCh <- struct{}{}
+
 }
 
-func buildWatcher(config config.Config, kstr swap.Keystore) (watch.Watch, error) {
+func buildGuardian(config config.Config, kstr swap.Keystore, state store.SwapState) (guardian.Guardian, error) {
+	keys, err := kstr.LoadKeys()
+	if err != nil {
+		return nil, err
+	}
+	atomBuilder := atoms.NewAtomBuilder(config, keys)
+	return guardian.NewGuardian(atomBuilder, state), nil
+}
+
+func buildWatcher(config config.Config, kstr swap.Keystore, state store.SwapState) (watch.Watch, error) {
 	ethConn, err := ethClient.Connect(config)
 	if err != nil {
 		return nil, err
@@ -111,12 +156,6 @@ func buildWatcher(config config.Config, kstr swap.Keystore) (watch.Watch, error)
 	}
 
 	atomBuilder := atoms.NewAtomBuilder(config, keys)
-
-	db, err := leveldb.NewLDBStore(config.StoreLocation())
-	if err != nil {
-		return nil, err
-	}
-	str := store.NewSwapState(db)
-	watcher := watch.NewWatch(ethNet, ethInfo, ethWallet, atomBuilder, str)
+	watcher := watch.NewWatch(ethNet, ethInfo, ethWallet, atomBuilder, state)
 	return watcher, nil
 }
