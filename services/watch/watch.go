@@ -17,13 +17,15 @@ type watch struct {
 	wallet   Wallet
 	state    store.SwapState
 	notifyCh chan struct{}
+	doneCh   chan struct{}
 }
 
 type Watch interface {
-	Run(<-chan struct{}) <-chan error
+	Run() <-chan error
 	Add([32]byte) error
 	Status([32]byte) string
 	Notify()
+	Done()
 }
 
 func NewWatch(network swap.Network, info swap.Info, wallet Wallet, builder swap.AtomBuilder, state store.SwapState) Watch {
@@ -34,11 +36,12 @@ func NewWatch(network swap.Network, info swap.Info, wallet Wallet, builder swap.
 		wallet:   wallet,
 		state:    state,
 		notifyCh: make(chan struct{}, 1),
+		doneCh:   make(chan struct{}, 1),
 	}
 }
 
 // Run runs the watch object on the given order id
-func (watch *watch) Run(done <-chan struct{}) <-chan error {
+func (watch *watch) Run() <-chan error {
 	errs := make(chan error)
 	log.Println("Starting the watcher......")
 	go func() {
@@ -46,7 +49,7 @@ func (watch *watch) Run(done <-chan struct{}) <-chan error {
 		defer log.Println("Stopping the watcher......")
 		for {
 			select {
-			case <-done:
+			case <-watch.doneCh:
 				return
 			case <-watch.notifyCh:
 				swaps, err := watch.state.PendingSwaps()
@@ -57,7 +60,7 @@ func (watch *watch) Run(done <-chan struct{}) <-chan error {
 					return
 				}
 				co.ParForAll(swaps, func(i int) {
-					fmt.Println("Inside Par for all")
+					fmt.Println("Inside Par for all", order.ID(swaps[i]))
 					if err := watch.Swap(swaps[i]); err != nil {
 						errs <- err
 						return
@@ -80,6 +83,10 @@ func (watch *watch) Status(orderID [32]byte) string {
 
 func (watch *watch) Notify() {
 	watch.notifyCh <- struct{}{}
+}
+
+func (watch *watch) Done() {
+	watch.doneCh <- struct{}{}
 }
 
 func (watch *watch) Swap(orderID [32]byte) error {

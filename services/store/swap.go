@@ -3,10 +3,12 @@ package store
 import (
 	"bytes"
 	"encoding/json"
+	"log"
 	"math/big"
 	"sync"
 
 	"github.com/republicprotocol/atom-go/domains/match"
+	"github.com/republicprotocol/republic-go/order"
 )
 
 // SwapStatus stores the swap status
@@ -98,6 +100,7 @@ func (state *state) AddSwap(orderID [32]byte) error {
 func (state *state) DeleteSwap(orderID [32]byte) error {
 	state.swapMu.Lock()
 	defer state.swapMu.Unlock()
+	defer log.Println("Deleting the swap:", order.ID(orderID))
 
 	pendingSwapsRawBytes, err := state.Read([]byte("Pending Swaps:"))
 	if err != nil {

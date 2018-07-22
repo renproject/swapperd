@@ -12,24 +12,37 @@ import (
 )
 
 type Guardian interface {
-	Run(<-chan struct{}, <-chan struct{}) <-chan error
+	Run() <-chan error
+	Notify()
+	Done()
 }
 
 type guardian struct {
-	builder swap.AtomBuilder
-	state   store.SwapState
+	builder  swap.AtomBuilder
+	state    store.SwapState
+	notifyCh chan struct{}
+	doneCh   chan struct{}
 }
 
-func (g *guardian) Run(done <-chan struct{}, notification <-chan struct{}) {
+func NewGuardian(builder swap.AtomBuilder, state store.SwapState) Guardian {
+	return &guardian{
+		builder:  builder,
+		state:    state,
+		notifyCh: make(chan struct{}, 1),
+		doneCh:   make(chan struct{}, 1),
+	}
+}
+
+func (g *guardian) Run() <-chan error {
 	errs := make(chan error)
 	log.Println("Starting the guardian service......")
 	go func() {
 		defer log.Println("Ending the guardian service......")
 		for {
 			select {
-			case <-done:
+			case <-g.doneCh:
 				return
-			case <-notification:
+			case <-g.notifyCh:
 				swaps, err := g.expiredSwaps()
 				if err != nil {
 					fmt.Println(err.Error())
@@ -44,9 +57,17 @@ func (g *guardian) Run(done <-chan struct{}, notification <-chan struct{}) {
 					g.state.DeleteSwap(swaps[i])
 				})
 			}
-			time.Sleep(10 * time.Second)
 		}
 	}()
+	return errs
+}
+
+func (g *guardian) Notify() {
+	g.notifyCh <- struct{}{}
+}
+
+func (g *guardian) Done() {
+	g.doneCh <- struct{}{}
 }
 
 func (g *guardian) refund(orderID [32]byte) error {

@@ -192,11 +192,9 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 	It("can do an eth - btc atomic swap (eth implementations)", func() {
 
 		wg := &sync.WaitGroup{}
-		doneChAlice := make(chan struct{}, 1)
-		doneChBob := make(chan struct{}, 1)
 
-		errChAlice := aliceWatch.Run(doneChAlice)
-		errChBob := bobWatch.Run(doneChBob)
+		errChAlice := aliceWatch.Run()
+		errChBob := bobWatch.Run()
 
 		wg.Add(1)
 		go func() {
@@ -235,8 +233,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		bobWatch.Notify()
 
 		go func() {
-			defer func() { doneChAlice <- struct{}{} }()
-			defer func() { doneChBob <- struct{}{} }()
+			defer aliceWatch.Done()
+			defer bobWatch.Done()
 
 			for {
 				if aliceWatch.Status(aliceOrderID) == swap.StatusRedeemed && bobWatch.Status(bobOrderID) == swap.StatusRedeemed {
