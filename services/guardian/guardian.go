@@ -11,6 +11,8 @@ import (
 	co "github.com/republicprotocol/co-go"
 )
 
+var ErrSwapRedeemed = fmt.Errorf("Swap Redeemed")
+
 type Guardian interface {
 	Run() <-chan error
 	Notify()
@@ -43,13 +45,25 @@ func (g *guardian) Run() <-chan error {
 			case <-g.doneCh:
 				return
 			case <-g.notifyCh:
-				swaps, err := g.expiredSwaps()
+				swaps, err := g.state.PendingSwaps()
 				if err != nil {
-					fmt.Println(err.Error())
+					if err == ErrSwapRedeemed {
+						continue
+					}
 					errs <- err
 					return
 				}
-				co.ParForAll(swaps, func(i int) {
+				if len(swaps) < 1000 {
+					co.ParForAll(swaps, func(i int) {
+						if err := g.refund(swaps[i]); err != nil {
+							errs <- err
+							return
+						}
+						g.state.DeleteSwap(swaps[i])
+					})
+					continue
+				}
+				co.ParForAll(swaps[:1000], func(i int) {
 					if err := g.refund(swaps[i]); err != nil {
 						errs <- err
 						return
@@ -76,28 +90,14 @@ func (g *guardian) refund(orderID [32]byte) error {
 		return errors.ErrAtomBuildFailed(err)
 	}
 
+	if err = g.WaitForExpiry(orderID); err != nil {
+		return err
+	}
+
 	if err := atom.Refund(); err != nil {
 		return errors.ErrRefundAfterRedeem(err)
 	}
 	return nil
-}
-
-func (g *guardian) expiredSwaps() ([][32]byte, error) {
-	pendingSwaps, err := g.state.PendingSwaps()
-	if err != nil {
-		return nil, errors.ErrFailedPendingSwaps(err)
-	}
-	expiredSwaps := [][32]byte{}
-	for _, swap := range pendingSwaps {
-		expiry, _, err := g.state.InitiateDetails(swap)
-		if err != nil {
-			return nil, errors.ErrFailedInitiateDetails(err)
-		}
-		if expiry <= time.Now().Unix() {
-			expiredSwaps = append(expiredSwaps, swap)
-		}
-	}
-	return expiredSwaps, nil
 }
 
 func (g *guardian) buildAtom(orderID [32]byte) (swap.Atom, error) {
@@ -107,4 +107,21 @@ func (g *guardian) buildAtom(orderID [32]byte) (swap.Atom, error) {
 	}
 	atom, _, err := g.builder.BuildAtoms(g.state, m)
 	return atom, err
+}
+
+func (g *guardian) WaitForExpiry(orderID [32]byte) error {
+	expiry, _, err := g.state.InitiateDetails(orderID)
+	if err != nil {
+		return err
+	}
+
+	for {
+		if time.Now().Unix() >= expiry {
+			if g.state.Status(orderID) == swap.StatusRedeemed {
+				return ErrSwapRedeemed
+			}
+			return nil
+		}
+		time.Sleep(time.Duration(time.Now().Unix()-expiry) * time.Minute)
+	}
 }
