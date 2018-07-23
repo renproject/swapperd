@@ -184,8 +184,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		bobLDB, err := leveldb.NewLDBStore("/Users/susruth/go/src/github.com/republicprotocol/atom-go/temp/dbBob")
 		Expect(err).Should(BeNil())
 
-		aliceState := store.NewSwapState(aliceLDB)
-		bobState := store.NewSwapState(bobLDB)
+		aliceState := store.NewState(aliceLDB)
+		bobState := store.NewState(bobLDB)
 
 		aliceState.PutStatus(aliceOrderID, StatusInfoSubmitted)
 		bobState.PutStatus(bobOrderID, StatusInfoSubmitted)

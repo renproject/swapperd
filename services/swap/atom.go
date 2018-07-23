@@ -14,8 +14,8 @@ type Atom interface {
 	Redeem(secret [32]byte) error
 	Audit() ([32]byte, []byte, *big.Int, int64, error)
 	WaitForCounterRedemption() error
-	Store(store.SwapState) error
-	Restore(store.SwapState) error
+	Store(store.State) error
+	Restore(store.State) error
 
 	PriorityCode() uint32
 	GetSecretHash() [32]byte
@@ -23,5 +23,5 @@ type Atom interface {
 }
 
 type AtomBuilder interface {
-	BuildAtoms(store.SwapState, match.Match) (Atom, Atom, error)
+	BuildAtoms(store.State, match.Match) (Atom, Atom, error)
 }

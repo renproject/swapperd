@@ -177,8 +177,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		bobLDB, err := leveldb.NewLDBStore("/Users/susruth/go/src/github.com/republicprotocol/atom-go/dbBob")
 		Expect(err).Should(BeNil())
 
-		aliceState := store.NewSwapState(aliceLDB)
-		bobState := store.NewSwapState(bobLDB)
+		aliceState := store.NewState(aliceLDB)
+		bobState := store.NewState(bobLDB)
 
 		mockWallet := wal.NewMockWallet()
 
@@ -193,8 +193,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 
 		wg := &sync.WaitGroup{}
 
-		errChAlice := aliceWatch.Run()
-		errChBob := bobWatch.Run()
+		errChAlice := aliceWatch.Start()
+		errChBob := bobWatch.Start()
 
 		wg.Add(1)
 		go func() {
@@ -233,8 +233,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		bobWatch.Notify()
 
 		go func() {
-			defer aliceWatch.Done()
-			defer bobWatch.Done()
+			defer aliceWatch.Stop()
+			defer bobWatch.Stop()
 
 			for {
 				if aliceWatch.Status(aliceOrderID) == swap.StatusRedeemed && bobWatch.Status(bobOrderID) == swap.StatusRedeemed {

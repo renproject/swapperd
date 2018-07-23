@@ -26,11 +26,11 @@ type swap struct {
 	order        match.Match
 	network      Network
 	info         Info
-	state        store.SwapState
+	state        store.State
 }
 
 // NewSwap returns a new Swap instance
-func NewSwap(personalAtom Atom, foreignAtom Atom, info Info, order match.Match, network Network, state store.SwapState) Swap {
+func NewSwap(personalAtom Atom, foreignAtom Atom, info Info, order match.Match, network Network, state store.State) Swap {
 	return &swap{
 		personalAtom: personalAtom,
 		foreignAtom:  foreignAtom,
@@ -188,35 +188,25 @@ func (swap *swap) generateDetails() error {
 func (swap *swap) initiate() error {
 	orderID := swap.order.PersonalOrderID()
 	expiry, secretHash, err := swap.state.InitiateDetails(orderID)
-	log.Println("Hello -0")
 	if err != nil {
-		log.Println("Hello 0")
 		return err
 	}
 	log.Println("Initiating the swap for ", order.ID(orderID))
 
-	log.Println("Hello -1")
 	foreignAddr, err := swap.info.GetOwnerAddress(swap.order.ForeignOrderID())
 	if err != nil {
-		log.Println("Hello 1")
 		return err
 	}
 
-	log.Println("Hello -2")
 	if err = swap.personalAtom.Initiate(foreignAddr, secretHash, swap.order.SendValue(), expiry); err != nil {
-		log.Println("Hello 2")
 		return err
 	}
 
-	log.Println("Hello -3")
 	if err := swap.personalAtom.Store(swap.state); err != nil {
-		log.Println("Hello 3")
 		return err
 	}
 
-	log.Println("Hello -4")
 	if err := swap.state.PutStatus(orderID, StatusInitiated); err != nil {
-		log.Println("Hello 4")
 		return err
 	}
 

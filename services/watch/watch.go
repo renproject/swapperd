@@ -15,7 +15,7 @@ type watch struct {
 	info     swap.Info
 	builder  swap.AtomBuilder
 	wallet   Wallet
-	state    store.SwapState
+	state    store.State
 	notifyCh chan struct{}
 	doneCh   chan struct{}
 }
@@ -28,7 +28,7 @@ type Watch interface {
 	Stop()
 }
 
-func NewWatch(network swap.Network, info swap.Info, wallet Wallet, builder swap.AtomBuilder, state store.SwapState) Watch {
+func NewWatch(network swap.Network, info swap.Info, wallet Wallet, builder swap.AtomBuilder, state store.State) Watch {
 	return &watch{
 		network:  network,
 		info:     info,
@@ -54,9 +54,8 @@ func (watch *watch) Start() <-chan error {
 			case <-watch.notifyCh:
 				swaps, err := watch.state.PendingSwaps()
 				if err != nil {
-					fmt.Println(err.Error())
 					errs <- err
-					return
+					continue
 				}
 				co.ParForAll(swaps, func(i int) {
 					if err := watch.Swap(swaps[i]); err != nil {

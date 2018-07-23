@@ -21,12 +21,12 @@ type Guardian interface {
 
 type guardian struct {
 	builder  swap.AtomBuilder
-	state    store.SwapState
+	state    store.State
 	notifyCh chan struct{}
 	doneCh   chan struct{}
 }
 
-func NewGuardian(builder swap.AtomBuilder, state store.SwapState) Guardian {
+func NewGuardian(builder swap.AtomBuilder, state store.State) Guardian {
 	return &guardian{
 		builder:  builder,
 		state:    state,

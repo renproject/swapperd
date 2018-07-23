@@ -28,7 +28,7 @@ func NewAtomBuilder(config config.Config, keys []swap.Key) swap.AtomBuilder {
 	}
 }
 
-func (ab *atomBuilder) BuildAtoms(state store.SwapState, m match.Match) (swap.Atom, swap.Atom, error) {
+func (ab *atomBuilder) BuildAtoms(state store.State, m match.Match) (swap.Atom, swap.Atom, error) {
 
 	if len(ab.keys) != 2 {
 		return nil, nil, fmt.Errorf("This software does not support more than two keys at the moment")

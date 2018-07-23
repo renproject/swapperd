@@ -111,7 +111,7 @@ func (atom *BitcoinAtom) AuditSecret() ([32]byte, error) {
 }
 
 // Store stores the atom details
-func (atom *BitcoinAtom) Store(state store.SwapState) error {
+func (atom *BitcoinAtom) Store(state store.State) error {
 	b, err := json.Marshal(atom.data)
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func (atom *BitcoinAtom) Store(state store.SwapState) error {
 }
 
 // Restore restores the atom details
-func (atom *BitcoinAtom) Restore(state store.SwapState) error {
+func (atom *BitcoinAtom) Restore(state store.State) error {
 	b, err := state.AtomDetails(atom.orderID)
 	if err != nil {
 		return err

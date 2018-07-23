@@ -44,14 +44,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	swapState := store.NewSwapState(db)
+	state := store.NewState(db)
 
-	watcher, err := buildWatcher(conf, keystr, swapState)
+	watcher, err := buildWatcher(conf, keystr, state)
 	if err != nil {
 		panic(err)
 	}
 
-	guardian, err := buildGuardian(conf, keystr, swapState)
+	guardian, err := buildGuardian(conf, keystr, state)
 	if err != nil {
 		panic(err)
 	}
@@ -63,16 +63,14 @@ func main() {
 	guardian.Notify()
 
 	go func() {
-		err := <-errCh1
-		if err != nil {
-			panic(err)
+		for err := range errCh1 {
+			log.Println("Error :", err)
 		}
 	}()
 
 	go func() {
-		err := <-errCh2
-		if err != nil {
-			panic(err)
+		for err := range errCh2 {
+			log.Println("Error :", err)
 		}
 	}()
 
@@ -94,7 +92,7 @@ func main() {
 
 }
 
-func buildGuardian(config config.Config, kstr swap.Keystore, state store.SwapState) (guardian.Guardian, error) {
+func buildGuardian(config config.Config, kstr swap.Keystore, state store.State) (guardian.Guardian, error) {
 	keys, err := kstr.LoadKeys()
 	if err != nil {
 		return nil, err
@@ -103,7 +101,7 @@ func buildGuardian(config config.Config, kstr swap.Keystore, state store.SwapSta
 	return guardian.NewGuardian(atomBuilder, state), nil
 }
 
-func buildWatcher(config config.Config, kstr swap.Keystore, state store.SwapState) (watch.Watch, error) {
+func buildWatcher(config config.Config, kstr swap.Keystore, state store.State) (watch.Watch, error) {
 	ethConn, err := ethClient.Connect(config)
 	if err != nil {
 		return nil, err

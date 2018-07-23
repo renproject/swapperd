@@ -46,7 +46,7 @@ type state struct {
 	swapMu *sync.RWMutex
 }
 
-type SwapState interface {
+type State interface {
 	AddSwap([32]byte) error
 	DeleteSwap([32]byte) error
 	PendingSwaps() ([][32]byte, error)
@@ -68,7 +68,7 @@ type SwapState interface {
 	AtomExists([32]byte) bool
 }
 
-func NewSwapState(store Store) SwapState {
+func NewState(store Store) State {
 	return &state{
 		Store:  store,
 		swapMu: new(sync.RWMutex),
