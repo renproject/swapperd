@@ -55,14 +55,6 @@ func NewEthereumAtom(client ethclient.Conn, key swap.Key, orderID [32]byte) (swa
 
 // Initiate a new Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error {
-	initiatable, err := atom.initiatable()
-	if err != nil {
-		return err
-	}
-	if !initiatable {
-		return nil
-	}
-
 	auth := bind.NewKeyedTransactor(atom.key.GetKey())
 	auth.Value = value
 	auth.GasLimit = 3000000
@@ -78,14 +70,6 @@ func (atom *EthereumAtom) Initiate(to []byte, hash [32]byte, value *big.Int, exp
 
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) Redeem(secret [32]byte) error {
-	// redeemable, err := atom.redeemable()
-	// if err != nil {
-	// 	return err
-	// }
-	// if !redeemable {
-	// 	return nil
-	// }
-
 	auth := bind.NewKeyedTransactor(atom.key.GetKey())
 	auth.GasLimit = 3000000
 	tx, err := atom.binding.Redeem(auth, atom.data.SwapID, secret)
@@ -98,61 +82,24 @@ func (atom *EthereumAtom) Redeem(secret [32]byte) error {
 // WaitForCounterRedemption waits for the counter-party to initiate.
 func (atom *EthereumAtom) WaitForCounterRedemption() error {
 	for {
-		refundable, err := atom.refundable()
-		if err != nil {
-			return err
-		}
-
 		secret, err := atom.binding.AuditSecret(&bind.CallOpts{}, atom.data.SwapID)
-		if (err != nil || secret == [32]byte{}) && !refundable {
+		if err != nil || secret == [32]byte{} {
 			time.Sleep(1 * time.Second)
 			continue
 		}
-
-		if refundable {
-			// TODO: Complain to Watchdog
-			auth := bind.NewKeyedTransactor(atom.key.GetKey())
-			auth.GasLimit = 3000000
-			tx, err := atom.binding.Refund(auth, atom.data.SwapID)
-			if err == nil {
-				_, err := atom.client.PatchedWaitMined(atom.context, tx)
-				return err
-			}
-			return err
-		}
-
 		return nil
 	}
 }
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) Refund() error {
-	for {
-		redeemable, err := atom.redeemable()
-		if err != nil {
-			return err
-		}
-
-		refundable, err := atom.refundable()
-		if err != nil {
-			return err
-		}
-
-		if !(redeemable && refundable) {
-			time.Sleep(1 * time.Minute)
-			continue
-		}
-		if !refundable {
-			return nil
-		}
-		auth := bind.NewKeyedTransactor(atom.key.GetKey())
-		auth.GasLimit = 3000000
-		tx, err := atom.binding.Refund(auth, atom.data.SwapID)
-		if err == nil {
-			_, err = atom.client.PatchedWaitMined(atom.context, tx)
-		}
-		return err
+	auth := bind.NewKeyedTransactor(atom.key.GetKey())
+	auth.GasLimit = 3000000
+	tx, err := atom.binding.Refund(auth, atom.data.SwapID)
+	if err == nil {
+		_, err = atom.client.PatchedWaitMined(atom.context, tx)
 	}
+	return err
 }
 
 // Audit an Atom swap by calling a function on ethereum
@@ -207,14 +154,14 @@ func (atom *EthereumAtom) GetKey() swap.Key {
 	return atom.key
 }
 
-func (atom *EthereumAtom) redeemable() (bool, error) {
-	return atom.binding.Redeemable(&bind.CallOpts{}, atom.data.SwapID)
-}
+// func (atom *EthereumAtom) redeemable() (bool, error) {
+// 	return atom.binding.Redeemable(&bind.CallOpts{}, atom.data.SwapID)
+// }
 
-func (atom *EthereumAtom) initiatable() (bool, error) {
-	return atom.binding.Initiatable(&bind.CallOpts{}, atom.data.SwapID)
-}
+// func (atom *EthereumAtom) initiatable() (bool, error) {
+// 	return atom.binding.Initiatable(&bind.CallOpts{}, atom.data.SwapID)
+// }
 
-func (atom *EthereumAtom) refundable() (bool, error) {
-	return atom.binding.Refundable(&bind.CallOpts{}, atom.data.SwapID)
-}
+// func (atom *EthereumAtom) refundable() (bool, error) {
+// 	return atom.binding.Refundable(&bind.CallOpts{}, atom.data.SwapID)
+// }
