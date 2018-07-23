@@ -7,7 +7,7 @@ then
     git checkout $2
 fi
 
-npm install
+# npm install
 
 # Setup
 sed -i -e 's/"openzeppelin-solidity\/contracts\//".\/openzeppelin-solidity\/contracts\//' contracts/*.sol

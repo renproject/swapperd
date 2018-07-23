@@ -1,3 +1,6 @@
 [submodule "drivers/atom-sol"]
 	path = drivers/atom-sol
 	url = https://github.com/republicprotocol/atom-sol.git
+[submodule "drivers/renex-sol"]
+	path = drivers/renex-sol
+	url = git@github.com:republicprotocol/renex-sol.git

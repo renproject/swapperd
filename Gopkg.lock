@@ -61,8 +61,17 @@
     "common/hexutil",
     "common/math",
     "common/mclock",
+    "consensus",
+    "consensus/misc",
+    "core",
+    "core/rawdb",
+    "core/state",
     "core/types",
+    "core/vm",
     "crypto",
+    "crypto/bn256",
+    "crypto/bn256/cloudflare",
+    "crypto/bn256/google",
     "crypto/randentropy",
     "crypto/secp256k1",
     "crypto/sha3",
@@ -109,6 +118,15 @@
   name = "github.com/gxed/hashland"
   packages = ["keccakpg"]
   revision = "d9f6b97f8db22dd1e090fd0bbbe98f09cc7dd0a8"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru"
+  ]
+  revision = "0fb14efe8c47ae851c0034ed7a448854d3d34cf3"
 
 [[projects]]
   name = "github.com/jbenet/go-base58"
@@ -206,9 +224,12 @@
   branch = "nightly"
   name = "github.com/republicprotocol/republic-go"
   packages = [
+    "contract",
+    "contract/bindings",
     "crypto",
     "identity",
     "order",
+    "registry",
     "shamir",
     "stackint",
     "stackint/asm"
@@ -345,6 +366,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "be46f8006d366233edfb2a4f5a0441d503cec4d58dfdb702c1ad4edb7f4fbd13"
+  inputs-digest = "62df081040fa390f67c1937aa53fd062ded539455fdcaeb2c3b976ad4ab250c7"
   solver-name = "gps-cdcl"
   solver-version = 1
