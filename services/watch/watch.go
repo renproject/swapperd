@@ -203,6 +203,6 @@ func (w *watch) getMatch(orderID [32]byte) error {
 		return err
 	}
 
-	log.Println("Match found for ", order.ID(orderID))
+	log.Println("Match found :", order.ID(orderID), " <---->", order.ID(match.ForeignOrderID()))
 	return nil
 }
