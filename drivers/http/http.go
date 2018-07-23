@@ -56,10 +56,10 @@ func main() {
 		panic(err)
 	}
 
-	errCh1 := watcher.Run()
+	errCh1 := watcher.Start()
 	watcher.Notify()
 
-	errCh2 := guardian.Run()
+	errCh2 := guardian.Start()
 	guardian.Notify()
 
 	go func() {
@@ -81,9 +81,9 @@ func main() {
 	go func() {
 		_ = <-c
 		log.Println("Stopping the swapper service")
-		watcher.Done()
+		watcher.Stop()
 		log.Println("Stopping the guardian service")
-		guardian.Done()
+		guardian.Stop()
 		log.Println("Stopping the atom box safely")
 		os.Exit(1)
 	}()

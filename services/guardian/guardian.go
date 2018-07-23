@@ -14,9 +14,9 @@ import (
 var ErrSwapRedeemed = fmt.Errorf("Swap Redeemed")
 
 type Guardian interface {
-	Run() <-chan error
+	Start() <-chan error
 	Notify()
-	Done()
+	Stop()
 }
 
 type guardian struct {
@@ -35,7 +35,7 @@ func NewGuardian(builder swap.AtomBuilder, state store.SwapState) Guardian {
 	}
 }
 
-func (g *guardian) Run() <-chan error {
+func (g *guardian) Start() <-chan error {
 	errs := make(chan error)
 	log.Println("Starting the guardian service......")
 	go func() {
@@ -80,7 +80,7 @@ func (g *guardian) Notify() {
 	g.notifyCh <- struct{}{}
 }
 
-func (g *guardian) Done() {
+func (g *guardian) Stop() {
 	g.doneCh <- struct{}{}
 }
 
@@ -90,7 +90,7 @@ func (g *guardian) refund(orderID [32]byte) error {
 		return errors.ErrAtomBuildFailed(err)
 	}
 
-	if err = g.WaitForExpiry(orderID); err != nil {
+	if err = g.waitForExpiry(orderID); err != nil {
 		return err
 	}
 
@@ -109,7 +109,7 @@ func (g *guardian) buildAtom(orderID [32]byte) (swap.Atom, error) {
 	return atom, err
 }
 
-func (g *guardian) WaitForExpiry(orderID [32]byte) error {
+func (g *guardian) waitForExpiry(orderID [32]byte) error {
 	expiry, _, err := g.state.InitiateDetails(orderID)
 	if err != nil {
 		return err
