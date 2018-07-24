@@ -27,6 +27,10 @@ func (ldb *ldbStore) Write(key []byte, value []byte) error {
 	return ldb.db.Put(key, value, nil)
 }
 
+func (ldb *ldbStore) Delete(key []byte) error {
+	return ldb.db.Delete(key, nil)
+}
+
 func (ldb *ldbStore) Close() error {
 	return ldb.db.Close()
 }
