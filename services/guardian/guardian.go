@@ -85,6 +85,10 @@ func (g *guardian) Stop() {
 }
 
 func (g *guardian) refund(orderID [32]byte) error {
+	if !g.state.IsRedeemable(orderID) {
+		return nil
+	}
+
 	atom, err := g.buildAtom(orderID)
 	if err != nil {
 		return errors.ErrAtomBuildFailed(err)
