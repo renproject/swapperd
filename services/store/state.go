@@ -118,8 +118,8 @@ func (state *state) DeleteSwap(orderID [32]byte) error {
 
 	for i, swap := range pendingSwaps.Swaps {
 		if swap == orderID {
-			if i == 0 {
-				pendingSwaps.Swaps = pendingSwaps.Swaps[i:]
+			if len(pendingSwaps.Swaps) == 1 {
+				pendingSwaps.Swaps = [][32]byte{}
 				break
 			}
 			pendingSwaps.Swaps = append(pendingSwaps.Swaps[:i-1], pendingSwaps.Swaps[i:]...)
