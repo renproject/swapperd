@@ -362,7 +362,7 @@ func (swap *swap) requestorAudit() error {
 		return errors.New("Reciever Address Mismatch")
 	}
 
-	if value.Cmp(swap.order.ReceiveValue()) <= 0 {
+	if value.Cmp(swap.order.ReceiveValue()) < 0 {
 		return errors.New("Recieve value is less than expected")
 	}
 
