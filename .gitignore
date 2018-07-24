@@ -1,6 +1,9 @@
 vendor
 secrets
+temp
 db*/*
 *.json
 .DS_Store
 temp/*
+local_*
+todo
