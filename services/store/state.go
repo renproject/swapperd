@@ -66,6 +66,10 @@ type State interface {
 	AtomDetails([32]byte) ([]byte, error)
 	PutAtomDetails([32]byte, []byte) error
 	AtomExists([32]byte) bool
+
+	PutRedeemable([32]byte) error
+	IsRedeemable([32]byte) bool
+	Redeemed([32]byte) error
 }
 
 func NewState(store Store) State {
@@ -266,4 +270,24 @@ func (state *state) AtomExists(orderID [32]byte) bool {
 		return false
 	}
 	return true
+}
+
+func (state *state) IsRedeemable(orderID [32]byte) bool {
+	_, err := state.Read(append([]byte("Redeemable"), orderID[:]...))
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+func (state *state) PutRedeemable(orderID [32]byte) error {
+	return state.Write(append([]byte("Redeemable"), orderID[:]...), orderID[:])
+}
+
+func (state *state) Redeemed(orderID [32]byte) error {
+	err := state.Delete(append([]byte("Redeemable"), orderID[:]...))
+	if err != nil {
+		return err
+	}
+	return nil
 }
