@@ -206,6 +206,10 @@ func (swap *swap) initiate() error {
 		return err
 	}
 
+	if err := swap.state.PutRedeemable(orderID); err != nil {
+		return err
+	}
+
 	if err := swap.state.PutStatus(orderID, StatusInitiated); err != nil {
 		return err
 	}
@@ -268,6 +272,10 @@ func (swap *swap) redeem() error {
 	}
 
 	if err := swap.foreignAtom.Redeem(secret); err != nil {
+		return err
+	}
+
+	if err := swap.state.Redeemed(orderID); err != nil {
 		return err
 	}
 
