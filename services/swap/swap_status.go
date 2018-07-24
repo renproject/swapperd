@@ -12,7 +12,7 @@ const (
 	StatusWaitingForCounterRedemption = "WAITING_FOR_COUNTER_REDEMPTION"
 	StatusRefunded                    = "REFUNDED"
 
-	StatusRecievedSwapDetails = "RECIEVED_SWAP_DETAILS"
+	StatusReceivedSwapDetails = "ReceiveD_SWAP_DETAILS"
 	StatusSentSwapDetails     = "SENT_SWAP_DETAILS"
 	StatusAudited             = "AUDITED"
 )

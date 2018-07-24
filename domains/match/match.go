@@ -59,7 +59,7 @@ func (match *match) SendValue() *big.Int {
 	return match.sendValue
 }
 
-// ReceiveValue returns the value the caller has to recieve according to this order match.
+// ReceiveValue returns the value the caller has to receive according to this order match.
 func (match *match) ReceiveValue() *big.Int {
 	return match.receiveValue
 }

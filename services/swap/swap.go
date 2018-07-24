@@ -79,14 +79,14 @@ func (swap *swap) request() error {
 	}
 
 	if swap.state.Status(swap.order.PersonalOrderID()) == StatusSentSwapDetails {
-		if err := swap.recieveDetails(); err != nil {
+		if err := swap.receiveDetails(); err != nil {
 			return err
 		}
 	} else {
-		log.Println("Skipping recieve details")
+		log.Println("Skipping receive details")
 	}
 
-	if swap.state.Status(swap.order.PersonalOrderID()) == StatusRecievedSwapDetails {
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusReceivedSwapDetails {
 		if err := swap.requestorAudit(); err != nil {
 			return err
 		}
@@ -108,14 +108,14 @@ func (swap *swap) respond() error {
 	log.Println("Responder ", order.ID(swap.order.PersonalOrderID()))
 
 	if swap.state.Status(swap.order.PersonalOrderID()) == StatusInfoSubmitted {
-		if err := swap.recieveDetails(); err != nil {
+		if err := swap.receiveDetails(); err != nil {
 			return err
 		}
 	} else {
 		log.Println("Skipping generate details")
 	}
 
-	if swap.state.Status(swap.order.PersonalOrderID()) == StatusRecievedSwapDetails {
+	if swap.state.Status(swap.order.PersonalOrderID()) == StatusReceivedSwapDetails {
 		if err := swap.responderAudit(); err != nil {
 			return err
 		}
@@ -238,7 +238,7 @@ func (swap *swap) sendDetails() error {
 	return nil
 }
 
-func (swap *swap) recieveDetails() error {
+func (swap *swap) receiveDetails() error {
 	personalOrderID := swap.order.PersonalOrderID()
 	foreignOrderID := swap.order.ForeignOrderID()
 	log.Println("Recieving the swap details for ", order.ID(personalOrderID))
@@ -252,11 +252,11 @@ func (swap *swap) recieveDetails() error {
 		return err
 	}
 
-	if err := swap.state.PutStatus(personalOrderID, StatusRecievedSwapDetails); err != nil {
+	if err := swap.state.PutStatus(personalOrderID, StatusReceivedSwapDetails); err != nil {
 		return err
 	}
 
-	log.Println("Recieved the swap details for ", order.ID(personalOrderID))
+	log.Println("Received the swap details for ", order.ID(personalOrderID))
 	return nil
 }
 
@@ -308,11 +308,11 @@ func (swap *swap) responderAudit() error {
 	}
 
 	if bytes.Compare(to, personalAddr) != 0 {
-		return errors.New("Reciever Address Mismatch")
+		return errors.New("Receiver Address Mismatch")
 	}
 
 	if value.Cmp(swap.order.ReceiveValue()) > 0 {
-		return errors.New("Recieve value is less than expected")
+		return errors.New("Receive value is less than expected")
 	}
 
 	if time.Now().Unix() > newExpiry {
@@ -359,11 +359,11 @@ func (swap *swap) requestorAudit() error {
 	}
 
 	if bytes.Compare(to, personalAddr) == 0 {
-		return errors.New("Reciever Address Mismatch")
+		return errors.New("Receiver Address Mismatch")
 	}
 
 	if value.Cmp(swap.order.ReceiveValue()) < 0 {
-		return errors.New("Recieve value is less than expected")
+		return errors.New("Receive value is less than expected")
 	}
 
 	if time.Now().Unix() > expiry {
@@ -401,6 +401,6 @@ func (swap *swap) getRedeemDetails() error {
 		return err
 	}
 
-	log.Println("Recieved the redeem details for ", order.ID(orderID))
+	log.Println("Received the redeem details for ", order.ID(orderID))
 	return nil
 }
