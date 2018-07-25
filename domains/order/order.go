@@ -4,6 +4,9 @@ import (
 	"math/big"
 )
 
+// ID is the type of an Order's ID.
+type ID [32]byte
+
 // Order is the interface of an order.
 type Order interface {
 	Price() *big.Int
