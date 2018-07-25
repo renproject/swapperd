@@ -99,24 +99,17 @@ func (binder *Binder) receiveOwnerAddress(orderID order.ID) ([]byte, error) {
 	return binder.GetOwnerAddress(binder.callOpts, orderID)
 }
 
-// WaitForMatch waits for the match to be found and returns the match object
-func (binder *Binder) WaitForMatch(orderID order.ID) (match.Match, error) {
+// CheckForMatch checks if a match is found and returns the match object. If
+// a match is not found and the 'wait' flag is set to true, it loops until a
+// match is found.
+func (binder *Binder) CheckForMatch(orderID order.ID, wait bool) (match.Match, error) {
 	binder.mu.Lock()
 	defer binder.mu.Unlock()
-	return binder.waitForMatch(orderID)
+	return binder.checkForMatch(orderID, wait)
 }
 
-func (binder *Binder) waitForMatch(orderID order.ID) (match.Match, error) {
+func (binder *Binder) checkForMatch(orderID order.ID, wait bool) (match.Match, error) {
 	for {
-		expired, err := binder.expired(orderID)
-		if err != nil {
-			return nil, err
-		}
-
-		if expired {
-			break
-		}
-
 		status, err := binder.OrderStatus(binder.callOpts, orderID)
 		if err != nil {
 			return nil, err
@@ -130,9 +123,22 @@ func (binder *Binder) waitForMatch(orderID order.ID) (match.Match, error) {
 			return match.NewMatch(PersonalOrder, ForeignOrder, SendValue, ReceiveValue, SendCurrency, ReceiveCurrency), nil
 		}
 
+		expired, err := binder.expired(orderID)
+		if err != nil {
+			return nil, err
+		}
+
+		if expired {
+			return nil, fmt.Errorf("Order expired")
+		}
+
+		if !wait {
+			return nil, fmt.Errorf("Match does not exist")
+		}
+
 		time.Sleep(15 * time.Second)
 	}
-	return nil, fmt.Errorf("Order expired")
+	return nil, nil
 }
 
 func (binder *Binder) expired(orderID order.ID) (bool, error) {
