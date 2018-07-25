@@ -1,7 +1,7 @@
-package config
+package network
 
-// EthereumConfig are the parameters required to create an ethereum client
-type EthereumConfig struct {
+// EthereumNetwork are the parameters required to create an ethereum client
+type EthereumNetwork struct {
 	Chain                   string `json:"chain"`
 	URL                     string `json:"url"`
 	AtomAddress             string `json:"atom_address"`
@@ -15,13 +15,13 @@ type EthereumConfig struct {
 	OrderBookAddress        string `json:"ob_address"`
 }
 
-func (config *Config) GetEthereumConfig() EthereumConfig {
-	config.mu.RLock()
-	defer config.mu.RUnlock()
-	return config.Ethereum
+func (network *Config) GetEthereumNetwork() EthereumNetwork {
+	network.mu.RLock()
+	defer network.mu.RUnlock()
+	return network.Ethereum
 }
 
-func (config *Config) SetEthereumConfig(ethereumConfig EthereumConfig) {
+func (config *Config) SetEthereumNetwork(ethereumConfig EthereumNetwork) {
 	config.mu.Lock()
 	defer config.mu.Unlock()
 	config.Ethereum = ethereumConfig
