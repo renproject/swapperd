@@ -10,12 +10,10 @@ import (
 )
 
 type Config struct {
-	Ethereum            EthereumConfig `json:"ethereum"`
-	Bitcoin             BitcoinConfig  `json:"bitcoin"`
-	Version             string         `json:"version"`
-	SupportedCurrencies []string       `json:"supportedCurrencies"`
-	AuthorizedAddresses []string       `json:"authorizedAddresses"`
-	StoreLoc            string         `json:"storeLocation"`
+	Version             string   `json:"version"`
+	SupportedCurrencies []string `json:"supportedCurrencies"`
+	AuthorizedAddresses []string `json:"authorizedAddresses"`
+	StoreLoc            string   `json:"storeLocation"`
 
 	mu   *sync.RWMutex
 	path string
