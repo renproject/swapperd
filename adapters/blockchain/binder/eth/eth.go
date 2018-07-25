@@ -88,14 +88,14 @@ func (binder *Binder) sendOwnerAddress(orderID order.ID, address []byte) error {
 	return err
 }
 
-// RecieveOwnerAddress recieves the owner address for atomic swap
-func (binder *Binder) RecieveOwnerAddress(orderID order.ID) ([]byte, error) {
+// ReceiveOwnerAddress receives the owner address for atomic swap
+func (binder *Binder) ReceiveOwnerAddress(orderID order.ID) ([]byte, error) {
 	binder.mu.Lock()
 	defer binder.mu.Unlock()
-	return binder.recieveOwnerAddress(orderID)
+	return binder.receiveOwnerAddress(orderID)
 }
 
-func (binder *Binder) recieveOwnerAddress(orderID order.ID) ([]byte, error) {
+func (binder *Binder) receiveOwnerAddress(orderID order.ID) ([]byte, error) {
 	return binder.GetOwnerAddress(binder.callOpts, orderID)
 }
 
@@ -162,14 +162,14 @@ func (binder *Binder) sendSwapDetails(orderID order.ID, swapDetails []byte) erro
 	return err
 }
 
-// RecieveSwapDetails recieves the swap details from the ethereum blockchain
-func (binder *Binder) RecieveSwapDetails(orderID order.ID) ([]byte, error) {
+// ReceiveSwapDetails receives the swap details from the ethereum blockchain
+func (binder *Binder) ReceiveSwapDetails(orderID order.ID) ([]byte, error) {
 	binder.mu.Lock()
 	defer binder.mu.Unlock()
-	return binder.recieveSwapDetails(orderID)
+	return binder.receiveSwapDetails(orderID)
 }
 
-func (binder *Binder) recieveSwapDetails(orderID order.ID) ([]byte, error) {
+func (binder *Binder) receiveSwapDetails(orderID order.ID) ([]byte, error) {
 	return binder.SwapDetails(binder.callOpts, orderID)
 }
 
