@@ -24,19 +24,17 @@ type swap struct {
 	personalAtom Atom
 	foreignAtom  Atom
 	order        match.Match
-	network      Network
-	info         Info
+	swapAdapter  SwapAdapter
 	state        store.State
 }
 
 // NewSwap returns a new Swap instance
-func NewSwap(personalAtom Atom, foreignAtom Atom, info Info, order match.Match, network Network, state store.State) Swap {
+func NewSwap(personalAtom Atom, foreignAtom Atom, order match.Match, swapAdapter SwapAdapter, state store.State) Swap {
 	return &swap{
 		personalAtom: personalAtom,
 		foreignAtom:  foreignAtom,
 		order:        order,
-		info:         info,
-		network:      network,
+		swapAdapter:  swapAdapter,
 		state:        state,
 	}
 }
@@ -193,7 +191,7 @@ func (swap *swap) initiate() error {
 	}
 	log.Println("Initiating the swap for ", order.ID(orderID))
 
-	foreignAddr, err := swap.info.GetOwnerAddress(swap.order.ForeignOrderID())
+	foreignAddr, err := swap.swapAdapter.GetOwnerAddress(swap.order.ForeignOrderID())
 	if err != nil {
 		return err
 	}
@@ -225,7 +223,7 @@ func (swap *swap) sendDetails() error {
 	if err != nil {
 		return err
 	}
-	if err := swap.network.SendSwapDetails(orderID, personalAtomBytes); err != nil {
+	if err := swap.swapAdapter.SendSwapDetails(orderID, personalAtomBytes); err != nil {
 		log.Println("Error Here")
 		return err
 	}
@@ -242,7 +240,7 @@ func (swap *swap) receiveDetails() error {
 	personalOrderID := swap.order.PersonalOrderID()
 	foreignOrderID := swap.order.ForeignOrderID()
 	log.Println("Recieving the swap details for ", order.ID(personalOrderID))
-	foreignAtomBytes, err := swap.network.ReceiveSwapDetails(foreignOrderID)
+	foreignAtomBytes, err := swap.swapAdapter.ReceiveSwapDetails(foreignOrderID)
 
 	if err != nil {
 		return err
@@ -302,7 +300,7 @@ func (swap *swap) responderAudit() error {
 	hashLock, to, value, expiry, err := swap.foreignAtom.Audit()
 	newExpiry := expiry - 24*60*60
 
-	personalAddr, err := swap.info.GetOwnerAddress(swap.order.PersonalOrderID())
+	personalAddr, err := swap.swapAdapter.GetOwnerAddress(swap.order.PersonalOrderID())
 	if err != nil {
 		return err
 	}
@@ -353,7 +351,7 @@ func (swap *swap) requestorAudit() error {
 		return fmt.Errorf("Hashlock Mismatch %v %v", hashLock, selfHashLock)
 	}
 
-	personalAddr, err := swap.info.GetOwnerAddress(swap.order.PersonalOrderID())
+	personalAddr, err := swap.swapAdapter.GetOwnerAddress(swap.order.PersonalOrderID())
 	if err != nil {
 		return err
 	}
