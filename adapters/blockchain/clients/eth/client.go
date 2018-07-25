@@ -12,30 +12,32 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/republicprotocol/atom-go/adapters/config"
+	"github.com/republicprotocol/atom-go/adapters/configs/network"
 )
 
 type Conn struct {
-	network       string
-	client        *ethclient.Client
-	atomAddress   common.Address
-	walletAddress common.Address
-	infoAddress   common.Address
+	network          string
+	client           *ethclient.Client
+	atomAddress      common.Address
+	walletAddress    common.Address
+	infoAddress      common.Address
+	orderBookAddress common.Address
 }
 
 // Connect to an ethereum network.
-func Connect(config config.Config) (Conn, error) {
+func Connect(config network.Config) (Conn, error) {
 	ethclient, err := ethclient.Dial(config.Ethereum.URL)
 	if err != nil {
 		return Conn{}, err
 	}
 
 	return Conn{
-		client:        ethclient,
-		network:       config.Ethereum.Chain,
-		atomAddress:   common.HexToAddress(config.Ethereum.AtomAddress),
-		infoAddress:   common.HexToAddress(config.Ethereum.InfoAddress),
-		walletAddress: common.HexToAddress(config.Ethereum.WalletAddress),
+		client:           ethclient,
+		network:          config.Ethereum.Chain,
+		atomAddress:      common.HexToAddress(config.Ethereum.AtomAddress),
+		infoAddress:      common.HexToAddress(config.Ethereum.InfoAddress),
+		walletAddress:    common.HexToAddress(config.Ethereum.WalletAddress),
+		orderBookAddress: common.HexToAddress(config.Ethereum.OrderBookAddress),
 	}, nil
 }
 
@@ -114,6 +116,10 @@ func (conn *Conn) WalletAddress() common.Address {
 
 func (conn *Conn) InfoAddress() common.Address {
 	return conn.infoAddress
+}
+
+func (conn *Conn) OrderBookAddress() common.Address {
+	return conn.orderBookAddress
 }
 
 func (conn *Conn) Network() string {

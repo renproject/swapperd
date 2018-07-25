@@ -12,7 +12,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	rpc "github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/republicprotocol/atom-go/adapters/config"
+	"github.com/republicprotocol/atom-go/adapters/configs/network"
 )
 
 type Conn struct {
@@ -21,12 +21,12 @@ type Conn struct {
 	Network     string
 }
 
-func Connect(config config.Config) (Conn, error) {
+func Connect(networkConfig network.Config) (Conn, error) {
 	var chainParams *chaincfg.Params
 	var connect string
 	var err error
 
-	connParams := config.GetBitcoinConfig()
+	connParams := networkConfig.GetBitcoinNetwork()
 
 	switch connParams.Chain {
 	case "regtest":
@@ -70,7 +70,7 @@ func Connect(config config.Config) (Conn, error) {
 	return Conn{
 		Client:      rpcClient,
 		ChainParams: chainParams,
-		Network:     config.Bitcoin.Chain,
+		Network:     networkConfig.Bitcoin.Chain,
 	}, nil
 }
 
