@@ -11,8 +11,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	bindings "github.com/republicprotocol/atom-go/adapters/bindings/eth"
-	ethclient "github.com/republicprotocol/atom-go/adapters/clients/eth"
+	bindings "github.com/republicprotocol/atom-go/adapters/blockchain/bindings/eth"
+	ethclient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/eth"
 	"github.com/republicprotocol/atom-go/services/swap"
 )
 
@@ -153,15 +153,3 @@ func (atom *EthereumAtom) GetSecretHash() [32]byte {
 func (atom *EthereumAtom) GetKey() swap.Key {
 	return atom.key
 }
-
-// func (atom *EthereumAtom) redeemable() (bool, error) {
-// 	return atom.binding.Redeemable(&bind.CallOpts{}, atom.data.SwapID)
-// }
-
-// func (atom *EthereumAtom) initiatable() (bool, error) {
-// 	return atom.binding.Initiatable(&bind.CallOpts{}, atom.data.SwapID)
-// }
-
-// func (atom *EthereumAtom) refundable() (bool, error) {
-// 	return atom.binding.Refundable(&bind.CallOpts{}, atom.data.SwapID)
-// }
