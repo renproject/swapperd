@@ -1,4 +1,4 @@
-package btc
+package keystore
 
 import (
 	"crypto/ecdsa"
@@ -8,26 +8,27 @@ import (
 	"github.com/btcsuite/btcutil"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/republicprotocol/atom-go/services/swap"
 )
 
-type bitcoinKey struct {
-	privateKey *ecdsa.PrivateKey
-	network    string
+type BitcoinKey struct {
+	privateKey   *ecdsa.PrivateKey `json:"private_key"`
+	priorityCode uint32            `json:"priority_code"`
+	network      string            `json:"network"`
 }
 
-func NewBitcoinKey(pk string, network string) (swap.Key, error) {
+func NewBitcoinKey(pk string, network string) (BitcoinKey, error) {
 	key, err := crypto.HexToECDSA(pk)
 	if err != nil {
-		return nil, err
+		return BitcoinKey{}, err
 	}
-	return &bitcoinKey{
+	return BitcoinKey{
 		key,
+		0,
 		network,
 	}, nil
 }
 
-func (key bitcoinKey) GetAddress() ([]byte, error) {
+func (key *BitcoinKey) GetAddress() ([]byte, error) {
 	var chainParams *chaincfg.Params
 
 	switch key.network {
@@ -54,7 +55,7 @@ func (key bitcoinKey) GetAddress() ([]byte, error) {
 	return []byte(pubKey.EncodeAddress()), nil
 }
 
-func (key bitcoinKey) GetKeyString() (string, error) {
+func (key *BitcoinKey) GetKeyString() (string, error) {
 	var chainParams *chaincfg.Params
 
 	switch key.network {
@@ -75,10 +76,10 @@ func (key bitcoinKey) GetKeyString() (string, error) {
 	return wif.String(), nil
 }
 
-func (key bitcoinKey) GetKey() *ecdsa.PrivateKey {
+func (key *BitcoinKey) GetKey() *ecdsa.PrivateKey {
 	return key.privateKey
 }
 
-func (key bitcoinKey) PriorityCode() uint32 {
-	return 0
+func (key *BitcoinKey) PriorityCode() uint32 {
+	return key.priorityCode
 }
