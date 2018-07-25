@@ -146,6 +146,9 @@ func (binder *Binder) expired(orderID order.ID) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if details.SettlementID == 0 {
+		return false, fmt.Errorf("Order does not exist")
+	}
 	if time.Now().Unix() > int64(details.Expiry) {
 		return true, nil
 	}
