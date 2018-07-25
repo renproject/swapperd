@@ -11,7 +11,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/republicprotocol/atom-go/adapters/clients/btc"
+	"github.com/republicprotocol/atom-go/adapters/blockchain/clients/btc"
 	"golang.org/x/crypto/ripemd160"
 )
 
