@@ -5,8 +5,8 @@ import (
 	"errors"
 	"math/big"
 
-	bindings "github.com/republicprotocol/atom-go/adapters/bindings/btc"
-	"github.com/republicprotocol/atom-go/adapters/clients/btc"
+	bindings "github.com/republicprotocol/atom-go/adapters/blockchain/bindings/btc"
+	"github.com/republicprotocol/atom-go/adapters/blockchain/clients/btc"
 	"github.com/republicprotocol/atom-go/services/store"
 	"github.com/republicprotocol/atom-go/services/swap"
 )
