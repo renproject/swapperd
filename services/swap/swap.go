@@ -158,7 +158,7 @@ func (swap *swap) respond() error {
 
 func (swap *swap) generateDetails() error {
 	orderID := swap.order.PersonalOrderID()
-	log.Println("Generating the swap details for ", order.ID(orderID))
+	log.Println(fmt.Sprintf("(%s) Generating the swap details", order.ID(orderID)))
 	expiry := time.Now().Add(48 * time.Hour).Unix()
 	secret := make([]byte, 32)
 	rand.Read(secret)
@@ -191,7 +191,7 @@ func (swap *swap) initiate() error {
 	}
 	log.Println("Initiating the swap for ", order.ID(orderID))
 
-	foreignAddr, err := swap.swapAdapter.GetOwnerAddress(swap.order.ForeignOrderID())
+	foreignAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.ForeignOrderID())
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,12 @@ func (swap *swap) initiate() error {
 		return err
 	}
 
-	if err := swap.personalAtom.Store(swap.state); err != nil {
+	details, err := swap.personalAtom.Serialize()
+	if err != nil {
+		return err
+	}
+
+	if err := swap.state.PutAtomDetails(swap.order.PersonalOrderID(), details); err != nil {
 		return err
 	}
 
@@ -224,7 +229,7 @@ func (swap *swap) sendDetails() error {
 		return err
 	}
 	if err := swap.swapAdapter.SendSwapDetails(orderID, personalAtomBytes); err != nil {
-		log.Println("Error Here")
+		log.Println("Error Here", err.Error())
 		return err
 	}
 
@@ -240,8 +245,7 @@ func (swap *swap) receiveDetails() error {
 	personalOrderID := swap.order.PersonalOrderID()
 	foreignOrderID := swap.order.ForeignOrderID()
 	log.Println("Recieving the swap details for ", order.ID(personalOrderID))
-	foreignAtomBytes, err := swap.swapAdapter.ReceiveSwapDetails(foreignOrderID)
-
+	foreignAtomBytes, err := swap.swapAdapter.ReceiveSwapDetails(foreignOrderID, true)
 	if err != nil {
 		return err
 	}
@@ -262,7 +266,15 @@ func (swap *swap) redeem() error {
 	orderID := swap.order.PersonalOrderID()
 	log.Println("Redeeming the swap for ", order.ID(orderID))
 
-	swap.foreignAtom.Restore(swap.state)
+	details, err := swap.state.AtomDetails(swap.order.ForeignOrderID())
+	if err != nil {
+		return err
+	}
+
+	if err := swap.foreignAtom.Deserialize(details); err != nil {
+		fmt.Println(err)
+		return err
+	}
 
 	secret, err := swap.state.RedeemDetails(orderID)
 	if err != nil {
@@ -293,14 +305,21 @@ func (swap *swap) responderAudit() error {
 	orderID := swap.order.PersonalOrderID()
 	log.Println("Auditing the swap for ", order.ID(orderID))
 
-	if err := swap.foreignAtom.Restore(swap.state); err != nil {
+	details, err := swap.state.AtomDetails(swap.order.ForeignOrderID())
+	if err != nil {
 		return err
 	}
 
+	if err := swap.foreignAtom.Deserialize(details); err != nil {
+		return err
+	}
 	hashLock, to, value, expiry, err := swap.foreignAtom.Audit()
+	if err != nil {
+		return err
+	}
 	newExpiry := expiry - 24*60*60
 
-	personalAddr, err := swap.swapAdapter.GetOwnerAddress(swap.order.PersonalOrderID())
+	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID())
 	if err != nil {
 		return err
 	}
@@ -334,14 +353,19 @@ func (swap *swap) requestorAudit() error {
 	orderID := swap.order.PersonalOrderID()
 	log.Println("Auditing the swap for ", order.ID(orderID))
 
-	if err := swap.foreignAtom.Restore(swap.state); err != nil {
+	details, err := swap.state.AtomDetails(swap.order.ForeignOrderID())
+	if err != nil {
 		return err
 	}
 
+	if err := swap.foreignAtom.Deserialize(details); err != nil {
+		return err
+	}
 	hashLock, to, value, expiry, err := swap.foreignAtom.Audit()
 	if err != nil {
 		return err
 	}
+
 	_, selfHashLock, err := swap.state.InitiateDetails(orderID)
 	if err != nil {
 		return err
@@ -351,12 +375,12 @@ func (swap *swap) requestorAudit() error {
 		return fmt.Errorf("Hashlock Mismatch %v %v", hashLock, selfHashLock)
 	}
 
-	personalAddr, err := swap.swapAdapter.GetOwnerAddress(swap.order.PersonalOrderID())
+	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID())
 	if err != nil {
 		return err
 	}
 
-	if bytes.Compare(to, personalAddr) == 0 {
+	if bytes.Compare(to, personalAddr) != 0 {
 		return errors.New("Receiver Address Mismatch")
 	}
 
