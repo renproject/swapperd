@@ -4,17 +4,22 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"time"
-
-	"github.com/republicprotocol/atom-go/services/store"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	bindings "github.com/republicprotocol/atom-go/adapters/blockchain/bindings/eth"
 	ethclient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/eth"
+	"github.com/republicprotocol/atom-go/adapters/configs/keystore"
+	"github.com/republicprotocol/atom-go/domains/order"
 	"github.com/republicprotocol/atom-go/services/swap"
 )
+
+type Adapter interface {
+	ReceiveSwapDetails(order.ID, bool) ([]byte, error)
+}
 
 // EthereumData
 type EthereumData struct {
@@ -26,13 +31,14 @@ type EthereumAtom struct {
 	orderID [32]byte
 	context context.Context
 	client  ethclient.Conn
-	key     swap.Key
+	key     keystore.Key
 	binding *bindings.AtomicSwap
+	adapter Adapter
 	data    EthereumData
 }
 
 // NewEthereumAtom returns a new Ethereum RequestAtom instance
-func NewEthereumAtom(client ethclient.Conn, key swap.Key, orderID [32]byte) (swap.Atom, error) {
+func NewEthereumAtom(adapter Adapter, client ethclient.Conn, key keystore.Key, orderID [32]byte) (swap.Atom, error) {
 	contract, err := bindings.NewAtomicSwap(client.AtomAddress(), bind.ContractBackend(client.Client()))
 	if err != nil {
 		return &EthereumAtom{}, err
@@ -47,6 +53,7 @@ func NewEthereumAtom(client ethclient.Conn, key swap.Key, orderID [32]byte) (swa
 		key:     key,
 		binding: contract,
 		orderID: orderID,
+		adapter: adapter,
 		data: EthereumData{
 			SwapID: swapID,
 		},
@@ -104,11 +111,21 @@ func (atom *EthereumAtom) Refund() error {
 
 // Audit an Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
+	fmt.Println("-------> Eth")
+	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, false)
+	if err != nil {
+		return [32]byte{}, nil, nil, 0, err
+	}
+	fmt.Println("<------- Eth")
+
+	if err := atom.Deserialize(details); err != nil {
+		return [32]byte{}, nil, nil, 0, err
+	}
 	auditReport, err := atom.binding.Audit(&bind.CallOpts{}, atom.data.SwapID)
 	if err != nil {
 		return [32]byte{}, nil, nil, 0, err
 	}
-	return auditReport.SecretLock, auditReport.From.Bytes(), auditReport.Value, auditReport.Timelock.Int64(), nil
+	return auditReport.SecretLock, auditReport.To.Bytes(), auditReport.Value, auditReport.Timelock.Int64(), nil
 }
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
@@ -116,40 +133,22 @@ func (atom *EthereumAtom) AuditSecret() ([32]byte, error) {
 	return atom.binding.AuditSecret(&bind.CallOpts{}, atom.data.SwapID)
 }
 
-// Store stores the atom details
-func (atom *EthereumAtom) Store(state store.State) error {
-	b, err := json.Marshal(atom.data)
-	if err != nil {
-		return err
-	}
-	return state.PutAtomDetails(atom.orderID, b)
+// Serialize serializes the atom details
+func (atom *EthereumAtom) Serialize() ([]byte, error) {
+	return json.Marshal(atom.data)
 }
 
-// Restore restores the atom details
-func (atom *EthereumAtom) Restore(state store.State) error {
-	b, err := state.AtomDetails(atom.orderID)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, &atom.data)
+// Deserialize deserializes the atom details
+func (atom *EthereumAtom) Deserialize(data []byte) error {
+	return json.Unmarshal(data, &atom.data)
 }
 
-// From returns the address of the sender
-func (atom *EthereumAtom) From() ([]byte, error) {
+// GetFromAddress returns the address of the sender
+func (atom *EthereumAtom) GetFromAddress() ([]byte, error) {
 	return atom.key.GetAddress()
 }
 
 // PriorityCode returns the priority code of the currency.
 func (atom *EthereumAtom) PriorityCode() uint32 {
 	return atom.key.PriorityCode()
-}
-
-// GetSecretHash returns the Secret Hash of the atom.
-func (atom *EthereumAtom) GetSecretHash() [32]byte {
-	return atom.data.HashLock
-}
-
-// GetKey returns the key of the atom.
-func (atom *EthereumAtom) GetKey() swap.Key {
-	return atom.key
 }
