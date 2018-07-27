@@ -10,12 +10,12 @@ import (
 )
 
 type EthereumKey struct {
-	privateKey   *ecdsa.PrivateKey `json:"private_key"`
-	priorityCode uint32            `json:"priority_code"`
-	network      string            `json:"network"`
+	PrivateKey   *ecdsa.PrivateKey `json:"private_key"`
+	CurrencyCode uint32            `json:"currency_code"`
+	Network      string            `json:"network"`
 }
 
-func GetEthereumKey(key string, network string) (EthereumKey, error) {
+func NewEthereumKey(key string, network string) (EthereumKey, error) {
 	privateKey, err := crypto.HexToECDSA(key)
 	if err != nil {
 		return EthereumKey{}, err
@@ -28,17 +28,17 @@ func GetEthereumKey(key string, network string) (EthereumKey, error) {
 }
 
 func (key *EthereumKey) GetKey() *ecdsa.PrivateKey {
-	return key.privateKey
+	return key.PrivateKey
 }
 
 func (key *EthereumKey) GetKeyString() (string, error) {
-	return hex.EncodeToString(crypto.FromECDSA(key.privateKey)), nil
+	return hex.EncodeToString(crypto.FromECDSA(key.PrivateKey)), nil
 }
 
 func (key *EthereumKey) GetAddress() ([]byte, error) {
-	return bind.NewKeyedTransactor(key.privateKey).From.Bytes(), nil
+	return bind.NewKeyedTransactor(key.PrivateKey).From.Bytes(), nil
 }
 
 func (key *EthereumKey) PriorityCode() uint32 {
-	return 1
+	return key.CurrencyCode
 }

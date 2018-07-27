@@ -11,9 +11,9 @@ import (
 )
 
 type BitcoinKey struct {
-	privateKey   *ecdsa.PrivateKey `json:"private_key"`
-	priorityCode uint32            `json:"priority_code"`
-	network      string            `json:"network"`
+	PrivateKey   *ecdsa.PrivateKey `json:"private_key"`
+	CurrencyCode uint32            `json:"currency_code"`
+	Network      string            `json:"network"`
 }
 
 func NewBitcoinKey(pk string, network string) (BitcoinKey, error) {
@@ -31,7 +31,7 @@ func NewBitcoinKey(pk string, network string) (BitcoinKey, error) {
 func (key *BitcoinKey) GetAddress() ([]byte, error) {
 	var chainParams *chaincfg.Params
 
-	switch key.network {
+	switch key.Network {
 	case "regtest":
 		chainParams = &chaincfg.RegressionNetParams
 	case "testnet":
@@ -40,7 +40,7 @@ func (key *BitcoinKey) GetAddress() ([]byte, error) {
 		chainParams = &chaincfg.MainNetParams
 	}
 
-	privKey := (*btcec.PrivateKey)(key.privateKey)
+	privKey := (*btcec.PrivateKey)(key.PrivateKey)
 	wif, err := btcutil.NewWIF(privKey, chainParams, false)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (key *BitcoinKey) GetAddress() ([]byte, error) {
 func (key *BitcoinKey) GetKeyString() (string, error) {
 	var chainParams *chaincfg.Params
 
-	switch key.network {
+	switch key.Network {
 	case "regtest":
 		chainParams = &chaincfg.RegressionNetParams
 	case "testnet":
@@ -67,7 +67,7 @@ func (key *BitcoinKey) GetKeyString() (string, error) {
 		chainParams = &chaincfg.MainNetParams
 	}
 
-	privKey := (*btcec.PrivateKey)(key.privateKey)
+	privKey := (*btcec.PrivateKey)(key.PrivateKey)
 	wif, err := btcutil.NewWIF(privKey, chainParams, false)
 	if err != nil {
 		return "", err
@@ -77,9 +77,9 @@ func (key *BitcoinKey) GetKeyString() (string, error) {
 }
 
 func (key *BitcoinKey) GetKey() *ecdsa.PrivateKey {
-	return key.privateKey
+	return key.PrivateKey
 }
 
 func (key *BitcoinKey) PriorityCode() uint32 {
-	return key.priorityCode
+	return key.CurrencyCode
 }
