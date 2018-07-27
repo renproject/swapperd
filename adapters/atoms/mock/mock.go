@@ -62,11 +62,6 @@ package mock
 // 	return uint32(-1)
 // }
 
-// // GetSecretHash returns the Secret Hash of the atom.
-// func (eth *mockAtom) GetSecretHash() [32]byte {
-// 	return eth.data.HashLock
-// }
-
 // // GetKey returns the key of the atom.
 // func (eth *mockAtom) GetKey() swap.Key {
 // 	return eth.key
