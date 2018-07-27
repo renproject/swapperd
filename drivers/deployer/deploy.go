@@ -10,23 +10,17 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	bindings "github.com/republicprotocol/atom-go/adapters/bindings/eth"
-	"github.com/republicprotocol/atom-go/adapters/config"
-	"github.com/republicprotocol/atom-go/adapters/owner"
+	bindings "github.com/republicprotocol/atom-go/adapters/blockchain/bindings/eth"
+	"github.com/republicprotocol/atom-go/adapters/configs/network"
+	"github.com/republicprotocol/atom-go/adapters/configs/owner"
 )
 
 func main() {
 
-	var aPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/local/configA.json"
-	var bPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/local/configB.json"
+	var aPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/local/networkA.json"
 	var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/owner.json"
 
-	aTest, err := config.LoadConfig(aPath)
-	if err != nil {
-		panic(err)
-	}
-
-	bTest, err := config.LoadConfig(bPath)
+	aNet, err := network.LoadNetwork(aPath)
 	if err != nil {
 		panic(err)
 	}
@@ -42,14 +36,13 @@ func main() {
 	}
 
 	auth := bind.NewKeyedTransactor(key)
-	err = deployContracts(aTest, auth)
+	err = deployContracts(aNet, auth)
 	if err != nil {
 		panic(err)
 	}
-	bTest.SetEthereumConfig(aTest.GetEthereumConfig())
 }
 
-func deployContracts(config config.Config, owner *bind.TransactOpts) error {
+func deployContracts(config network.Config, owner *bind.TransactOpts) error {
 
 	network := config.Ethereum.Chain
 
@@ -60,16 +53,6 @@ func deployContracts(config config.Config, owner *bind.TransactOpts) error {
 
 	// Deploy Atom contract
 	AtomAddress, tx, _, err := bindings.DeployAtomicSwap(owner, ethclient)
-	if err != nil {
-		return err
-	}
-
-	if err := deploy(context.Background(), network, ethclient, tx); err != nil {
-		return err
-	}
-
-	// Deploy Info contract
-	InfoAddress, tx, _, err := bindings.DeployAtomicInfo(owner, ethclient)
 	if err != nil {
 		return err
 	}
@@ -100,6 +83,16 @@ func deployContracts(config config.Config, owner *bind.TransactOpts) error {
 
 	// Deploy Order Book contract
 	OBAddress, tx, _, err := bindings.DeployOrderbook(owner, ethclient, big.NewInt(0), RENAddress, DNRAddress)
+	if err != nil {
+		return err
+	}
+
+	if err := deploy(context.Background(), network, ethclient, tx); err != nil {
+		return err
+	}
+
+	// Deploy Info contract
+	InfoAddress, tx, _, err := bindings.DeployAtomicInfo(owner, ethclient, OBAddress)
 	if err != nil {
 		return err
 	}
@@ -148,17 +141,17 @@ func deployContracts(config config.Config, owner *bind.TransactOpts) error {
 		return err
 	}
 
-	ethCfg := config.GetEthereumConfig()
-	ethCfg.AtomAddress = AtomAddress.Hex()
-	ethCfg.InfoAddress = InfoAddress.Hex()
-	ethCfg.WalletAddress = WalletAddress.Hex()
-	ethCfg.RepublicTokenAddress = WalletAddress.Hex()
-	ethCfg.DarkNodeRegistryAddress = DNRAddress.Hex()
-	ethCfg.OrderBookAddress = OBAddress.Hex()
-	ethCfg.RenExTokens = RenExTokensAddress.Hex()
-	ethCfg.RewardVault = RewardVaultAddress.Hex()
-	ethCfg.RenExBalances = RenExBalancesAddress.Hex()
-	config.SetEthereumConfig(ethCfg)
+	ethNet := config.GetEthereumNetwork()
+	ethNet.AtomAddress = AtomAddress.Hex()
+	ethNet.InfoAddress = InfoAddress.Hex()
+	ethNet.WalletAddress = WalletAddress.Hex()
+	ethNet.RepublicTokenAddress = WalletAddress.Hex()
+	ethNet.DarkNodeRegistryAddress = DNRAddress.Hex()
+	ethNet.OrderBookAddress = OBAddress.Hex()
+	ethNet.RenExTokens = RenExTokensAddress.Hex()
+	ethNet.RewardVault = RewardVaultAddress.Hex()
+	ethNet.RenExBalances = RenExBalancesAddress.Hex()
+	config.SetEthereumNetwork(ethNet)
 	return nil
 }
 
