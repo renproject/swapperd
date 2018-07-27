@@ -1,6 +1,7 @@
 #!/bin/sh
+set -e
 
-cd ../../../drivers/renex-sol
+cd ../../../../drivers/renex-sol
 
 if [ $1 -e "--branch" ]
 then
@@ -25,9 +26,9 @@ cp -r ../../node_modules/openzeppelin-solidity/contracts ./contracts/openzeppeli
 cd ../..
 
 ### GENERATE BINDINGS HERE ###
-abigen --sol ./contracts/Bindings.sol -pkg bindings --out ../../adapters/bindings/eth/bindings.go
-# abigen --sol ./contracts/AtomicSwap.sol -pkg eth --out ../../adapters/bindings/eth/atom.go
-# abigen --sol ./contracts/RenExSettlement.sol -pkg eth --out ../../adapters/bindings/eth/settlement.go
+abigen --sol ./contracts/Bindings.sol -pkg bindings --out ../../adapters/blockchain/bindings/eth/bindings.go
+# abigen --sol ./contracts/AtomicSwap.sol -pkg eth --out ../../adapters/blockchain/bindings/eth/atom.go
+# abigen --sol ./contracts/RenExSettlement.sol -pkg eth --out ../../adapters/blockchain/bindings/eth/settlement.go
 
 # Revert setup
 sed -i -e 's/".\/openzeppelin-solidity\/contracts\//"openzeppelin-solidity\/contracts\//' contracts/*.sol
