@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -111,12 +110,10 @@ func (atom *EthereumAtom) Refund() error {
 
 // Audit an Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
-	fmt.Println("-------> Eth")
 	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, false)
 	if err != nil {
 		return [32]byte{}, nil, nil, 0, err
 	}
-	fmt.Println("<------- Eth")
 
 	if err := atom.Deserialize(details); err != nil {
 		return [32]byte{}, nil, nil, 0, err
@@ -130,6 +127,14 @@ func (atom *EthereumAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) AuditSecret() ([32]byte, error) {
+	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, false)
+	if err != nil {
+		return [32]byte{}, err
+	}
+
+	if err := atom.Deserialize(details); err != nil {
+		return [32]byte{}, err
+	}
 	return atom.binding.AuditSecret(&bind.CallOpts{}, atom.data.SwapID)
 }
 
