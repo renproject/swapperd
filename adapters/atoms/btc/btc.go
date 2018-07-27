@@ -3,13 +3,19 @@ package btc
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 
 	bindings "github.com/republicprotocol/atom-go/adapters/blockchain/bindings/btc"
 	"github.com/republicprotocol/atom-go/adapters/blockchain/clients/btc"
-	"github.com/republicprotocol/atom-go/services/store"
+	"github.com/republicprotocol/atom-go/adapters/configs/keystore"
+	"github.com/republicprotocol/atom-go/domains/order"
 	"github.com/republicprotocol/atom-go/services/swap"
 )
+
+type Adapter interface {
+	ReceiveSwapDetails(order.ID, bool) ([]byte, error)
+}
 
 type BitcoinData struct {
 	ContractHash   string   `json:"contract_hash"`
@@ -25,24 +31,26 @@ type BitcoinData struct {
 
 // BitcoinAtom is a struct for Bitcoin Atom
 type BitcoinAtom struct {
-	key        swap.Key
+	key        keystore.Key
 	orderID    [32]byte
 	connection btc.Conn
+	adapter    Adapter
 	data       BitcoinData
 }
 
 // NewBitcoinAtom returns a new Bitcoin Atom instance
-func NewBitcoinAtom(connection btc.Conn, key swap.Key, orderID [32]byte) swap.Atom {
+func NewBitcoinAtom(adapter Adapter, connection btc.Conn, key keystore.Key, orderID [32]byte) swap.Atom {
 	return &BitcoinAtom{
 		orderID:    orderID,
 		key:        key,
+		adapter:    adapter,
 		connection: connection,
 	}
 }
 
 // Initiate a new Atom swap by calling Bitcoin
 func (atom *BitcoinAtom) Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error {
-	from, err := atom.From()
+	from, err := atom.GetFromAddress()
 	if err != nil {
 		return err
 	}
@@ -63,7 +71,7 @@ func (atom *BitcoinAtom) Initiate(to []byte, hash [32]byte, value *big.Int, expi
 
 // Redeem an Atom swap by calling a function on Bitcoin
 func (atom *BitcoinAtom) Redeem(secret [32]byte) error {
-	from, err := atom.From()
+	from, err := atom.GetFromAddress()
 	if err != nil {
 		return err
 	}
@@ -85,7 +93,7 @@ func (atom *BitcoinAtom) WaitForCounterRedemption() error {
 
 // Refund an Atom swap by calling Bitcoin
 func (atom *BitcoinAtom) Refund() error {
-	from, err := atom.From()
+	from, err := atom.GetFromAddress()
 	if err != nil {
 		return err
 	}
@@ -94,6 +102,22 @@ func (atom *BitcoinAtom) Refund() error {
 
 // Audit an Atom swap by calling a function on Bitcoin
 func (atom *BitcoinAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
+
+	fmt.Println("-------> Btc")
+
+	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, false)
+	if err != nil {
+		fmt.Println("Error here", err.Error())
+		return [32]byte{}, nil, nil, 0, err
+	}
+
+	fmt.Println("<------- Btc")
+
+	if err := atom.Deserialize(details); err != nil {
+		return [32]byte{}, nil, nil, 0, err
+	}
+	fmt.Println(atom.data)
+
 	result, err := bindings.Audit(atom.connection, atom.data.Contract, atom.data.ContractTx)
 	if err != nil {
 		return [32]byte{}, nil, nil, 0, err
@@ -110,22 +134,17 @@ func (atom *BitcoinAtom) AuditSecret() ([32]byte, error) {
 	return result, nil
 }
 
-// Store stores the atom details
-func (atom *BitcoinAtom) Store(state store.State) error {
-	b, err := json.Marshal(atom.data)
-	if err != nil {
-		return err
-	}
-	return state.PutAtomDetails(atom.orderID, b)
+// Serialize serializes the atom details
+func (atom *BitcoinAtom) Serialize() ([]byte, error) {
+	return json.Marshal(atom.data)
 }
 
-// Restore restores the atom details
-func (atom *BitcoinAtom) Restore(state store.State) error {
-	b, err := state.AtomDetails(atom.orderID)
-	if err != nil {
+// Deserialize deserializes the atom details
+func (atom *BitcoinAtom) Deserialize(data []byte) error {
+	if err := json.Unmarshal(data, &atom.data); err != nil {
 		return err
 	}
-	return json.Unmarshal(b, &atom.data)
+	return nil
 }
 
 // PriorityCode returns the priority code of the currency.
@@ -133,17 +152,7 @@ func (atom *BitcoinAtom) PriorityCode() uint32 {
 	return atom.key.PriorityCode()
 }
 
-// GetSecretHash returns the Secret Hash of the atom.
-func (atom *BitcoinAtom) GetSecretHash() [32]byte {
-	return atom.data.SecretHash
-}
-
-// From returns the address of the sender
-func (atom *BitcoinAtom) From() ([]byte, error) {
+// GetFromAddress returns the address of the sender
+func (atom *BitcoinAtom) GetFromAddress() ([]byte, error) {
 	return atom.key.GetAddress()
-}
-
-// GetKey returns the key of the atom.
-func (atom *BitcoinAtom) GetKey() swap.Key {
-	return atom.key
 }
