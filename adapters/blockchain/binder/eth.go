@@ -108,6 +108,19 @@ func (binder *Binder) receiveOwnerAddress(orderID order.ID) ([]byte, error) {
 	return binder.GetOwnerAddress(binder.callOpts, orderID)
 }
 
+// SlashBond receives the guilty trader's atomic swap order id and slashes
+// their bond
+func (binder *Binder) SlashBond(guiltyOrderID order.ID) error {
+	binder.mu.Lock()
+	defer binder.mu.Unlock()
+	return binder.slashBond(guiltyOrderID)
+}
+
+func (binder *Binder) slashBond(guiltyOrderID order.ID) error {
+	_, err := binder.Slash(binder.transactOpts, guiltyOrderID)
+	return err
+}
+
 // CheckForMatch checks if a match is found and returns the match object. If
 // a match is not found and the 'wait' flag is set to true, it loops until a
 // match is found.
