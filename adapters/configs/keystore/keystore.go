@@ -1,6 +1,7 @@
 package keystore
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -15,6 +16,13 @@ type Keystore struct {
 
 	mu   *sync.RWMutex
 	path string
+}
+
+type Key interface {
+	GetKey() *ecdsa.PrivateKey
+	GetKeyString() (string, error)
+	GetAddress() ([]byte, error)
+	PriorityCode() uint32
 }
 
 func LoadKeystore(path string) (Keystore, error) {
