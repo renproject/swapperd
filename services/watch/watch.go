@@ -11,10 +11,7 @@ import (
 )
 
 type watch struct {
-	network  swap.Network
-	info     swap.Info
-	builder  swap.AtomBuilder
-	wallet   Wallet
+	adapter  Adapter
 	state    store.State
 	notifyCh chan struct{}
 	doneCh   chan struct{}
@@ -28,12 +25,9 @@ type Watch interface {
 	Stop()
 }
 
-func NewWatch(network swap.Network, info swap.Info, wallet Wallet, builder swap.AtomBuilder, state store.State) Watch {
+func NewWatch(adapter Adapter, state store.State) Watch {
 	return &watch{
-		network:  network,
-		info:     info,
-		builder:  builder,
-		wallet:   wallet,
+		adapter:  adapter,
 		state:    state,
 		notifyCh: make(chan struct{}, 1),
 		doneCh:   make(chan struct{}, 1),
@@ -130,17 +124,17 @@ func (w *watch) setInfo(orderID [32]byte) error {
 		return err
 	}
 
-	_, foreignAtom, err := w.builder.BuildAtoms(w.state, m)
+	_, foreignAtom, err := w.adapter.BuildAtoms(w.state, m)
 	if err != nil {
 		return err
 	}
 
-	addr, err := foreignAtom.GetKey().GetAddress()
+	addr, err := foreignAtom.GetFromAddress()
 	if err != nil {
 		return err
 	}
 
-	if err := w.info.SetOwnerAddress(orderID, addr); err != nil {
+	if err := w.adapter.SendOwnerAddress(orderID, addr); err != nil {
 		fmt.Println(err)
 		return err
 	}
@@ -159,12 +153,12 @@ func (w *watch) execute(orderID [32]byte) error {
 		return err
 	}
 
-	personalAtom, foreignAtom, err := w.builder.BuildAtoms(w.state, m)
+	personalAtom, foreignAtom, err := w.adapter.BuildAtoms(w.state, m)
 	if err != nil {
 		return err
 	}
 
-	atomicSwap := swap.NewSwap(personalAtom, foreignAtom, w.info, m, w.network, w.state)
+	atomicSwap := swap.NewSwap(personalAtom, foreignAtom, m, w.adapter, w.state)
 	if err := atomicSwap.Execute(); err != nil {
 		fmt.Println(err)
 		return err
@@ -184,7 +178,7 @@ func (w *watch) initiate(orderID [32]byte) error {
 
 func (w *watch) getMatch(orderID [32]byte) error {
 	log.Println("Waiting for the match to be found for ", order.ID(orderID))
-	match, err := w.wallet.GetMatch(orderID)
+	match, err := w.adapter.Match(orderID)
 	if err != nil {
 		return err
 	}
