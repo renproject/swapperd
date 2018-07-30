@@ -11,25 +11,29 @@ import (
 	"github.com/btcsuite/btcutil"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/republicprotocol/atom-go/adapters/atoms"
-	btcClient "github.com/republicprotocol/atom-go/adapters/clients/btc"
-	ethClient "github.com/republicprotocol/atom-go/adapters/clients/eth"
-	"github.com/republicprotocol/atom-go/adapters/config"
+	"github.com/republicprotocol/atom-go/adapters/blockchain/binder"
+	btcClient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/btc"
+	ethClient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/eth"
+	"github.com/republicprotocol/atom-go/adapters/configs/general"
+	"github.com/republicprotocol/atom-go/adapters/configs/keystore"
+	"github.com/republicprotocol/atom-go/adapters/configs/network"
 	"github.com/republicprotocol/atom-go/adapters/http"
-	ax "github.com/republicprotocol/atom-go/adapters/info/eth"
-	"github.com/republicprotocol/atom-go/adapters/keystore"
-	net "github.com/republicprotocol/atom-go/adapters/networks/eth"
 	"github.com/republicprotocol/atom-go/adapters/store/leveldb"
-	wal "github.com/republicprotocol/atom-go/adapters/wallet/eth"
 	"github.com/republicprotocol/atom-go/services/guardian"
 	"github.com/republicprotocol/atom-go/services/store"
-	"github.com/republicprotocol/atom-go/services/swap"
 	"github.com/republicprotocol/atom-go/services/watch"
 )
+
+type watchAdapter struct {
+	atoms.AtomBuilder
+	binder.Binder
+}
 
 func main() {
 	port := flag.String("port", "18516", "HTTP Atom port")
 	confPath := flag.String("config", "../config.json", "Location of the config file")
 	keystrPath := flag.String("keystore", "../keystore.json", "Location of the keystore file")
+	networkPath := flag.String("network", "../network.json", "Location of the network file")
 
 	flag.Parse()
 
@@ -38,7 +42,12 @@ func main() {
 		panic(err)
 	}
 
-	keystr := keystore.NewKeystore(*keystrPath)
+	keystr, err := keystore.LoadKeystore(*keystrPath)
+	if err != nil {
+		panic(err)
+	}
+
+	net, err := network.LoadNetwork(*networkPath)
 
 	db, err := leveldb.NewLDBStore(conf.StoreLocation())
 	if err != nil {
@@ -46,12 +55,12 @@ func main() {
 	}
 	state := store.NewState(db)
 
-	watcher, err := buildWatcher(conf, keystr, state)
+	watcher, err := buildWatcher(net, keystr, state)
 	if err != nil {
 		panic(err)
 	}
 
-	guardian, err := buildGuardian(conf, keystr, state)
+	guardian, err := buildGuardian(net, keystr, state)
 	if err != nil {
 		panic(err)
 	}
@@ -86,39 +95,33 @@ func main() {
 		os.Exit(1)
 	}()
 
-	httpAdapter := http.NewBoxHttpAdapter(conf, keystr, watcher)
+	httpAdapter := http.NewBoxHttpAdapter(conf, net, keystr, watcher)
 	log.Println(fmt.Sprintf("0.0.0.0:%s", *port))
 	log.Fatal(netHttp.ListenAndServe(fmt.Sprintf(":%s", *port), http.NewServer(httpAdapter)))
 
 }
 
-func buildGuardian(config config.Config, kstr swap.Keystore, state store.State) (guardian.Guardian, error) {
-	keys, err := kstr.LoadKeys()
+func buildGuardian(net network.Config, kstr keystore.Keystore, state store.State) (guardian.Guardian, error) {
+	atomBuilder, err := atoms.NewAtomBuilder(net, kstr)
 	if err != nil {
 		return nil, err
 	}
-	atomBuilder := atoms.NewAtomBuilder(config, keys)
 	return guardian.NewGuardian(atomBuilder, state), nil
 }
 
-func buildWatcher(config config.Config, kstr swap.Keystore, state store.State) (watch.Watch, error) {
-	ethConn, err := ethClient.Connect(config)
+func buildWatcher(net network.Config, kstr keystore.Keystore, state store.State) (watch.Watch, error) {
+	ethConn, err := ethClient.Connect(net)
 	if err != nil {
 		return nil, err
 	}
 
-	btcConn, err := btcClient.Connect(config)
+	btcConn, err := btcClient.Connect(net)
 	if err != nil {
 		return nil, err
 	}
 
-	keys, err := kstr.LoadKeys()
-	if err != nil {
-		return nil, err
-	}
-
-	ethKey := keys[0]
-	btcKey := keys[1]
+	ethKey := kstr.EthereumKey
+	btcKey := kstr.BitcoinKey
 
 	_WIF, err := btcKey.GetKeyString()
 	if err != nil {
@@ -138,22 +141,14 @@ func buildWatcher(config config.Config, kstr swap.Keystore, state store.State) (
 	owner := bind.NewKeyedTransactor(ethKey.GetKey())
 	owner.GasLimit = 3000000
 
-	ethNet, err := net.NewEthereumNetwork(ethConn, owner)
-	if err != nil {
-		return nil, err
+	ethBinder, err := binder.NewBinder(ethKey.GetKey(), ethConn)
+
+	atomBuilder, err := atoms.NewAtomBuilder(net, kstr)
+	wAdapter := watchAdapter{
+		atomBuilder,
+		ethBinder,
 	}
 
-	ethInfo, err := ax.NewEthereumAtomInfo(ethConn, owner)
-	if err != nil {
-		return nil, err
-	}
-
-	ethWallet, err := wal.NewEthereumWallet(ethConn, *owner)
-	if err != nil {
-		return nil, err
-	}
-
-	atomBuilder := atoms.NewAtomBuilder(config, keys)
-	watcher := watch.NewWatch(ethNet, ethInfo, ethWallet, atomBuilder, state)
+	watcher := watch.NewWatch(&wAdapter, state)
 	return watcher, nil
 }
