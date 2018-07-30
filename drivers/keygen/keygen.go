@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"flag"
 	"os"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -9,14 +10,19 @@ import (
 )
 
 func main() {
+	ethNet := flag.String("ethereum", "kovan", "Which ethereum network to use")
+	btcNet := flag.String("bitcoin", "testnet", "Which bitcoin network to use")
+
 	keyPair, err := crypto.GenerateKey()
 	if err != nil {
 		panic(err)
 	}
 	keyStr := hex.EncodeToString(crypto.FromECDSA(keyPair))
-	BTCKey, err := keystore.NewBitcoinKey(keyStr, "regtest")
-	ETHKey, err := keystore.NewEthereumKey(keyStr, "ganache")
-	ks, err := keystore.LoadKeystore(os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/local/keystoreB.json")
+	BTCKey, err := keystore.NewBitcoinKey(keyStr, *btcNet)
+	ETHKey, err := keystore.NewEthereumKey(keyStr, *ethNet)
+	f, err := os.Create("../keystore.json")
+	f.Close()
+	ks, err := keystore.LoadKeystore("../keystore.json")
 	if err != nil {
 		panic(err)
 	}
