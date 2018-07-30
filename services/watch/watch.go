@@ -178,7 +178,7 @@ func (w *watch) initiate(orderID [32]byte) error {
 
 func (w *watch) getMatch(orderID [32]byte) error {
 	log.Println("Waiting for the match to be found for ", order.ID(orderID))
-	match, err := w.adapter.Match(orderID)
+	match, err := w.adapter.CheckForMatch(orderID, true)
 	if err != nil {
 		return err
 	}
