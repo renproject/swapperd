@@ -11,10 +11,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 
-	btcClient "github.com/republicprotocol/atom-go/adapters/clients/btc"
-	ethClient "github.com/republicprotocol/atom-go/adapters/clients/eth"
-	"github.com/republicprotocol/atom-go/adapters/config"
-	"github.com/republicprotocol/atom-go/services/swap"
+	btcClient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/btc"
+	ethClient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/eth"
+	"github.com/republicprotocol/atom-go/adapters/configs/general"
+	"github.com/republicprotocol/atom-go/adapters/configs/keystore"
+	"github.com/republicprotocol/atom-go/adapters/configs/network"
 	"github.com/republicprotocol/atom-go/services/watch"
 	"github.com/republicprotocol/atom-go/utils"
 )
@@ -23,16 +24,18 @@ var ErrInvalidSignatureLength = errors.New("invalid signature length")
 var ErrInvalidOrderIDLength = errors.New("invalid order id length")
 
 type boxHttpAdapter struct {
-	config config.Config
-	keystr swap.Keystore
-	watch  watch.Watch
+	config  config.Config
+	network network.Config
+	keystr  keystore.Keystore
+	watch   watch.Watch
 }
 
-func NewBoxHttpAdapter(config config.Config, keystr swap.Keystore, watcher watch.Watch) BoxHttpAdapter {
+func NewBoxHttpAdapter(config config.Config, network network.Config, keystr keystore.Keystore, watcher watch.Watch) BoxHttpAdapter {
 	return &boxHttpAdapter{
-		config: config,
-		keystr: keystr,
-		watch:  watcher,
+		config:  config,
+		network: network,
+		keystr:  keystr,
+		watch:   watcher,
 	}
 }
 
@@ -54,11 +57,7 @@ func (adapter *boxHttpAdapter) WhoAmI(challenge string) (WhoAmI, error) {
 	}
 	boxHash := ethCrypto.Keccak256(boxBytes)
 
-	keys, err := adapter.keystr.LoadKeys()
-	if err != nil {
-		return WhoAmI{}, err
-	}
-	key := keys[0].GetKey()
+	key := adapter.keystr.EthereumKey.GetKey()
 
 	signature, err := ethCrypto.Sign(boxHash, key)
 	if err != nil {
@@ -98,11 +97,7 @@ func (adapter *boxHttpAdapter) PostOrder(order PostOrder) (PostOrder, error) {
 	}
 	adapter.watch.Notify()
 
-	keys, err := adapter.keystr.LoadKeys()
-	if err != nil {
-		return PostOrder{}, err
-	}
-	key := keys[0].GetKey()
+	key := adapter.keystr.EthereumKey.GetKey()
 
 	if err != nil {
 		return PostOrder{}, err
@@ -141,32 +136,32 @@ func (adapter *boxHttpAdapter) GetStatus(orderID string) (Status, error) {
 
 func (adapter *boxHttpAdapter) GetBalances() (Balances, error) {
 	balances := Balances{}
-	keys, err := adapter.keystr.LoadKeys()
+	ethBal, err := ethereumBalance(adapter.network, &adapter.keystr.EthereumKey)
 	if err != nil {
 		return balances, err
 	}
-	for _, key := range keys {
-		bal, err := getBalance(adapter.config, key)
-		if err != nil {
-			return balances, err
-		}
-		balances = append(balances, bal)
+	balances = append(balances, ethBal)
+
+	btcBal, err := bitcoinBalance(adapter.network, &adapter.keystr.BitcoinKey)
+	if err != nil {
+		return balances, err
 	}
+	balances = append(balances, btcBal)
 	return balances, nil
 }
 
-func getBalance(conf config.Config, key swap.Key) (Balance, error) {
-	switch key.PriorityCode() {
-	case 0:
-		return bitcoinBalance(conf, key)
-	case 1:
-		return ethereumBalance(conf, key)
-	default:
-		return Balance{}, errors.New("Unknown priority code")
-	}
-}
+// func getBalance(conf config.Config, key keystore.Key) (Balance, error) {
+// 	switch key.PriorityCode() {
+// 	case 0:
+// 		return bitcoinBalance(conf, key)
+// 	case 1:
+// 		return ethereumBalance(conf, key)
+// 	default:
+// 		return Balance{}, errors.New("Unknown priority code")
+// 	}
+// }
 
-func bitcoinBalance(conf config.Config, key swap.Key) (Balance, error) {
+func bitcoinBalance(conf network.Config, key keystore.Key) (Balance, error) {
 	conn, err := btcClient.Connect(conf)
 	if err != nil {
 		return Balance{}, err
@@ -190,7 +185,7 @@ func bitcoinBalance(conf config.Config, key swap.Key) (Balance, error) {
 	}, nil
 }
 
-func ethereumBalance(conf config.Config, key swap.Key) (Balance, error) {
+func ethereumBalance(conf network.Config, key keystore.Key) (Balance, error) {
 	conn, err := ethClient.Connect(conf)
 	if err != nil {
 		return Balance{}, err
