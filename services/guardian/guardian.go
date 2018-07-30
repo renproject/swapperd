@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/republicprotocol/atom-go/adapters/atoms"
 	"github.com/republicprotocol/atom-go/services/errors"
 	"github.com/republicprotocol/atom-go/services/store"
 	"github.com/republicprotocol/atom-go/services/swap"
@@ -20,13 +21,13 @@ type Guardian interface {
 }
 
 type guardian struct {
-	builder  swap.AtomBuilder
+	builder  atoms.AtomBuilder
 	state    store.State
 	notifyCh chan struct{}
 	doneCh   chan struct{}
 }
 
-func NewGuardian(builder swap.AtomBuilder, state store.State) Guardian {
+func NewGuardian(builder atoms.AtomBuilder, state store.State) Guardian {
 	return &guardian{
 		builder:  builder,
 		state:    state,
