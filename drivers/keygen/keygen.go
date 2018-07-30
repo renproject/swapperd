@@ -20,9 +20,9 @@ func main() {
 	keyStr := hex.EncodeToString(crypto.FromECDSA(keyPair))
 	BTCKey, err := keystore.NewBitcoinKey(keyStr, *btcNet)
 	ETHKey, err := keystore.NewEthereumKey(keyStr, *ethNet)
-	f, err := os.Create("../keystore.json")
+	f, err := os.Create(os.Getenv("HOME") + "/.swapper/keystore.json")
 	f.Close()
-	ks, err := keystore.LoadKeystore("../keystore.json")
+	ks, err := keystore.LoadKeystore(os.Getenv("HOME") + "/.swapper/keystore.json")
 	if err != nil {
 		panic(err)
 	}

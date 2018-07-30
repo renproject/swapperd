@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	cfg, err := config.LoadConfig("../config.json")
+	cfg, err := config.LoadConfig(os.Getenv("HOME") + "/.swapper/config.json")
 	if err != nil {
 		panic(err)
 	}

@@ -12,12 +12,7 @@ fi
 
 # creating working directory
 mkdir -p $HOME/.swapper
-mkdir -p $HOME/.swapper/bin
-
 cd $HOME/.swapper
-
-# curl -s 'https://swapper.ren.exchange/swapper.zip' > swapper.zip
-# unzip swapper.zip
 
 # get system information
 ostype="$(uname -s)"
@@ -25,9 +20,9 @@ cputype="$(uname -m)"
 
 # download darknode binary depending on the system and architecture
 if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
-    curl -s 'https://releases.republicprotocol.com/swapper/swapper_linux_amd64' > ./bin/swapper
+  curl -s 'https://releases.republicprotocol.com/swapper/swapper_linux_amd64.zip' > swapper.zip
 elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
-    curl -s 'https://releases.republicprotocol.com/swapper/swapper_darwin_amd64' > ./bin/swapper
+  curl -s 'https://releases.republicprotocol.com/swapper/swapper_darwin_amd64.zip' > swapper.zip
 else
    echo 'unsupported OS type or architecture'
    cd ..
@@ -35,10 +30,18 @@ else
    exit 1
 fi
 
+unzip swapper.zip
 chmod +x bin/swapper
+chmod +x bin/keygen
+chmod +x bin/config
+chmod +x bin/network
 
-# # clean up zip files
-# rm swapper.zip
+./bin/keygen < /dev/tty
+./bin/config < /dev/tty
+./bin/network < /dev/tty
+
+# clean up zip files
+rm swapper.zip
 
 # make sure the binary is installed in the path
 if ! [ -x "$(command -v swapper)" ]; then

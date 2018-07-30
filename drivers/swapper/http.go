@@ -31,9 +31,9 @@ type watchAdapter struct {
 
 func main() {
 	port := flag.String("port", "18516", "HTTP Atom port")
-	confPath := flag.String("config", "../config.json", "Location of the config file")
-	keystrPath := flag.String("keystore", "../keystore.json", "Location of the keystore file")
-	networkPath := flag.String("network", "../network.json", "Location of the network file")
+	confPath := flag.String("config", os.Getenv("HOME")+"/.swapper/config.json", "Location of the config file")
+	keystrPath := flag.String("keystore", os.Getenv("HOME")+"/.swapper/keystore.json", "Location of the keystore file")
+	networkPath := flag.String("network", os.Getenv("HOME")+"/.swapper/network.json", "Location of the network file")
 
 	flag.Parse()
 

@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	net, err := network.LoadNetwork("../network.json")
+	net, err := network.LoadNetwork(os.Getenv("HOME") + "/.swapper/network.json")
 	if err != nil {
 		panic(err)
 	}
