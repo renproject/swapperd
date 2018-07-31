@@ -15,4 +15,5 @@ type Atom interface {
 	Deserialize([]byte) error
 	GetFromAddress() ([]byte, error)
 	PriorityCode() uint32
+	RedeemedAt() (int32, error)
 }

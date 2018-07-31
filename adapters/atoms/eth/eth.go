@@ -138,6 +138,25 @@ func (atom *EthereumAtom) AuditSecret() ([32]byte, error) {
 	return atom.binding.AuditSecret(&bind.CallOpts{}, atom.data.SwapID)
 }
 
+// RedeemedAt returns the timestamp at which the atom is redeemed
+func (atom *EthereumAtom) RedeemedAt() (int64, error) {
+	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, false)
+	if err != nil {
+		return 0, err
+	}
+
+	if err := atom.Deserialize(details); err != nil {
+		return 0, err
+	}
+
+	reddemedAt, err := atom.binding.RedeemedAt(&bind.CallOpts{}, atom.data.SwapID)
+	if err != nil {
+		return 0, err
+	}
+
+	return reddemedAt.Int64(), nil
+}
+
 // Serialize serializes the atom details
 func (atom *EthereumAtom) Serialize() ([]byte, error) {
 	return json.Marshal(atom.data)

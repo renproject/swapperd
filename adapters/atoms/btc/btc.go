@@ -88,7 +88,11 @@ func (atom *BitcoinAtom) Redeem(secret [32]byte) error {
 // WaitForCounterRedemption waits for the counter party to initiate
 func (atom *BitcoinAtom) WaitForCounterRedemption() error {
 	panic("unimplemented")
-	return nil
+}
+
+// RedeemedAt returns the timestamp at which the atom is redeemed
+func (atom *BitcoinAtom) RedeemedAt() (int64, error) {
+	panic("unimplemented")
 }
 
 // Refund an Atom swap by calling Bitcoin
