@@ -61,7 +61,11 @@ func NewEthereumAtom(adapter Adapter, client ethclient.Conn, key keystore.Key, o
 
 // Initiate a new Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error {
-	auth := bind.NewKeyedTransactor(atom.key.GetKey())
+	key, err := atom.key.GetKey()
+	if err != nil {
+		return err
+	}
+	auth := bind.NewKeyedTransactor(key)
 	auth.Value = value
 	auth.GasLimit = 3000000
 	atom.data.HashLock = hash
@@ -76,7 +80,11 @@ func (atom *EthereumAtom) Initiate(to []byte, hash [32]byte, value *big.Int, exp
 
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) Redeem(secret [32]byte) error {
-	auth := bind.NewKeyedTransactor(atom.key.GetKey())
+	key, err := atom.key.GetKey()
+	if err != nil {
+		return err
+	}
+	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = 3000000
 	tx, err := atom.binding.Redeem(auth, atom.data.SwapID, secret)
 	if err == nil {
@@ -99,7 +107,11 @@ func (atom *EthereumAtom) WaitForCounterRedemption() error {
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) Refund() error {
-	auth := bind.NewKeyedTransactor(atom.key.GetKey())
+	key, err := atom.key.GetKey()
+	if err != nil {
+		return err
+	}
+	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = 3000000
 	tx, err := atom.binding.Refund(auth, atom.data.SwapID)
 	if err == nil {
