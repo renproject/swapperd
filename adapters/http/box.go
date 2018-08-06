@@ -57,9 +57,17 @@ func (adapter *boxHttpAdapter) WhoAmI(challenge string) (WhoAmI, error) {
 	}
 	boxHash := ethCrypto.Keccak256(boxBytes)
 
-	key := adapter.keystr.EthereumKey.GetKey()
+	ethKey, err := adapter.keystr.GetKey(1, 0)
+	if err != nil {
+		return WhoAmI{}, err
+	}
 
-	signature, err := ethCrypto.Sign(boxHash, key)
+	privKey, err := ethKey.GetKey()
+	if err != nil {
+		return WhoAmI{}, err
+	}
+
+	signature, err := ethCrypto.Sign(boxHash, privKey)
 	if err != nil {
 		return WhoAmI{}, err
 	}
@@ -97,13 +105,17 @@ func (adapter *boxHttpAdapter) PostOrder(order PostOrder) (PostOrder, error) {
 	}
 	adapter.watch.Notify()
 
-	key := adapter.keystr.EthereumKey.GetKey()
-
+	ethKey, err := adapter.keystr.GetKey(1, 0)
 	if err != nil {
 		return PostOrder{}, err
 	}
 
-	signOut, err := ethCrypto.Sign(orderID[:], key)
+	privKey, err := ethKey.GetKey()
+	if err != nil {
+		return PostOrder{}, err
+	}
+
+	signOut, err := ethCrypto.Sign(orderID[:], privKey)
 
 	if err != nil {
 		return PostOrder{}, err
@@ -136,30 +148,27 @@ func (adapter *boxHttpAdapter) GetStatus(orderID string) (Status, error) {
 
 func (adapter *boxHttpAdapter) GetBalances() (Balances, error) {
 	balances := Balances{}
-	ethBal, err := ethereumBalance(adapter.network, &adapter.keystr.EthereumKey)
+	ethKey, err := adapter.keystr.GetKey(1, 0)
+	if err != nil {
+		return balances, err
+	}
+	ethBal, err := ethereumBalance(adapter.network, ethKey)
 	if err != nil {
 		return balances, err
 	}
 	balances = append(balances, ethBal)
 
-	btcBal, err := bitcoinBalance(adapter.network, &adapter.keystr.BitcoinKey)
+	btcKey, err := adapter.keystr.GetKey(0, 0)
+	if err != nil {
+		return balances, err
+	}
+	btcBal, err := bitcoinBalance(adapter.network, btcKey)
 	if err != nil {
 		return balances, err
 	}
 	balances = append(balances, btcBal)
 	return balances, nil
 }
-
-// func getBalance(conf config.Config, key keystore.Key) (Balance, error) {
-// 	switch key.PriorityCode() {
-// 	case 0:
-// 		return bitcoinBalance(conf, key)
-// 	case 1:
-// 		return ethereumBalance(conf, key)
-// 	default:
-// 		return Balance{}, errors.New("Unknown priority code")
-// 	}
-// }
 
 func bitcoinBalance(conf network.Config, key keystore.Key) (Balance, error) {
 	conn, err := btcClient.Connect(conf)
