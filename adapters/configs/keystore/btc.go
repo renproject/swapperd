@@ -2,51 +2,28 @@ package keystore
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
-
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
-type BitcoinKey struct {
-	PrivateKey   *ecdsa.PrivateKey `json:"private_key"`
-	CurrencyCode uint32            `json:"currency_code"`
-	Network      string            `json:"network"`
-}
+type bitcoinKey key
 
-func NewBitcoinKey(pk string, network string) (BitcoinKey, error) {
-	key, err := crypto.HexToECDSA(pk)
+func (key *bitcoinKey) GetAddress() ([]byte, error) {
+	chainParams, err := getChainParams(key.Network)
 	if err != nil {
-		return BitcoinKey{}, err
-	}
-	return BitcoinKey{
-		key,
-		0,
-		network,
-	}, nil
-}
-
-func (key *BitcoinKey) GetAddress() ([]byte, error) {
-	var chainParams *chaincfg.Params
-
-	switch key.Network {
-	case "regtest":
-		chainParams = &chaincfg.RegressionNetParams
-	case "testnet":
-		chainParams = &chaincfg.TestNet3Params
-	default:
-		chainParams = &chaincfg.MainNetParams
+		return nil, err
 	}
 
-	privKey := (*btcec.PrivateKey)(key.PrivateKey)
-	wif, err := btcutil.NewWIF(privKey, chainParams, false)
+	wif, err := btcutil.DecodeWIF(key.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
 	spubKey := wif.SerializePubKey()
+
 	pubKey, err := btcutil.NewAddressPubKey(spubKey, chainParams)
 	if err != nil {
 		return nil, err
@@ -55,31 +32,51 @@ func (key *BitcoinKey) GetAddress() ([]byte, error) {
 	return []byte(pubKey.EncodeAddress()), nil
 }
 
-func (key *BitcoinKey) GetKeyString() (string, error) {
-	var chainParams *chaincfg.Params
-
-	switch key.Network {
-	case "regtest":
-		chainParams = &chaincfg.RegressionNetParams
-	case "testnet":
-		chainParams = &chaincfg.TestNet3Params
-	default:
-		chainParams = &chaincfg.MainNetParams
-	}
-
-	privKey := (*btcec.PrivateKey)(key.PrivateKey)
-	wif, err := btcutil.NewWIF(privKey, chainParams, false)
-	if err != nil {
-		return "", err
-	}
-
-	return wif.String(), nil
-}
-
-func (key *BitcoinKey) GetKey() *ecdsa.PrivateKey {
+func (key *bitcoinKey) GetKeyString() string {
 	return key.PrivateKey
 }
 
-func (key *BitcoinKey) PriorityCode() uint32 {
-	return key.CurrencyCode
+func (key *bitcoinKey) GetKey() (*ecdsa.PrivateKey, error) {
+	wif, err := btcutil.DecodeWIF(key.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	privKey := ecdsa.PrivateKey(*wif.PrivKey)
+	return &privKey, nil
+}
+
+func (key *bitcoinKey) PriorityCode() uint32 {
+	return key.Code
+}
+
+func (key *bitcoinKey) Chain() string {
+	return key.Network
+}
+
+func RandomBitcoinKeyString(chain string) (string, error) {
+	priv, err := btcec.NewPrivateKey(btcec.S256())
+	if err != nil {
+		return "", err
+	}
+	chainParams, err := getChainParams(chain)
+	if err != nil {
+		return "", err
+	}
+	wif, err := btcutil.NewWIF(priv, chainParams, false)
+	if err != nil {
+		return "", err
+	}
+	return wif.String(), nil
+}
+
+func getChainParams(chain string) (*chaincfg.Params, error) {
+	switch chain {
+	case "regtest":
+		return &chaincfg.RegressionNetParams, nil
+	case "testnet":
+		return &chaincfg.TestNet3Params, nil
+	case "mainnet":
+		return &chaincfg.MainNetParams, nil
+	}
+	return nil, fmt.Errorf(ErrPrefix, "Unknown chain")
 }
