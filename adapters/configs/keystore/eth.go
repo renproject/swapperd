@@ -9,36 +9,36 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-type EthereumKey struct {
-	PrivateKey   *ecdsa.PrivateKey `json:"private_key"`
-	CurrencyCode uint32            `json:"currency_code"`
-	Network      string            `json:"network"`
+type ethereumKey key
+
+func (key *ethereumKey) GetKey() (*ecdsa.PrivateKey, error) {
+	return crypto.HexToECDSA(key.PrivateKey)
 }
 
-func NewEthereumKey(key string, network string) (EthereumKey, error) {
-	privateKey, err := crypto.HexToECDSA(key)
-	if err != nil {
-		return EthereumKey{}, err
-	}
-	return EthereumKey{
-		privateKey,
-		1,
-		network,
-	}, nil
-}
-
-func (key *EthereumKey) GetKey() *ecdsa.PrivateKey {
+func (key *ethereumKey) GetKeyString() string {
 	return key.PrivateKey
 }
 
-func (key *EthereumKey) GetKeyString() (string, error) {
-	return hex.EncodeToString(crypto.FromECDSA(key.PrivateKey)), nil
+func (key *ethereumKey) GetAddress() ([]byte, error) {
+	privKey, err := key.GetKey()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewKeyedTransactor(privKey).From.Bytes(), nil
 }
 
-func (key *EthereumKey) GetAddress() ([]byte, error) {
-	return bind.NewKeyedTransactor(key.PrivateKey).From.Bytes(), nil
+func (key *ethereumKey) PriorityCode() uint32 {
+	return key.Code
 }
 
-func (key *EthereumKey) PriorityCode() uint32 {
-	return key.CurrencyCode
+func (key *ethereumKey) Chain() string {
+	return key.Network
+}
+
+func RandomEthereumKeyString() (string, error) {
+	priv, err := crypto.GenerateKey()
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(crypto.FromECDSA(priv)), nil
 }
