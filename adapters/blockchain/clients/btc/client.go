@@ -165,3 +165,65 @@ func walletPort(params *chaincfg.Params) string {
 		return ""
 	}
 }
+
+// func (conn *Conn) FundTransaction(tx *wire.MsgTx, addresses []btcutil.Address) (fundedTx *wire.MsgTx, err error) {
+
+// 	// FIXME: update the output selection policy
+// 	// policy := wallet.OutputSelectionPolicy{
+// 	// 	Account:               req.Account,
+// 	// 	RequiredConfirmations: req.RequiredConfirmations,
+// 	// }
+// 	// unspentOutputs, err := s.wallet.UnspentOutputs(policy)
+// 	// if err != nil {
+// 	// 	return nil, translateError(err)
+// 	// }
+
+// 	unspentOutputs, err := conn.Client.ListUnspentMinMaxAddresses(1, 999999999, addresses);
+
+// 	selectedOutputs := make([]*pb.FundTransactionResponse_PreviousOutput, 0, len(unspentOutputs))
+// 	var totalAmount btcutil.Amount
+// 	for _, output := range unspentOutputs {
+// 		selectedOutputs = append(selectedOutputs, &pb.FundTransactionResponse_PreviousOutput{
+
+// 	TxID          string  `json:"txid"`
+// 	Vout          uint32  `json:"vout"`
+// 	Address       string  `json:"address"`
+// 	Account       string  `json:"account"`
+// 	ScriptPubKey  string  `json:"scriptPubKey"`
+// 	RedeemScript  string  `json:"redeemScript,omitempty"`
+// 	Amount        float64 `json:"amount"`
+// 	Confirmations int64   `json:"confirmations"`
+// 	Spendable     bool    `json:"spendable"`
+
+// 			TransactionHash: output.OutPoint.Hash[:],
+// 			OutputIndex:     output.OutPoint.Index,
+// 			Amount:          output.Output.Value,
+// 			PkScript:        output.Output.PkScript,
+// 			ReceiveTime:     output.ReceiveTime.Unix(),
+// 			FromCoinbase:    output.OutputKind == wallet.OutputKindCoinbase,
+// 		})
+// 		totalAmount += btcutil.Amount(output.Output.Value)
+
+// 		if req.TargetAmount != 0 && totalAmount > btcutil.Amount(req.TargetAmount) {
+// 			break
+// 		}
+// 	}
+
+// 	var changeScript []byte
+// 	if req.IncludeChangeScript && totalAmount > btcutil.Amount(req.TargetAmount) {
+// 		changeAddr, err := s.wallet.NewChangeAddress(req.Account, waddrmgr.KeyScopeBIP0044)
+// 		if err != nil {
+// 			return nil, translateError(err)
+// 		}
+// 		changeScript, err = txscript.PayToAddrScript(changeAddr)
+// 		if err != nil {
+// 			return nil, translateError(err)
+// 		}
+// 	}
+
+// 	return &pb.FundTransactionResponse{
+// 		SelectedOutputs: selectedOutputs,
+// 		TotalAmount:     int64(totalAmount),
+// 		ChangePkScript:  changeScript,
+// 	}, nil
+// }
