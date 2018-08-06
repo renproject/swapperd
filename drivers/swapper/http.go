@@ -42,7 +42,7 @@ func main() {
 		panic(err)
 	}
 
-	keystr, err := keystore.LoadKeystore(*keystrPath)
+	keystr, err := keystore.Load(*keystrPath)
 	if err != nil {
 		panic(err)
 	}
@@ -120,10 +120,17 @@ func buildWatcher(net network.Config, kstr keystore.Keystore, state store.State)
 		return nil, err
 	}
 
-	ethKey := kstr.EthereumKey
-	btcKey := kstr.BitcoinKey
+	ethKey, err := kstr.GetKey(1, 0)
+	if err != nil {
+		return nil, err
+	}
 
-	_WIF, err := btcKey.GetKeyString()
+	btcKey, err := kstr.GetKey(0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	_WIF := btcKey.GetKeyString()
 	if err != nil {
 		return nil, err
 	}
@@ -138,10 +145,14 @@ func buildWatcher(net network.Config, kstr keystore.Keystore, state store.State)
 		return nil, err
 	}
 
-	owner := bind.NewKeyedTransactor(ethKey.GetKey())
+	privKey, err := ethKey.GetKey()
+	if err != nil {
+		return nil, err
+	}
+	owner := bind.NewKeyedTransactor(privKey)
 	owner.GasLimit = 3000000
 
-	ethBinder, err := binder.NewBinder(ethKey.GetKey(), ethConn)
+	ethBinder, err := binder.NewBinder(privKey, ethConn)
 
 	atomBuilder, err := atoms.NewAtomBuilder(net, kstr)
 	wAdapter := watchAdapter{
