@@ -33,7 +33,15 @@ func NewAtomBuilder(config network.Config, keystore keystore.Keystore) (AtomBuil
 	if err != nil {
 		return nil, err
 	}
-	b, err := binder.NewBinder(keystore.EthereumKey.GetKey(), ethConn)
+	ethKey, err := keystore.GetKey(1, 0)
+	if err != nil {
+		return nil, err
+	}
+	privkey, err := ethKey.GetKey()
+	if err != nil {
+		return nil, err
+	}
+	b, err := binder.NewBinder(privkey, ethConn)
 	if err != nil {
 		return nil, err
 	}
@@ -88,13 +96,21 @@ func buildAtom(binder binder.Binder, key keystore.Keystore, config network.Confi
 		if err != nil {
 			return nil, err
 		}
-		return btc.NewBitcoinAtom(&binder, conn, &key.BitcoinKey, orderID), nil
+		btcKey, err := key.GetKey(0, 0)
+		if err != nil {
+			return nil, err
+		}
+		return btc.NewBitcoinAtom(&binder, conn, btcKey, orderID), nil
 	case 1:
 		conn, err := ethClient.Connect(config)
 		if err != nil {
 			return nil, err
 		}
-		return eth.NewEthereumAtom(&binder, conn, &key.EthereumKey, orderID)
+		ethKey, err := key.GetKey(1, 0)
+		if err != nil {
+			return nil, err
+		}
+		return eth.NewEthereumAtom(&binder, conn, ethKey, orderID)
 	}
 	return nil, fmt.Errorf("Atom Build Failed")
 }
