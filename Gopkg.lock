@@ -221,22 +221,6 @@
   revision = "173f46076b0a510e5136b0a791c6af48b3d85f92"
 
 [[projects]]
-  branch = "nightly"
-  name = "github.com/republicprotocol/republic-go"
-  packages = [
-    "contract",
-    "contract/bindings",
-    "crypto",
-    "identity",
-    "order",
-    "registry",
-    "shamir",
-    "stackint",
-    "stackint/asm"
-  ]
-  revision = "0593e7ad6a048d44b6fe9012ee31cdd33cf097b0"
-
-[[projects]]
   branch = "master"
   name = "github.com/rjeczalik/notify"
   packages = ["."]
