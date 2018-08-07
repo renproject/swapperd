@@ -14,6 +14,7 @@ type Config struct {
 	SupportedCurrencies []string `json:"supportedCurrencies"`
 	AuthorizedAddresses []string `json:"authorizedAddresses"`
 	StoreLoc            string   `json:"storeLocation"`
+	RenGuardAddr        string   `json:"renguardAddress"`
 
 	mu   *sync.RWMutex
 	path string
@@ -59,4 +60,8 @@ func (config *Config) GetAuthorizedAddresses() []common.Address {
 
 func (config *Config) StoreLocation() string {
 	return config.StoreLoc
+}
+
+func (config *Config) RenGuardAddress() string {
+	return config.RenGuardAddr
 }
