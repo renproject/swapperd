@@ -78,6 +78,7 @@ func (swap *swap) request() error {
 
 	if swap.state.Status(swap.order.PersonalOrderID()) == StatusSentSwapDetails {
 		if err := swap.receiveDetails(); err != nil {
+			swap.swapAdapter.ComplainDelayedResponderInitiation(swap.order.PersonalOrderID())
 			return err
 		}
 	} else {
@@ -86,6 +87,7 @@ func (swap *swap) request() error {
 
 	if swap.state.Status(swap.order.PersonalOrderID()) == StatusReceivedSwapDetails {
 		if err := swap.requestorAudit(); err != nil {
+			swap.swapAdapter.ComplainWrongResponderInitiation(swap.order.PersonalOrderID())
 			return err
 		}
 	} else {
@@ -107,6 +109,7 @@ func (swap *swap) respond() error {
 
 	if swap.state.Status(swap.order.PersonalOrderID()) == StatusInfoSubmitted {
 		if err := swap.receiveDetails(); err != nil {
+			swap.swapAdapter.ComplainDelayedRequestorInitiation(swap.order.PersonalOrderID())
 			return err
 		}
 	} else {
@@ -115,6 +118,7 @@ func (swap *swap) respond() error {
 
 	if swap.state.Status(swap.order.PersonalOrderID()) == StatusReceivedSwapDetails {
 		if err := swap.responderAudit(); err != nil {
+			swap.swapAdapter.ComplainWrongRequestorInitiation(swap.order.PersonalOrderID())
 			return err
 		}
 	} else {
@@ -139,6 +143,7 @@ func (swap *swap) respond() error {
 
 	if swap.state.Status(swap.order.PersonalOrderID()) == StatusSentSwapDetails {
 		if err := swap.getRedeemDetails(); err != nil {
+			swap.swapAdapter.ComplainDelayedRequestorRedemption(swap.order.PersonalOrderID())
 			return err
 		}
 	} else {
