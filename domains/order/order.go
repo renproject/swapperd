@@ -1,6 +1,7 @@
 package order
 
 import (
+	"encoding/base64"
 	"math/big"
 )
 
@@ -163,4 +164,8 @@ func priorityToken(token uint64) uint32 {
 
 func nonPriorityToken(token uint64) uint32 {
 	return uint32(token >> 32)
+}
+
+func Fmt(orderID [32]byte) string {
+	return base64.StdEncoding.EncodeToString(orderID[:])[:4]
 }
