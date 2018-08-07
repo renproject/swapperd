@@ -9,9 +9,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/republicprotocol/atom-go/domains/match"
-	"github.com/republicprotocol/atom-go/services/store"
-	"github.com/republicprotocol/atom-go/utils"
+	"github.com/republicprotocol/renex-swapper-go/domains/match"
+	"github.com/republicprotocol/renex-swapper-go/services/store"
+	"github.com/republicprotocol/renex-swapper-go/utils"
 	"github.com/republicprotocol/republic-go/order"
 )
 

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/republicprotocol/atom-go/adapters/configs/general"
-	"github.com/republicprotocol/atom-go/services/renguardClient"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/general"
+	"github.com/republicprotocol/renex-swapper-go/services/renguardClient"
 )
 
 type renguardHTTPClient struct {

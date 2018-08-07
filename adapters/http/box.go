@@ -11,13 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 
-	btcClient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/btc"
-	ethClient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/eth"
-	"github.com/republicprotocol/atom-go/adapters/configs/general"
-	"github.com/republicprotocol/atom-go/adapters/configs/keystore"
-	"github.com/republicprotocol/atom-go/adapters/configs/network"
-	"github.com/republicprotocol/atom-go/services/watch"
-	"github.com/republicprotocol/atom-go/utils"
+	btcClient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/btc"
+	ethClient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/general"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/network"
+	"github.com/republicprotocol/renex-swapper-go/services/watch"
+	"github.com/republicprotocol/renex-swapper-go/utils"
 )
 
 var ErrInvalidSignatureLength = errors.New("invalid signature length")

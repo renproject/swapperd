@@ -1,8 +1,8 @@
 package swap
 
 import (
-	"github.com/republicprotocol/atom-go/domains/order"
-	"github.com/republicprotocol/atom-go/services/renguardClient"
+	"github.com/republicprotocol/renex-swapper-go/domains/order"
+	"github.com/republicprotocol/renex-swapper-go/services/renguardClient"
 )
 
 type SwapAdapter interface {

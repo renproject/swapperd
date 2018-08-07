@@ -4,7 +4,7 @@ package mock
 // 	"encoding/json"
 // 	"math/big"
 
-// 	"github.com/republicprotocol/atom-go/services/swap"
+// 	"github.com/republicprotocol/renex-swapper-go/services/swap"
 // )
 
 // const mockPriorityCode = 4294967295

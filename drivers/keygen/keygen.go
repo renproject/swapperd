@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/republicprotocol/atom-go/adapters/configs/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
 )
 
 func main() {

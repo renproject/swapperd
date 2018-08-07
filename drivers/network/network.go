@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/republicprotocol/atom-go/adapters/configs/network"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/network"
 )
 
 func main() {

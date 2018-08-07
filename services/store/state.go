@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/republicprotocol/atom-go/domains/match"
+	"github.com/republicprotocol/renex-swapper-go/domains/match"
 	"github.com/republicprotocol/republic-go/order"
 )
 

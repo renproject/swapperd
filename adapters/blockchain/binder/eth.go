@@ -14,11 +14,11 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
-	bindings "github.com/republicprotocol/atom-go/adapters/blockchain/bindings/eth"
-	ethclient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/eth"
-	"github.com/republicprotocol/atom-go/domains/match"
-	"github.com/republicprotocol/atom-go/domains/order"
-	"github.com/republicprotocol/atom-go/domains/swap"
+	bindings "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/bindings/eth"
+	ethclient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/domains/match"
+	"github.com/republicprotocol/renex-swapper-go/domains/order"
+	"github.com/republicprotocol/renex-swapper-go/domains/swap"
 )
 
 // Binder implements all methods that will communicate with the smart contracts

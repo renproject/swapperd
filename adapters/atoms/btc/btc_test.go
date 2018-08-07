@@ -12,11 +12,11 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/atom-go/adapters/atoms/btc"
-	btcclient "github.com/republicprotocol/atom-go/adapters/clients/btc"
-	"github.com/republicprotocol/atom-go/adapters/config"
-	"github.com/republicprotocol/atom-go/adapters/key/btc"
-	"github.com/republicprotocol/atom-go/services/swap"
+	. "github.com/republicprotocol/renex-swapper-go/adapters/atoms/btc"
+	btcclient "github.com/republicprotocol/renex-swapper-go/adapters/clients/btc"
+	"github.com/republicprotocol/renex-swapper-go/adapters/config"
+	"github.com/republicprotocol/renex-swapper-go/adapters/key/btc"
+	"github.com/republicprotocol/renex-swapper-go/services/swap"
 )
 
 var _ = Describe("bitcoin", func() {
@@ -34,8 +34,8 @@ var _ = Describe("bitcoin", func() {
 	var reqAtom, reqAtomFailed swap.Atom
 	var resAtom swap.Atom
 	var data []byte
-	//	var confLocal = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/configLocal.json" // Bitcoin Regtest
-	var confPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/configTestnet.json" // Bitcoin Testnet
+	//	var confLocal = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/secrets/configLocal.json" // Bitcoin Regtest
+	var confPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/secrets/configTestnet.json" // Bitcoin Testnet
 
 	BeforeSuite(func() {
 		config, err := config.LoadConfig(confPath)

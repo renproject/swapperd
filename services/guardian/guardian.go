@@ -5,10 +5,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/republicprotocol/atom-go/adapters/atoms"
-	"github.com/republicprotocol/atom-go/services/errors"
-	"github.com/republicprotocol/atom-go/services/store"
-	"github.com/republicprotocol/atom-go/services/swap"
+	"github.com/republicprotocol/renex-swapper-go/adapters/atoms"
+	"github.com/republicprotocol/renex-swapper-go/services/errors"
+	"github.com/republicprotocol/renex-swapper-go/services/store"
+	"github.com/republicprotocol/renex-swapper-go/services/swap"
 	co "github.com/republicprotocol/co-go"
 )
 

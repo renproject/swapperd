@@ -10,15 +10,15 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	bindings "github.com/republicprotocol/atom-go/adapters/blockchain/bindings/eth"
-	"github.com/republicprotocol/atom-go/adapters/configs/network"
-	"github.com/republicprotocol/atom-go/adapters/configs/owner"
+	bindings "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/bindings/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/network"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/owner"
 )
 
 func main() {
 
-	var aPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/local_secrets/local/networkA.json"
-	var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/local_secrets/owner.json"
+	var aPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/renex-swapper-go/local_secrets/local/networkA.json"
+	var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/renex-swapper-go/local_secrets/owner.json"
 
 	aNet, err := network.LoadNetwork(aPath)
 	if err != nil {

@@ -12,7 +12,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	rpc "github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/republicprotocol/atom-go/adapters/configs/network"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/network"
 )
 
 type Conn struct {

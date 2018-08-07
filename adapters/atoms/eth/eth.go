@@ -9,11 +9,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	bindings "github.com/republicprotocol/atom-go/adapters/blockchain/bindings/eth"
-	ethclient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/eth"
-	"github.com/republicprotocol/atom-go/adapters/configs/keystore"
-	"github.com/republicprotocol/atom-go/domains/order"
-	"github.com/republicprotocol/atom-go/services/swap"
+	bindings "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/bindings/eth"
+	ethclient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
+	"github.com/republicprotocol/renex-swapper-go/domains/order"
+	"github.com/republicprotocol/renex-swapper-go/services/swap"
 )
 
 type Adapter interface {
