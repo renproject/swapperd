@@ -10,7 +10,7 @@ import (
 	"github.com/rs/cors"
 )
 
-// opening of an order.
+// NewServer creates a new http handler
 func NewServer(adapter BoxHttpAdapter) http.Handler {
 
 	r := mux.NewRouter()

@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"log"
 
+	co "github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/renex-swapper-go/services/store"
 	"github.com/republicprotocol/renex-swapper-go/services/swap"
-	co "github.com/republicprotocol/co-go"
-	"github.com/republicprotocol/republic-go/order"
 )
 
 type watch struct {
@@ -86,7 +85,7 @@ func (watch *watch) Swap(orderID [32]byte) error {
 			return err
 		}
 	} else {
-		log.Println("Skipping swap initiation for ", order.ID(orderID))
+		// log.Println("Skipping swap initiation for ", order.ID(orderID))
 	}
 
 	if watch.state.Status(orderID) == "PENDING" {
@@ -94,7 +93,7 @@ func (watch *watch) Swap(orderID [32]byte) error {
 			return err
 		}
 	} else {
-		log.Println("Skipping get match for ", order.ID(orderID))
+		// log.Println("Skipping get match for ", order.ID(orderID))
 	}
 
 	if watch.state.Status(orderID) == "MATCHED" {
@@ -102,7 +101,7 @@ func (watch *watch) Swap(orderID [32]byte) error {
 			return err
 		}
 	} else {
-		log.Println("Skipping Info Submission for ", order.ID(orderID))
+		// log.Println("Skipping Info Submission for ", order.ID(orderID))
 	}
 
 	if watch.state.Status(orderID) != "REDEEMED" && watch.state.Status(orderID) != "REFUNDED" {
@@ -110,14 +109,14 @@ func (watch *watch) Swap(orderID [32]byte) error {
 			return err
 		}
 	} else {
-		log.Println("Skipping Execute for ", order.ID(orderID))
+		// log.Println("Skipping Execute for ", order.ID(orderID))
 	}
 
 	return nil
 }
 
 func (w *watch) setInfo(orderID [32]byte) error {
-	log.Println("Submitting info for", order.ID(orderID))
+	// log.Println("Submitting info for", order.ID(orderID))
 
 	m, err := w.state.Match(orderID)
 	if err != nil {
@@ -143,7 +142,7 @@ func (w *watch) setInfo(orderID [32]byte) error {
 		return err
 	}
 
-	log.Println("Info Submitted for ", order.ID(orderID))
+	// log.Println("Info Submitted for ", order.ID(orderID))
 	return nil
 }
 
@@ -167,17 +166,17 @@ func (w *watch) execute(orderID [32]byte) error {
 }
 
 func (w *watch) initiate(orderID [32]byte) error {
-	log.Println("Starting the Atomic Swap for", order.ID(orderID))
+	// log.Println("Starting the Atomic Swap for", order.ID(orderID))
 	err := w.state.PutStatus(orderID, "PENDING")
 	if err != nil {
 		return err
 	}
-	log.Println("Started the Atomic Swap for", order.ID(orderID))
+	// log.Println("Started the Atomic Swap for", order.ID(orderID))
 	return nil
 }
 
 func (w *watch) getMatch(orderID [32]byte) error {
-	log.Println("Waiting for the match to be found for ", order.ID(orderID))
+	// log.Println("Waiting for the match to be found for ", order.ID(orderID))
 	match, err := w.adapter.CheckForMatch(orderID, true)
 	if err != nil {
 		return err
@@ -193,6 +192,6 @@ func (w *watch) getMatch(orderID [32]byte) error {
 		return err
 	}
 
-	log.Println("Match found :", order.ID(orderID), " <---->", order.ID(match.ForeignOrderID()))
+	// log.Println("Match found :", order.ID(orderID), " <---->", order.ID(match.ForeignOrderID()))
 	return nil
 }
