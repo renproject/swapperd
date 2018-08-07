@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/republicprotocol/atom-go/services/renguardClient"
+
 	"github.com/btcsuite/btcutil"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/republicprotocol/atom-go/adapters/atoms"
@@ -18,6 +20,7 @@ import (
 	"github.com/republicprotocol/atom-go/adapters/configs/keystore"
 	"github.com/republicprotocol/atom-go/adapters/configs/network"
 	"github.com/republicprotocol/atom-go/adapters/http"
+	"github.com/republicprotocol/atom-go/adapters/renguard/client"
 	"github.com/republicprotocol/atom-go/adapters/store/leveldb"
 	"github.com/republicprotocol/atom-go/services/guardian"
 	"github.com/republicprotocol/atom-go/services/store"
@@ -27,6 +30,7 @@ import (
 type watchAdapter struct {
 	atoms.AtomBuilder
 	binder.Binder
+	renguardClient.RenguardClient
 }
 
 func main() {
@@ -55,7 +59,7 @@ func main() {
 	}
 	state := store.NewState(db)
 
-	watcher, err := buildWatcher(net, keystr, state)
+	watcher, err := buildWatcher(conf, net, keystr, state)
 	if err != nil {
 		panic(err)
 	}
@@ -109,7 +113,7 @@ func buildGuardian(net network.Config, kstr keystore.Keystore, state store.State
 	return guardian.NewGuardian(atomBuilder, state), nil
 }
 
-func buildWatcher(net network.Config, kstr keystore.Keystore, state store.State) (watch.Watch, error) {
+func buildWatcher(gen config.Config, net network.Config, kstr keystore.Keystore, state store.State) (watch.Watch, error) {
 	ethConn, err := ethClient.Connect(net)
 	if err != nil {
 		return nil, err
@@ -149,15 +153,19 @@ func buildWatcher(net network.Config, kstr keystore.Keystore, state store.State)
 	if err != nil {
 		return nil, err
 	}
+
 	owner := bind.NewKeyedTransactor(privKey)
 	owner.GasLimit = 3000000
 
 	ethBinder, err := binder.NewBinder(privKey, ethConn)
 
+	renguardClient := client.NewrenguardHTTPClient(gen)
+
 	atomBuilder, err := atoms.NewAtomBuilder(net, kstr)
 	wAdapter := watchAdapter{
 		atomBuilder,
 		ethBinder,
+		renguardClient,
 	}
 
 	watcher := watch.NewWatch(&wAdapter, state)
