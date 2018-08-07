@@ -90,4 +90,25 @@ var _ = Describe("Keystore", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		_ = btcKey.Chain()
 	})
+
+	// Negative Tests
+
+	It("cannot create a key other than eth and btc", func() {
+		_, err := NewKey("", 3, "")
+		Expect(err).Should(HaveOccurred())
+	})
+
+	It("should fail to extract a private key from malformed privatekey string", func() {
+		keyInf, err := NewKey("", 1, "")
+		Expect(err).ShouldNot(HaveOccurred())
+		_, err = keyInf.GetKey()
+		Expect(err).Should(HaveOccurred())
+	})
+
+	It("should fail to extract an address from malformed privatekey string", func() {
+		keyInf, err := NewKey("", 1, "")
+		Expect(err).ShouldNot(HaveOccurred())
+		_, err = keyInf.GetKey()
+		Expect(err).Should(HaveOccurred())
+	})
 })

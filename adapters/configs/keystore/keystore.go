@@ -68,7 +68,7 @@ func Load(path string) (Keystore, error) {
 
 func (keystore *keystore) GetKey(priorityCode, index uint32) (Key, error) {
 	key := keystore.keyMap[priorityCode][index]
-	return NewKey(key)
+	return NewKey(key.PrivateKey, key.Code, key.Network)
 }
 
 func (keystore *keystore) AppendKey(priorityCode, index uint32, keyInf Key) {

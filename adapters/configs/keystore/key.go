@@ -18,8 +18,13 @@ type Key interface {
 	Chain() string
 }
 
-func NewKey(key key) (Key, error) {
-	switch key.Code {
+func NewKey(privKey string, priCode uint32, network string) (Key, error) {
+	key := key{
+		privKey,
+		priCode,
+		network,
+	}
+	switch priCode {
 	case 0:
 		btcKey := bitcoinKey(key)
 		return &btcKey, nil
