@@ -17,8 +17,8 @@ import (
 
 func main() {
 
-	var aPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/local/networkA.json"
-	var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/owner.json"
+	var aPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/local_secrets/local/networkA.json"
+	var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/local_secrets/owner.json"
 
 	aNet, err := network.LoadNetwork(aPath)
 	if err != nil {
@@ -132,7 +132,7 @@ func deployContracts(config network.Config, owner *bind.TransactOpts) error {
 	}
 
 	// Deploy Wallet contract
-	WalletAddress, tx, _, err := bindings.DeployRenExSettlement(owner, ethclient, OBAddress, RenExTokensAddress, RenExBalancesAddress, big.NewInt(100))
+	WalletAddress, tx, _, err := bindings.DeployRenExSettlement(owner, ethclient, OBAddress, RenExTokensAddress, RenExBalancesAddress, big.NewInt(100), RenExBalancesAddress)
 	if err != nil {
 		return err
 	}
