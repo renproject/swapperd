@@ -25,17 +25,18 @@ func main() {
 
 	addresses := []string{}
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Authorize your ethereum address(es): \nPress Enter twice when you are done\n")
+	fmt.Print("Enter your ethereum address(es): \nAddress>")
 	for {
 		text, _ := reader.ReadString('\n')
 		if text == "\n" {
 			break
 		}
 		addresses = append(addresses, strings.Trim(text, "\n"))
+		fmt.Print("Address>")
 	}
 	cfg.AuthorizedAddresses = addresses
 	cfg.StoreLoc = os.Getenv("HOME") + "/.swapper/db"
-	cfg.RenGuardAddr = "<>:<>"
+	cfg.RenGuardAddr = "renex-watchdog-nightly.herokuapp.com"
 
 	if err := cfg.Update(); err != nil {
 		panic(err)

@@ -46,7 +46,7 @@ func (client *renguardHTTPClient) ComplainDelayedRequestorRedemption(orderID [32
 }
 
 func (client *renguardHTTPClient) watch(orderID [32]byte) error {
-	resp, err := http.Post(fmt.Sprintf("http://"+client.ipAddress+"/watch?orderID="+hex.EncodeToString(orderID[:])), "text", nil)
+	resp, err := http.Post(fmt.Sprintf("https://"+client.ipAddress+"/watch?orderID="+hex.EncodeToString(orderID[:])), "text", nil)
 	if err != nil {
 		return err
 	}
