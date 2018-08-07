@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcutil"
-	btcclient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/btc"
+	btcclient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/btc"
 )
 
 // Start a local Ganache instance.

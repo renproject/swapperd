@@ -13,12 +13,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/atom-go/adapters/atoms/eth"
-	ethclient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/eth"
-	config "github.com/republicprotocol/atom-go/adapters/configs/general"
-	"github.com/republicprotocol/atom-go/adapters/key/eth"
-	"github.com/republicprotocol/atom-go/adapters/owner"
-	"github.com/republicprotocol/atom-go/services/swap"
+	. "github.com/republicprotocol/renex-swapper-go/adapters/atoms/eth"
+	ethclient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/eth"
+	config "github.com/republicprotocol/renex-swapper-go/adapters/configs/general"
+	"github.com/republicprotocol/renex-swapper-go/adapters/key/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapters/owner"
+	"github.com/republicprotocol/renex-swapper-go/services/swap"
 )
 
 var _ = Describe("ether", func() {
@@ -32,8 +32,8 @@ var _ = Describe("ether", func() {
 	var reqAtom, reqAtomFailed swap.Atom
 	var resAtom swap.Atom
 	var data []byte
-	var confPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/configLocal.json"
-	var ownPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/owner.json"
+	var confPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/secrets/configLocal.json"
+	var ownPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/secrets/owner.json"
 
 	BeforeSuite(func() {
 		config, err := config.LoadConfig(confPath)

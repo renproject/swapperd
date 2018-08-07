@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcutil"
-	"github.com/republicprotocol/atom-go/services/store"
+	"github.com/republicprotocol/renex-swapper-go/services/store"
 
-	"github.com/republicprotocol/atom-go/domains/match"
+	"github.com/republicprotocol/renex-swapper-go/domains/match"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -18,20 +18,20 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/republicprotocol/atom-go/drivers/btc/regtest"
-	. "github.com/republicprotocol/atom-go/services/swap"
+	"github.com/republicprotocol/renex-swapper-go/drivers/btc/regtest"
+	. "github.com/republicprotocol/renex-swapper-go/services/swap"
 
-	"github.com/republicprotocol/atom-go/adapters/atoms/btc"
-	"github.com/republicprotocol/atom-go/adapters/atoms/eth"
-	"github.com/republicprotocol/atom-go/adapters/configs/keystore"
-	"github.com/republicprotocol/atom-go/adapters/configs/owner"
+	"github.com/republicprotocol/renex-swapper-go/adapters/atoms/btc"
+	"github.com/republicprotocol/renex-swapper-go/adapters/atoms/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/owner"
 
-	btcclient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/btc"
-	ethclient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/eth"
-	"github.com/republicprotocol/atom-go/adapters/configs/network"
+	btcclient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/btc"
+	ethclient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/network"
 
-	"github.com/republicprotocol/atom-go/adapters/blockchain/binder"
-	"github.com/republicprotocol/atom-go/adapters/store/leveldb"
+	"github.com/republicprotocol/renex-swapper-go/adapters/blockchain/binder"
+	"github.com/republicprotocol/renex-swapper-go/adapters/store/leveldb"
 )
 
 var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
@@ -71,15 +71,15 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 })
 
 func LoadConfigs() (network.Config, keystore.Keystore, keystore.Keystore) {
-	var confPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/local_secrets/local/networkA.json"
+	var confPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/local_secrets/local/networkA.json"
 	config, err := network.LoadNetwork(confPath)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	var ksPathA = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/local.alice.json"
+	var ksPathA = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/secrets/local.alice.json"
 	ksA, err := keystore.Load(ksPathA)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	var ksPathB = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/secrets/local.bob.json"
+	var ksPathB = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/secrets/local.bob.json"
 	ksB, err := keystore.Load(ksPathB)
 	Expect(err).ShouldNot(HaveOccurred())
 
@@ -108,7 +108,7 @@ func SetupEthereumNetwork(netConf network.Config, ksA keystore.Keystore, ksB key
 	bobAddrBytes, err := bobKey.GetAddress()
 	Expect(err).ShouldNot(HaveOccurred())
 
-	var ownPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/atom-go/local_secrets/owner.json"
+	var ownPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/local_secrets/owner.json"
 
 	own, err := owner.LoadOwner(ownPath)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -232,10 +232,10 @@ func SetupSwaps(ethConn ethclient.Conn, btcConn btcclient.Conn, aliceMatch, bobM
 	resBob, err := eth.NewEthereumAtom(&bobBinder, ethConn, bobEthKey, aliceMatch.PersonalOrderID())
 	Expect(err).Should(BeNil())
 
-	aliceLDB, err := leveldb.NewLDBStore("/Users/susruth/go/src/github.com/republicprotocol/atom-go/temp/dbAlice")
+	aliceLDB, err := leveldb.NewLDBStore("/Users/susruth/go/src/github.com/republicprotocol/renex-swapper-go/temp/dbAlice")
 	Expect(err).Should(BeNil())
 
-	bobLDB, err := leveldb.NewLDBStore("/Users/susruth/go/src/github.com/republicprotocol/atom-go/temp/dbBob")
+	bobLDB, err := leveldb.NewLDBStore("/Users/susruth/go/src/github.com/republicprotocol/renex-swapper-go/temp/dbBob")
 	Expect(err).Should(BeNil())
 
 	aliceState := store.NewState(aliceLDB)

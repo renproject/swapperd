@@ -15,24 +15,24 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
-	btcclient "github.com/republicprotocol/atom-go/adapters/clients/btc"
-	ethclient "github.com/republicprotocol/atom-go/adapters/clients/eth"
-	"github.com/republicprotocol/atom-go/adapters/config"
-	"github.com/republicprotocol/atom-go/adapters/keystore"
-	"github.com/republicprotocol/atom-go/adapters/owner"
-	wal "github.com/republicprotocol/atom-go/adapters/wallet/eth"
-	"github.com/republicprotocol/atom-go/domains/match"
-	"github.com/republicprotocol/atom-go/services/swap"
+	btcclient "github.com/republicprotocol/renex-swapper-go/adapters/clients/btc"
+	ethclient "github.com/republicprotocol/renex-swapper-go/adapters/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapters/config"
+	"github.com/republicprotocol/renex-swapper-go/adapters/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapters/owner"
+	wal "github.com/republicprotocol/renex-swapper-go/adapters/wallet/eth"
+	"github.com/republicprotocol/renex-swapper-go/domains/match"
+	"github.com/republicprotocol/renex-swapper-go/services/swap"
 )
 
 func main() {
 
 	var aliceOrderID, bobOrderID [32]byte
 	
-	var conf = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/test/configA.json"
-	var keyA = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/test/keystoreA.json"
-	var keyB = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/test/keystoreB.json"
-	var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/atom-go/secrets/owner.json"
+	var conf = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/renex-swapper-go/secrets/test/configA.json"
+	var keyA = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/renex-swapper-go/secrets/test/keystoreA.json"
+	var keyB = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/renex-swapper-go/secrets/test/keystoreB.json"
+	var ownPath = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/renex-swapper-go/secrets/owner.json"
 
 	ksA := keystore.NewKeystore(keyA)
 	ksB := keystore.NewKeystore(keyB)

@@ -14,11 +14,11 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
-	bindings "github.com/republicprotocol/atom-go/adapters/blockchain/bindings/eth"
-	ethclient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/eth"
-	"github.com/republicprotocol/atom-go/domains/match"
-	"github.com/republicprotocol/atom-go/domains/order"
-	"github.com/republicprotocol/atom-go/domains/swap"
+	bindings "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/bindings/eth"
+	ethclient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/domains/match"
+	"github.com/republicprotocol/renex-swapper-go/domains/order"
+	"github.com/republicprotocol/renex-swapper-go/domains/swap"
 )
 
 // Binder implements all methods that will communicate with the smart contracts
@@ -145,17 +145,18 @@ func (binder *Binder) checkForMatch(orderID order.ID, wait bool) (match.Match, e
 			return match.NewMatch(PersonalOrder, ForeignOrder, SendValue, ReceiveValue, SendCurrency, ReceiveCurrency), nil
 		}
 
+		if !wait {
+			return nil, fmt.Errorf("Match does not exist")
+		}
+
 		expired, err := binder.expired(orderID)
+
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Failed to get match details")
 		}
 
 		if expired {
 			return nil, fmt.Errorf("Order expired")
-		}
-
-		if !wait {
-			return nil, fmt.Errorf("Match does not exist")
 		}
 
 		time.Sleep(15 * time.Second)
@@ -167,9 +168,6 @@ func (binder *Binder) expired(orderID order.ID) (bool, error) {
 	details, err := binder.OrderDetails(binder.callOpts, orderID)
 	if err != nil {
 		return false, err
-	}
-	if details.SettlementID == 0 {
-		return false, fmt.Errorf("Order does not exist")
 	}
 	if time.Now().Unix() > int64(details.Expiry) {
 		return true, nil

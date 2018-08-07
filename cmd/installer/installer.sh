@@ -73,6 +73,6 @@ if ! [ -x "$(command -v swapper)" ]; then
 fi
 
 echo ''
-echo "${GREEN}Done! Please update your keystore and run the following command.${NC}"
+echo "${GREEN}Done! Please update run the following command to start the RenEx Swapper.${NC}"
 echo ''
 echo "${GREEN}swapper${NC}"

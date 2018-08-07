@@ -3,19 +3,19 @@ package atoms
 import (
 	"fmt"
 
-	"github.com/republicprotocol/atom-go/domains/match"
+	"github.com/republicprotocol/renex-swapper-go/domains/match"
 
-	"github.com/republicprotocol/atom-go/services/store"
-	"github.com/republicprotocol/atom-go/services/swap"
+	"github.com/republicprotocol/renex-swapper-go/services/store"
+	"github.com/republicprotocol/renex-swapper-go/services/swap"
 
-	"github.com/republicprotocol/atom-go/adapters/atoms/btc"
-	"github.com/republicprotocol/atom-go/adapters/atoms/eth"
-	"github.com/republicprotocol/atom-go/adapters/configs/keystore"
-	"github.com/republicprotocol/atom-go/adapters/configs/network"
+	"github.com/republicprotocol/renex-swapper-go/adapters/atoms/btc"
+	"github.com/republicprotocol/renex-swapper-go/adapters/atoms/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/network"
 
-	"github.com/republicprotocol/atom-go/adapters/blockchain/binder"
-	btcClient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/btc"
-	ethClient "github.com/republicprotocol/atom-go/adapters/blockchain/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapters/blockchain/binder"
+	btcClient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/btc"
+	ethClient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/eth"
 )
 
 type atomBuilder struct {

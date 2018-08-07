@@ -1,7 +1,7 @@
 package leveldb
 
 import (
-	"github.com/republicprotocol/atom-go/services/store"
+	"github.com/republicprotocol/renex-swapper-go/services/store"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 

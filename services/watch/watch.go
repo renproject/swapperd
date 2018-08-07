@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/republicprotocol/atom-go/services/store"
-	"github.com/republicprotocol/atom-go/services/swap"
+	"github.com/republicprotocol/renex-swapper-go/services/store"
+	"github.com/republicprotocol/renex-swapper-go/services/swap"
 	co "github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/republic-go/order"
 )

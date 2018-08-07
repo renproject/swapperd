@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"math/big"
 
-	bindings "github.com/republicprotocol/atom-go/adapters/blockchain/bindings/btc"
-	"github.com/republicprotocol/atom-go/adapters/blockchain/clients/btc"
-	"github.com/republicprotocol/atom-go/adapters/configs/keystore"
-	"github.com/republicprotocol/atom-go/domains/order"
-	"github.com/republicprotocol/atom-go/services/swap"
+	bindings "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/bindings/btc"
+	"github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/btc"
+	"github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
+	"github.com/republicprotocol/renex-swapper-go/domains/order"
+	"github.com/republicprotocol/renex-swapper-go/services/swap"
 )
 
 type Adapter interface {
