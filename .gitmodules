@@ -1,3 +1,0 @@
-[submodule "drivers/renex-sol"]
-	path = drivers/renex-sol
-	url = git@github.com:republicprotocol/renex-sol.git

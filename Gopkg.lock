@@ -61,17 +61,8 @@
     "common/hexutil",
     "common/math",
     "common/mclock",
-    "consensus",
-    "consensus/misc",
-    "core",
-    "core/rawdb",
-    "core/state",
     "core/types",
-    "core/vm",
     "crypto",
-    "crypto/bn256",
-    "crypto/bn256/cloudflare",
-    "crypto/bn256/google",
     "crypto/randentropy",
     "crypto/secp256k1",
     "crypto/sha3",
@@ -112,57 +103,6 @@
   packages = ["."]
   revision = "e3702bed27f0d39777b0b37b664b6280e8ef8fbf"
   version = "v1.6.2"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/gxed/hashland"
-  packages = ["keccakpg"]
-  revision = "d9f6b97f8db22dd1e090fd0bbbe98f09cc7dd0a8"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/hashicorp/golang-lru"
-  packages = [
-    ".",
-    "simplelru"
-  ]
-  revision = "0fb14efe8c47ae851c0034ed7a448854d3d34cf3"
-
-[[projects]]
-  name = "github.com/jbenet/go-base58"
-  packages = ["."]
-  revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
-  version = "1.0.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/minio/blake2b-simd"
-  packages = ["."]
-  revision = "3f5f724cb5b182a5c278d6d3d55b40e7f8c2efb4"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/minio/sha256-simd"
-  packages = ["."]
-  revision = "ad98a36ba0da87206e3378c556abbfeaeaa98668"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/mr-tron/base58"
-  packages = ["base58"]
-  revision = "4df4dc6e86a912614d09719d10cad427b087cbfb"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/multiformats/go-multiaddr"
-  packages = ["."]
-  revision = "96804982667ed1672985566d0d0c2a7ed6f10e1f"
-
-[[projects]]
-  name = "github.com/multiformats/go-multihash"
-  packages = ["."]
-  revision = "8be2a682ab9f254311de1375145a2f78a809b07d"
-  version = "v1.0.8"
 
 [[projects]]
   name = "github.com/onsi/ginkgo"
@@ -233,12 +173,6 @@
   version = "v1.4.0"
 
 [[projects]]
-  name = "github.com/spaolacci/murmur3"
-  packages = ["."]
-  revision = "9f5d223c60793748f04a9d5b4b4eacddfc1f755d"
-  version = "v1.1"
-
-[[projects]]
   branch = "master"
   name = "github.com/syndtr/goleveldb"
   packages = [
@@ -261,11 +195,9 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
-    "blake2s",
     "pbkdf2",
     "ripemd160",
-    "scrypt",
-    "sha3"
+    "scrypt"
   ]
   revision = "df8d4716b3472e4a531c33cedbe537dae921a1a9"
 
@@ -283,10 +215,7 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = [
-    "cpu",
-    "unix"
-  ]
+  packages = ["unix"]
   revision = "c11f84a56e43e20a78cee75a7c034031ecf57d1f"
 
 [[projects]]
@@ -350,6 +279,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "62df081040fa390f67c1937aa53fd062ded539455fdcaeb2c3b976ad4ab250c7"
+  inputs-digest = "82255956807af8d30196724e34e38bd3c54d406349e2ba97a5e38564bb979563"
   solver-name = "gps-cdcl"
   solver-version = 1
