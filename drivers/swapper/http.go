@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/republicprotocol/renex-swapper-go/services/logger"
 	"github.com/republicprotocol/renex-swapper-go/services/renguardClient"
 
 	"github.com/btcsuite/btcutil"
@@ -20,6 +21,7 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
 	"github.com/republicprotocol/renex-swapper-go/adapters/configs/network"
 	"github.com/republicprotocol/renex-swapper-go/adapters/http"
+	loggerAdapter "github.com/republicprotocol/renex-swapper-go/adapters/logger"
 	"github.com/republicprotocol/renex-swapper-go/adapters/renguard/client"
 	"github.com/republicprotocol/renex-swapper-go/adapters/store/leveldb"
 	"github.com/republicprotocol/renex-swapper-go/services/guardian"
@@ -31,6 +33,7 @@ type watchAdapter struct {
 	atoms.AtomBuilder
 	binder.Binder
 	renguardClient.RenguardClient
+	logger.Logger
 }
 
 func main() {
@@ -57,7 +60,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	state := store.NewState(db)
+	state := store.NewState(db, loggerAdapter.NewStdOutLogger())
 
 	watcher, err := buildWatcher(conf, net, keystr, state)
 	if err != nil {
@@ -77,13 +80,13 @@ func main() {
 
 	go func() {
 		for err := range errCh1 {
-			log.Println("Error :", err)
+			log.Println("Watcher Error :", err)
 		}
 	}()
 
 	go func() {
 		for err := range errCh2 {
-			log.Println("Error :", err)
+			log.Println("Guardian Error :", err)
 		}
 	}()
 
@@ -166,6 +169,7 @@ func buildWatcher(gen config.Config, net network.Config, kstr keystore.Keystore,
 		atomBuilder,
 		ethBinder,
 		renguardClient,
+		loggerAdapter.NewStdOutLogger(),
 	}
 
 	watcher := watch.NewWatch(&wAdapter, state)

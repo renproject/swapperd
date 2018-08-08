@@ -3,12 +3,11 @@ package store
 import (
 	"bytes"
 	"encoding/json"
-	"log"
 	"math/big"
 	"sync"
 
 	"github.com/republicprotocol/renex-swapper-go/domains/match"
-	"github.com/republicprotocol/renex-swapper-go/domains/order"
+	"github.com/republicprotocol/renex-swapper-go/services/logger"
 )
 
 // SwapStatus stores the swap status
@@ -42,6 +41,7 @@ type PendingSwaps struct {
 }
 
 type state struct {
+	logger.Logger
 	Store
 	swapMu *sync.RWMutex
 }
@@ -72,9 +72,10 @@ type State interface {
 	Redeemed([32]byte) error
 }
 
-func NewState(store Store) State {
+func NewState(store Store, logger logger.Logger) State {
 	return &state{
 		Store:  store,
+		Logger: logger,
 		swapMu: new(sync.RWMutex),
 	}
 }
@@ -104,7 +105,7 @@ func (state *state) AddSwap(orderID [32]byte) error {
 func (state *state) DeleteSwap(orderID [32]byte) error {
 	state.swapMu.Lock()
 	defer state.swapMu.Unlock()
-	defer log.Println("Deleting the swap:", order.Fmt(orderID))
+	defer state.LogInfo(orderID, "deleted the swap and its details")
 
 	pendingSwapsRawBytes, err := state.Read([]byte("Pending Swaps:"))
 	if err != nil {

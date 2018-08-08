@@ -44,26 +44,22 @@ func NewBinder(privKey *ecdsa.PrivateKey, conn ethclient.Conn) (Binder, error) {
 
 	atomicInfo, err := bindings.NewAtomicInfo(conn.InfoAddress(), bind.ContractBackend(conn.Client()))
 	if err != nil {
-		fmt.Println(fmt.Errorf("cannot bind to atom info: %v", err))
-		return Binder{}, err
+		return Binder{}, fmt.Errorf("cannot bind to atom info: %v", err)
 	}
 
 	atomicSwap, err := bindings.NewAtomicSwap(conn.AtomAddress(), bind.ContractBackend(conn.Client()))
 	if err != nil {
-		fmt.Println(fmt.Errorf("cannot bind to atomic swap: %v", err))
-		return Binder{}, err
+		return Binder{}, fmt.Errorf("cannot bind to atomic swap: %v", err)
 	}
 
 	orderbook, err := bindings.NewOrderbook(conn.OrderBookAddress(), bind.ContractBackend(conn.Client()))
 	if err != nil {
-		fmt.Println(fmt.Errorf("cannot bind to Orderbook: %v", err))
-		return Binder{}, err
+		return Binder{}, fmt.Errorf("cannot bind to Orderbook: %v", err)
 	}
 
 	renExSettlement, err := bindings.NewRenExSettlement(conn.WalletAddress(), bind.ContractBackend(conn.Client()))
 	if err != nil {
-		fmt.Println(fmt.Errorf("cannot bind to RenEx accounts: %v", err))
-		return Binder{}, err
+		return Binder{}, fmt.Errorf("cannot bind to RenEx accounts: %v", err)
 	}
 
 	return Binder{
@@ -136,7 +132,6 @@ func (binder *Binder) checkForMatch(orderID order.ID, wait bool) (match.Match, e
 		if err != nil {
 			return nil, err
 		}
-
 		if status == 2 {
 			PersonalOrder, ForeignOrder, ReceiveValue, SendValue, ReceiveCurrency, SendCurrency, err := binder.GetMatchDetails(&bind.CallOpts{}, orderID)
 			if err != nil {
@@ -169,7 +164,7 @@ func (binder *Binder) expired(orderID order.ID) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if time.Now().Unix() > int64(details.Expiry) {
+	if time.Now().Unix() > int64(details.Expiry) && int64(details.Expiry) != 0 {
 		return true, nil
 	}
 	return false, nil
@@ -193,12 +188,8 @@ func (binder *Binder) sendSwapDetails(orderID order.ID, swapDetails []byte) erro
 
 // ReceiveSwapDetails receives the swap details from the ethereum blockchain
 func (binder *Binder) ReceiveSwapDetails(orderID order.ID, wait bool) ([]byte, error) {
-	fmt.Println("Entered recieved swap details", wait)
 	binder.mu.Lock()
 	defer binder.mu.Unlock()
-	if !wait {
-		fmt.Println("Please Print this")
-	}
 	return binder.receiveSwapDetails(orderID, wait)
 }
 
@@ -427,6 +418,5 @@ func (binder *Binder) orderTraderAddress(orderID [32]byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(addr.String())
 	return addr.Bytes(), nil
 }

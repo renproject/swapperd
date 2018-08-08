@@ -3,7 +3,6 @@ package btc
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 
 	bindings "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/bindings/btc"
@@ -106,21 +105,14 @@ func (atom *BitcoinAtom) Refund() error {
 
 // Audit an Atom swap by calling a function on Bitcoin
 func (atom *BitcoinAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
-
-	fmt.Println("-------> Btc")
-
 	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, false)
 	if err != nil {
-		fmt.Println("Error here", err.Error())
 		return [32]byte{}, nil, nil, 0, err
 	}
-
-	fmt.Println("<------- Btc")
 
 	if err := atom.Deserialize(details); err != nil {
 		return [32]byte{}, nil, nil, 0, err
 	}
-	fmt.Println(atom.data)
 
 	result, err := bindings.Audit(atom.connection, atom.data.Contract, atom.data.ContractTx)
 	if err != nil {

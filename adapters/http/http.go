@@ -3,7 +3,6 @@ package http
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -43,7 +42,6 @@ func RecoveryHandler(h http.Handler) http.Handler {
 func PostOrdersHandler(boxHttpAdapter BoxHttpAdapter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		postOrder := PostOrder{}
-		log.Println("Submitting an order")
 		if err := json.NewDecoder(r.Body).Decode(&postOrder); err != nil {
 			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode json into post order format: %v", err))
 			return
@@ -60,7 +58,6 @@ func PostOrdersHandler(boxHttpAdapter BoxHttpAdapter) http.HandlerFunc {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot marshal the processed order: %v", err))
 			return
 		}
-		log.Println("Submitted the order")
 
 		w.WriteHeader(http.StatusCreated)
 		w.Write(orderJSON)

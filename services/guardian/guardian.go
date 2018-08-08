@@ -5,11 +5,11 @@ import (
 	"log"
 	"time"
 
+	co "github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/renex-swapper-go/adapters/atoms"
 	"github.com/republicprotocol/renex-swapper-go/services/errors"
 	"github.com/republicprotocol/renex-swapper-go/services/store"
 	"github.com/republicprotocol/renex-swapper-go/services/swap"
-	co "github.com/republicprotocol/co-go"
 )
 
 var ErrSwapRedeemed = fmt.Errorf("Swap Redeemed")
@@ -57,7 +57,7 @@ func (g *guardian) Start() <-chan error {
 				if len(swaps) < 1000 {
 					co.ParForAll(swaps, func(i int) {
 						if err := g.refund(swaps[i]); err != nil {
-							if err == fmt.Errorf("No Swaps to refund") {
+							if err == errors.ErrNotInitiated {
 								return
 							}
 							errs <- err
@@ -69,7 +69,7 @@ func (g *guardian) Start() <-chan error {
 				}
 				co.ParForAll(swaps[:1000], func(i int) {
 					if err := g.refund(swaps[i]); err != nil {
-						if err == fmt.Errorf("No Swaps to refund") {
+						if err == errors.ErrNotInitiated {
 							return
 						}
 						errs <- err
@@ -93,7 +93,7 @@ func (g *guardian) Stop() {
 
 func (g *guardian) refund(orderID [32]byte) error {
 	if !g.state.IsRedeemable(orderID) {
-		return fmt.Errorf("No Swaps to refund")
+		return errors.ErrNotInitiated
 	}
 
 	atom, err := g.buildAtom(orderID)

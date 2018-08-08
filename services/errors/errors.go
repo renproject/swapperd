@@ -4,6 +4,7 @@ import "fmt"
 
 var (
 	ErrNonRefundable = fmt.Errorf("Trying to refund a non refundable order")
+	ErrNotInitiated  = fmt.Errorf("Trying to refund a swap which is not initiated")
 )
 
 func ErrAtomBuildFailed(err error) error {

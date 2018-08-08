@@ -100,10 +100,12 @@ func (adapter *boxHttpAdapter) PostOrder(order PostOrder) (PostOrder, error) {
 		return PostOrder{}, err
 	}
 
-	if err := adapter.watch.Add(orderID); err != nil {
-		return PostOrder{}, err
-	}
-	adapter.watch.Notify()
+	go func() {
+		if err := adapter.watch.Add(orderID); err != nil {
+			return
+		}
+		adapter.watch.Notify()
+	}()
 
 	ethKey, err := adapter.keystr.GetKey(1, 0)
 	if err != nil {
@@ -183,7 +185,6 @@ func bitcoinBalance(conf network.Config, key keystore.Key) (Balance, error) {
 
 	amt, err := conn.Client.GetBalance("*")
 	if err != nil {
-		fmt.Println(err)
 		return Balance{}, err
 	}
 

@@ -86,7 +86,7 @@ func (watch *watch) Swap(orderID [32]byte) error {
 			return err
 		}
 	} else {
-		log.Println("Skipping swap initiation for ", order.Fmt(orderID))
+		watch.adapter.LogInfo(orderID, " skipping watcher initiation")
 	}
 
 	if watch.state.Status(orderID) == "PENDING" {
@@ -94,7 +94,7 @@ func (watch *watch) Swap(orderID [32]byte) error {
 			return err
 		}
 	} else {
-		log.Println("Skipping get match for ", order.Fmt(orderID))
+		watch.adapter.LogInfo(orderID, " skipping get match")
 	}
 
 	if watch.state.Status(orderID) == "MATCHED" {
@@ -102,7 +102,7 @@ func (watch *watch) Swap(orderID [32]byte) error {
 			return err
 		}
 	} else {
-		log.Println("Skipping Info Submission for ", order.Fmt(orderID))
+		watch.adapter.LogInfo(orderID, " skipping address submission")
 	}
 
 	if watch.state.Status(orderID) != "REDEEMED" && watch.state.Status(orderID) != "REFUNDED" {
@@ -110,15 +110,14 @@ func (watch *watch) Swap(orderID [32]byte) error {
 			return err
 		}
 	} else {
-		log.Println("Skipping Execute for ", order.Fmt(orderID))
+		watch.adapter.LogInfo(orderID, " skipping address submission")
 	}
 
 	return nil
 }
 
 func (w *watch) setInfo(orderID [32]byte) error {
-	log.Println("Submitting info for", order.Fmt(orderID))
-
+	w.adapter.LogInfo(orderID, " submitting address")
 	m, err := w.state.Match(orderID)
 	if err != nil {
 		return err
@@ -135,7 +134,6 @@ func (w *watch) setInfo(orderID [32]byte) error {
 	}
 
 	if err := w.adapter.SendOwnerAddress(orderID, addr); err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -143,7 +141,7 @@ func (w *watch) setInfo(orderID [32]byte) error {
 		return err
 	}
 
-	log.Println("Info Submitted for ", order.Fmt(orderID))
+	w.adapter.LogInfo(orderID, " submitted the address")
 	return nil
 }
 
@@ -160,24 +158,23 @@ func (w *watch) execute(orderID [32]byte) error {
 
 	atomicSwap := swap.NewSwap(personalAtom, foreignAtom, m, w.adapter, w.state)
 	if err := atomicSwap.Execute(); err != nil {
-		fmt.Println(err)
 		return err
 	}
 	return nil
 }
 
 func (w *watch) initiate(orderID [32]byte) error {
-	log.Println("Starting the Atomic Swap for", order.Fmt(orderID))
+	w.adapter.LogInfo(orderID, " starting the atomic swap")
 	err := w.state.PutStatus(orderID, "PENDING")
 	if err != nil {
 		return err
 	}
-	log.Println("Started the Atomic Swap for", order.Fmt(orderID))
+	w.adapter.LogInfo(orderID, " started the atomic swap")
 	return nil
 }
 
 func (w *watch) getMatch(orderID [32]byte) error {
-	log.Println("Waiting for the match to be found for ", order.Fmt(orderID))
+	w.adapter.LogInfo(orderID, " waiting for the match to be found")
 	match, err := w.adapter.CheckForMatch(orderID, true)
 	if err != nil {
 		return err
@@ -193,6 +190,6 @@ func (w *watch) getMatch(orderID [32]byte) error {
 		return err
 	}
 
-	log.Println("Match found :", order.Fmt(orderID), " <---->", order.Fmt(match.ForeignOrderID()))
+	w.adapter.LogInfo(orderID, fmt.Sprintf(" <----------> (%s)", order.Fmt(match.ForeignOrderID())))
 	return nil
 }
