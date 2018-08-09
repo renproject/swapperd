@@ -95,12 +95,6 @@ func (binder *Binder) sendOwnerAddress(orderID order.ID, address []byte) error {
 
 // ReceiveOwnerAddress receives the owner address for atomic swap
 func (binder *Binder) ReceiveOwnerAddress(orderID order.ID) ([]byte, error) {
-	binder.mu.Lock()
-	defer binder.mu.Unlock()
-	return binder.receiveOwnerAddress(orderID)
-}
-
-func (binder *Binder) receiveOwnerAddress(orderID order.ID) ([]byte, error) {
 	return binder.GetOwnerAddress(binder.callOpts, orderID)
 }
 
@@ -121,12 +115,6 @@ func (binder *Binder) slashBond(guiltyOrderID order.ID) error {
 // a match is not found and the 'wait' flag is set to true, it loops until a
 // match is found.
 func (binder *Binder) CheckForMatch(orderID order.ID, wait bool) (match.Match, error) {
-	binder.mu.Lock()
-	defer binder.mu.Unlock()
-	return binder.checkForMatch(orderID, wait)
-}
-
-func (binder *Binder) checkForMatch(orderID order.ID, wait bool) (match.Match, error) {
 	for {
 		status, err := binder.OrderStatus(binder.callOpts, orderID)
 		if err != nil {
@@ -156,7 +144,6 @@ func (binder *Binder) checkForMatch(orderID order.ID, wait bool) (match.Match, e
 
 		time.Sleep(15 * time.Second)
 	}
-	return nil, nil
 }
 
 func (binder *Binder) expired(orderID order.ID) (bool, error) {
@@ -188,12 +175,6 @@ func (binder *Binder) sendSwapDetails(orderID order.ID, swapDetails []byte) erro
 
 // ReceiveSwapDetails receives the swap details from the ethereum blockchain
 func (binder *Binder) ReceiveSwapDetails(orderID order.ID, wait bool) ([]byte, error) {
-	binder.mu.Lock()
-	defer binder.mu.Unlock()
-	return binder.receiveSwapDetails(orderID, wait)
-}
-
-func (binder *Binder) receiveSwapDetails(orderID order.ID, wait bool) ([]byte, error) {
 	for {
 		if !wait {
 			details, err := binder.SwapDetails(binder.callOpts, orderID)
@@ -212,12 +193,6 @@ func (binder *Binder) receiveSwapDetails(orderID order.ID, wait bool) ([]byte, e
 
 // InfoTimeStamp returns the time at which the address for the atomic swap is submitted.
 func (binder *Binder) InfoTimeStamp(orderID order.ID) (int64, error) {
-	binder.mu.Lock()
-	defer binder.mu.Unlock()
-	return binder.infoTimeStamp(orderID)
-}
-
-func (binder *Binder) infoTimeStamp(orderID order.ID) (int64, error) {
 	ts, err := binder.OwnerAddressTimestamp(binder.callOpts, orderID)
 	if err != nil {
 		return 0, err
@@ -227,12 +202,6 @@ func (binder *Binder) infoTimeStamp(orderID order.ID) (int64, error) {
 
 // InitiateTimeStamp returns the time at which the atomic swap is intiated.
 func (binder *Binder) InitiateTimeStamp(orderID order.ID) (int64, error) {
-	binder.mu.Lock()
-	defer binder.mu.Unlock()
-	return binder.initiateTimeStamp(orderID)
-}
-
-func (binder *Binder) initiateTimeStamp(orderID order.ID) (int64, error) {
 	ts, err := binder.SwapDetailsTimestamp(binder.callOpts, orderID)
 	if err != nil {
 		return 0, err
@@ -242,12 +211,6 @@ func (binder *Binder) initiateTimeStamp(orderID order.ID) (int64, error) {
 
 // RedeemTimeStamp returns the time at which the atomic swap is redeemed.
 func (binder *Binder) RedeemTimeStamp(orderID swap.ID) (int64, error) {
-	binder.mu.Lock()
-	defer binder.mu.Unlock()
-	return binder.redeemTimeStamp(orderID)
-}
-
-func (binder *Binder) redeemTimeStamp(orderID swap.ID) (int64, error) {
 	ts, err := binder.RedeemedAt(binder.callOpts, orderID)
 	if err != nil {
 		return 0, err
@@ -314,12 +277,6 @@ func (binder *Binder) refundAtomicSwap(swapID [32]byte) error {
 
 // AuditAtomicSwap Audits an Atomic swap
 func (binder *Binder) AuditAtomicSwap(swapID [32]byte) ([32]byte, []byte, *big.Int, int64, error) {
-	binder.mu.Lock()
-	defer binder.mu.Unlock()
-	return binder.auditAtomicSwap(swapID)
-}
-
-func (binder *Binder) auditAtomicSwap(swapID [32]byte) ([32]byte, []byte, *big.Int, int64, error) {
 	auditReport, err := binder.Audit(&bind.CallOpts{}, swapID)
 	if err != nil {
 		return [32]byte{}, nil, nil, 0, err
@@ -329,12 +286,6 @@ func (binder *Binder) auditAtomicSwap(swapID [32]byte) ([32]byte, []byte, *big.I
 
 // AuditSecretAtomicSwap audits the secret of an Atom swap
 func (binder *Binder) AuditSecretAtomicSwap(swapID [32]byte) ([32]byte, error) {
-	binder.mu.Lock()
-	defer binder.mu.Unlock()
-	return binder.auditSecretAtomicSwap(swapID)
-}
-
-func (binder *Binder) auditSecretAtomicSwap(swapID swap.ID) ([32]byte, error) {
 	return binder.AuditSecret(&bind.CallOpts{}, swapID)
 }
 
@@ -408,12 +359,6 @@ func (binder *Binder) submitSellOrder(orderID [32]byte) error {
 
 // OrderTraderAddress returns the order's submitting trader's ethereum address.
 func (binder *Binder) OrderTraderAddress(orderID [32]byte) ([]byte, error) {
-	binder.mu.Lock()
-	defer binder.mu.Unlock()
-	return binder.orderTraderAddress(orderID)
-}
-
-func (binder *Binder) orderTraderAddress(orderID [32]byte) ([]byte, error) {
 	addr, err := binder.Orderbook.OrderTrader(binder.callOpts, orderID)
 	if err != nil {
 		return nil, err
