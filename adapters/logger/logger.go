@@ -16,13 +16,13 @@ func NewStdOutLogger() logger.Logger {
 }
 
 func (logger *stdOutLogger) LogInfo(orderID [32]byte, msg string) {
-	log.Println(fmt.Sprintf("(%s)%s", order.Fmt(orderID), msg))
+	log.Println(fmt.Sprintf("(%s) %s", order.Fmt(orderID), msg))
 }
 
 func (logger *stdOutLogger) LogDebug(orderID [32]byte, msg string) {
-	log.Println(fmt.Sprintf("(%s)%s", order.Fmt(orderID), msg))
+	log.Println(fmt.Sprintf("(%s) %s", order.Fmt(orderID), msg))
 }
 
 func (logger *stdOutLogger) LogError(orderID [32]byte, msg string) {
-	log.Println(fmt.Sprintf("(%s)%s", order.Fmt(orderID), msg))
+	log.Println(fmt.Sprintf("(%s) %s", order.Fmt(orderID), msg))
 }

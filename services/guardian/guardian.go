@@ -38,9 +38,9 @@ func NewGuardian(builder atoms.AtomBuilder, state store.State) Guardian {
 
 func (g *guardian) Start() <-chan error {
 	errs := make(chan error)
-	log.Println("Starting the guardian service......")
+	log.Println("Starting the guardian......")
 	go func() {
-		defer log.Println("Ending the guardian service......")
+		defer log.Println("Ending the guardian......")
 		for {
 			select {
 			case <-g.doneCh:

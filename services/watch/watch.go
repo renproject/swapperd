@@ -86,7 +86,7 @@ func (watch *watch) Swap(orderID [32]byte) error {
 			return err
 		}
 	} else {
-		watch.adapter.LogInfo(orderID, " skipping watcher initiation")
+		watch.adapter.LogInfo(orderID, "skipping watcher initiation")
 	}
 
 	if watch.state.Status(orderID) == "PENDING" {
@@ -94,7 +94,7 @@ func (watch *watch) Swap(orderID [32]byte) error {
 			return err
 		}
 	} else {
-		watch.adapter.LogInfo(orderID, " skipping get match")
+		watch.adapter.LogInfo(orderID, "skipping get match")
 	}
 
 	if watch.state.Status(orderID) == "MATCHED" {
@@ -102,7 +102,7 @@ func (watch *watch) Swap(orderID [32]byte) error {
 			return err
 		}
 	} else {
-		watch.adapter.LogInfo(orderID, " skipping address submission")
+		watch.adapter.LogInfo(orderID, "skipping address submission")
 	}
 
 	if watch.state.Status(orderID) != "REDEEMED" && watch.state.Status(orderID) != "REFUNDED" {
@@ -110,14 +110,14 @@ func (watch *watch) Swap(orderID [32]byte) error {
 			return err
 		}
 	} else {
-		watch.adapter.LogInfo(orderID, " skipping address submission")
+		watch.adapter.LogInfo(orderID, "skipping address submission")
 	}
 
 	return nil
 }
 
 func (w *watch) setInfo(orderID [32]byte) error {
-	w.adapter.LogInfo(orderID, " submitting address")
+	w.adapter.LogInfo(orderID, "submitting address")
 	m, err := w.state.Match(orderID)
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func (w *watch) setInfo(orderID [32]byte) error {
 		return err
 	}
 
-	w.adapter.LogInfo(orderID, " submitted the address")
+	w.adapter.LogInfo(orderID, "submitted the address")
 	return nil
 }
 
@@ -164,17 +164,17 @@ func (w *watch) execute(orderID [32]byte) error {
 }
 
 func (w *watch) initiate(orderID [32]byte) error {
-	w.adapter.LogInfo(orderID, " starting the atomic swap")
+	w.adapter.LogInfo(orderID, "starting the atomic swap")
 	err := w.state.PutStatus(orderID, "PENDING")
 	if err != nil {
 		return err
 	}
-	w.adapter.LogInfo(orderID, " started the atomic swap")
+	w.adapter.LogInfo(orderID, "started the atomic swap")
 	return nil
 }
 
 func (w *watch) getMatch(orderID [32]byte) error {
-	w.adapter.LogInfo(orderID, " waiting for the match to be found")
+	w.adapter.LogInfo(orderID, "waiting for the match to be found")
 	match, err := w.adapter.CheckForMatch(orderID, true)
 	if err != nil {
 		return err
@@ -190,6 +190,6 @@ func (w *watch) getMatch(orderID [32]byte) error {
 		return err
 	}
 
-	w.adapter.LogInfo(orderID, fmt.Sprintf(" <----------> (%s)", order.Fmt(match.ForeignOrderID())))
+	w.adapter.LogInfo(orderID, fmt.Sprintf("<----------> (%s)", order.Fmt(match.ForeignOrderID())))
 	return nil
 }

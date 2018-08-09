@@ -28,11 +28,14 @@ func main() {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Enter your ethereum address(es): \nAddress>")
 	for {
-		text, _ := reader.ReadString('\n')
+		text, err := reader.ReadString('\n')
+		if err != nil {
+			panic(err)
+		}
 		if text == "\n" {
 			break
 		}
-		addresses = append(addresses, strings.Trim(text, "\n"))
+		addresses = append(addresses, strings.Trim(text, "\r\n"))
 		fmt.Print("Address>")
 	}
 	cfg.AuthorizedAddresses = addresses
@@ -55,9 +58,9 @@ func main() {
 	fmt.Print("Enter Bitcoin RPC Password: ")
 	rpcPass, _ := reader.ReadString('\n')
 
-	net.Bitcoin.Password = strings.Trim(rpcPass, "\n")
-	net.Bitcoin.User = strings.Trim(rpcUser, "\n")
-	net.Bitcoin.URL = strings.Trim(ipAddr, "\n")
+	net.Bitcoin.Password = strings.Trim(rpcPass, "\r\n")
+	net.Bitcoin.User = strings.Trim(rpcUser, "\r\n")
+	net.Bitcoin.URL = strings.Trim(ipAddr, "\r\n")
 
 	if err := net.Update(); err != nil {
 		panic(err)
