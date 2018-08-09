@@ -13,12 +13,13 @@ import (
 )
 
 func main() {
+	home := getHome()
 	ethNet := flag.String("ethereum", "kovan", "Which ethereum network to use")
 	btcNet := flag.String("bitcoin", "testnet", "Which bitcoin network to use")
 
-	keystore.NewKeystore([]uint32{0, 1}, []string{*btcNet, *ethNet}, os.Getenv("HOME")+"/.swapper/keystore.json")
+	keystore.NewKeystore([]uint32{0, 1}, []string{*btcNet, *ethNet}, home+"/.swapper/keystore.json")
 
-	cfg, err := config.LoadConfig(os.Getenv("HOME") + "/.swapper/config.json")
+	cfg, err := config.LoadConfig(home + "/.swapper/config.json")
 	if err != nil {
 		panic(err)
 	}
@@ -35,14 +36,14 @@ func main() {
 		fmt.Print("Address>")
 	}
 	cfg.AuthorizedAddresses = addresses
-	cfg.StoreLoc = os.Getenv("HOME") + "/.swapper/db"
+	cfg.StoreLoc = home + "/.swapper/db"
 	cfg.RenGuardAddr = "renex-watchdog-nightly.herokuapp.com"
 
 	if err := cfg.Update(); err != nil {
 		panic(err)
 	}
 
-	net, err := network.LoadNetwork(os.Getenv("HOME") + "/.swapper/network.json")
+	net, err := network.LoadNetwork(home + "/.swapper/network.json")
 	if err != nil {
 		panic(err)
 	}
@@ -61,4 +62,19 @@ func main() {
 	if err := net.Update(); err != nil {
 		panic(err)
 	}
+}
+
+func getHome() string {
+	winHome := os.Getenv("userprofile")
+	unixHome := os.Getenv("HOME")
+
+	if winHome != "" {
+		return winHome
+	}
+
+	if unixHome != "" {
+		return unixHome
+	}
+
+	panic("unknown Operating System")
 }

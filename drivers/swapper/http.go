@@ -37,10 +37,12 @@ type watchAdapter struct {
 }
 
 func main() {
+	home := getHome()
+
 	port := flag.String("port", "18516", "HTTP Atom port")
-	confPath := flag.String("config", os.Getenv("HOME")+"/.swapper/config.json", "Location of the config file")
-	keystrPath := flag.String("keystore", os.Getenv("HOME")+"/.swapper/keystore.json", "Location of the keystore file")
-	networkPath := flag.String("network", os.Getenv("HOME")+"/.swapper/network.json", "Location of the network file")
+	confPath := flag.String("config", home+"/.swapper/config.json", "Location of the config file")
+	keystrPath := flag.String("keystore", home+"/.swapper/keystore.json", "Location of the keystore file")
+	networkPath := flag.String("network", home+"/.swapper/network.json", "Location of the network file")
 
 	flag.Parse()
 
@@ -174,4 +176,19 @@ func buildWatcher(gen config.Config, net network.Config, kstr keystore.Keystore,
 
 	watcher := watch.NewWatch(&wAdapter, state)
 	return watcher, nil
+}
+
+func getHome() string {
+	winHome := os.Getenv("userprofile")
+	unixHome := os.Getenv("HOME")
+
+	if winHome != "" {
+		return winHome
+	}
+
+	if unixHome != "" {
+		return unixHome
+	}
+
+	panic("unknown Operating System")
 }
