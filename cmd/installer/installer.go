@@ -29,7 +29,7 @@ func main() {
 	fmt.Print("Enter your ethereum address(es): \nAddress>")
 	for {
 		text, _ := reader.ReadString('\n')
-		if text == "Address>\n" {
+		if text == "\n" {
 			break
 		}
 		addresses = append(addresses, strings.Trim(text, "\n"))
