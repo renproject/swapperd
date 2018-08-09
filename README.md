@@ -1,6 +1,6 @@
 # RenEx Atomic Swapper
 
-The RenEx Atomic Swapper is built, and officially supported by, the Republic Protocol team. It can used to execute atomic swaps between Ethereum and Bitcoin, and while it can be used independently of RenEx, it is designed for use with https://testnet.ren.exchange. Using this software, traders will be able to open Ethereum to Bitcoin orders on https://testnet.ren.exchange.
+The RenEx Atomic Swapper is built and officially supported by, the Republic Protocol team. It can be used to execute atomic swaps between Ethereum and Bitcoin, and while it can be used independently of RenEx, it is designed for use with https://testnet.ren.exchange. Using this software, traders will be able to open Ethereum to Bitcoin orders on https://testnet.ren.exchange.
     
 ## Installation
 
@@ -18,9 +18,9 @@ The RenEx Atomic Swapper is built, and officially supported by, the Republic Pro
 
 `curl https://releases.republicprotocol.com/swapper/install.sh -sSf | sh`
 
-2. When prompted enter the Ethereum address on your MetaMask
+2. When prompted, enter the Ethereum address that you will use with https://testnet.ren.exchange. This Ethereum address must hold all trading fees but does not hold the funds used for swapping. The swapper uses this address to distinguish between trades opened by RenEx vs. other malicious websites.
 
-3. When prompted enter the required Bitcoin Node information. You will need its IP address, the RPC port, and the RPC credentials (username / password).
+3. When prompted enter the required Bitcoin Node information. You will need its IP address, the RPC port, and the RPC credentials (username/password).
 
 ### Windows
 
@@ -34,7 +34,7 @@ IMPORTANT: The RenEx Atomic Swapper must be running at all times. If it is not r
 
 To open an atomic swap on RenEx:
 
-1. Select Ethereum / Bitcoin trading pair.
+1. Select the Ethereum / Bitcoin trading pair.
 
 2. Click "Connect to atomic swapper".
 
