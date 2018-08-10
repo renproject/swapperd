@@ -21,16 +21,14 @@
 4. Update the Bitcoin config to use the Bitcoin Testnet
 
 ```sh 
-echo "
-testnet=1
+echo "testnet=1
 blocksonly=1
 rest=1
 server=1
 listen=0
 rpcallowip=0.0.0.0/0 
 rpcuser=<enter_your_username>
-rpcpassword=<enter_your_password>
-"
+rpcpassword=<enter_your_password>"
 >> ~/.bitcoin/bitcoin.conf
 ```
 
