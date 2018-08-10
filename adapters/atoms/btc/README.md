@@ -1,8 +1,8 @@
-## Installation 
+## Installation Instructions
 
 ### Ubuntu
 
-1. Install Bitcoin Node software
+1. Install Bitcoin node
 
 `sudo apt-add-repository ppa:bitcoin/bitcoin`
 
@@ -18,7 +18,7 @@
 
 `bitcoin-cli stop`
 
-4. Updated the Bitcoin config to use the Bitcoin Testnet
+4. Update the Bitcoin config to use the Bitcoin Testnet
 
 ```sh 
 echo "
