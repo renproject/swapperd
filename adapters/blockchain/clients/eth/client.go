@@ -2,6 +2,7 @@ package ethclient
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -87,7 +88,16 @@ func (b *Conn) PatchedWaitMined(ctx context.Context, tx *types.Transaction) (*ty
 		time.Sleep(100 * time.Millisecond)
 		return nil, nil
 	default:
-		return bind.WaitMined(ctx, b.client, tx)
+		reciept, err := bind.WaitMined(ctx, b.client, tx)
+		if err != nil {
+			return nil, err
+		}
+
+		if reciept.Status != 1 {
+			return nil, fmt.Errorf("Transaction reverted")
+		}
+
+		return reciept, nil
 	}
 }
 

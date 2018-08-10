@@ -107,7 +107,11 @@ func (binder *Binder) SlashBond(guiltyOrderID order.ID) error {
 }
 
 func (binder *Binder) slashBond(guiltyOrderID order.ID) error {
-	_, err := binder.Slash(binder.transactOpts, guiltyOrderID)
+	tx, err := binder.Slash(binder.transactOpts, guiltyOrderID)
+	if err != nil {
+		return err
+	}
+	_, err = binder.conn.PatchedWaitMined(context.Background(), tx)
 	return err
 }
 
@@ -138,6 +142,10 @@ func (binder *Binder) CheckForMatch(orderID order.ID, wait bool) (match.Match, e
 			return nil, fmt.Errorf("Failed to get match details")
 		}
 
+		if cancelled := binder.cancelled(orderID); cancelled {
+			return nil, fmt.Errorf("Order cancelled")
+		}
+
 		if expired {
 			return nil, fmt.Errorf("Order expired")
 		}
@@ -155,6 +163,17 @@ func (binder *Binder) expired(orderID order.ID) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func (binder *Binder) cancelled(orderID order.ID) bool {
+	state, err := binder.Orderbook.OrderState(binder.callOpts, orderID)
+	if err != nil {
+		return false
+	}
+	if state == 3 {
+		return true
+	}
+	return false
 }
 
 // SendSwapDetails stores the swap details on the ethereum blockchain
