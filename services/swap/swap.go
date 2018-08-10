@@ -206,7 +206,7 @@ func (swap *swap) initiate() error {
 	}
 	swap.swapAdapter.LogInfo(orderID, "initiating the swap")
 
-	foreignAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.ForeignOrderID(), swap.ResponderExpiry(swap.RequestorExpiry()))
+	foreignAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.ForeignOrderID(), swap.ResponderExpiry())
 	if err != nil {
 		return err
 	}
@@ -259,7 +259,7 @@ func (swap *swap) receiveDetails() error {
 	personalOrderID := swap.order.PersonalOrderID()
 	foreignOrderID := swap.order.ForeignOrderID()
 	swap.swapAdapter.LogInfo(personalOrderID, "recieving the swap details")
-	foreignAtomBytes, err := swap.swapAdapter.ReceiveSwapDetails(foreignOrderID, swap.ResponderExpiry(swap.RequestorExpiry()))
+	foreignAtomBytes, err := swap.swapAdapter.ReceiveSwapDetails(foreignOrderID, swap.ResponderExpiry())
 	if err != nil {
 		return err
 	}
@@ -327,7 +327,7 @@ func (swap *swap) responderAudit() error {
 	}
 	newExpiry := expiry - 24*60*60
 
-	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID(), swap.ResponderExpiry(swap.RequestorExpiry()))
+	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID(), swap.ResponderExpiry())
 	if err != nil {
 		return err
 	}
@@ -382,7 +382,7 @@ func (swap *swap) requestorAudit() error {
 		return fmt.Errorf("Hashlock Mismatch %v %v", hashLock, selfHashLock)
 	}
 
-	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID(), swap.ResponderExpiry(swap.RequestorExpiry()))
+	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID(), swap.ResponderExpiry())
 	if err != nil {
 		return err
 	}
@@ -436,6 +436,6 @@ func (swap *swap) RequestorExpiry() int64 {
 	return time.Now().Add(30 * time.Minute).Unix()
 }
 
-func (swap *swap) ResponderExpiry(requestorExpiry int64) int64 {
-	return requestorExpiry / 2
+func (swap *swap) ResponderExpiry() int64 {
+	return time.Now().Add(15 * time.Minute).Unix()
 }
