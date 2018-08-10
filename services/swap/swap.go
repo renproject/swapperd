@@ -327,7 +327,7 @@ func (swap *swap) responderAudit() error {
 	}
 	newExpiry := expiry - 24*60*60
 
-	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID(), 0)
+	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID(), swap.ResponderExpiry(swap.RequestorExpiry()))
 	if err != nil {
 		return err
 	}
@@ -382,7 +382,7 @@ func (swap *swap) requestorAudit() error {
 		return fmt.Errorf("Hashlock Mismatch %v %v", hashLock, selfHashLock)
 	}
 
-	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID(), 0)
+	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID(), swap.ResponderExpiry(swap.RequestorExpiry()))
 	if err != nil {
 		return err
 	}

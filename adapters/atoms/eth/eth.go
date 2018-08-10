@@ -122,7 +122,7 @@ func (atom *EthereumAtom) Refund() error {
 
 // Audit an Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
-	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, 0)
+	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, time.Now().Add(15*time.Minute).Unix())
 	if err != nil {
 		return [32]byte{}, nil, nil, 0, err
 	}
@@ -139,7 +139,7 @@ func (atom *EthereumAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) AuditSecret() ([32]byte, error) {
-	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, 0)
+	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, time.Now().Add(15*time.Minute).Unix())
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -152,7 +152,7 @@ func (atom *EthereumAtom) AuditSecret() ([32]byte, error) {
 
 // RedeemedAt returns the timestamp at which the atom is redeemed
 func (atom *EthereumAtom) RedeemedAt() (int64, error) {
-	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, 0)
+	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, time.Now().Add(15*time.Minute).Unix())
 	if err != nil {
 		return 0, err
 	}
