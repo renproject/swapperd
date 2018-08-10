@@ -105,7 +105,7 @@ func (watch *watch) Swap(orderID [32]byte) error {
 		watch.adapter.LogInfo(orderID, "skipping address submission")
 	}
 
-	if watch.state.Status(orderID) != "REDEEMED" && watch.state.Status(orderID) != "REFUNDED" {
+	if watch.state.Status(orderID) != "REDEEMED" && watch.state.Status(orderID) != "REFUNDED" && watch.state.Status(orderID) != swap.StatusComplained {
 		if err := watch.execute(orderID); err != nil {
 			return err
 		}

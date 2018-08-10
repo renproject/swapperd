@@ -69,6 +69,7 @@ type State interface {
 
 	PutRedeemable([32]byte) error
 	IsRedeemable([32]byte) bool
+	Complained([32]byte) bool
 	Redeemed([32]byte) error
 }
 
@@ -276,6 +277,17 @@ func (state *state) AtomExists(orderID [32]byte) bool {
 func (state *state) IsRedeemable(orderID [32]byte) bool {
 	_, err := state.Read(append([]byte("Redeemable"), orderID[:]...))
 	if err != nil {
+		return false
+	}
+	return true
+}
+
+func (state *state) Complained(orderID [32]byte) bool {
+	statusBytes, err := state.Read(append([]byte("Status:"), orderID[:]...))
+	if err != nil {
+		return false
+	}
+	if string(statusBytes) != "COMPLAINED" {
 		return false
 	}
 	return true

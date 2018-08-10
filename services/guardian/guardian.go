@@ -92,7 +92,7 @@ func (g *guardian) Stop() {
 }
 
 func (g *guardian) refund(orderID [32]byte) error {
-	if !g.state.IsRedeemable(orderID) {
+	if !g.state.Complained() && !g.state.IsRedeemable(orderID) {
 		return errors.ErrNotInitiated
 	}
 

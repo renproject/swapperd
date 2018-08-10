@@ -11,6 +11,7 @@ const (
 	StatusRedeemed                    = "REDEEMED"
 	StatusWaitingForCounterRedemption = "WAITING_FOR_COUNTER_REDEMPTION"
 	StatusRefunded                    = "REFUNDED"
+	StatusComplained                  = "COMPLAINED"
 
 	StatusReceivedSwapDetails = "ReceiveD_SWAP_DETAILS"
 	StatusSentSwapDetails     = "SENT_SWAP_DETAILS"

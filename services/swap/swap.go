@@ -78,7 +78,9 @@ func (swap *swap) request() error {
 	if swap.state.Status(personalOrderID) == StatusSentSwapDetails {
 		if err := swap.receiveDetails(); err != nil {
 			swap.swapAdapter.ComplainDelayedResponderInitiation(personalOrderID)
-			return err
+			swap.swapAdapter.LogError(personalOrderID, err.Error())
+			swap.state.PutStatus(personalOrderID, StatusComplained)
+			return nil
 		}
 	} else {
 		swap.swapAdapter.LogInfo(personalOrderID, "skipping receive details")
@@ -87,7 +89,9 @@ func (swap *swap) request() error {
 	if swap.state.Status(personalOrderID) == StatusReceivedSwapDetails {
 		if err := swap.requestorAudit(); err != nil {
 			swap.swapAdapter.ComplainWrongResponderInitiation(personalOrderID)
-			return err
+			swap.swapAdapter.LogError(personalOrderID, err.Error())
+			swap.state.PutStatus(personalOrderID, StatusComplained)
+			return nil
 		}
 	} else {
 		swap.swapAdapter.LogInfo(personalOrderID, "skipping requestor audit")
@@ -111,7 +115,9 @@ func (swap *swap) respond() error {
 	if swap.state.Status(personalOrderID) == StatusInfoSubmitted {
 		if err := swap.receiveDetails(); err != nil {
 			swap.swapAdapter.ComplainDelayedRequestorInitiation(personalOrderID)
-			return err
+			swap.swapAdapter.LogError(personalOrderID, err.Error())
+			swap.state.PutStatus(personalOrderID, StatusComplained)
+			return nil
 		}
 	} else {
 		swap.swapAdapter.LogInfo(personalOrderID, "skipping generate details")
@@ -120,7 +126,9 @@ func (swap *swap) respond() error {
 	if swap.state.Status(personalOrderID) == StatusReceivedSwapDetails {
 		if err := swap.responderAudit(); err != nil {
 			swap.swapAdapter.ComplainWrongRequestorInitiation(personalOrderID)
-			return err
+			swap.swapAdapter.LogError(personalOrderID, err.Error())
+			swap.state.PutStatus(personalOrderID, StatusComplained)
+			return nil
 		}
 	} else {
 		swap.swapAdapter.LogInfo(personalOrderID, "skipping audit")
@@ -145,7 +153,9 @@ func (swap *swap) respond() error {
 	if swap.state.Status(personalOrderID) == StatusSentSwapDetails {
 		if err := swap.getRedeemDetails(); err != nil {
 			swap.swapAdapter.ComplainDelayedRequestorRedemption(personalOrderID)
-			return err
+			swap.swapAdapter.LogError(personalOrderID, err.Error())
+			swap.state.PutStatus(personalOrderID, StatusComplained)
+			return nil
 		}
 	} else {
 		swap.swapAdapter.LogInfo(personalOrderID, "skipping get redeem details audit")
