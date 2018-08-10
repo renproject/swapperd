@@ -94,8 +94,20 @@ func (binder *Binder) sendOwnerAddress(orderID order.ID, address []byte) error {
 }
 
 // ReceiveOwnerAddress receives the owner address for atomic swap
-func (binder *Binder) ReceiveOwnerAddress(orderID order.ID) ([]byte, error) {
-	return binder.GetOwnerAddress(binder.callOpts, orderID)
+func (binder *Binder) ReceiveOwnerAddress(orderID order.ID, waitTill int64) ([]byte, error) {
+	for {
+		address, err := binder.GetOwnerAddress(binder.callOpts, orderID)
+
+		if bytes.Compare(address, []byte{}) != 0 && err == nil {
+			return address, nil
+		}
+
+		if time.Now().Unix() <= waitTill {
+			continue
+		}
+
+		return address, err
+	}
 }
 
 // SlashBond receives the guilty trader's atomic swap order id and slashes
@@ -193,20 +205,19 @@ func (binder *Binder) sendSwapDetails(orderID order.ID, swapDetails []byte) erro
 }
 
 // ReceiveSwapDetails receives the swap details from the ethereum blockchain
-func (binder *Binder) ReceiveSwapDetails(orderID order.ID, wait bool) ([]byte, error) {
+func (binder *Binder) ReceiveSwapDetails(orderID order.ID, waitTill int64) ([]byte, error) {
 	for {
-		if !wait {
-			details, err := binder.SwapDetails(binder.callOpts, orderID)
-			if bytes.Compare(details, []byte{}) == 0 || err != nil {
-				return nil, fmt.Errorf("Swap details not submitted")
-			}
+		details, err := binder.SwapDetails(binder.callOpts, orderID)
+
+		if bytes.Compare(details, []byte{}) != 0 && err == nil {
 			return details, nil
 		}
-		details, err := binder.SwapDetails(binder.callOpts, orderID)
-		if bytes.Compare(details, []byte{}) == 0 || err != nil {
+
+		if time.Now().Unix() <= waitTill {
 			continue
 		}
-		return binder.SwapDetails(binder.callOpts, orderID)
+
+		return details, err
 	}
 }
 

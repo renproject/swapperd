@@ -13,7 +13,7 @@ import (
 )
 
 type Adapter interface {
-	ReceiveSwapDetails(order.ID, bool) ([]byte, error)
+	ReceiveSwapDetails(order.ID, int64) ([]byte, error)
 }
 
 type BitcoinData struct {
@@ -105,7 +105,7 @@ func (atom *BitcoinAtom) Refund() error {
 
 // Audit an Atom swap by calling a function on Bitcoin
 func (atom *BitcoinAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
-	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, false)
+	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, 0)
 	if err != nil {
 		return [32]byte{}, nil, nil, 0, err
 	}

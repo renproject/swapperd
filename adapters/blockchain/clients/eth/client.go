@@ -92,11 +92,9 @@ func (b *Conn) PatchedWaitMined(ctx context.Context, tx *types.Transaction) (*ty
 		if err != nil {
 			return nil, err
 		}
-
 		if reciept.Status != 1 {
 			return nil, fmt.Errorf("Transaction reverted")
 		}
-
 		return reciept, nil
 	}
 }
