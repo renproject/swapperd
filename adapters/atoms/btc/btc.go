@@ -109,11 +109,9 @@ func (atom *BitcoinAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
 	if err != nil {
 		return [32]byte{}, nil, nil, 0, err
 	}
-
 	if err := atom.Deserialize(details); err != nil {
 		return [32]byte{}, nil, nil, 0, err
 	}
-
 	result, err := bindings.Audit(atom.connection, atom.data.Contract, atom.data.ContractTx)
 	if err != nil {
 		return [32]byte{}, nil, nil, 0, err
@@ -137,10 +135,7 @@ func (atom *BitcoinAtom) Serialize() ([]byte, error) {
 
 // Deserialize deserializes the atom details
 func (atom *BitcoinAtom) Deserialize(data []byte) error {
-	if err := json.Unmarshal(data, &atom.data); err != nil {
-		return err
-	}
-	return nil
+	return json.Unmarshal(data, &atom.data)
 }
 
 // PriorityCode returns the priority code of the currency.
