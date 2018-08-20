@@ -5,7 +5,6 @@ import (
 	"log"
 	"time"
 
-	co "github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/renex-swapper-go/adapters/atoms"
 	"github.com/republicprotocol/renex-swapper-go/services/errors"
 	"github.com/republicprotocol/renex-swapper-go/services/store"
@@ -55,7 +54,24 @@ func (g *guardian) Start() <-chan error {
 					return
 				}
 				if len(swaps) < 1000 {
-					co.ParForAll(swaps, func(i int) {
+					for i := range swaps {
+						go func(i int) {
+							if err := g.refund(swaps[i]); err != nil {
+								if err == errors.ErrNotInitiated {
+									return
+								}
+								errs <- err
+								return
+							}
+							if g.state.Status(swaps[i]) == swap.StatusRefunded {
+								g.state.DeleteSwap(swaps[i])
+							}
+						}(i)
+					}
+					continue
+				}
+				for i := range swaps[:1000] {
+					go func(i int) {
 						if err := g.refund(swaps[i]); err != nil {
 							if err == errors.ErrNotInitiated {
 								return
@@ -66,21 +82,8 @@ func (g *guardian) Start() <-chan error {
 						if g.state.Status(swaps[i]) == swap.StatusRefunded {
 							g.state.DeleteSwap(swaps[i])
 						}
-					})
-					continue
+					}(i)
 				}
-				co.ParForAll(swaps[:1000], func(i int) {
-					if err := g.refund(swaps[i]); err != nil {
-						if err == errors.ErrNotInitiated {
-							return
-						}
-						errs <- err
-						return
-					}
-					if g.state.Status(swaps[i]) == swap.StatusRefunded {
-						g.state.DeleteSwap(swaps[i])
-					}
-				})
 			}
 		}
 	}()

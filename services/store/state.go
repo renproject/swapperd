@@ -49,7 +49,6 @@ type state struct {
 type State interface {
 	AddSwap([32]byte) error
 	DeleteSwap([32]byte) error
-	PendingSwaps() ([][32]byte, error)
 	ExecutableSwaps() ([][32]byte, error)
 	RefundableSwaps() ([][32]byte, error)
 
@@ -126,6 +125,11 @@ func (state *state) DeleteSwap(orderID [32]byte) error {
 				pendingSwaps.Swaps = [][32]byte{}
 				break
 			}
+
+			if i == 0 {
+				pendingSwaps.Swaps = pendingSwaps.Swaps[1:]
+			}
+
 			pendingSwaps.Swaps = append(pendingSwaps.Swaps[:i-1], pendingSwaps.Swaps[i:]...)
 			break
 		}
@@ -139,10 +143,7 @@ func (state *state) DeleteSwap(orderID [32]byte) error {
 	return state.Write([]byte("Pending Swaps:"), pendingSwapsProcessedBytes)
 }
 
-func (state *state) PendingSwaps() ([][32]byte, error) {
-	state.swapMu.Lock()
-	defer state.swapMu.Unlock()
-
+func (state *state) pendingSwaps() ([][32]byte, error) {
 	pendingSwapsBytes, err := state.Read([]byte("Pending Swaps:"))
 	if err != nil {
 		return [][32]byte{}, nil
@@ -157,7 +158,9 @@ func (state *state) PendingSwaps() ([][32]byte, error) {
 }
 
 func (state *state) ExecutableSwaps() ([][32]byte, error) {
-	pendingSwaps, err := state.PendingSwaps()
+	state.swapMu.RLock()
+	pendingSwaps, err := state.pendingSwaps()
+	state.swapMu.RUnlock()
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +174,9 @@ func (state *state) ExecutableSwaps() ([][32]byte, error) {
 }
 
 func (state *state) RefundableSwaps() ([][32]byte, error) {
-	pendingSwaps, err := state.PendingSwaps()
+	state.swapMu.RLock()
+	pendingSwaps, err := state.pendingSwaps()
+	state.swapMu.RUnlock()
 	if err != nil {
 		return nil, err
 	}

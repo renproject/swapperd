@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	co "github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/renex-swapper-go/domains/order"
 	"github.com/republicprotocol/renex-swapper-go/services/store"
 	"github.com/republicprotocol/renex-swapper-go/services/swap"
@@ -52,7 +51,21 @@ func (watch *watch) Start() <-chan error {
 					continue
 				}
 				if len(swaps) < 1000 {
-					co.ParForAll(swaps, func(i int) {
+					for i := range swaps {
+						go func(i int) {
+							if err := watch.Swap(swaps[i]); err != nil {
+								errs <- err
+								return
+							}
+							if watch.state.Status(swaps[i]) == swap.StatusRedeemed {
+								watch.state.DeleteSwap(swaps[i])
+							}
+						}(i)
+					}
+					continue
+				}
+				for i := range swaps[:1000] {
+					go func(i int) {
 						if err := watch.Swap(swaps[i]); err != nil {
 							errs <- err
 							return
@@ -60,18 +73,8 @@ func (watch *watch) Start() <-chan error {
 						if watch.state.Status(swaps[i]) == swap.StatusRedeemed {
 							watch.state.DeleteSwap(swaps[i])
 						}
-					})
-					continue
+					}(i)
 				}
-				co.ParForAll(swaps[:1000], func(i int) {
-					if err := watch.Swap(swaps[i]); err != nil {
-						errs <- err
-						return
-					}
-					if watch.state.Status(swaps[i]) == swap.StatusRedeemed {
-						watch.state.DeleteSwap(swaps[i])
-					}
-				})
 			}
 		}
 	}()
