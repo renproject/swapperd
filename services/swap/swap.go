@@ -297,7 +297,7 @@ func (swap *swap) receiveDetails() error {
 	personalOrderID := swap.order.PersonalOrderID()
 	foreignOrderID := swap.order.ForeignOrderID()
 	swap.swapAdapter.LogInfo(personalOrderID, "recieving the swap details")
-	foreignAtomBytes, err := swap.swapAdapter.ReceiveSwapDetails(foreignOrderID, 0)
+	foreignAtomBytes, err := swap.swapAdapter.ReceiveSwapDetails(foreignOrderID, time.Now().Add(24*time.Hour).Unix())
 	if err != nil {
 		return err
 	}
