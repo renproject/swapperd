@@ -40,7 +40,7 @@ func main() {
 	}
 	cfg.AuthorizedAddresses = addresses
 	cfg.StoreLoc = home + "/.swapper/db"
-	cfg.RenGuardAddr = "renex-watchdog-nightly.herokuapp.com"
+	cfg.RenGuardAddr = "renex-watchdog-federation.herokuapp.com"
 
 	if err := cfg.Update(); err != nil {
 		panic(err)
