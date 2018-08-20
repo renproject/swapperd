@@ -61,6 +61,7 @@ func (watch *watch) Start() <-chan error {
 							watch.state.DeleteSwap(swaps[i])
 						}
 					})
+					continue
 				}
 				co.ParForAll(swaps[:1000], func(i int) {
 					if err := watch.Swap(swaps[i]); err != nil {
