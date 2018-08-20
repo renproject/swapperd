@@ -33,20 +33,5 @@ func (logger *stdOutLogger) LogError(orderID [32]byte, msg string) {
 }
 
 func pickColor(orderID [32]byte) string {
-	switch int64(orderID[0]) % 7 {
-	case 0:
-		return "\033[30m"
-	case 1:
-		return "\033[31m"
-	case 2:
-		return "\033[32m"
-	case 3:
-		return "\033[33m"
-	case 4:
-		return "\033[34m"
-	case 5:
-		return "\033[35m"
-	default:
-		return "\033[36m"
-	}
+	return fmt.Sprintf("\033[3%dm", int64(orderID[0])%7)
 }
