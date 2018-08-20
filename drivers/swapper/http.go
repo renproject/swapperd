@@ -149,7 +149,7 @@ func buildWatcher(gen config.Config, net network.Config, kstr keystore.Keystore,
 		return nil, err
 	}
 
-	err = btcConn.Client.ImportPrivKey(WIF)
+	err = btcConn.Client.ImportPrivKeyLabel(WIF, "Atom")
 	if err != nil {
 		return nil, err
 	}

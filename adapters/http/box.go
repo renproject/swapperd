@@ -182,12 +182,8 @@ func bitcoinBalance(conf network.Config, key keystore.Key) (Balance, error) {
 	if err != nil {
 		return Balance{}, err
 	}
-	btcAddr, err := btcutil.DecodeAddress(string(addr), conn.ChainParams)
-	if err != nil {
-		return Balance{}, err
-	}
 
-	amt, err := conn.Client.GetReceivedByAddress(btcAddr)
+	amt, err := conn.Client.GetBalance("Atom")
 	if err != nil {
 		return Balance{}, err
 	}
