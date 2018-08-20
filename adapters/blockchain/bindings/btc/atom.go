@@ -516,12 +516,13 @@ func buildContract(connection btc.Conn, args *contractArgs, refundAddr btcutil.A
 
 	unsignedContract := wire.NewMsgTx(txVersion)
 	unsignedContract.AddTxOut(wire.NewTxOut(int64(args.amount), contractP2SHPkScript))
-	unsignedContract, err = connection.FundRawTransaction(unsignedContract)
+
+	unsignedContract, _, err = connection.FundTransaction(unsignedContract, []btcutil.Address{refundAddr})
 	if err != nil {
 		return nil, fmt.Errorf("fundrawtransaction: %v", err)
 	}
 
-	contractTx, complete, err := connection.Client.SignRawTransaction(unsignedContract)
+	contractTx, complete, err := connection.SignTransaction(unsignedContract)
 	if err != nil {
 		return nil, fmt.Errorf("signrawtransaction: %v", err)
 	}
