@@ -46,7 +46,7 @@ func (g *guardian) Start() <-chan error {
 			case <-g.doneCh:
 				return
 			case <-g.notifyCh:
-				swaps, err := g.state.PendingSwaps()
+				swaps, err := g.state.RefundableSwaps()
 				if err != nil {
 					if err == ErrSwapRedeemed {
 						continue
@@ -63,7 +63,9 @@ func (g *guardian) Start() <-chan error {
 							errs <- err
 							return
 						}
-						g.state.DeleteSwap(swaps[i])
+						if g.state.Status(swaps[i]) == swap.StatusRefunded {
+							g.state.DeleteSwap(swaps[i])
+						}
 					})
 					continue
 				}
@@ -75,7 +77,9 @@ func (g *guardian) Start() <-chan error {
 						errs <- err
 						return
 					}
-					g.state.DeleteSwap(swaps[i])
+					if g.state.Status(swaps[i]) == swap.StatusRefunded {
+						g.state.DeleteSwap(swaps[i])
+					}
 				})
 			}
 		}
