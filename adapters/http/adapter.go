@@ -30,7 +30,7 @@ type Balance struct {
 
 type Balances []Balance
 
-type BoxHttpAdapter interface {
+type BoxHTTPAdapter interface {
 	WhoAmI(challenge string) (WhoAmI, error)
 	PostOrder(order PostOrder) (PostOrder, error)
 	GetStatus(orderID string) (Status, error)

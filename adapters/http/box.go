@@ -30,7 +30,7 @@ type boxHttpAdapter struct {
 	watch   watch.Watch
 }
 
-func NewBoxHttpAdapter(config config.Config, network network.Config, keystr keystore.Keystore, watcher watch.Watch) BoxHttpAdapter {
+func NewBoxHttpAdapter(config config.Config, network network.Config, keystr keystore.Keystore, watcher watch.Watch) BoxHTTPAdapter {
 	return &boxHttpAdapter{
 		config:  config,
 		network: network,
@@ -182,8 +182,12 @@ func bitcoinBalance(conf network.Config, key keystore.Key) (Balance, error) {
 	if err != nil {
 		return Balance{}, err
 	}
+	btcAddr, err := btcutil.DecodeAddress(string(addr), conn.ChainParams)
+	if err != nil {
+		return Balance{}, err
+	}
 
-	amt, err := conn.Client.GetBalance("*")
+	amt, err := conn.Client.GetReceivedByAddress(btcAddr)
 	if err != nil {
 		return Balance{}, err
 	}

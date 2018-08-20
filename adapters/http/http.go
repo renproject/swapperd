@@ -10,7 +10,7 @@ import (
 )
 
 // NewServer creates a new http handler
-func NewServer(adapter BoxHttpAdapter) http.Handler {
+func NewServer(adapter BoxHTTPAdapter) http.Handler {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/orders", PostOrdersHandler(adapter)).Methods("POST")
@@ -39,7 +39,10 @@ func RecoveryHandler(h http.Handler) http.Handler {
 	})
 }
 
-func PostOrdersHandler(boxHttpAdapter BoxHttpAdapter) http.HandlerFunc {
+// PostOrdersHandler handles post orders request, it gets the signed order id,
+// checks whether the signer is authorized, if the signer is authorized this
+// function adds the order id to the queue.
+func PostOrdersHandler(boxHTTPAdapter BoxHTTPAdapter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		postOrder := PostOrder{}
 		if err := json.NewDecoder(r.Body).Decode(&postOrder); err != nil {
@@ -47,7 +50,7 @@ func PostOrdersHandler(boxHttpAdapter BoxHttpAdapter) http.HandlerFunc {
 			return
 		}
 
-		processedOrder, err := boxHttpAdapter.PostOrder(postOrder)
+		processedOrder, err := boxHTTPAdapter.PostOrder(postOrder)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot process the order: %v", err))
 			return
@@ -64,7 +67,10 @@ func PostOrdersHandler(boxHttpAdapter BoxHttpAdapter) http.HandlerFunc {
 	}
 }
 
-func WhoAmIHandler(adapter BoxHttpAdapter) http.HandlerFunc {
+// WhoAmIHandler handles the get whoami request,it gets a challenge from the
+// caller signs it and sends back the signed challenge with it's version
+// information.
+func WhoAmIHandler(adapter BoxHTTPAdapter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		params := mux.Vars(r)
@@ -85,7 +91,8 @@ func WhoAmIHandler(adapter BoxHttpAdapter) http.HandlerFunc {
 	}
 }
 
-func GetStatusHandler(adapter BoxHttpAdapter) http.HandlerFunc {
+//
+func GetStatusHandler(adapter BoxHTTPAdapter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		params := mux.Vars(r)
 		status, err := adapter.GetStatus(params["orderId"])
@@ -105,7 +112,7 @@ func GetStatusHandler(adapter BoxHttpAdapter) http.HandlerFunc {
 	}
 }
 
-func GetBalancesHandler(adapter BoxHttpAdapter) http.HandlerFunc {
+func GetBalancesHandler(adapter BoxHTTPAdapter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		balances, err := adapter.GetBalances()
 		if err != nil {
