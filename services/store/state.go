@@ -128,6 +128,7 @@ func (state *state) DeleteSwap(orderID [32]byte) error {
 
 			if i == 0 {
 				pendingSwaps.Swaps = pendingSwaps.Swaps[1:]
+				break
 			}
 
 			pendingSwaps.Swaps = append(pendingSwaps.Swaps[:i-1], pendingSwaps.Swaps[i:]...)
