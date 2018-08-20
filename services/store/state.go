@@ -50,6 +50,8 @@ type State interface {
 	AddSwap([32]byte) error
 	DeleteSwap([32]byte) error
 	PendingSwaps() ([][32]byte, error)
+	ExecutableSwaps() ([][32]byte, error)
+	RefundableSwaps() ([][32]byte, error)
 
 	InitiateDetails([32]byte) (int64, [32]byte, error)
 	PutInitiateDetails([32]byte, int64, [32]byte) error
@@ -150,7 +152,36 @@ func (state *state) PendingSwaps() ([][32]byte, error) {
 	if err := json.Unmarshal(pendingSwapsBytes, &pendingSwaps); err != nil {
 		return nil, err
 	}
+
 	return pendingSwaps.Swaps, nil
+}
+
+func (state *state) ExecutableSwaps() ([][32]byte, error) {
+	pendingSwaps, err := state.PendingSwaps()
+	if err != nil {
+		return nil, err
+	}
+	executableSwaps := [][32]byte{}
+	for _, pendingSwap := range pendingSwaps {
+		if state.Status(pendingSwap) != "COMPLAINED" {
+			executableSwaps = append(executableSwaps, pendingSwap)
+		}
+	}
+	return executableSwaps, nil
+}
+
+func (state *state) RefundableSwaps() ([][32]byte, error) {
+	pendingSwaps, err := state.PendingSwaps()
+	if err != nil {
+		return nil, err
+	}
+	refundableSwaps := [][32]byte{}
+	for _, pendingSwap := range pendingSwaps {
+		if state.Status(pendingSwap) == "COMPLAINED" {
+			refundableSwaps = append(refundableSwaps, pendingSwap)
+		}
+	}
+	return refundableSwaps, nil
 }
 
 func (state *state) PutInitiateDetails(orderID [32]byte, expiry int64, hashLock [32]byte) error {
