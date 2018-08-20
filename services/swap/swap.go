@@ -212,7 +212,7 @@ func (swap *swap) respond() error {
 func (swap *swap) generateDetails() error {
 	orderID := swap.order.PersonalOrderID()
 	swap.swapAdapter.LogInfo(orderID, "generating swap details")
-	expiry := swap.RequestorExpiry()
+	expiry := time.Now().Add(48 * time.Hour).Unix()
 	secret := make([]byte, 32)
 	rand.Read(secret)
 	secret32, err := utils.ToBytes32(secret)
@@ -244,7 +244,7 @@ func (swap *swap) initiate() error {
 	}
 	swap.swapAdapter.LogInfo(orderID, "initiating the swap")
 
-	foreignAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.ForeignOrderID(), swap.ResponderExpiry())
+	foreignAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.ForeignOrderID(), time.Now().Add(24*time.Hour).Unix())
 	if err != nil {
 		return err
 	}
@@ -297,7 +297,7 @@ func (swap *swap) receiveDetails() error {
 	personalOrderID := swap.order.PersonalOrderID()
 	foreignOrderID := swap.order.ForeignOrderID()
 	swap.swapAdapter.LogInfo(personalOrderID, "recieving the swap details")
-	foreignAtomBytes, err := swap.swapAdapter.ReceiveSwapDetails(foreignOrderID, swap.ResponderExpiry())
+	foreignAtomBytes, err := swap.swapAdapter.ReceiveSwapDetails(foreignOrderID, 0)
 	if err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ func (swap *swap) responderAudit() error {
 	}
 	newExpiry := expiry - 24*60*60
 
-	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID(), swap.ResponderExpiry())
+	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID(), 0)
 	if err != nil {
 		return err
 	}
@@ -420,7 +420,7 @@ func (swap *swap) requestorAudit() error {
 		return fmt.Errorf("Hashlock Mismatch %v %v", hashLock, selfHashLock)
 	}
 
-	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID(), swap.ResponderExpiry())
+	personalAddr, err := swap.swapAdapter.ReceiveOwnerAddress(swap.order.PersonalOrderID(), 0)
 	if err != nil {
 		return err
 	}
@@ -468,12 +468,4 @@ func (swap *swap) getRedeemDetails() error {
 
 	swap.swapAdapter.LogInfo(orderID, "recieved the redeem details")
 	return nil
-}
-
-func (swap *swap) RequestorExpiry() int64 {
-	return time.Now().Add(30 * time.Minute).Unix()
-}
-
-func (swap *swap) ResponderExpiry() int64 {
-	return time.Now().Add(15 * time.Minute).Unix()
 }

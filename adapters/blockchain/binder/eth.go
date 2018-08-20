@@ -154,9 +154,9 @@ func (binder *Binder) CheckForMatch(orderID order.ID, wait bool) (match.Match, e
 			return nil, fmt.Errorf("Failed to get match details")
 		}
 
-		if cancelled := binder.cancelled(orderID); cancelled {
-			return nil, fmt.Errorf("Order cancelled")
-		}
+		// if cancelled := binder.cancelled(orderID); cancelled {
+		// 	return nil, fmt.Errorf("Order cancelled")
+		// }
 
 		if expired {
 			return nil, fmt.Errorf("Order expired")
@@ -217,7 +217,7 @@ func (binder *Binder) ReceiveSwapDetails(orderID order.ID, waitTill int64) ([]by
 			continue
 		}
 
-		return details, err
+		return details, fmt.Errorf("Swap details expired")
 	}
 }
 
