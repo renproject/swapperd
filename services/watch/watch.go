@@ -36,6 +36,7 @@ func NewWatch(adapter Adapter, state store.State) Watch {
 // Run runs the watch object on the given order id
 func (watch *watch) Start() <-chan error {
 	errs := make(chan error)
+	fullsync := true
 	log.Println("Starting the watcher......")
 	go func() {
 		defer close(errs)
@@ -45,7 +46,10 @@ func (watch *watch) Start() <-chan error {
 			case <-watch.doneCh:
 				return
 			case <-watch.notifyCh:
-				swaps, err := watch.state.ExecutableSwaps()
+				swaps, err := watch.state.ExecutableSwaps(fullsync)
+				if fullsync {
+					fullsync = false
+				}
 				if err != nil {
 					errs <- err
 					continue

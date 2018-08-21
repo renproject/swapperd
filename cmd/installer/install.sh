@@ -48,20 +48,26 @@ if ! [ -x "$(command -v swapper)" ]; then
   shell=${path##*/}
 
   if [ "$shell" = 'zsh' ] ; then
-    if [ -f "$HOME/.zshrc" ] ; then
-      echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.zshrc
-    elif [ -f "$HOME/.zprofile" ] ; then
+    if [ -f "$HOME/.zprofile" ] ; then
       echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.zprofile
+      swapper_home=$HOME/.zprofile
+    elif [ -f "$HOME/.zshrc" ] ; then
+      echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.zshrc
+      swapper_home=$HOME/.zshrc
     elif [ -f "$HOME/.profile" ] ; then
       echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.profile
+      swapper_home=$HOME/.profile
     fi
   elif  [ "$shell" = 'bash' ] ; then
     if [ -f "$HOME/.bash_profile" ] ; then
       echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.bash_profile
+      swapper_home=$HOME/.bash_profile
     elif [ -f "$HOME/.bashrc" ] ; then
       echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.bashrc
+      swapper_home=$HOME/.bashrc
     elif [ -f "$HOME/.profile" ] ; then
       echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.profile
+      swapper_home=$HOME/.profile
     fi
   elif [ -f "$HOME/.profile" ] ; then
     echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.profile
@@ -72,7 +78,10 @@ if ! [ -x "$(command -v swapper)" ]; then
   echo "${GREEN}export PATH=\$PATH:\$HOME/.swapper/bin ${NC}"
 fi
 
+echo "RenEx Atomic Swapper is installed now. Great!"
 echo ''
-echo "${GREEN}Done! Please run the following command to start the RenEx Swapper.${NC}"
+echo "To get started you need RenEx Atomic Swapper's bin directory ($HOME/.swapper/bin) in your PATH"
+echo "environment variable. Next time you log in this will be done"
+echo "automatically."
 echo ''
-echo "${GREEN}swapper${NC}"
+echo "To configure your current shell run 'source ${swapper_home}'"

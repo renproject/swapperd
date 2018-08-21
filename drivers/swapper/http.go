@@ -56,6 +56,7 @@ func main() {
 		panic(err)
 	}
 
+	log.Println("This might take a few minutes to complete")
 	net, err := network.LoadNetwork(*networkPath)
 
 	db, err := leveldb.NewLDBStore(conf.StoreLocation())

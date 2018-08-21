@@ -49,7 +49,7 @@ type state struct {
 type State interface {
 	AddSwap([32]byte) error
 	DeleteSwap([32]byte) error
-	ExecutableSwaps() ([][32]byte, error)
+	ExecutableSwaps(bool) ([][32]byte, error)
 	RefundableSwaps() ([][32]byte, error)
 
 	InitiateDetails([32]byte) (int64, [32]byte, error)
@@ -158,16 +158,35 @@ func (state *state) pendingSwaps() ([][32]byte, error) {
 	return pendingSwaps.Swaps, nil
 }
 
-func (state *state) ExecutableSwaps() ([][32]byte, error) {
+func (state *state) ExecutableSwaps(fullsync bool) ([][32]byte, error) {
 	state.swapMu.RLock()
 	pendingSwaps, err := state.pendingSwaps()
 	state.swapMu.RUnlock()
+	state.swapMu.Lock()
+	defer state.swapMu.Unlock()
 	if err != nil {
 		return nil, err
 	}
+	if fullsync {
+		return state.executableFullSync(pendingSwaps)
+	}
+	return state.executablePartialSync(pendingSwaps)
+}
+
+func (state *state) executableFullSync(pendingSwaps [][32]byte) ([][32]byte, error) {
 	executableSwaps := [][32]byte{}
 	for _, pendingSwap := range pendingSwaps {
 		if state.Status(pendingSwap) != "COMPLAINED" {
+			executableSwaps = append(executableSwaps, pendingSwap)
+		}
+	}
+	return executableSwaps, nil
+}
+
+func (state *state) executablePartialSync(pendingSwaps [][32]byte) ([][32]byte, error) {
+	executableSwaps := [][32]byte{}
+	for _, pendingSwap := range pendingSwaps {
+		if state.Status(pendingSwap) == "UNKNOWN" {
 			executableSwaps = append(executableSwaps, pendingSwap)
 		}
 	}

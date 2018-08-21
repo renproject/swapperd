@@ -26,7 +26,7 @@ func main() {
 
 	addresses := []string{}
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter your ethereum address(es): \nAddress>")
+	fmt.Print("Enter your ethereum address(es): (\033[32mClick Enter to Finish\033[m) \nAddress>")
 	for {
 		text, err := reader.ReadString('\n')
 		if err != nil {
