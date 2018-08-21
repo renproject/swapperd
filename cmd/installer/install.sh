@@ -48,10 +48,10 @@ if ! [ -x "$(command -v swapper)" ]; then
   shell=${path##*/}
 
   if [ "$shell" = 'zsh' ] ; then
-    if [ -f "$HOME/.zprofile" ] ; then
-      echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.zprofile
-    elif [ -f "$HOME/.zshrc" ] ; then
+    if [ -f "$HOME/.zshrc" ] ; then
       echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.zshrc
+    elif [ -f "$HOME/.zprofile" ] ; then
+      echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.zprofile
     elif [ -f "$HOME/.profile" ] ; then
       echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.profile
     fi
@@ -73,6 +73,6 @@ if ! [ -x "$(command -v swapper)" ]; then
 fi
 
 echo ''
-echo "${GREEN}Done! Please update run the following command to start the RenEx Swapper.${NC}"
+echo "${GREEN}Done! Please run the following command to start the RenEx Swapper.${NC}"
 echo ''
 echo "${GREEN}swapper${NC}"
