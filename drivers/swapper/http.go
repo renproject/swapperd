@@ -111,15 +111,15 @@ func main() {
 
 }
 
-func buildGuardian(net network.Config, kstr keystore.Keystore, state store.State) (guardian.Guardian, error) {
-	atomBuilder, err := atoms.NewAtomBuilder(net, kstr)
+func buildGuardian(net network.Config, keystore keystore.Keystore, state store.State) (guardian.Guardian, error) {
+	atomBuilder, err := atoms.NewAtomBuilder(net, keystore)
 	if err != nil {
 		return nil, err
 	}
 	return guardian.NewGuardian(atomBuilder, state), nil
 }
 
-func buildWatcher(gen config.Config, net network.Config, kstr keystore.Keystore, state store.State) (watch.Watch, error) {
+func buildWatcher(gen config.Config, net network.Config, keystore keystore.Keystore, state store.State) (watch.Watch, error) {
 	ethConn, err := ethClient.Connect(net)
 	if err != nil {
 		return nil, err
@@ -130,12 +130,12 @@ func buildWatcher(gen config.Config, net network.Config, kstr keystore.Keystore,
 		return nil, err
 	}
 
-	ethKey, err := kstr.GetKey(1, 0)
+	ethKey, err := keystore.GetKey(1, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	btcKey, err := kstr.GetKey(0, 0)
+	btcKey, err := keystore.GetKey(0, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -165,9 +165,9 @@ func buildWatcher(gen config.Config, net network.Config, kstr keystore.Keystore,
 
 	ethBinder, err := binder.NewBinder(privKey, ethConn)
 
-	renguardClient := client.NewrenguardHTTPClient(gen)
+	renguardClient := client.NewRenguardHTTPClient(gen)
 
-	atomBuilder, err := atoms.NewAtomBuilder(net, kstr)
+	atomBuilder, err := atoms.NewAtomBuilder(net, keystore)
 	wAdapter := watchAdapter{
 		atomBuilder,
 		ethBinder,

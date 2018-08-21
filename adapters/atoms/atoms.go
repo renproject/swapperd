@@ -37,11 +37,11 @@ func NewAtomBuilder(config network.Config, keystore keystore.Keystore) (AtomBuil
 	if err != nil {
 		return nil, err
 	}
-	privkey, err := ethKey.GetKey()
+	privKey, err := ethKey.GetKey()
 	if err != nil {
 		return nil, err
 	}
-	b, err := binder.NewBinder(privkey, ethConn)
+	b, err := binder.NewBinder(privKey, ethConn)
 	if err != nil {
 		return nil, err
 	}

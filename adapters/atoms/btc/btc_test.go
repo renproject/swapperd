@@ -74,11 +74,11 @@ var _ = Describe("bitcoin", func() {
 		_bobAddr, err = btcutil.DecodeAddress(bobAddr, connection.ChainParams)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		btcvalue, err := btcutil.NewAmount(0.5)
+		btcValue, err := btcutil.NewAmount(0.5)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		connection.Client.SendToAddress(_aliceAddr, btcvalue)
-		connection.Client.SendToAddress(_bobAddr, btcvalue)
+		connection.Client.SendToAddress(_aliceAddr, btcValue)
+		connection.Client.SendToAddress(_bobAddr, btcValue)
 
 		aliceWIF, err := btcutil.DecodeWIF(alicePrivKey)
 		Expect(err).ShouldNot(HaveOccurred())

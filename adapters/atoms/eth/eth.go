@@ -161,12 +161,12 @@ func (atom *EthereumAtom) RedeemedAt() (int64, error) {
 		return 0, err
 	}
 
-	reddemedAt, err := atom.binding.RedeemedAt(&bind.CallOpts{}, atom.data.SwapID)
+	redeemedAt, err := atom.binding.RedeemedAt(&bind.CallOpts{}, atom.data.SwapID)
 	if err != nil {
 		return 0, err
 	}
 
-	return reddemedAt.Int64(), nil
+	return redeemedAt.Int64(), nil
 }
 
 // Serialize serializes the atom details

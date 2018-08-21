@@ -45,7 +45,7 @@ type order struct {
 }
 
 // NewOrder creates a new order interface
-func NewOrder(parity, orderType uint8, expiry, tokens uint64, priceC, priceQ, volumC, volumeQ, minimumVolumeC, minimumVolumeQ, nonceHash *big.Int, trader []byte) Order {
+func NewOrder(parity, orderType uint8, expiry, tokens uint64, priceC, priceQ, volumeC, volumeQ, minimumVolumeC, minimumVolumeQ, nonceHash *big.Int, trader []byte) Order {
 	return &order{
 		parity:         parity,
 		orderType:      orderType,
@@ -53,7 +53,7 @@ func NewOrder(parity, orderType uint8, expiry, tokens uint64, priceC, priceQ, vo
 		tokens:         tokens,
 		priceC:         priceC,
 		priceQ:         priceQ,
-		volumeC:        volumC,
+		volumeC:        volumeC,
 		volumeQ:        volumeQ,
 		minimumVolumeC: minimumVolumeC,
 		minimumVolumeQ: minimumVolumeQ,

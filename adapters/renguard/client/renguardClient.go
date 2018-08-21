@@ -13,9 +13,9 @@ type renguardHTTPClient struct {
 	ipAddress string
 }
 
-// NewrenguardHTTPClient creates a new RenguardClient interface, that interacts
+// NewRenguardHTTPClient creates a new RenguardClient interface, that interacts
 // with RenGuard over http.
-func NewrenguardHTTPClient(config config.Config) renguardClient.RenguardClient {
+func NewRenguardHTTPClient(config config.Config) renguardClient.RenguardClient {
 	return &renguardHTTPClient{
 		ipAddress: config.RenGuardAddress(),
 	}
