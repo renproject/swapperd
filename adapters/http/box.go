@@ -183,15 +183,22 @@ func bitcoinBalance(conf network.Config, key keystore.Key) (Balance, error) {
 		return Balance{}, err
 	}
 
-	amt, err := conn.Client.GetBalance("Atom")
+	btcAddr, err := btcutil.DecodeAddress(string(addr), conn.ChainParams)
 	if err != nil {
 		return Balance{}, err
+	}
+
+	utxos, err := conn.Client.ListUnspentMinMaxAddresses(1, 999999, []btcutil.Address{btcAddr})
+	balance := float64(0)
+
+	for _, utxo := range utxos {
+		balance += utxo.Amount
 	}
 
 	return Balance{
 		PriorityCode: key.PriorityCode(),
 		Address:      string(addr),
-		Amount:       uint64(amt.ToUnit(btcutil.AmountSatoshi)),
+		Amount:       uint64(balance * 100000000),
 	}, nil
 }
 
