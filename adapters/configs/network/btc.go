@@ -1,7 +1,7 @@
 package network
 
 type BitcoinNetwork struct {
-	Chain    string `json:"chain"`
+	Network  string `json:"network"`
 	User     string `json:"username"`
 	Password string `json:"password"`
 	URL      string `json:"url"`

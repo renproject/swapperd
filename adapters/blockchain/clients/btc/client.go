@@ -28,7 +28,7 @@ type Conn struct {
 
 func Connect(networkConfig network.Config) (Conn, error) {
 	connParams := networkConfig.GetBitcoinNetwork()
-	return ConnectWithParams(connParams.Chain, connParams.URL, connParams.User, connParams.Password)
+	return ConnectWithParams(connParams.Network, connParams.URL, connParams.User, connParams.Password)
 }
 
 func ConnectWithParams(chain, url, user, password string) (Conn, error) {

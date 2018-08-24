@@ -34,7 +34,7 @@ func Connect(config network.Config) (Conn, error) {
 
 	return Conn{
 		client:             ethclient,
-		network:            config.Ethereum.Chain,
+		network:            config.Ethereum.Network,
 		renExAtomicSwapper: common.HexToAddress(config.Ethereum.RenExAtomicSwapper),
 		renExAtomicInfo:    common.HexToAddress(config.Ethereum.RenExAtomicInfo),
 		renExSettlement:    common.HexToAddress(config.Ethereum.RenExSettlement),

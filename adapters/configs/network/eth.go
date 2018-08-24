@@ -2,7 +2,7 @@ package network
 
 // EthereumNetwork are the parameters required to create an ethereum client
 type EthereumNetwork struct {
-	Chain              string `json:"chain"`
+	Network            string `json:"network"`
 	URL                string `json:"url"`
 	RenExAtomicSwapper string `json:"renExAtomicSwapper"`
 	RenExAtomicInfo    string `json:"renExAtomicInfo"`
