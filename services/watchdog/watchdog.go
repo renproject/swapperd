@@ -1,6 +1,6 @@
-package renguardClient
+package watchdog
 
-type RenguardClient interface {
+type WatchdogClient interface {
 	ComplainDelayedAddressSubmission([32]byte) error
 	ComplainDelayedRequestorInitiation([32]byte) error
 	ComplainWrongRequestorInitiation([32]byte) error

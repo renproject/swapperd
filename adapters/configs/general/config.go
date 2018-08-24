@@ -15,7 +15,7 @@ type Config struct {
 	Version             string   `json:"version"`
 	SupportedCurrencies []string `json:"supportedCurrencies"`
 	AuthorizedAddresses []string `json:"authorizedAddresses"`
-	RenGuardAddr        string   `json:"renguardAddress"`
+	Watchdog            string   `json:"watchdogURL"`
 
 	mu   *sync.RWMutex
 	path string
@@ -74,6 +74,6 @@ func (config *Config) StoreLocation() (string, error) {
 	return "", fmt.Errorf("Unsupported Operating System")
 }
 
-func (config *Config) RenGuardAddress() string {
-	return config.RenGuardAddr
+func (config *Config) WatchdogURL() string {
+	return config.Watchdog
 }

@@ -9,7 +9,7 @@ import (
 	"os/signal"
 
 	"github.com/republicprotocol/renex-swapper-go/services/logger"
-	"github.com/republicprotocol/renex-swapper-go/services/renguardClient"
+	"github.com/republicprotocol/renex-swapper-go/services/watchdog"
 
 	"github.com/btcsuite/btcutil"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -22,8 +22,8 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapters/configs/network"
 	"github.com/republicprotocol/renex-swapper-go/adapters/http"
 	loggerAdapter "github.com/republicprotocol/renex-swapper-go/adapters/logger"
-	"github.com/republicprotocol/renex-swapper-go/adapters/renguard/client"
 	"github.com/republicprotocol/renex-swapper-go/adapters/store/leveldb"
+	"github.com/republicprotocol/renex-swapper-go/adapters/watchdog/client"
 	"github.com/republicprotocol/renex-swapper-go/services/guardian"
 	"github.com/republicprotocol/renex-swapper-go/services/store"
 	"github.com/republicprotocol/renex-swapper-go/services/watch"
@@ -32,7 +32,7 @@ import (
 type watchAdapter struct {
 	atoms.AtomBuilder
 	binder.Binder
-	renguardClient.RenguardClient
+	watchdog.WatchdogClient
 	logger.Logger
 }
 
@@ -170,13 +170,13 @@ func buildWatcher(gen config.Config, net network.Config, keystore keystore.Keyst
 
 	ethBinder, err := binder.NewBinder(privKey, ethConn)
 
-	renguardClient := client.NewRenguardHTTPClient(gen)
+	watchdog := client.NewWatchdogHTTPClient(gen)
 
 	atomBuilder, err := atoms.NewAtomBuilder(net, keystore)
 	wAdapter := watchAdapter{
 		atomBuilder,
 		ethBinder,
-		renguardClient,
+		watchdog,
 		loggerAdapter.NewStdOutLogger(),
 	}
 

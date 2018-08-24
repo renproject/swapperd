@@ -3,7 +3,7 @@ package swap
 import (
 	"github.com/republicprotocol/renex-swapper-go/domains/order"
 	"github.com/republicprotocol/renex-swapper-go/services/logger"
-	"github.com/republicprotocol/renex-swapper-go/services/renguardClient"
+	"github.com/republicprotocol/renex-swapper-go/services/watchdog"
 )
 
 type SwapAdapter interface {
@@ -11,6 +11,6 @@ type SwapAdapter interface {
 	ReceiveOwnerAddress(order.ID, int64) ([]byte, error)
 	ReceiveSwapDetails(order.ID, int64) ([]byte, error)
 	SendSwapDetails(order.ID, []byte) error
-	renguardClient.RenguardClient
+	watchdog.WatchdogClient
 	logger.Logger
 }
