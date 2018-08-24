@@ -8,6 +8,7 @@ import (
 )
 
 type Config struct {
+	Network  string          `json:"network"`
 	Ethereum EthereumNetwork `json:"ethereum"`
 	Bitcoin  BitcoinNetwork  `json:"bitcoin"`
 

@@ -4,7 +4,6 @@ package network
 type EthereumNetwork struct {
 	Chain              string `json:"chain"`
 	URL                string `json:"url"`
-	Network            string `json:"network"`
 	RenExAtomicSwapper string `json:"renExAtomicSwapper"`
 	RenExAtomicInfo    string `json:"renExAtomicInfo"`
 	RenExSettlement    string `json:"renExSettlement"`
