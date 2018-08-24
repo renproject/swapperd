@@ -3,7 +3,9 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
+	"os"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -13,14 +15,13 @@ type Config struct {
 	Version             string   `json:"version"`
 	SupportedCurrencies []string `json:"supportedCurrencies"`
 	AuthorizedAddresses []string `json:"authorizedAddresses"`
-	StoreLoc            string   `json:"storeLocation"`
 	RenGuardAddr        string   `json:"renguardAddress"`
 
 	mu   *sync.RWMutex
 	path string
 }
 
-var ErrUnSupportedPriorityCode = errors.New("Un Supported Priority Code")
+var ErrUnSupportedPriorityCode = errors.New("Unsupported Priority Code")
 
 func LoadConfig(path string) (Config, error) {
 	var config Config
@@ -58,8 +59,19 @@ func (config *Config) GetAuthorizedAddresses() []common.Address {
 	return addrs
 }
 
-func (config *Config) StoreLocation() string {
-	return config.StoreLoc
+func (config *Config) StoreLocation() (string, error) {
+	winHome := os.Getenv("userprofile")
+	unixHome := os.Getenv("HOME")
+
+	if unixHome != "" {
+		return unixHome + "/.swapper/db", nil
+	}
+
+	if winHome != "" {
+		return winHome + "/.swapper/db", nil
+	}
+
+	return "", fmt.Errorf("Unsupported Operating System")
 }
 
 func (config *Config) RenGuardAddress() string {

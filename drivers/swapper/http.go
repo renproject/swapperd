@@ -59,7 +59,12 @@ func main() {
 	log.Println("Swapper is syncing with the bitcoin node, this might take few minutes to complete")
 	net, err := network.LoadNetwork(*networkPath)
 
-	db, err := leveldb.NewLDBStore(conf.StoreLocation())
+	dbLoc, err := conf.StoreLocation()
+	if err != nil {
+		panic(err)
+	}
+
+	db, err := leveldb.NewLDBStore(dbLoc)
 	if err != nil {
 		panic(err)
 	}
