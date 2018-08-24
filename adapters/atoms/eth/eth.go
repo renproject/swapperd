@@ -38,7 +38,7 @@ type EthereumAtom struct {
 
 // NewEthereumAtom returns a new Ethereum RequestAtom instance
 func NewEthereumAtom(adapter Adapter, client ethclient.Conn, key keystore.Key, orderID [32]byte) (swap.Atom, error) {
-	contract, err := bindings.NewAtomicSwap(client.AtomAddress(), bind.ContractBackend(client.Client()))
+	contract, err := bindings.NewAtomicSwap(client.RenExAtomicSwapperAddress(), bind.ContractBackend(client.Client()))
 	if err != nil {
 		return &EthereumAtom{}, err
 	}

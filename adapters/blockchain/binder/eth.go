@@ -42,22 +42,22 @@ func NewBinder(privKey *ecdsa.PrivateKey, conn ethclient.Conn) (Binder, error) {
 	auth.GasPrice = big.NewInt(20000000000)
 	auth.GasLimit = 3000000
 
-	atomicInfo, err := bindings.NewAtomicInfo(conn.InfoAddress(), bind.ContractBackend(conn.Client()))
+	atomicInfo, err := bindings.NewAtomicInfo(conn.RenExAtomicInfoAddress(), bind.ContractBackend(conn.Client()))
 	if err != nil {
 		return Binder{}, fmt.Errorf("cannot bind to atom info: %v", err)
 	}
 
-	atomicSwap, err := bindings.NewAtomicSwap(conn.AtomAddress(), bind.ContractBackend(conn.Client()))
+	atomicSwap, err := bindings.NewAtomicSwap(conn.RenExAtomicSwapperAddress(), bind.ContractBackend(conn.Client()))
 	if err != nil {
 		return Binder{}, fmt.Errorf("cannot bind to atomic swap: %v", err)
 	}
 
-	orderbook, err := bindings.NewOrderbook(conn.OrderBookAddress(), bind.ContractBackend(conn.Client()))
+	orderbook, err := bindings.NewOrderbook(conn.OrderbookAddress(), bind.ContractBackend(conn.Client()))
 	if err != nil {
 		return Binder{}, fmt.Errorf("cannot bind to Orderbook: %v", err)
 	}
 
-	renExSettlement, err := bindings.NewRenExSettlement(conn.WalletAddress(), bind.ContractBackend(conn.Client()))
+	renExSettlement, err := bindings.NewRenExSettlement(conn.RenExSettlementAddress(), bind.ContractBackend(conn.Client()))
 	if err != nil {
 		return Binder{}, fmt.Errorf("cannot bind to RenEx accounts: %v", err)
 	}

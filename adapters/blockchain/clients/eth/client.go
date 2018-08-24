@@ -17,12 +17,12 @@ import (
 )
 
 type Conn struct {
-	network          string
-	client           *ethclient.Client
-	atomAddress      common.Address
-	walletAddress    common.Address
-	infoAddress      common.Address
-	orderBookAddress common.Address
+	network            string
+	client             *ethclient.Client
+	renExAtomicSwapper common.Address
+	renExAtomicInfo    common.Address
+	renExSettlement    common.Address
+	orderbook          common.Address
 }
 
 // Connect to an ethereum network.
@@ -33,12 +33,12 @@ func Connect(config network.Config) (Conn, error) {
 	}
 
 	return Conn{
-		client:           ethclient,
-		network:          config.Ethereum.Chain,
-		atomAddress:      common.HexToAddress(config.Ethereum.AtomAddress),
-		infoAddress:      common.HexToAddress(config.Ethereum.InfoAddress),
-		walletAddress:    common.HexToAddress(config.Ethereum.WalletAddress),
-		orderBookAddress: common.HexToAddress(config.Ethereum.OrderBookAddress),
+		client:             ethclient,
+		network:            config.Ethereum.Chain,
+		renExAtomicSwapper: common.HexToAddress(config.Ethereum.RenExAtomicSwapper),
+		renExAtomicInfo:    common.HexToAddress(config.Ethereum.RenExAtomicInfo),
+		renExSettlement:    common.HexToAddress(config.Ethereum.RenExSettlement),
+		orderbook:          common.HexToAddress(config.Ethereum.Orderbook),
 	}, nil
 }
 
@@ -114,20 +114,20 @@ func (b *Conn) PatchedWaitDeployed(ctx context.Context, tx *types.Transaction) (
 	}
 }
 
-func (conn *Conn) AtomAddress() common.Address {
-	return conn.atomAddress
+func (conn *Conn) RenExAtomicSwapperAddress() common.Address {
+	return conn.renExAtomicSwapper
 }
 
-func (conn *Conn) WalletAddress() common.Address {
-	return conn.walletAddress
+func (conn *Conn) RenExAtomicInfoAddress() common.Address {
+	return conn.renExAtomicInfo
 }
 
-func (conn *Conn) InfoAddress() common.Address {
-	return conn.infoAddress
+func (conn *Conn) RenExSettlementAddress() common.Address {
+	return conn.renExSettlement
 }
 
-func (conn *Conn) OrderBookAddress() common.Address {
-	return conn.orderBookAddress
+func (conn *Conn) OrderbookAddress() common.Address {
+	return conn.orderbook
 }
 
 func (conn *Conn) Network() string {
