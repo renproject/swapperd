@@ -279,12 +279,12 @@ func validate(id [32]byte, signature [65]byte, addresses []common.Address) error
 	message := append([]byte("Republic Protocol: open: "), id[:]...)
 	signatureData := ethCrypto.Keccak256([]byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d", len(message))), message)
 
-	upubKey, err := ethCrypto.Ecrecover(signatureData, signature[:])
+	marshalledPubKey, err := ethCrypto.Ecrecover(signatureData, signature[:])
 	if err != nil {
 		return err
 	}
 
-	ecdsaPubKey, err := ethCrypto.UnmarshalPubkey(upubKey)
+	ecdsaPubKey, err := ethCrypto.UnmarshalPubkey(marshalledPubKey)
 	if err != nil {
 		return err
 	}

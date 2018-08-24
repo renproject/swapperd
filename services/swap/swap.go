@@ -61,7 +61,7 @@ func (swap *swap) request() error {
 		swap.swapAdapter.LogInfo(personalOrderID, "skipping generate details")
 	}
 
-	if swap.state.Status(personalOrderID) == StatusInitateDetailsAcquired {
+	if swap.state.Status(personalOrderID) == StatusInitiateDetailsAcquired {
 		if err := swap.initiate(); err != nil {
 			swap.swapAdapter.LogError(personalOrderID, fmt.Sprintf("failed to initiate details: %v", err))
 			return fmt.Errorf("failed to initiate details: %v", err)
@@ -85,12 +85,12 @@ func (swap *swap) request() error {
 				swap.swapAdapter.LogError(personalOrderID, fmt.Sprintf("failed to complain to the watchdog: %v", err))
 				return fmt.Errorf("failed to complain to the watchdog: %v", err)
 			}
-			swap.swapAdapter.LogError(personalOrderID, fmt.Sprintf("failed to recieve details: %v", err))
+			swap.swapAdapter.LogError(personalOrderID, fmt.Sprintf("failed to receive details: %v", err))
 			if err := swap.state.PutStatus(personalOrderID, StatusComplained); err != nil {
 				swap.swapAdapter.LogError(personalOrderID, fmt.Sprintf("failed to change the status: %v", err))
 				return fmt.Errorf("failed to change the status: %v", err)
 			}
-			return fmt.Errorf("failed to recieve details: %v", err)
+			return fmt.Errorf("failed to receive details: %v", err)
 		}
 	} else {
 		swap.swapAdapter.LogInfo(personalOrderID, "skipping receive details")
@@ -102,12 +102,12 @@ func (swap *swap) request() error {
 				swap.swapAdapter.LogError(personalOrderID, fmt.Sprintf("failed to complain to the watch dog: %v", err))
 				return fmt.Errorf("failed to complain to the watch dog: %v", err)
 			}
-			swap.swapAdapter.LogError(personalOrderID, fmt.Sprintf("failed to recieve swap details: %v", err))
+			swap.swapAdapter.LogError(personalOrderID, fmt.Sprintf("failed to receive swap details: %v", err))
 			if err := swap.state.PutStatus(personalOrderID, StatusComplained); err != nil {
 				swap.swapAdapter.LogError(personalOrderID, fmt.Sprintf("failed to update the status: %v", err))
 				return fmt.Errorf("failed to update the status: %v", err)
 			}
-			return fmt.Errorf("failed to recieve swap details: %v", err)
+			return fmt.Errorf("failed to receive swap details: %v", err)
 		}
 	} else {
 		swap.swapAdapter.LogInfo(personalOrderID, "skipping requestor audit")
@@ -136,12 +136,12 @@ func (swap *swap) respond() error {
 				swap.swapAdapter.LogError(personalOrderID, fmt.Sprintf("failed to complain to the watch dog: %v", err))
 				return fmt.Errorf("failed to complain to the watch dog: %v", err)
 			}
-			swap.swapAdapter.LogError(personalOrderID, fmt.Sprintf("failed to recieve details: %v", err))
+			swap.swapAdapter.LogError(personalOrderID, fmt.Sprintf("failed to receive details: %v", err))
 			if err := swap.state.PutStatus(personalOrderID, StatusComplained); err != nil {
 				swap.swapAdapter.LogError(personalOrderID, fmt.Sprintf("failed to change status: %v", err))
 				return fmt.Errorf("failed to change status: %v", err)
 			}
-			return fmt.Errorf("failed to recieve details: %v", err)
+			return fmt.Errorf("failed to receive details: %v", err)
 		}
 	} else {
 		swap.swapAdapter.LogInfo(personalOrderID, "skipping generate details")
@@ -229,7 +229,7 @@ func (swap *swap) generateDetails() error {
 		return err
 	}
 
-	if err := swap.state.PutStatus(orderID, StatusInitateDetailsAcquired); err != nil {
+	if err := swap.state.PutStatus(orderID, StatusInitiateDetailsAcquired); err != nil {
 		return err
 	}
 	swap.swapAdapter.LogInfo(orderID, "generated the swap details")
@@ -296,7 +296,7 @@ func (swap *swap) sendDetails() error {
 func (swap *swap) receiveDetails() error {
 	personalOrderID := swap.order.PersonalOrderID()
 	foreignOrderID := swap.order.ForeignOrderID()
-	swap.swapAdapter.LogInfo(personalOrderID, "recieving the swap details")
+	swap.swapAdapter.LogInfo(personalOrderID, "receiving the swap details")
 	foreignAtomBytes, err := swap.swapAdapter.ReceiveSwapDetails(foreignOrderID, time.Now().Add(24*time.Hour).Unix())
 	if err != nil {
 		return err
@@ -309,7 +309,7 @@ func (swap *swap) receiveDetails() error {
 	if err := swap.state.PutStatus(personalOrderID, StatusReceivedSwapDetails); err != nil {
 		return err
 	}
-	swap.swapAdapter.LogInfo(personalOrderID, "recieved the swap details")
+	swap.swapAdapter.LogInfo(personalOrderID, "received the swap details")
 	return nil
 }
 
@@ -447,7 +447,7 @@ func (swap *swap) requestorAudit() error {
 
 func (swap *swap) getRedeemDetails() error {
 	orderID := swap.order.PersonalOrderID()
-	swap.swapAdapter.LogInfo(orderID, "recieving the redeem details")
+	swap.swapAdapter.LogInfo(orderID, "receiving the redeem details")
 
 	if err := swap.personalAtom.WaitForCounterRedemption(); err != nil {
 		return err
@@ -466,6 +466,6 @@ func (swap *swap) getRedeemDetails() error {
 		return err
 	}
 
-	swap.swapAdapter.LogInfo(orderID, "recieved the redeem details")
+	swap.swapAdapter.LogInfo(orderID, "received the redeem details")
 	return nil
 }

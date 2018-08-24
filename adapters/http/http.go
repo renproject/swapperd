@@ -77,12 +77,12 @@ func WhoAmIHandler(adapter BoxHTTPAdapter) http.HandlerFunc {
 		whoami, err := adapter.WhoAmI(params["challenge"])
 		if err != nil {
 
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get the woami information: %v", err))
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get the whoami information: %v", err))
 			return
 		}
 		whoamiJSON, err := json.Marshal(whoami)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot marshal who am i information: %v", err))
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot marshal whoami information: %v", err))
 			return
 		}
 

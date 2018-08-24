@@ -230,7 +230,7 @@ func (binder *Binder) InfoTimeStamp(orderID order.ID) (int64, error) {
 	return ts.Int64(), nil
 }
 
-// InitiateTimeStamp returns the time at which the atomic swap is intiated.
+// InitiateTimeStamp returns the time at which the atomic swap is initiated.
 func (binder *Binder) InitiateTimeStamp(orderID order.ID) (int64, error) {
 	ts, err := binder.SwapDetailsTimestamp(binder.callOpts, orderID)
 	if err != nil {
@@ -319,7 +319,7 @@ func (binder *Binder) AuditSecretAtomicSwap(swapID [32]byte) ([32]byte, error) {
 	return binder.AuditSecret(&bind.CallOpts{}, swapID)
 }
 
-// AuthorizeAtomBox authorizes the atom box to submit the swao details
+// AuthorizeAtomBox authorizes the atom box to submit the swap details
 func (binder *Binder) AuthorizeAtomBox() error {
 	binder.mu.Lock()
 	defer binder.mu.Unlock()

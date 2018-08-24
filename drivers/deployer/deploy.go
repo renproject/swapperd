@@ -145,12 +145,7 @@ func deployContracts(config network.Config, owner *bind.TransactOpts) error {
 	ethNet.AtomAddress = AtomAddress.Hex()
 	ethNet.InfoAddress = InfoAddress.Hex()
 	ethNet.WalletAddress = WalletAddress.Hex()
-	ethNet.RepublicTokenAddress = WalletAddress.Hex()
-	ethNet.DarkNodeRegistryAddress = DNRAddress.Hex()
 	ethNet.OrderBookAddress = OBAddress.Hex()
-	ethNet.RenExTokens = RenExTokensAddress.Hex()
-	ethNet.RewardVault = RewardVaultAddress.Hex()
-	ethNet.RenExBalances = RenExBalancesAddress.Hex()
 	config.SetEthereumNetwork(ethNet)
 	return nil
 }

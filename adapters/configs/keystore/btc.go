@@ -22,9 +22,9 @@ func (key *bitcoinKey) GetAddress() ([]byte, error) {
 		return nil, err
 	}
 
-	spubKey := wif.SerializePubKey()
+	serializedPubKey := wif.SerializePubKey()
 
-	pubKey, err := btcutil.NewAddressPubKey(spubKey, chainParams)
+	pubKey, err := btcutil.NewAddressPubKey(serializedPubKey, chainParams)
 	if err != nil {
 		return nil, err
 	}

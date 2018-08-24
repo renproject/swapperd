@@ -176,21 +176,21 @@ func (conn *Conn) FundTransaction(tx *wire.MsgTx, addresses []btcutil.Address) (
 	for _, j := range tx.TxOut {
 		value = value + float64(j.Value)
 	}
-	Unspents, err := conn.Client.ListUnspentMinMaxAddresses(0, 99999, addresses)
+	utxos, err := conn.Client.ListUnspentMinMaxAddresses(0, 99999, addresses)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	value = value / 100000000
-	for _, j := range Unspents {
-		unspentValue = unspentValue + j.Amount
+	for _, utxo := range utxos {
+		unspentValue = unspentValue + utxo.Amount
 	}
 	if value > unspentValue {
 		return nil, nil, fmt.Errorf("Not enough balance required:%f current:%f", value, unspentValue)
 	}
 	selectedTxIns := []btcjson.RawTxInput{}
 
-	for _, j := range Unspents {
+	for _, j := range utxos {
 		if value <= 0 {
 			break
 		}
@@ -212,13 +212,13 @@ func (conn *Conn) FundTransaction(tx *wire.MsgTx, addresses []btcutil.Address) (
 		value = value - j.Amount
 	}
 
-	P2PKHscript, err := txscript.PayToAddrScript(addresses[0])
+	P2PKHScript, err := txscript.PayToAddrScript(addresses[0])
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if value <= 0 {
-		tx.AddTxOut(wire.NewTxOut(int64(-value*100000000)-10000, P2PKHscript))
+		tx.AddTxOut(wire.NewTxOut(int64(-value*100000000)-10000, P2PKHScript))
 	}
 
 	return tx, selectedTxIns, nil
