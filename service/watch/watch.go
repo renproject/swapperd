@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/republicprotocol/renex-swapper-go/domains/order"
-	"github.com/republicprotocol/renex-swapper-go/services/store"
-	"github.com/republicprotocol/renex-swapper-go/services/swap"
+	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/service/store"
+	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
 type watch struct {

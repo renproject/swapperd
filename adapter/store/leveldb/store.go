@@ -1,7 +1,7 @@
 package leveldb
 
 import (
-	"github.com/republicprotocol/renex-swapper-go/services/store"
+	"github.com/republicprotocol/renex-swapper-go/service/store"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 

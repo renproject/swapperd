@@ -8,8 +8,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/republicprotocol/renex-swapper-go/services/logger"
-	"github.com/republicprotocol/renex-swapper-go/services/watchdog"
+	"github.com/republicprotocol/renex-swapper-go/service/logger"
+	"github.com/republicprotocol/renex-swapper-go/service/watchdog"
 
 	"github.com/btcsuite/btcutil"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -24,9 +24,9 @@ import (
 	loggerAdapter "github.com/republicprotocol/renex-swapper-go/adapter/logger"
 	"github.com/republicprotocol/renex-swapper-go/adapter/store/leveldb"
 	"github.com/republicprotocol/renex-swapper-go/adapter/watchdog/client"
-	"github.com/republicprotocol/renex-swapper-go/services/guardian"
-	"github.com/republicprotocol/renex-swapper-go/services/store"
-	"github.com/republicprotocol/renex-swapper-go/services/watch"
+	"github.com/republicprotocol/renex-swapper-go/service/guardian"
+	"github.com/republicprotocol/renex-swapper-go/service/store"
+	"github.com/republicprotocol/renex-swapper-go/service/watch"
 )
 
 type watchAdapter struct {

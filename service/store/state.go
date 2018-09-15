@@ -6,8 +6,8 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/republicprotocol/renex-swapper-go/domains/match"
-	"github.com/republicprotocol/renex-swapper-go/services/logger"
+	"github.com/republicprotocol/renex-swapper-go/domain/match"
+	"github.com/republicprotocol/renex-swapper-go/service/logger"
 )
 
 // SwapStatus stores the swap status

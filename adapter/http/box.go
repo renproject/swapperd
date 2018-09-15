@@ -16,7 +16,7 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapter/configs/general"
 	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
 	"github.com/republicprotocol/renex-swapper-go/adapter/configs/network"
-	"github.com/republicprotocol/renex-swapper-go/services/watch"
+	"github.com/republicprotocol/renex-swapper-go/service/watch"
 	"github.com/republicprotocol/renex-swapper-go/utils"
 )
 

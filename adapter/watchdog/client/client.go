@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/republicprotocol/renex-swapper-go/adapter/configs/general"
-	"github.com/republicprotocol/renex-swapper-go/services/watchdog"
+	"github.com/republicprotocol/renex-swapper-go/service/watchdog"
 )
 
 type watchdogHTTPClient struct {

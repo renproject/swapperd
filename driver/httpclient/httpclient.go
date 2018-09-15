@@ -21,8 +21,8 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 	"github.com/republicprotocol/renex-swapper-go/adapter/owner"
 	wal "github.com/republicprotocol/renex-swapper-go/adapter/wallet/eth"
-	"github.com/republicprotocol/renex-swapper-go/domains/match"
-	"github.com/republicprotocol/renex-swapper-go/services/swap"
+	"github.com/republicprotocol/renex-swapper-go/domain/match"
+	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
 func main() {

@@ -1,10 +1,10 @@
 package watch
 
 import (
-	"github.com/republicprotocol/renex-swapper-go/domains/match"
-	"github.com/republicprotocol/renex-swapper-go/domains/order"
-	"github.com/republicprotocol/renex-swapper-go/services/store"
-	"github.com/republicprotocol/renex-swapper-go/services/swap"
+	"github.com/republicprotocol/renex-swapper-go/domain/match"
+	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/service/store"
+	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
 // Wallet is an interface for the Atom Wallet Contract

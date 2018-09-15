@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/republicprotocol/renex-swapper-go/adapter/atoms"
-	"github.com/republicprotocol/renex-swapper-go/services/errors"
-	"github.com/republicprotocol/renex-swapper-go/services/store"
-	"github.com/republicprotocol/renex-swapper-go/services/swap"
+	"github.com/republicprotocol/renex-swapper-go/service/errors"
+	"github.com/republicprotocol/renex-swapper-go/service/store"
+	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
 var ErrSwapRedeemed = fmt.Errorf("Swap Redeemed")

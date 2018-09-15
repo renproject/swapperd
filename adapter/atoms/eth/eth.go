@@ -12,8 +12,8 @@ import (
 	bindings "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/bindings/eth"
 	ethclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
 	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
-	"github.com/republicprotocol/renex-swapper-go/domains/order"
-	"github.com/republicprotocol/renex-swapper-go/services/swap"
+	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
 type Adapter interface {

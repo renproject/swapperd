@@ -18,7 +18,7 @@ import (
 	config "github.com/republicprotocol/renex-swapper-go/adapter/configs/general"
 	"github.com/republicprotocol/renex-swapper-go/adapter/key/eth"
 	"github.com/republicprotocol/renex-swapper-go/adapter/owner"
-	"github.com/republicprotocol/renex-swapper-go/services/swap"
+	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
 var _ = Describe("ether", func() {

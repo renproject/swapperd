@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/republicprotocol/renex-swapper-go/domains/order"
-	"github.com/republicprotocol/renex-swapper-go/services/logger"
+	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/service/logger"
 )
 
 const white = "\033[m"

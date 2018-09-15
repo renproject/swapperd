@@ -13,9 +13,9 @@ import (
 	. "github.com/republicprotocol/renex-swapper-go/adapter/atoms/btc"
 	btcclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
 	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
-	"github.com/republicprotocol/renex-swapper-go/domains/order"
-	"github.com/republicprotocol/renex-swapper-go/drivers/btc/regtest"
-	"github.com/republicprotocol/renex-swapper-go/services/swap"
+	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/driver/btc/regtest"
+	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
 var _ = Describe("bitcoin", func() {

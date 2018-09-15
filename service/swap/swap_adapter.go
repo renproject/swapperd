@@ -1,9 +1,9 @@
 package swap
 
 import (
-	"github.com/republicprotocol/renex-swapper-go/domains/order"
-	"github.com/republicprotocol/renex-swapper-go/services/logger"
-	"github.com/republicprotocol/renex-swapper-go/services/watchdog"
+	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/service/logger"
+	"github.com/republicprotocol/renex-swapper-go/service/watchdog"
 )
 
 type SwapAdapter interface {

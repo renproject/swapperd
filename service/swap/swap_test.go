@@ -1,4 +1,4 @@
-package watch_test
+package swap_test
 
 import (
 	"crypto/rand"
@@ -8,36 +8,35 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcutil"
+	"github.com/republicprotocol/renex-swapper-go/service/store"
+
+	"github.com/republicprotocol/renex-swapper-go/domain/match"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/republicprotocol/renex-swapper-go/adapter/atoms"
+	"github.com/republicprotocol/renex-swapper-go/driver/btc/regtest"
+	. "github.com/republicprotocol/renex-swapper-go/service/swap"
+
 	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/btc"
 	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/eth"
-	binder "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/binder"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/owner"
+
 	btcclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
 	ethclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
-	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
 	"github.com/republicprotocol/renex-swapper-go/adapter/configs/network"
-	"github.com/republicprotocol/renex-swapper-go/adapter/configs/owner"
+
+	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/binder"
 	"github.com/republicprotocol/renex-swapper-go/adapter/store/leveldb"
-	"github.com/republicprotocol/renex-swapper-go/domains/match"
-	"github.com/republicprotocol/renex-swapper-go/drivers/btc/regtest"
-	"github.com/republicprotocol/renex-swapper-go/services/store"
-	"github.com/republicprotocol/renex-swapper-go/services/swap"
-	. "github.com/republicprotocol/renex-swapper-go/services/watch"
 )
 
-var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
+var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 
-	var aliceWatch, bobWatch Watch
-	var aliceOrderID, bobOrderID [32]byte
-
-	rand.Read(aliceOrderID[:])
-	rand.Read(bobOrderID[:])
+	var aliceSwap, bobSwap Swap
 
 	BeforeSuite(func() {
 		netConf, aliceKS, bobKS := LoadConfigs()
@@ -45,81 +44,43 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap using Watch", func() {
 		btcConn := SetupBitcoinNetwork(netConf, aliceKS, bobKS)
 		aliceMatch, bobMatch := GetMatches()
 		SendAddresses(aliceMatch.PersonalOrderID(), bobMatch.PersonalOrderID(), aliceKS, bobKS, aliceBinder, bobBinder)
-		aliceWatch, bobWatch := buildWatchers()
-
+		aliceSwap, bobSwap = SetupSwaps(ethConn, btcConn, aliceMatch, bobMatch, aliceKS, bobKS, aliceBinder, bobBinder)
 	})
 
-	It("can do an eth - btc atomic swap (eth implementations)", func() {
-
+	It("can do an eth - btc atomic swap", func() {
 		wg := &sync.WaitGroup{}
-
-		errChAlice := aliceWatch.Start()
-		errChBob := bobWatch.Start()
-
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			defer GinkgoRecover()
-			for {
-				select {
-				case err, ok := <-errChAlice:
-					if !ok {
-						return
-					}
-					Expect(err).ShouldNot(HaveOccurred())
-				}
-			}
+
+			err := aliceSwap.Execute()
+			Expect(err).ShouldNot(HaveOccurred())
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			defer GinkgoRecover()
-			for {
-				select {
-				case err, ok := <-errChBob:
-					if !ok {
-						return
-					}
-					Expect(err).ShouldNot(HaveOccurred())
-				}
-			}
+
+			err := bobSwap.Execute()
+			Expect(err).ShouldNot(HaveOccurred())
 		}()
-
-		Expect(aliceWatch.Add(aliceOrderID)).ShouldNot(HaveOccurred())
-		Expect(bobWatch.Add(bobOrderID)).ShouldNot(HaveOccurred())
-
-		aliceWatch.Notify()
-		bobWatch.Notify()
-
-		go func() {
-			defer aliceWatch.Stop()
-			defer bobWatch.Stop()
-
-			for {
-				if aliceWatch.Status(aliceOrderID) == swap.StatusRedeemed && bobWatch.Status(bobOrderID) == swap.StatusRedeemed {
-					break
-				}
-				time.Sleep(1 * time.Second)
-			}
-		}()
-
 		wg.Wait()
 	})
-
 })
 
 func LoadConfigs() (network.Config, keystore.Keystore, keystore.Keystore) {
-	var confPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/secrets/local/networkA.json"
+	var confPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/local_secrets/local/networkA.json"
 	config, err := network.LoadNetwork(confPath)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	var ksPathA = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/secrets/local/keystoreA.json"
-	ksA, err := keystore.LoadKeystore(ksPathA)
+	var ksPathA = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/secrets/local.alice.json"
+	ksA, err := keystore.Load(ksPathA)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	var ksPathB = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/secrets/local/keystoreB.json"
-	ksB, err := keystore.LoadKeystore(ksPathB)
+	var ksPathB = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/secrets/local.bob.json"
+	ksB, err := keystore.Load(ksPathB)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	return config, ksA, ksB
@@ -129,18 +90,25 @@ func SetupEthereumNetwork(netConf network.Config, ksA keystore.Keystore, ksB key
 	ganache, err := ethclient.Connect(netConf)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	aliceKey := ksA.EthereumKey
-	aliceBinder, err := binder.NewBinder(aliceKey.GetKey(), ganache)
+	aliceKey, err := ksA.GetKey(1, 0)
+	Expect(err).ShouldNot(HaveOccurred())
+	aliceEthKey, err := aliceKey.GetKey()
+	Expect(err).ShouldNot(HaveOccurred())
+	aliceBinder, err := binder.NewBinder(aliceEthKey, ganache)
+	Expect(err).ShouldNot(HaveOccurred())
 
-	bobKey := ksB.EthereumKey
-	bobBinder, err := binder.NewBinder(bobKey.GetKey(), ganache)
+	bobKey, err := ksB.GetKey(1, 0)
+	Expect(err).ShouldNot(HaveOccurred())
+	bobEthKey, err := bobKey.GetKey()
+	Expect(err).ShouldNot(HaveOccurred())
+	bobBinder, err := binder.NewBinder(bobEthKey, ganache)
 
 	aliceAddrBytes, err := aliceKey.GetAddress()
 	Expect(err).ShouldNot(HaveOccurred())
 	bobAddrBytes, err := bobKey.GetAddress()
 	Expect(err).ShouldNot(HaveOccurred())
 
-	var ownPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/secrets/owner.json"
+	var ownPath = os.Getenv("GOPATH") + "/src/github.com/republicprotocol/renex-swapper-go/local_secrets/owner.json"
 
 	own, err := owner.LoadOwner(ownPath)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -170,17 +138,19 @@ func SetupBitcoinNetwork(netConf network.Config, ksA, ksB keystore.Keystore) btc
 	}()
 	time.Sleep(5 * time.Second)
 
-	_AliceWIF, err := ksA.BitcoinKey.GetKeyString()
+	AliceBtcKey, err := ksA.GetKey(0, 0)
 	Expect(err).ShouldNot(HaveOccurred())
 
+	_AliceWIF := AliceBtcKey.GetKeyString()
 	AliceWIF, err := btcutil.DecodeWIF(_AliceWIF)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	err = connection.Client.ImportPrivKeyLabel(AliceWIF, "alice")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	_BobWIF, err := ksB.BitcoinKey.GetKeyString()
+	BobBtcKey, err := ksB.GetKey(0, 0)
 	Expect(err).ShouldNot(HaveOccurred())
+	_BobWIF := BobBtcKey.GetKeyString()
 
 	BobWIF, err := btcutil.DecodeWIF(_BobWIF)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -195,6 +165,7 @@ func SetupBitcoinNetwork(netConf network.Config, ksA, ksB keystore.Keystore) btc
 }
 
 func GetMatches() (match.Match, match.Match) {
+	var aliceOrderID, bobOrderID [32]byte
 	rand.Read(aliceOrderID[:])
 	rand.Read(bobOrderID[:])
 
@@ -224,10 +195,16 @@ func SendAddresses(aliceOrderID, bobOrderID [32]byte, aliceKS, bobKS keystore.Ke
 	err = bobBinder.AuthorizeAtomBox()
 	Expect(err).Should(BeNil())
 
-	aliceBtcAddrBytes, err := aliceKS.BitcoinKey.GetAddress()
+	AliceBtcKey, err := aliceKS.GetKey(0, 0)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	BobEthKey, err := bobKS.GetKey(1, 0)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	aliceBtcAddrBytes, err := AliceBtcKey.GetAddress()
 	Expect(err).Should(BeNil())
 
-	bobEthAddrBytes, err := bobKS.EthereumKey.GetAddress()
+	bobEthAddrBytes, err := BobEthKey.GetAddress()
 	Expect(err).Should(BeNil())
 
 	err = aliceBinder.SendOwnerAddress(aliceOrderID, aliceBtcAddrBytes)
@@ -236,36 +213,23 @@ func SendAddresses(aliceOrderID, bobOrderID [32]byte, aliceKS, bobKS keystore.Ke
 	Expect(err).Should(BeNil())
 }
 
-func SetupWatchers(ethConn ethclient.Conn, btcConn btcclient.Conn, aliceMatch, bobMatch match.Match, aliceKS, bobKS keystore.Keystore, aliceBinder, bobBinder binder.Binder) (Swap, Swap) {
-	aliceAtomBuilder, err := atoms.NewAtomBuilder(aliceBinder, configAlice, aliceKS)
+func SetupSwaps(ethConn ethclient.Conn, btcConn btcclient.Conn, aliceMatch, bobMatch match.Match, aliceKS, bobKS keystore.Keystore, aliceBinder, bobBinder binder.Binder) (Swap, Swap) {
+	aliceEthKey, err := aliceKS.GetKey(1, 0)
 	Expect(err).Should(BeNil())
-	bobAtomBuilder, err := atoms.NewAtomBuilder(bobBinder, configBob, bobKS)
+	aliceBtcKey, err := aliceKS.GetKey(0, 0)
 	Expect(err).Should(BeNil())
-
-	aliceLDB, err := leveldb.NewLDBStore("/Users/susruth/go/src/github.com/republicprotocol/renex-swapper-go/dbAlice")
+	bobEthKey, err := bobKS.GetKey(1, 0)
 	Expect(err).Should(BeNil())
-
-	bobLDB, err := leveldb.NewLDBStore("/Users/susruth/go/src/github.com/republicprotocol/renex-swapper-go/dbBob")
+	bobBtcKey, err := bobKS.GetKey(0, 0)
 	Expect(err).Should(BeNil())
 
-	aliceState := store.NewState(aliceLDB)
-	bobState := store.NewState(bobLDB)
-
-	mockWallet := wal.NewMockWallet()
-
-	mockWallet.SetMatch(aliceOrderID, aliceOrder)
-	mockWallet.SetMatch(bobOrderID, bobOrder)
-
-	aliceWatch = NewWatch(aliceNet, aliceInfo, mockWallet, aliceAtomBuilder, aliceState)
-	bobWatch = NewWatch(bobNet, bobInfo, mockWallet, bobAtomBuilder, bobState)
-
-	reqAlice, err := eth.NewEthereumAtom(ethConn, &aliceKS.EthereumKey, aliceMatch.PersonalOrderID())
+	reqAlice, err := eth.NewEthereumAtom(&aliceBinder, ethConn, aliceEthKey, aliceMatch.PersonalOrderID())
 	Expect(err).Should(BeNil())
 
-	reqBob := btc.NewBitcoinAtom(btcConn, &bobKS.BitcoinKey, bobMatch.PersonalOrderID())
-	resAlice := btc.NewBitcoinAtom(btcConn, &aliceKS.BitcoinKey, aliceMatch.ForeignOrderID())
+	reqBob := btc.NewBitcoinAtom(&bobBinder, btcConn, bobBtcKey, bobMatch.PersonalOrderID())
+	resAlice := btc.NewBitcoinAtom(&aliceBinder, btcConn, aliceBtcKey, bobMatch.PersonalOrderID())
 
-	resBob, err := eth.NewEthereumAtom(ethConn, &bobKS.EthereumKey, bobMatch.ForeignOrderID())
+	resBob, err := eth.NewEthereumAtom(&bobBinder, ethConn, bobEthKey, aliceMatch.PersonalOrderID())
 	Expect(err).Should(BeNil())
 
 	aliceLDB, err := leveldb.NewLDBStore("/Users/susruth/go/src/github.com/republicprotocol/renex-swapper-go/temp/dbAlice")

@@ -3,10 +3,10 @@ package atoms
 import (
 	"fmt"
 
-	"github.com/republicprotocol/renex-swapper-go/domains/match"
+	"github.com/republicprotocol/renex-swapper-go/domain/match"
 
-	"github.com/republicprotocol/renex-swapper-go/services/store"
-	"github.com/republicprotocol/renex-swapper-go/services/swap"
+	"github.com/republicprotocol/renex-swapper-go/service/store"
+	"github.com/republicprotocol/renex-swapper-go/service/swap"
 
 	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/btc"
 	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/eth"

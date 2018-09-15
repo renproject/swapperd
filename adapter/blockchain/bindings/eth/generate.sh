@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-cd ../../../../drivers/renex-sol
+cd ../../../../driver/renex-sol
 
 if [ $1 -e "--branch" ]
 then
