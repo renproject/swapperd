@@ -11,7 +11,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/btc"
+	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
 	"golang.org/x/crypto/ripemd160"
 )
 

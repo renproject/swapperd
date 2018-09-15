@@ -5,7 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
+	. "github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
 )
 
 var _ = Describe("Keystore", func() {

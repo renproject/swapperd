@@ -10,9 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	bindings "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/bindings/eth"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/network"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/owner"
+	bindings "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/bindings/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/network"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/owner"
 )
 
 func main() {

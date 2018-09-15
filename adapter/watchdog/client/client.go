@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/general"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/general"
 	"github.com/republicprotocol/renex-swapper-go/services/watchdog"
 )
 

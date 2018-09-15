@@ -21,17 +21,17 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/drivers/btc/regtest"
 	. "github.com/republicprotocol/renex-swapper-go/services/swap"
 
-	"github.com/republicprotocol/renex-swapper-go/adapters/atoms/btc"
-	"github.com/republicprotocol/renex-swapper-go/adapters/atoms/eth"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/owner"
+	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/btc"
+	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/owner"
 
-	btcclient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/btc"
-	ethclient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/eth"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/network"
+	btcclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
+	ethclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/network"
 
-	"github.com/republicprotocol/renex-swapper-go/adapters/blockchain/binder"
-	"github.com/republicprotocol/renex-swapper-go/adapters/store/leveldb"
+	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/binder"
+	"github.com/republicprotocol/renex-swapper-go/adapter/store/leveldb"
 )
 
 var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {

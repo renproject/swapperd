@@ -11,11 +11,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 
-	btcClient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/btc"
-	ethClient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/eth"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/general"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/network"
+	btcClient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
+	ethClient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/general"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/network"
 	"github.com/republicprotocol/renex-swapper-go/services/watch"
 	"github.com/republicprotocol/renex-swapper-go/utils"
 )

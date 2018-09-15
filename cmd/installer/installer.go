@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
-	config "github.com/republicprotocol/renex-swapper-go/adapters/configs/general"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/network"
+	config "github.com/republicprotocol/renex-swapper-go/adapter/configs/general"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/network"
 )
 
 func main() {

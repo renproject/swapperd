@@ -15,12 +15,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
-	btcclient "github.com/republicprotocol/renex-swapper-go/adapters/clients/btc"
-	ethclient "github.com/republicprotocol/renex-swapper-go/adapters/clients/eth"
-	"github.com/republicprotocol/renex-swapper-go/adapters/config"
-	"github.com/republicprotocol/renex-swapper-go/adapters/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapters/owner"
-	wal "github.com/republicprotocol/renex-swapper-go/adapters/wallet/eth"
+	btcclient "github.com/republicprotocol/renex-swapper-go/adapter/clients/btc"
+	ethclient "github.com/republicprotocol/renex-swapper-go/adapter/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/config"
+	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapter/owner"
+	wal "github.com/republicprotocol/renex-swapper-go/adapter/wallet/eth"
 	"github.com/republicprotocol/renex-swapper-go/domains/match"
 	"github.com/republicprotocol/renex-swapper-go/services/swap"
 )
@@ -28,7 +28,7 @@ import (
 func main() {
 
 	var aliceOrderID, bobOrderID [32]byte
-	
+
 	var conf = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/renex-swapper-go/secrets/test/configA.json"
 	var keyA = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/renex-swapper-go/secrets/test/keystoreA.json"
 	var keyB = os.Getenv("HOME") + "/go/src/github.com/republicprotocol/renex-swapper-go/secrets/test/keystoreB.json"

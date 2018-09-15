@@ -26,9 +26,9 @@ cp -r ../../node_modules/openzeppelin-solidity/contracts ./contracts/openzeppeli
 cd ../..
 
 ### GENERATE BINDINGS HERE ###
-abigen --sol ./contracts/Bindings.sol -pkg bindings --out ../../adapters/blockchain/bindings/eth/bindings.go
-# abigen --sol ./contracts/AtomicSwap.sol -pkg eth --out ../../adapters/blockchain/bindings/eth/atom.go
-# abigen --sol ./contracts/RenExSettlement.sol -pkg eth --out ../../adapters/blockchain/bindings/eth/settlement.go
+abigen --sol ./contracts/Bindings.sol -pkg bindings --out ../../adapter/blockchain/bindings/eth/bindings.go
+# abigen --sol ./contracts/AtomicSwap.sol -pkg eth --out ../../adapter/blockchain/bindings/eth/atom.go
+# abigen --sol ./contracts/RenExSettlement.sol -pkg eth --out ../../adapter/blockchain/bindings/eth/settlement.go
 
 # Revert setup
 sed -i -e 's/".\/openzeppelin-solidity\/contracts\//"openzeppelin-solidity\/contracts\//' contracts/*.sol

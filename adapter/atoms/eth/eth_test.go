@@ -13,11 +13,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/renex-swapper-go/adapters/atoms/eth"
-	ethclient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/eth"
-	config "github.com/republicprotocol/renex-swapper-go/adapters/configs/general"
-	"github.com/republicprotocol/renex-swapper-go/adapters/key/eth"
-	"github.com/republicprotocol/renex-swapper-go/adapters/owner"
+	. "github.com/republicprotocol/renex-swapper-go/adapter/atoms/eth"
+	ethclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
+	config "github.com/republicprotocol/renex-swapper-go/adapter/configs/general"
+	"github.com/republicprotocol/renex-swapper-go/adapter/key/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/owner"
 	"github.com/republicprotocol/renex-swapper-go/services/swap"
 )
 

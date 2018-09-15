@@ -5,9 +5,9 @@ import (
 	"errors"
 	"math/big"
 
-	bindings "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/bindings/btc"
-	"github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/btc"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
+	bindings "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/bindings/btc"
+	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
 	"github.com/republicprotocol/renex-swapper-go/domains/order"
 	"github.com/republicprotocol/renex-swapper-go/services/swap"
 )

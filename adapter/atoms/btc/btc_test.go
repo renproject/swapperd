@@ -10,9 +10,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/renex-swapper-go/adapters/atoms/btc"
-	btcclient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/btc"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
+	. "github.com/republicprotocol/renex-swapper-go/adapter/atoms/btc"
+	btcclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
 	"github.com/republicprotocol/renex-swapper-go/domains/order"
 	"github.com/republicprotocol/renex-swapper-go/drivers/btc/regtest"
 	"github.com/republicprotocol/renex-swapper-go/services/swap"

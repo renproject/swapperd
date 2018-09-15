@@ -8,14 +8,14 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/services/store"
 	"github.com/republicprotocol/renex-swapper-go/services/swap"
 
-	"github.com/republicprotocol/renex-swapper-go/adapters/atoms/btc"
-	"github.com/republicprotocol/renex-swapper-go/adapters/atoms/eth"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapters/configs/network"
+	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/btc"
+	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapter/configs/network"
 
-	"github.com/republicprotocol/renex-swapper-go/adapters/blockchain/binder"
-	btcClient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/btc"
-	ethClient "github.com/republicprotocol/renex-swapper-go/adapters/blockchain/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/binder"
+	btcClient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
+	ethClient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
 )
 
 type atomBuilder struct {
