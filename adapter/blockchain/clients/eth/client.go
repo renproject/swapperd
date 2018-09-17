@@ -1,4 +1,4 @@
-package ethclient
+package eth
 
 import (
 	"context"
@@ -13,33 +13,36 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/republicprotocol/renex-swapper-go/adapter/configs/network"
+	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 )
 
 type Conn struct {
-	network            string
-	client             *ethclient.Client
-	renExAtomicSwapper common.Address
-	renExAtomicInfo    common.Address
-	renExSettlement    common.Address
-	orderbook          common.Address
+	Network            string
+	Client             *ethclient.Client
+	RenExAtomicSwapper common.Address
+	RenExSettlement    common.Address
+	Orderbook          common.Address
 }
 
 // Connect to an ethereum network.
-func Connect(config network.Config) (Conn, error) {
+func Connect(config config.Config) (Conn, error) {
 	ethclient, err := ethclient.Dial(config.Ethereum.URL)
 	if err != nil {
 		return Conn{}, err
 	}
 
 	return Conn{
-		client:             ethclient,
-		network:            config.Ethereum.Network,
-		renExAtomicSwapper: common.HexToAddress(config.Ethereum.RenExAtomicSwapper),
-		renExAtomicInfo:    common.HexToAddress(config.Ethereum.RenExAtomicInfo),
-		renExSettlement:    common.HexToAddress(config.Ethereum.RenExSettlement),
-		orderbook:          common.HexToAddress(config.Ethereum.Orderbook),
+		Client:             ethclient,
+		Network:            config.Ethereum.Network,
+		RenExAtomicSwapper: common.HexToAddress(config.RenEx.Swapper),
+		RenExSettlement:    common.HexToAddress(config.RenEx.Settlement),
+		Orderbook:          common.HexToAddress(config.RenEx.Orderbook),
 	}, nil
+}
+
+// Balance of the given address
+func (b *Conn) Balance(address common.Address) (*big.Int, error) {
+	return b.Client.PendingBalanceAt(context.Background(), address)
 }
 
 // NewAccount creates a new account and funds it with ether
@@ -68,7 +71,7 @@ func (b *Conn) Transfer(to common.Address, from *bind.TransactOpts, value int64)
 	}
 
 	// Why is there no ethclient.Transfer?
-	bound := bind.NewBoundContract(to, abi.ABI{}, nil, b.client, nil)
+	bound := bind.NewBoundContract(to, abi.ABI{}, nil, b.Client, nil)
 	tx, err := bound.Transfer(transactor)
 	if err != nil {
 		return err
@@ -83,12 +86,12 @@ func (b *Conn) Transfer(to common.Address, from *bind.TransactOpts, value int64)
 // TODO: THIS DOES NOT WORK WITH PARITY, WHICH SENDS A TRANSACTION RECEIPT UPON
 // RECEIVING A TX, NOT AFTER IT'S MINED
 func (b *Conn) PatchedWaitMined(ctx context.Context, tx *types.Transaction) (*types.Receipt, error) {
-	switch b.network {
+	switch b.Network {
 	case "ganache":
 		time.Sleep(100 * time.Millisecond)
 		return nil, nil
 	default:
-		receipt, err := bind.WaitMined(ctx, b.client, tx)
+		receipt, err := bind.WaitMined(ctx, b.Client, tx)
 		if err != nil {
 			return nil, err
 		}
@@ -105,35 +108,11 @@ func (b *Conn) PatchedWaitMined(ctx context.Context, tx *types.Transaction) (*ty
 // TODO: THIS DOES NOT WORK WITH PARITY, WHICH SENDS A TRANSACTION RECEIPT UPON
 // RECEIVING A TX, NOT AFTER IT'S MINED
 func (b *Conn) PatchedWaitDeployed(ctx context.Context, tx *types.Transaction) (common.Address, error) {
-	switch b.network {
+	switch b.Network {
 	case "ganache":
 		time.Sleep(100 * time.Millisecond)
 		return common.Address{}, nil
 	default:
-		return bind.WaitDeployed(ctx, b.client, tx)
+		return bind.WaitDeployed(ctx, b.Client, tx)
 	}
-}
-
-func (conn *Conn) RenExAtomicSwapperAddress() common.Address {
-	return conn.renExAtomicSwapper
-}
-
-func (conn *Conn) RenExAtomicInfoAddress() common.Address {
-	return conn.renExAtomicInfo
-}
-
-func (conn *Conn) RenExSettlementAddress() common.Address {
-	return conn.renExSettlement
-}
-
-func (conn *Conn) OrderbookAddress() common.Address {
-	return conn.orderbook
-}
-
-func (conn *Conn) Network() string {
-	return conn.network
-}
-
-func (conn *Conn) Client() *ethclient.Client {
-	return conn.client
 }
