@@ -11,19 +11,18 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/service/logger"
 	"github.com/republicprotocol/renex-swapper-go/service/watchdog"
 
-	"github.com/btcsuite/btcutil"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/republicprotocol/renex-swapper-go/adapter/atoms"
 	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/binder"
 	btcClient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
 	ethClient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
-	"github.com/republicprotocol/renex-swapper-go/adapter/configs/general"
-	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapter/configs/network"
+	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/http"
+	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
+
 	loggerAdapter "github.com/republicprotocol/renex-swapper-go/adapter/logger"
 	"github.com/republicprotocol/renex-swapper-go/adapter/store/leveldb"
 	"github.com/republicprotocol/renex-swapper-go/adapter/watchdog/client"
+	"github.com/republicprotocol/renex-swapper-go/driver/network"
 	"github.com/republicprotocol/renex-swapper-go/service/guardian"
 	"github.com/republicprotocol/renex-swapper-go/service/store"
 	"github.com/republicprotocol/renex-swapper-go/service/watch"
@@ -124,55 +123,23 @@ func buildGuardian(net network.Config, keystore keystore.Keystore, state store.S
 	return guardian.NewGuardian(atomBuilder, state), nil
 }
 
-func buildWatcher(gen config.Config, net network.Config, keystore keystore.Keystore, state store.State) (watch.Watch, error) {
-	ethConn, err := ethClient.Connect(net)
+func buildWatcher(gen config.Config, conf config.Config, keystore keystore.Keystore, state store.State) (watch.Watch, error) {
+	ethConn, err := ethClient.Connect(conf)
 	if err != nil {
 		return nil, err
 	}
 
-	btcConn, err := btcClient.Connect(net)
+	btcConn, err := btcClient.NewConnWithConfig(conf)
 	if err != nil {
 		return nil, err
 	}
 
-	ethKey, err := keystore.GetKey(1, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	btcKey, err := keystore.GetKey(0, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	_WIF := btcKey.GetKeyString()
-	if err != nil {
-		return nil, err
-	}
-
-	WIF, err := btcutil.DecodeWIF(_WIF)
-	if err != nil {
-		return nil, err
-	}
-
-	err = btcConn.Client.ImportPrivKeyLabel(WIF, "Atom")
-	if err != nil {
-		return nil, err
-	}
-
-	privKey, err := ethKey.GetKey()
-	if err != nil {
-		return nil, err
-	}
-
-	owner := bind.NewKeyedTransactor(privKey)
-	owner.GasLimit = 3000000
-
-	ethBinder, err := binder.NewBinder(privKey, ethConn)
+	ethBinder, err := binder.NewBinder(nil, ethConn)
+	ingressNet := network.NewIngress(conf.RenEx.Ingress)
 
 	watchdog := client.NewWatchdogHTTPClient(gen)
 
-	atomBuilder, err := atoms.NewAtomBuilder(net, keystore)
+	atomBuilder, err := atoms.NewAtomBuilder(ingressNet, net, keystore)
 	wAdapter := watchAdapter{
 		atomBuilder,
 		ethBinder,
