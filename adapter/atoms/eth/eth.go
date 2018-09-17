@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	bindings "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/bindings/eth"
 	ethclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 	"github.com/republicprotocol/renex-swapper-go/domain/order"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
@@ -38,8 +39,13 @@ type EthereumAtom struct {
 }
 
 // NewEthereumAtom returns a new Ethereum RequestAtom instance
-func NewEthereumAtom(adapter Adapter, client ethclient.Conn, key keystore.EthereumKey, orderID [32]byte) (swap.Atom, error) {
-	contract, err := bindings.NewAtomicSwap(client.RenExAtomicSwapper, bind.ContractBackend(client.Client))
+func NewEthereumAtom(adapter Adapter, conf config.EthereumNetwork, key keystore.EthereumKey, orderID [32]byte) (swap.Atom, error) {
+	conn, err := ethclient.Connect(conf)
+	if err != nil {
+		return &EthereumAtom{}, err
+	}
+
+	contract, err := bindings.NewAtomicSwap(conn.RenExAtomicSwapper, bind.ContractBackend(conn.Client))
 	if err != nil {
 		return &EthereumAtom{}, err
 	}
@@ -49,7 +55,7 @@ func NewEthereumAtom(adapter Adapter, client ethclient.Conn, key keystore.Ethere
 
 	return &EthereumAtom{
 		context: context.Background(),
-		client:  client,
+		client:  conn,
 		key:     key,
 		binding: contract,
 		orderID: orderID,
