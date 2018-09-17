@@ -1,138 +1,167 @@
 package http
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
-	"net/http"
 
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
+	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/config"
+	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
+	"github.com/republicprotocol/renex-swapper-go/domain/token"
+	"github.com/republicprotocol/renex-swapper-go/service/watch"
 )
 
-// NewServer creates a new http handler
-func NewServer(adapter BoxHTTPAdapter) http.Handler {
+var ErrInvalidSignatureLength = errors.New("invalid signature length")
+var ErrInvalidOrderIDLength = errors.New("invalid order id length")
 
-	r := mux.NewRouter()
-	r.HandleFunc("/orders", PostOrdersHandler(adapter)).Methods("POST")
-	r.HandleFunc("/status/{orderId}", GetStatusHandler(adapter)).Methods("GET")
-	r.HandleFunc("/whoami/{challenge}", WhoAmIHandler(adapter)).Methods("GET")
-	r.HandleFunc("/balances", GetBalancesHandler(adapter)).Methods("GET")
-	r.Use(RecoveryHandler)
-
-	handler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowCredentials: true,
-		AllowedMethods:   []string{"GET", "POST"},
-	}).Handler(r)
-	return handler
+type Adapter interface {
+	WhoAmI(challenge string) (WhoAmISigned, error)
+	PostOrder(order PostOrder) (PostOrder, error)
+	GetStatus(orderID string) (Status, error)
+	GetBalances() (Balances, error)
 }
 
-// RecoveryHandler handles errors while processing the requests and populates the errors in the response
-func RecoveryHandler(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if r := recover(); r != nil {
-				writeError(w, http.StatusInternalServerError, fmt.Sprintf("%v", r))
-			}
-		}()
-		h.ServeHTTP(w, r)
-	})
+type adapter struct {
+	config config.Config
+	keystr keystore.Keystore
+	watch  watch.Watch
 }
 
-// PostOrdersHandler handles post orders request, it gets the signed order id,
-// checks whether the signer is authorized, if the signer is authorized this
-// function adds the order id to the queue.
-func PostOrdersHandler(boxHTTPAdapter BoxHTTPAdapter) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		postOrder := PostOrder{}
-		if err := json.NewDecoder(r.Body).Decode(&postOrder); err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode json into post order format: %v", err))
-			return
-		}
-
-		processedOrder, err := boxHTTPAdapter.PostOrder(postOrder)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot process the order: %v", err))
-			return
-		}
-
-		orderJSON, err := json.Marshal(processedOrder)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot marshal the processed order: %v", err))
-			return
-		}
-
-		w.WriteHeader(http.StatusCreated)
-		w.Write(orderJSON)
+func NewAdapter(config config.Config, keystr keystore.Keystore, watcher watch.Watch) Adapter {
+	return &adapter{
+		config: config,
+		keystr: keystr,
+		watch:  watcher,
 	}
 }
 
-// WhoAmIHandler handles the get whoami request,it gets a challenge from the
-// caller signs it and sends back the signed challenge with it's version
-// information.
-func WhoAmIHandler(adapter BoxHTTPAdapter) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		params := mux.Vars(r)
-		whoami, err := adapter.WhoAmI(params["challenge"])
-		if err != nil {
-
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get the whoami information: %v", err))
-			return
-		}
-		whoamiJSON, err := json.Marshal(whoami)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot marshal whoami information: %v", err))
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		w.Write(whoamiJSON)
+func (adapter *adapter) WhoAmI(challenge string) (WhoAmISigned, error) {
+	whoAmI := NewWhoAmI(challenge, adapter.config)
+	infoBytes, err := MarshalWhoAmI(whoAmI)
+	if err != nil {
+		return WhoAmISigned{}, err
 	}
+	infoHash := crypto.Keccak256(infoBytes)
+	ethKey := adapter.keystr.GetKey(token.ETH).(keystore.EthereumKey)
+	sig, err := ethKey.Sign(infoHash)
+	return WhoAmISigned{
+		Signature: MarshalSignature(sig),
+		WhoAmI:    whoAmI,
+	}, nil
 }
 
-//
-func GetStatusHandler(adapter BoxHTTPAdapter) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		params := mux.Vars(r)
-		status, err := adapter.GetStatus(params["orderId"])
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get the status information: %v", err))
-			return
-		}
-
-		statusJSON, err := json.Marshal(status)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot marshal status information: %v", err))
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		w.Write(statusJSON)
+func (adapter *adapter) PostOrder(order PostOrder) (PostOrder, error) {
+	orderID, err := UnmarshalOrderID(order.OrderID)
+	if err != nil {
+		return PostOrder{}, err
 	}
+	if err := validate(orderID, order.Signature, adapter.config.AuthorizedAddresses); err != nil {
+		return PostOrder{}, err
+	}
+	go func() {
+		if err := adapter.watch.Add(orderID); err != nil {
+			return
+		}
+		adapter.watch.Notify()
+	}()
+	key := adapter.keystr.GetKey(token.ETH).(keystore.EthereumKey)
+	sig, err := key.Sign(orderID[:])
+	return PostOrder{
+		order.OrderID,
+		MarshalSignature(sig),
+	}, nil
 }
 
-func GetBalancesHandler(adapter BoxHTTPAdapter) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		balances, err := adapter.GetBalances()
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get the balances: %v", err))
-			return
-		}
-
-		balancesJSON, err := json.Marshal(balances)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot marshal the balance information: %v", err))
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		w.Write(balancesJSON)
+func (adapter *adapter) GetStatus(orderID string) (Status, error) {
+	id, err := UnmarshalOrderID(orderID)
+	if err != nil {
+		return Status{}, err
 	}
+	status := adapter.watch.Status(id)
+	return Status{
+		OrderID: orderID,
+		Status:  status,
+	}, nil
 }
 
-func writeError(w http.ResponseWriter, statusCode int, err string) {
-	w.WriteHeader(statusCode)
-	w.Write([]byte(err))
-	return
+func (adapter *adapter) GetBalances() (Balances, error) {
+	ethBal, err := ethereumBalance(
+		adapter.config,
+		adapter.keystr.GetKey(token.ETH).(keystore.EthereumKey),
+	)
+	if err != nil {
+		return Balances{}, err
+	}
+	btcBal, err := bitcoinBalance(
+		adapter.config,
+		adapter.keystr.GetKey(token.BTC).(keystore.BitcoinKey),
+	)
+	if err != nil {
+		return Balances{}, err
+	}
+	return Balances{
+		Ethereum: ethBal,
+		Bitcoin:  btcBal,
+	}, nil
+}
+
+func bitcoinBalance(conf config.Config, key keystore.BitcoinKey) (Balance, error) {
+	conn, err := btc.NewConnWithConfig(conf)
+	if err != nil {
+		return Balance{}, err
+	}
+	balance, err := conn.Balance(key.AddressString)
+	if err != nil {
+		return Balance{}, err
+	}
+	return Balance{
+		Address: key.AddressString,
+		Amount:  uint64(balance),
+	}, nil
+}
+
+func ethereumBalance(conf config.Config, key keystore.EthereumKey) (Balance, error) {
+	conn, err := eth.Connect(conf)
+	if err != nil {
+		return Balance{}, err
+	}
+	bal, err := conn.Balance(key.Address)
+	if err != nil {
+		return Balance{}, err
+	}
+	return Balance{
+		Address: key.Address.String(),
+		Amount:  bal.Uint64(),
+	}, nil
+}
+
+func validate(id [32]byte, signature string, addresses []string) error {
+	sig, err := UnmarshalSignature(signature)
+	if err != nil {
+		return err
+	}
+
+	message := append([]byte("Republic Protocol: open: "), id[:]...)
+	signatureData := crypto.Keccak256([]byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d", len(message))), message)
+
+	marshalledPubKey, err := crypto.Ecrecover(signatureData, sig)
+	if err != nil {
+		return err
+	}
+
+	ecdsaPubKey, err := crypto.UnmarshalPubkey(marshalledPubKey)
+	if err != nil {
+		return err
+	}
+	addr := crypto.PubkeyToAddress(*ecdsaPubKey)
+
+	for _, address := range addresses {
+		if address == addr.String() {
+			return nil
+		}
+	}
+	return errors.New("Unauthorized Public Key")
 }
