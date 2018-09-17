@@ -11,13 +11,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	bindings "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/bindings/eth"
 	ethclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
-	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
 type Adapter interface {
-	ReceiveSwapDetails(order.ID, int64) ([]byte, error)
+	RecieveSwapDetails(order.ID, int64) ([]byte, error)
 }
 
 // EthereumData
@@ -30,15 +31,15 @@ type EthereumAtom struct {
 	orderID [32]byte
 	context context.Context
 	client  ethclient.Conn
-	key     keystore.Key
+	key     keystore.EthereumKey
 	binding *bindings.AtomicSwap
 	adapter Adapter
 	data    EthereumData
 }
 
 // NewEthereumAtom returns a new Ethereum RequestAtom instance
-func NewEthereumAtom(adapter Adapter, client ethclient.Conn, key keystore.Key, orderID [32]byte) (swap.Atom, error) {
-	contract, err := bindings.NewAtomicSwap(client.RenExAtomicSwapperAddress(), bind.ContractBackend(client.Client()))
+func NewEthereumAtom(adapter Adapter, client ethclient.Conn, key keystore.EthereumKey, orderID [32]byte) (swap.Atom, error) {
+	contract, err := bindings.NewAtomicSwap(client.RenExAtomicSwapper, bind.ContractBackend(client.Client))
 	if err != nil {
 		return &EthereumAtom{}, err
 	}
@@ -61,35 +62,33 @@ func NewEthereumAtom(adapter Adapter, client ethclient.Conn, key keystore.Key, o
 
 // Initiate a new Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error {
-	key, err := atom.key.GetKey()
-	if err != nil {
-		return err
-	}
-	auth := bind.NewKeyedTransactor(key)
-	auth.Value = value
-	auth.GasLimit = 3000000
+	prevValue := atom.key.TransactOpts.Value
+	prevGasLimit := atom.key.TransactOpts.GasLimit
+	atom.key.TransactOpts.Value = value
+	atom.key.TransactOpts.GasLimit = 3000000
 	atom.data.HashLock = hash
 
-	tx, err := atom.binding.Initiate(auth, atom.data.SwapID, common.BytesToAddress(to), hash, big.NewInt(expiry))
+	tx, err := atom.binding.Initiate(atom.key.TransactOpts, atom.data.SwapID, common.BytesToAddress(to), hash, big.NewInt(expiry))
+	atom.key.TransactOpts.Value = prevValue
+	atom.key.TransactOpts.GasLimit = prevGasLimit
 	if err != nil {
 		return err
 	}
+
 	_, err = atom.client.PatchedWaitMined(atom.context, tx)
 	return err
 }
 
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) Redeem(secret [32]byte) error {
-	key, err := atom.key.GetKey()
-	if err != nil {
-		return err
-	}
-	auth := bind.NewKeyedTransactor(key)
-	auth.GasLimit = 3000000
-	tx, err := atom.binding.Redeem(auth, atom.data.SwapID, secret)
+	prevGasLimit := atom.key.TransactOpts.GasLimit
+	atom.key.TransactOpts.GasLimit = 3000000
+	tx, err := atom.binding.Redeem(atom.key.TransactOpts, atom.data.SwapID, secret)
+	atom.key.TransactOpts.GasLimit = prevGasLimit
 	if err == nil {
 		_, err = atom.client.PatchedWaitMined(atom.context, tx)
 	}
+
 	return err
 }
 
@@ -107,13 +106,10 @@ func (atom *EthereumAtom) WaitForCounterRedemption() error {
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) Refund() error {
-	key, err := atom.key.GetKey()
-	if err != nil {
-		return err
-	}
-	auth := bind.NewKeyedTransactor(key)
-	auth.GasLimit = 3000000
-	tx, err := atom.binding.Refund(auth, atom.data.SwapID)
+	prevGasLimit := atom.key.TransactOpts.GasLimit
+	atom.key.TransactOpts.GasLimit = 3000000
+	tx, err := atom.binding.Refund(atom.key.TransactOpts, atom.data.SwapID)
+	atom.key.TransactOpts.GasLimit = prevGasLimit
 	if err == nil {
 		_, err = atom.client.PatchedWaitMined(atom.context, tx)
 	}
@@ -122,7 +118,7 @@ func (atom *EthereumAtom) Refund() error {
 
 // Audit an Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
-	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, time.Now().Add(15*time.Minute).Unix())
+	details, err := atom.adapter.RecieveSwapDetails(atom.orderID, time.Now().Add(15*time.Minute).Unix())
 	if err != nil {
 		return [32]byte{}, nil, nil, 0, err
 	}
@@ -139,7 +135,7 @@ func (atom *EthereumAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
 func (atom *EthereumAtom) AuditSecret() ([32]byte, error) {
-	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, time.Now().Add(15*time.Minute).Unix())
+	details, err := atom.adapter.RecieveSwapDetails(atom.orderID, time.Now().Add(15*time.Minute).Unix())
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -152,7 +148,7 @@ func (atom *EthereumAtom) AuditSecret() ([32]byte, error) {
 
 // RedeemedAt returns the timestamp at which the atom is redeemed
 func (atom *EthereumAtom) RedeemedAt() (int64, error) {
-	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, time.Now().Add(15*time.Minute).Unix())
+	details, err := atom.adapter.RecieveSwapDetails(atom.orderID, time.Now().Add(15*time.Minute).Unix())
 	if err != nil {
 		return 0, err
 	}
@@ -181,10 +177,10 @@ func (atom *EthereumAtom) Deserialize(data []byte) error {
 
 // GetFromAddress returns the address of the sender
 func (atom *EthereumAtom) GetFromAddress() ([]byte, error) {
-	return atom.key.GetAddress()
+	return []byte(atom.key.Address.String()), nil
 }
 
 // PriorityCode returns the priority code of the currency.
 func (atom *EthereumAtom) PriorityCode() uint32 {
-	return atom.key.PriorityCode()
+	return uint32(token.ETH)
 }
