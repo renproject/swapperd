@@ -3,23 +3,20 @@ package atoms
 import (
 	"fmt"
 
-	"github.com/republicprotocol/renex-swapper-go/domain/match"
-	"github.com/republicprotocol/renex-swapper-go/domain/token"
-
-	"github.com/republicprotocol/renex-swapper-go/service/store"
-	"github.com/republicprotocol/renex-swapper-go/service/swap"
-
 	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/btc"
 	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/eth"
-	"github.com/republicprotocol/renex-swapper-go/adapter/config"
-	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-
 	btcClient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
 	ethClient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/config"
+	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
+	"github.com/republicprotocol/renex-swapper-go/domain/match"
+	"github.com/republicprotocol/renex-swapper-go/domain/token"
+	"github.com/republicprotocol/renex-swapper-go/service/state"
+	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
 type Builder interface {
-	BuildAtoms(state store.State, m match.Match) (swap.Atom, swap.Atom, error)
+	BuildAtoms(state state.State, m match.Match) (swap.Atom, swap.Atom, error)
 }
 type atomBuilder struct {
 	binder   eth.Adapter
@@ -35,7 +32,7 @@ func NewAtomBuilder(network eth.Adapter, config config.Config, keystore keystore
 	}, nil
 }
 
-func (ab *atomBuilder) BuildAtoms(state store.State, m match.Match) (swap.Atom, swap.Atom, error) {
+func (ab *atomBuilder) BuildAtoms(state state.State, m match.Match) (swap.Atom, swap.Atom, error) {
 	var personalAtom, foreignAtom swap.Atom
 	var err error
 
