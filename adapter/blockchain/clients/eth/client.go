@@ -20,23 +20,19 @@ type Conn struct {
 	Network            string
 	Client             *ethclient.Client
 	RenExAtomicSwapper common.Address
-	RenExSettlement    common.Address
-	Orderbook          common.Address
 }
 
 // Connect to an ethereum network.
-func Connect(config config.Config) (Conn, error) {
-	ethclient, err := ethclient.Dial(config.Ethereum.URL)
+func Connect(config config.EthereumNetwork) (Conn, error) {
+	ethclient, err := ethclient.Dial(config.URL)
 	if err != nil {
 		return Conn{}, err
 	}
 
 	return Conn{
 		Client:             ethclient,
-		Network:            config.Ethereum.Network,
-		RenExAtomicSwapper: common.HexToAddress(config.RenEx.Swapper),
-		RenExSettlement:    common.HexToAddress(config.RenEx.Settlement),
-		Orderbook:          common.HexToAddress(config.RenEx.Orderbook),
+		Network:            config.Network,
+		RenExAtomicSwapper: common.HexToAddress(config.Swapper),
 	}, nil
 }
 
