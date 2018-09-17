@@ -7,13 +7,14 @@ import (
 
 	bindings "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/bindings/btc"
 	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
-	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
 type Adapter interface {
-	ReceiveSwapDetails(order.ID, int64) ([]byte, error)
+	RecieveSwapDetails(order.ID, int64) ([]byte, error)
 }
 
 type BitcoinData struct {
@@ -30,7 +31,7 @@ type BitcoinData struct {
 
 // BitcoinAtom is a struct for Bitcoin Atom
 type BitcoinAtom struct {
-	key        keystore.Key
+	key        keystore.BitcoinKey
 	orderID    [32]byte
 	connection btc.Conn
 	adapter    Adapter
@@ -38,7 +39,7 @@ type BitcoinAtom struct {
 }
 
 // NewBitcoinAtom returns a new Bitcoin Atom instance
-func NewBitcoinAtom(adapter Adapter, connection btc.Conn, key keystore.Key, orderID [32]byte) swap.Atom {
+func NewBitcoinAtom(adapter Adapter, connection btc.Conn, key keystore.BitcoinKey, orderID [32]byte) swap.Atom {
 	return &BitcoinAtom{
 		orderID:    orderID,
 		key:        key,
@@ -49,11 +50,7 @@ func NewBitcoinAtom(adapter Adapter, connection btc.Conn, key keystore.Key, orde
 
 // Initiate a new Atom swap by calling Bitcoin
 func (atom *BitcoinAtom) Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error {
-	from, err := atom.GetFromAddress()
-	if err != nil {
-		return err
-	}
-	result, err := bindings.Initiate(atom.connection, string(from), string(to), value.Int64(), hash[:], expiry)
+	result, err := bindings.Initiate(atom.connection, atom.key, string(to), value.Int64(), hash[:], expiry)
 	if err != nil {
 		return err
 	}
@@ -70,12 +67,7 @@ func (atom *BitcoinAtom) Initiate(to []byte, hash [32]byte, value *big.Int, expi
 
 // Redeem an Atom swap by calling a function on Bitcoin
 func (atom *BitcoinAtom) Redeem(secret [32]byte) error {
-	from, err := atom.GetFromAddress()
-	if err != nil {
-		return err
-	}
-
-	result, err := bindings.Redeem(atom.connection, string(from), atom.data.Contract, atom.data.ContractTx, secret)
+	result, err := bindings.Redeem(atom.connection, atom.key, atom.data.Contract, atom.data.ContractTx, secret)
 	if err != nil {
 		return err
 	}
@@ -96,16 +88,12 @@ func (atom *BitcoinAtom) RedeemedAt() (int64, error) {
 
 // Refund an Atom swap by calling Bitcoin
 func (atom *BitcoinAtom) Refund() error {
-	from, err := atom.GetFromAddress()
-	if err != nil {
-		return err
-	}
-	return bindings.Refund(atom.connection, string(from), atom.data.Contract, atom.data.ContractTx)
+	return bindings.Refund(atom.connection, atom.key, atom.data.Contract, atom.data.ContractTx)
 }
 
 // Audit an Atom swap by calling a function on Bitcoin
 func (atom *BitcoinAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
-	details, err := atom.adapter.ReceiveSwapDetails(atom.orderID, 0)
+	details, err := atom.adapter.RecieveSwapDetails(atom.orderID, 0)
 	if err != nil {
 		return [32]byte{}, nil, nil, 0, err
 	}
@@ -140,10 +128,10 @@ func (atom *BitcoinAtom) Deserialize(data []byte) error {
 
 // PriorityCode returns the priority code of the currency.
 func (atom *BitcoinAtom) PriorityCode() uint32 {
-	return atom.key.PriorityCode()
+	return uint32(token.BTC)
 }
 
 // GetFromAddress returns the address of the sender
 func (atom *BitcoinAtom) GetFromAddress() ([]byte, error) {
-	return atom.key.GetAddress()
+	return []byte(atom.key.AddressString), nil
 }
