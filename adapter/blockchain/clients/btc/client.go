@@ -24,8 +24,8 @@ type Conn struct {
 	Network     string
 }
 
-func NewConnWithConfig(conf config.Config) (Conn, error) {
-	return NewConn(conf.Bitcoin.Network, conf.Bitcoin.URL)
+func NewConnWithConfig(conf config.BitcoinNetwork) (Conn, error) {
+	return NewConn(conf.Network, conf.URL)
 }
 
 func NewConn(chain, url string) (Conn, error) {
