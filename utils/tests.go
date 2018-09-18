@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"os"
 	"strconv"
 
@@ -28,4 +30,26 @@ func LocalContext(description string, f func()) {
 			ginkgo.It("SKIPPING LOCAL TESTS", func() {})
 		})
 	}
+}
+
+type TestKeystores struct {
+	Alice TestKeystore `json:"alice"`
+	Bob   TestKeystore `json:"bob"`
+}
+
+type TestKeystore struct {
+	Ethereum string `json:"ethereum"`
+	Bitcoin  string `json:"bitcoin"`
+}
+
+func LoadTestKeys(loc string) TestKeystores {
+	keystores := TestKeystores{}
+	data, err := ioutil.ReadFile(loc)
+	if err != nil {
+		panic(err)
+	}
+	if err := json.Unmarshal(data, &keystores); err != nil {
+		panic(err)
+	}
+	return keystores
 }
