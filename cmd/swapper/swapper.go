@@ -8,79 +8,52 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/republicprotocol/renex-swapper-go/service/logger"
-	"github.com/republicprotocol/renex-swapper-go/service/watchdog"
-
-	"github.com/republicprotocol/renex-swapper-go/adapter/atoms"
-	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/binder"
-	btcClient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
-	ethClient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/http"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-
-	loggerAdapter "github.com/republicprotocol/renex-swapper-go/adapter/logger"
-	"github.com/republicprotocol/renex-swapper-go/adapter/store/leveldb"
-	"github.com/republicprotocol/renex-swapper-go/adapter/watchdog/client"
+	renexAdapter "github.com/republicprotocol/renex-swapper-go/adapter/renex"
+	stateAdapter "github.com/republicprotocol/renex-swapper-go/adapter/state"
+	configDriver "github.com/republicprotocol/renex-swapper-go/driver/config"
+	httpDriver "github.com/republicprotocol/renex-swapper-go/driver/http"
+	keystoreDriver "github.com/republicprotocol/renex-swapper-go/driver/keystore"
+	loggerDriver "github.com/republicprotocol/renex-swapper-go/driver/logger"
 	"github.com/republicprotocol/renex-swapper-go/driver/network"
+	storeDriver "github.com/republicprotocol/renex-swapper-go/driver/store"
+	watchdogDriver "github.com/republicprotocol/renex-swapper-go/driver/watchdog"
 	"github.com/republicprotocol/renex-swapper-go/service/guardian"
-	"github.com/republicprotocol/renex-swapper-go/service/store"
-	"github.com/republicprotocol/renex-swapper-go/service/watch"
+	"github.com/republicprotocol/renex-swapper-go/service/renex"
+	"github.com/republicprotocol/renex-swapper-go/service/state"
 )
 
-type watchAdapter struct {
-	atoms.AtomBuilder
-	binder.Binder
-	watchdog.WatchdogClient
-	logger.Logger
-}
-
 func main() {
-	home := getHome()
-
 	port := flag.String("port", "18516", "HTTP Atom port")
-	confPath := flag.String("config", home+"/.swapper/config.json", "Location of the config file")
-	keystrPath := flag.String("keystore", home+"/.swapper/keystore.json", "Location of the keystore file")
-	networkPath := flag.String("network", home+"/.swapper/network.json", "Location of the network file")
-
+	repNet := flag.String("network", "nightly", "Republic Protocol Network")
+	keyphrase := flag.String("keyphrase", "", "Keyphrase to unlock keystore")
 	flag.Parse()
 
-	conf, err := config.LoadConfig(*confPath)
+	conf := configDriver.New(*repNet)
+	ks := keystoreDriver.LoadFromFile(*repNet, *keyphrase)
+	db, err := storeDriver.NewLevelDB(conf.StoreLocation)
+	if err != nil {
+		panic(err)
+	}
+	logger := loggerDriver.NewStdOut()
+	state := state.NewState(stateAdapter.New(db, logger))
+	ingressNet := network.NewIngress(conf.RenEx.Ingress)
+	nopWatchdog := watchdogDriver.NewMock()
+	swapperAdapter, err := renexAdapter.New(conf, ks, ingressNet, nopWatchdog, state, logger)
+	if err != nil {
+		panic(err)
+	}
+	renexSwapper := renex.NewRenEx(swapperAdapter)
+
+	guardian, err := buildGuardian(conf, ks, state)
 	if err != nil {
 		panic(err)
 	}
 
-	keystr, err := keystore.Load(*keystrPath)
-	if err != nil {
-		panic(err)
-	}
-
-	log.Println("Swapper is syncing with the bitcoin node, this might take few minutes to complete")
-	net, err := network.LoadNetwork(*networkPath)
-
-	dbLoc, err := conf.StoreLocation()
-	if err != nil {
-		panic(err)
-	}
-
-	db, err := leveldb.NewLDBStore(dbLoc)
-	if err != nil {
-		panic(err)
-	}
-	state := store.NewState(db, loggerAdapter.NewStdOutLogger())
-
-	watcher, err := buildWatcher(conf, net, keystr, state)
-	if err != nil {
-		panic(err)
-	}
-
-	guardian, err := buildGuardian(net, keystr, state)
-	if err != nil {
-		panic(err)
-	}
-
-	errCh1 := watcher.Start()
-	watcher.Notify()
+	errCh1 := renexSwapper.Start()
+	renexSwapper.Notify()
 
 	errCh2 := guardian.Start()
 	guardian.Notify()
@@ -102,53 +75,21 @@ func main() {
 	go func() {
 		_ = <-c
 		log.Println("Stopping the swapper service")
-		watcher.Stop()
+		renexSwapper.Stop()
 		log.Println("Stopping the guardian service")
 		guardian.Stop()
 		log.Println("Stopping the atom box safely")
 		os.Exit(1)
 	}()
 
-	httpAdapter := http.NewBoxHttpAdapter(conf, net, keystr, watcher)
+	httpAdapter := http.NewAdapter(conf, ks, renexSwapper)
 	log.Println(fmt.Sprintf("0.0.0.0:%s", *port))
-	log.Fatal(netHttp.ListenAndServe(fmt.Sprintf(":%s", *port), http.NewServer(httpAdapter)))
+	log.Fatal(netHttp.ListenAndServe(fmt.Sprintf(":%s", *port), httpDriver.NewServer(httpAdapter)))
 
 }
 
-func buildGuardian(net network.Config, keystore keystore.Keystore, state store.State) (guardian.Guardian, error) {
-	atomBuilder, err := atoms.NewAtomBuilder(net, keystore)
-	if err != nil {
-		return nil, err
-	}
-	return guardian.NewGuardian(atomBuilder, state), nil
-}
-
-func buildWatcher(gen config.Config, conf config.Config, keystore keystore.Keystore, state store.State) (watch.Watch, error) {
-	ethConn, err := ethClient.Connect(conf)
-	if err != nil {
-		return nil, err
-	}
-
-	btcConn, err := btcClient.NewConnWithConfig(conf)
-	if err != nil {
-		return nil, err
-	}
-
-	ethBinder, err := binder.NewBinder(nil, ethConn)
-	ingressNet := network.NewIngress(conf.RenEx.Ingress)
-
-	watchdog := client.NewWatchdogHTTPClient(gen)
-
-	atomBuilder, err := atoms.NewAtomBuilder(ingressNet, net, keystore)
-	wAdapter := watchAdapter{
-		atomBuilder,
-		ethBinder,
-		watchdog,
-		loggerAdapter.NewStdOutLogger(),
-	}
-
-	watcher := watch.NewWatch(&wAdapter, state)
-	return watcher, nil
+func buildGuardian(conf config.Config, keystore keystore.Keystore, state state.State) (guardian.Guardian, error) {
+	return guardian.NewGuardian(), nil
 }
 
 func getHome() string {
