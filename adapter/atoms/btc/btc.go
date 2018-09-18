@@ -9,14 +9,10 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/adapter/network"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
-
-type Adapter interface {
-	RecieveSwapDetails(order.ID, int64) ([]byte, error)
-}
 
 type BitcoinData struct {
 	ContractHash   string   `json:"contract_hash"`
@@ -35,12 +31,12 @@ type BitcoinAtom struct {
 	key        keystore.BitcoinKey
 	orderID    [32]byte
 	connection btc.Conn
-	adapter    Adapter
+	network    network.Network
 	data       BitcoinData
 }
 
 // NewBitcoinAtom returns a new Bitcoin Atom instance
-func NewBitcoinAtom(adapter Adapter, conf config.BitcoinNetwork, key keystore.BitcoinKey, orderID [32]byte) (swap.Atom, error) {
+func NewBitcoinAtom(network network.Network, conf config.BitcoinNetwork, key keystore.BitcoinKey, orderID [32]byte) (swap.Atom, error) {
 	conn, err := btc.NewConnWithConfig(conf)
 	if err != nil {
 		return nil, err
@@ -48,7 +44,7 @@ func NewBitcoinAtom(adapter Adapter, conf config.BitcoinNetwork, key keystore.Bi
 	return &BitcoinAtom{
 		orderID:    orderID,
 		key:        key,
-		adapter:    adapter,
+		network:    network,
 		connection: conn,
 	}, nil
 }
@@ -98,7 +94,7 @@ func (atom *BitcoinAtom) Refund() error {
 
 // Audit an Atom swap by calling a function on Bitcoin
 func (atom *BitcoinAtom) Audit() ([32]byte, []byte, *big.Int, int64, error) {
-	details, err := atom.adapter.RecieveSwapDetails(atom.orderID, 0)
+	details, err := atom.network.ReceiveSwapDetails(atom.orderID, 0)
 	if err != nil {
 		return [32]byte{}, nil, nil, 0, err
 	}
