@@ -11,7 +11,7 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
-	"github.com/republicprotocol/renex-swapper-go/service/watch"
+	"github.com/republicprotocol/renex-swapper-go/service/renex"
 )
 
 var ErrInvalidSignatureLength = errors.New("invalid signature length")
@@ -27,14 +27,14 @@ type Adapter interface {
 type adapter struct {
 	config config.Config
 	keystr keystore.Keystore
-	watch  watch.Watch
+	renex  renex.RenEx
 }
 
-func NewAdapter(config config.Config, keystr keystore.Keystore, watcher watch.Watch) Adapter {
+func NewAdapter(config config.Config, keystr keystore.Keystore, renExSwapper renex.RenEx) Adapter {
 	return &adapter{
 		config: config,
 		keystr: keystr,
-		watch:  watcher,
+		renex:  renExSwapper,
 	}
 }
 
@@ -62,10 +62,10 @@ func (adapter *adapter) PostOrder(order PostOrder) (PostOrder, error) {
 		return PostOrder{}, err
 	}
 	go func() {
-		if err := adapter.watch.Add(orderID); err != nil {
+		if err := adapter.renex.Add(orderID); err != nil {
 			return
 		}
-		adapter.watch.Notify()
+		adapter.renex.Notify()
 	}()
 	key := adapter.keystr.GetKey(token.ETH).(keystore.EthereumKey)
 	sig, err := key.Sign(orderID[:])
@@ -80,10 +80,10 @@ func (adapter *adapter) GetStatus(orderID string) (Status, error) {
 	if err != nil {
 		return Status{}, err
 	}
-	status := adapter.watch.Status(id)
+	status := adapter.renex.Status(id)
 	return Status{
 		OrderID: orderID,
-		Status:  status,
+		Status:  string(status),
 	}, nil
 }
 
@@ -109,7 +109,7 @@ func (adapter *adapter) GetBalances() (Balances, error) {
 }
 
 func bitcoinBalance(conf config.Config, key keystore.BitcoinKey) (Balance, error) {
-	conn, err := btc.NewConnWithConfig(conf)
+	conn, err := btc.NewConnWithConfig(conf.Bitcoin)
 	if err != nil {
 		return Balance{}, err
 	}
@@ -124,7 +124,7 @@ func bitcoinBalance(conf config.Config, key keystore.BitcoinKey) (Balance, error
 }
 
 func ethereumBalance(conf config.Config, key keystore.EthereumKey) (Balance, error) {
-	conn, err := eth.Connect(conf)
+	conn, err := eth.Connect(conf.Ethereum)
 	if err != nil {
 		return Balance{}, err
 	}
