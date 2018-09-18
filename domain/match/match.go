@@ -3,6 +3,8 @@ package match
 import (
 	"encoding/json"
 	"math/big"
+
+	"github.com/republicprotocol/renex-swapper-go/domain/token"
 )
 
 // Match is the order match interface
@@ -11,8 +13,8 @@ type Match interface {
 	ForeignOrderID() [32]byte
 	SendValue() *big.Int
 	ReceiveValue() *big.Int
-	SendCurrency() uint32
-	ReceiveCurrency() uint32
+	SendCurrency() token.Token
+	ReceiveCurrency() token.Token
 	Serialize() ([]byte, error)
 }
 
@@ -21,12 +23,12 @@ type match struct {
 	foreignOrderID  [32]byte
 	sendValue       *big.Int
 	receiveValue    *big.Int
-	sendCurrency    uint32
-	receiveCurrency uint32
+	sendCurrency    token.Token
+	receiveCurrency token.Token
 }
 
 // NewMatch creates a new Match interface
-func NewMatch(personalOrderID, foreignOrderID [32]byte, sendValue, receiveValue *big.Int, sendCurrency, receiveCurrency uint32) Match {
+func NewMatch(personalOrderID, foreignOrderID [32]byte, sendValue, receiveValue *big.Int, sendCurrency, receiveCurrency token.Token) Match {
 	return &match{
 		personalOrderID: personalOrderID,
 		foreignOrderID:  foreignOrderID,
@@ -65,12 +67,12 @@ func (match *match) ReceiveValue() *big.Int {
 }
 
 // SendCurrency returns the currency the caller has to send according to this order match.
-func (match *match) SendCurrency() uint32 {
+func (match *match) SendCurrency() token.Token {
 	return match.sendCurrency
 }
 
 // SendCurrency returns the currency the caller has to send according to this order match.
-func (match *match) ReceiveCurrency() uint32 {
+func (match *match) ReceiveCurrency() token.Token {
 	return match.receiveCurrency
 }
 
