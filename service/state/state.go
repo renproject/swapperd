@@ -1,38 +1,47 @@
-package store
+package state
 
 import (
 	"bytes"
 	"encoding/json"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/republicprotocol/renex-swapper-go/domain/match"
-	"github.com/republicprotocol/renex-swapper-go/service/logger"
+	"github.com/republicprotocol/renex-swapper-go/domain/swap"
+	"github.com/republicprotocol/renex-swapper-go/domain/token"
 )
 
 // SwapStatus stores the swap status
 type SwapStatus struct {
-	Status string `json:"status"`
+	Status swap.Status `json:"status"`
 }
 
-// SwapInitiateDetails stores the swap status
+// OrderTimeStamp stores the timestamp when the order is submitted to the
+// swapper
+type OrderTimeStamp struct {
+	TimeStamp int64 `json:"timeStamp"`
+}
+
+// SwapInitiateDetails stores the initiate details
 type SwapInitiateDetails struct {
 	Expiry   int64    `json:"expiry"`
 	HashLock [32]byte `json:"hashLock"`
 }
 
+// SwapRedeemDetails stores the redeem details
 type SwapRedeemDetails struct {
 	Secret [32]byte `json:"secret"`
 }
 
 // SwapMatch stores the swap status
 type SwapMatch struct {
-	PersonalOrderID [32]byte `json:"personalOrderID"`
-	ForeignOrderID  [32]byte `json:"foreignOrderID"`
-	SendValue       *big.Int `json:"sendValue"`
-	ReceiveValue    *big.Int `json:"receiveValue"`
-	SendCurrency    uint32   `json:"sendCurrency"`
-	ReceiveCurrency uint32   `json:"receiveCurrency"`
+	PersonalOrderID [32]byte    `json:"personalOrderID"`
+	ForeignOrderID  [32]byte    `json:"foreignOrderID"`
+	SendValue       *big.Int    `json:"sendValue"`
+	ReceiveValue    *big.Int    `json:"receiveValue"`
+	SendCurrency    token.Token `json:"sendCurrency"`
+	ReceiveCurrency token.Token `json:"receiveCurrency"`
 }
 
 // PendingSwaps stores all the swaps that are pending
@@ -41,9 +50,8 @@ type PendingSwaps struct {
 }
 
 type state struct {
-	logger.Logger
-	Store
 	swapMu *sync.RWMutex
+	Adapter
 }
 
 type State interface {
@@ -52,17 +60,20 @@ type State interface {
 	ExecutableSwaps(bool) ([][32]byte, error)
 	RefundableSwaps() ([][32]byte, error)
 
-	InitiateDetails([32]byte) (int64, [32]byte, error)
-	PutInitiateDetails([32]byte, int64, [32]byte) error
+	InitiateDetails([32]byte) ([32]byte, int64, error)
+	PutInitiateDetails([32]byte, [32]byte, int64) error
 
 	RedeemDetails([32]byte) ([32]byte, error)
 	PutRedeemDetails([32]byte, [32]byte) error
 
-	Status([32]byte) string
-	PutStatus([32]byte, string) error
+	Status([32]byte) swap.Status
+	PutStatus([32]byte, swap.Status) error
 
 	Match([32]byte) (match.Match, error)
 	PutMatch([32]byte, match.Match) error
+
+	OrderTimeStamp([32]byte) (int64, error)
+	PutOrderTimeStamp([32]byte) error
 
 	AtomDetails([32]byte) ([]byte, error)
 	PutAtomDetails([32]byte, []byte) error
@@ -74,11 +85,10 @@ type State interface {
 	Redeemed([32]byte) error
 }
 
-func NewState(store Store, logger logger.Logger) State {
+func NewState(adapter Adapter) State {
 	return &state{
-		Store:  store,
-		Logger: logger,
-		swapMu: new(sync.RWMutex),
+		Adapter: adapter,
+		swapMu:  new(sync.RWMutex),
 	}
 }
 
@@ -209,7 +219,7 @@ func (state *state) RefundableSwaps() ([][32]byte, error) {
 	return refundableSwaps, nil
 }
 
-func (state *state) PutInitiateDetails(orderID [32]byte, expiry int64, hashLock [32]byte) error {
+func (state *state) PutInitiateDetails(orderID [32]byte, hashLock [32]byte, expiry int64) error {
 	swapInitiateDetails := SwapInitiateDetails{
 		Expiry:   expiry,
 		HashLock: hashLock,
@@ -221,18 +231,18 @@ func (state *state) PutInitiateDetails(orderID [32]byte, expiry int64, hashLock 
 	return state.Write(append([]byte("Initiate Details:"), orderID[:]...), initiateDetailsBytes)
 }
 
-func (state *state) InitiateDetails(orderID [32]byte) (int64, [32]byte, error) {
+func (state *state) InitiateDetails(orderID [32]byte) ([32]byte, int64, error) {
 	initiateDetailsBytes, err := state.Read(append([]byte("Initiate Details:"), orderID[:]...))
 	if err != nil {
-		return 0, [32]byte{}, err
+		return [32]byte{}, 0, err
 	}
 	swapInitiateDetails := SwapInitiateDetails{}
 
 	if err := json.Unmarshal(initiateDetailsBytes, &swapInitiateDetails); err != nil {
-		return 0, [32]byte{}, err
+		return [32]byte{}, 0, err
 	}
 
-	return swapInitiateDetails.Expiry, swapInitiateDetails.HashLock, nil
+	return swapInitiateDetails.HashLock, swapInitiateDetails.Expiry, nil
 }
 
 func (state *state) PutRedeemDetails(orderID [32]byte, secret [32]byte) error {
@@ -260,7 +270,7 @@ func (state *state) RedeemDetails(orderID [32]byte) ([32]byte, error) {
 	return swapRedeemDetails.Secret, nil
 }
 
-func (state *state) PutStatus(orderID [32]byte, status string) error {
+func (state *state) PutStatus(orderID [32]byte, status swap.Status) error {
 	swapStatus := SwapStatus{
 		Status: status,
 	}
@@ -271,7 +281,7 @@ func (state *state) PutStatus(orderID [32]byte, status string) error {
 	return state.Write(append([]byte("Status:"), orderID[:]...), statusBytes)
 }
 
-func (state *state) Status(orderID [32]byte) string {
+func (state *state) Status(orderID [32]byte) swap.Status {
 	statusBytes, err := state.Read(append([]byte("Status:"), orderID[:]...))
 	if err != nil {
 		return "UNKNOWN"
@@ -359,4 +369,29 @@ func (state *state) Redeemed(orderID [32]byte) error {
 		return err
 	}
 	return nil
+}
+
+func (state *state) PutOrderTimeStamp(orderID [32]byte) error {
+	data, err := json.Marshal(
+		OrderTimeStamp{
+			TimeStamp: time.Now().Unix(),
+		},
+	)
+	if err != nil {
+		return err
+	}
+	return state.Write(append([]byte("OrderTimeStamp:"), orderID[:]...), data)
+}
+
+func (state *state) OrderTimeStamp(orderID [32]byte) (int64, error) {
+	tsBytes, err := state.Read(append([]byte("OrderTimeStamp:"), orderID[:]...))
+	if err != nil {
+		return 0, err
+	}
+	timeStamp := OrderTimeStamp{}
+
+	if err := json.Unmarshal(tsBytes, &timeStamp); err != nil {
+		return 0, err
+	}
+	return timeStamp.TimeStamp, nil
 }
