@@ -13,6 +13,7 @@ type Config struct {
 
 // EthereumNetwork is the ethereum specific config object
 type EthereumNetwork struct {
+	Swapper string `json:"swapper"`
 	Network string `json:"network"`
 	URL     string `json:"url"`
 }
@@ -29,6 +30,4 @@ type RenExNetwork struct {
 	Watchdog   string `json:"watchdog"`
 	Ingress    string `json:"ingress"`
 	Settlement string `json:"settlement"`
-	Swapper    string `json:"swapper"`
-	Orderbook  string `json:"orderbook"`
 }
