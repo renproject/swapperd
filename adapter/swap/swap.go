@@ -78,13 +78,13 @@ func (swapper *swapperAdapter) NewSwap(orderID order.ID) (swap.Atom, swap.Atom, 
 	return personalAtom, foreignAtom, match, swapper, nil
 }
 
-func buildAtom(network network.Network, key keystore.Keystore, config config.Config, t uint32, orderID [32]byte) (swap.Atom, error) {
+func buildAtom(network network.Network, key keystore.Keystore, config config.Config, t token.Token, orderID [32]byte) (swap.Atom, error) {
 	switch t {
-	case 0:
-		btcKey := key.GetKey(token.BTC).(keystore.BitcoinKey)
+	case token.BTC:
+		btcKey := key.GetKey(t).(keystore.BitcoinKey)
 		return btc.NewBitcoinAtom(network, config.Bitcoin, btcKey, orderID)
-	case 1:
-		ethKey := key.GetKey(token.ETH).(keystore.EthereumKey)
+	case token.ETH:
+		ethKey := key.GetKey(t).(keystore.EthereumKey)
 		return eth.NewEthereumAtom(network, config.Ethereum, ethKey, orderID)
 	}
 	return nil, fmt.Errorf("Atom Build Failed")
