@@ -1,66 +1,91 @@
 package swap
 
 import (
-	"github.com/republicprotocol/renex-swapper-go/adapter/atoms"
-	"github.com/republicprotocol/renex-swapper-go/adapter/logger"
-	"github.com/republicprotocol/renex-swapper-go/adapter/watchdog"
+	"fmt"
+
 	"github.com/republicprotocol/renex-swapper-go/domain/match"
-	"github.com/republicprotocol/renex-swapper-go/driver/network"
+
+	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/btc"
+	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/config"
+	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
+	"github.com/republicprotocol/renex-swapper-go/adapter/network"
+	"github.com/republicprotocol/renex-swapper-go/adapter/watchdog"
+	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/domain/token"
+	"github.com/republicprotocol/renex-swapper-go/service/logger"
+	"github.com/republicprotocol/renex-swapper-go/service/state"
 	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
-type builder struct {
+type swapperAdapter struct {
 	network.Network
 	watchdog.Watchdog
-	State
+	state.State
 	logger.Logger
-	atoms.Builder
+	config   config.Config
+	keystore keystore.Keystore
 }
 
-func New(network swap.Network, watchdog swap.Watchdog, state State, logger swap.Logger, atomBuilder swap.AtomBuilder) swap.Builder {
-	return &builder{
-		Network:     network,
-		Watchdog:    watchdog,
-		State:       state,
-		Logger:      logger,
-		AtomBuilder: atomBuilder,
+func New(cfg config.Config, ks keystore.Keystore, network network.Network, watchdog watchdog.Watchdog, state state.State, logger logger.Logger) swap.SwapperAdapter {
+	return &swapperAdapter{
+		config:   cfg,
+		keystore: ks,
+		Network:  network,
+		Watchdog: watchdog,
+		State:    state,
+		Logger:   logger,
 	}
 }
 
-type adapter struct {
-	swap.Network
-	swap.Watchdog
-	swap.State
-	swap.Logger
-	personalAtom swap.Atom
-	foreignAtom  swap.Atom
-	match        match.Match
-}
-
-func (builder *builder) New(match match.Match) (swap.Adapter, error) {
-	personal, foreign, err := builder.BuildAtoms(builder.State, req)
+func (swapper *swapperAdapter) NewSwap(orderID order.ID) (swap.Atom, swap.Atom, match.Match, swap.Adapter, error) {
+	var personalAtom, foreignAtom swap.Atom
+	match, err := swapper.Match(orderID)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, nil, err
 	}
-	return &adapter{
-		Network:      builder.Network,
-		Watchdog:     builder.Watchdog,
-		State:        builder.State,
-		Logger:       builder.Logger,
-		personalAtom: personal,
-		foreignAtom:  foreign,
-		match:        match,
-	}, nil
+
+	personalAtom, err = buildAtom(swapper.Network, swapper.keystore, swapper.config, match.SendCurrency(), match.PersonalOrderID())
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	foreignAtom, err = buildAtom(swapper.Network, swapper.keystore, swapper.config, match.ReceiveCurrency(), match.ForeignOrderID())
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if swapper.AtomExists(match.PersonalOrderID()) {
+		details, err := swapper.AtomDetails(match.PersonalOrderID())
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		if err := personalAtom.Deserialize(details); err != nil {
+			return nil, nil, nil, nil, err
+		}
+	}
+
+	if swapper.AtomExists(match.ForeignOrderID()) {
+		details, err := swapper.AtomDetails(match.ForeignOrderID())
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		if err := foreignAtom.Deserialize(details); err != nil {
+			return nil, nil, nil, nil, err
+		}
+	}
+
+	return personalAtom, foreignAtom, match, swapper, nil
 }
 
-func (adapter *adapter) PersonalAtom() swap.Atom {
-	return adapter.personalAtom
-}
-
-func (adapter *adapter) ForeignAtom() swap.Atom {
-	return adapter.foreignAtom
-}
-
-func (adapter *adapter) Request() swap.Request {
-	return adapter.request
+func buildAtom(network network.Network, key keystore.Keystore, config config.Config, t uint32, orderID [32]byte) (swap.Atom, error) {
+	switch t {
+	case 0:
+		btcKey := key.GetKey(token.BTC).(keystore.BitcoinKey)
+		return btc.NewBitcoinAtom(network, config.Bitcoin, btcKey, orderID)
+	case 1:
+		ethKey := key.GetKey(token.ETH).(keystore.EthereumKey)
+		return eth.NewEthereumAtom(network, config.Ethereum, ethKey, orderID)
+	}
+	return nil, fmt.Errorf("Atom Build Failed")
 }
