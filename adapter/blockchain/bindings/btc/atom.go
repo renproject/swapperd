@@ -3,6 +3,7 @@ package btc
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -229,7 +230,10 @@ func Initiate(connection btc.Conn, myKey keystore.BitcoinKey, participantAddress
 
 	txHash := b.contractTx.TxHash()
 
-	connection.WaitTillMined(&txHash, 1)
+	fmt.Printf("Atomic Swap Script (%s): (%s)", b.contractP2SH.EncodeAddress(), hex.EncodeToString(b.contract))
+	fmt.Printf("Initiate Tx (%s): (%s)", hex.EncodeToString((&txHash).CloneBytes()), hex.EncodeToString(contractBuf.Bytes()))
+
+	connection.WaitTillMined(&txHash, 0)
 
 	refundTx := *b.refundTx
 	return bitcoinData{
@@ -320,7 +324,7 @@ func Redeem(connection btc.Conn, myKey keystore.BitcoinKey, contract, contractTx
 		return redeemResult{}, err
 	}
 
-	connection.WaitTillMined(&redeemTxHash, 1)
+	connection.WaitTillMined(&redeemTxHash, 0)
 
 	return redeemResult{
 		RedeemTx:     buf.Bytes(),
@@ -359,7 +363,7 @@ func Refund(connection btc.Conn, myKey keystore.BitcoinKey, contract, contractTx
 
 	txHash := refundTx.TxHash()
 
-	return connection.WaitTillMined(&txHash, 1)
+	return connection.WaitTillMined(&txHash, 0)
 }
 
 func Audit(connection btc.Conn, contract, contractTxBytes []byte) (readResult, error) {
@@ -484,6 +488,7 @@ func buildContract(connection btc.Conn, args *contractArgs, myKey keystore.Bitco
 	if err != nil {
 		return nil, err
 	}
+
 	contractP2SH, err := btcutil.NewAddressScriptHash(contract, connection.ChainParams)
 	if err != nil {
 		return nil, err
