@@ -3,12 +3,8 @@ package guardian
 import (
 	"fmt"
 	"log"
-	"time"
 
-	"github.com/republicprotocol/renex-swapper-go/adapter/atoms"
-	"github.com/republicprotocol/renex-swapper-go/service/errors"
-	"github.com/republicprotocol/renex-swapper-go/service/store"
-	"github.com/republicprotocol/renex-swapper-go/service/swap"
+	"github.com/republicprotocol/renex-swapper-go/domain/swap"
 )
 
 var ErrSwapRedeemed = fmt.Errorf("Swap Redeemed")
@@ -20,16 +16,14 @@ type Guardian interface {
 }
 
 type guardian struct {
-	builder  atoms.AtomBuilder
-	state    store.State
+	Adapter
 	notifyCh chan struct{}
 	doneCh   chan struct{}
 }
 
-func NewGuardian(builder atoms.AtomBuilder, state store.State) Guardian {
+func NewGuardian(adapter Adapter) Guardian {
 	return &guardian{
-		builder:  builder,
-		state:    state,
+		Adapter:  adapter,
 		notifyCh: make(chan struct{}, 1),
 		doneCh:   make(chan struct{}, 1),
 	}
@@ -45,7 +39,7 @@ func (g *guardian) Start() <-chan error {
 			case <-g.doneCh:
 				return
 			case <-g.notifyCh:
-				swaps, err := g.state.RefundableSwaps()
+				swaps, err := g.RefundableSwaps()
 				if err != nil {
 					if err == ErrSwapRedeemed {
 						continue
@@ -56,15 +50,12 @@ func (g *guardian) Start() <-chan error {
 				if len(swaps) < 1000 {
 					for i := range swaps {
 						go func(i int) {
-							if err := g.refund(swaps[i]); err != nil {
-								if err == errors.ErrNotInitiated {
-									return
-								}
+							if err := g.Refund(swaps[i]); err != nil {
 								errs <- err
 								return
 							}
-							if g.state.Status(swaps[i]) == swap.StatusRefunded {
-								g.state.DeleteSwap(swaps[i])
+							if g.Status(swaps[i]) == swap.StatusRefunded {
+								g.DeleteSwap(swaps[i])
 							}
 						}(i)
 					}
@@ -72,15 +63,12 @@ func (g *guardian) Start() <-chan error {
 				}
 				for i := range swaps[:1000] {
 					go func(i int) {
-						if err := g.refund(swaps[i]); err != nil {
-							if err == errors.ErrNotInitiated {
-								return
-							}
+						if err := g.Refund(swaps[i]); err != nil {
 							errs <- err
 							return
 						}
-						if g.state.Status(swaps[i]) == swap.StatusRefunded {
-							g.state.DeleteSwap(swaps[i])
+						if g.Status(swaps[i]) == swap.StatusRefunded {
+							g.DeleteSwap(swaps[i])
 						}
 					}(i)
 				}
@@ -96,50 +84,4 @@ func (g *guardian) Notify() {
 
 func (g *guardian) Stop() {
 	g.doneCh <- struct{}{}
-}
-
-func (g *guardian) refund(orderID [32]byte) error {
-	if !g.state.Complained(orderID) && !g.state.IsRedeemable(orderID) {
-		return errors.ErrNotInitiated
-	}
-
-	atom, err := g.buildAtom(orderID)
-	if err != nil {
-		return errors.ErrAtomBuildFailed(err)
-	}
-
-	if err = g.waitForExpiry(orderID); err != nil {
-		return err
-	}
-
-	if err := atom.Refund(); err != nil {
-		return errors.ErrRefundAfterRedeem(err)
-	}
-	return nil
-}
-
-func (g *guardian) buildAtom(orderID [32]byte) (swap.Atom, error) {
-	m, err := g.state.Match(orderID)
-	if err != nil {
-		return nil, err
-	}
-	atom, _, err := g.builder.BuildAtoms(g.state, m)
-	return atom, err
-}
-
-func (g *guardian) waitForExpiry(orderID [32]byte) error {
-	expiry, _, err := g.state.InitiateDetails(orderID)
-	if err != nil {
-		return err
-	}
-
-	for {
-		if time.Now().Unix() >= expiry {
-			if g.state.Status(orderID) == swap.StatusRedeemed {
-				return ErrSwapRedeemed
-			}
-			return nil
-		}
-		time.Sleep(time.Duration(time.Now().Unix()-expiry) * time.Minute)
-	}
 }
