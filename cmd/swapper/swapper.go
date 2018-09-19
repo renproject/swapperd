@@ -27,7 +27,7 @@ import (
 func main() {
 	port := flag.String("port", "18516", "HTTP Atom port")
 	repNet := flag.String("network", "testnet", "Republic Protocol Network")
-	keyphrase := flag.String("keyphrase", "", "Keyphrase to unlock keystore")
+	keyphrase := flag.String("passphrase", "", "Keyphrase to unlock keystore")
 	location := flag.String("loc", getHome()+"/.swapper", "Location of the swapper directory")
 	flag.Parse()
 
