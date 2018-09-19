@@ -29,7 +29,7 @@ type EthereumAtom struct {
 	context context.Context
 	client  ethclient.Conn
 	key     keystore.EthereumKey
-	binding *bindings.AtomicSwap
+	binding *bindings.RenExAtomicSwapper
 	network network.Network
 	data    EthereumData
 }
@@ -41,7 +41,7 @@ func NewEthereumAtom(network network.Network, conf config.EthereumNetwork, key k
 		return &EthereumAtom{}, err
 	}
 
-	contract, err := bindings.NewAtomicSwap(conn.RenExAtomicSwapper, bind.ContractBackend(conn.Client))
+	contract, err := bindings.NewRenExAtomicSwapper(conn.RenExAtomicSwapper, bind.ContractBackend(conn.Client))
 	if err != nil {
 		return &EthereumAtom{}, err
 	}
