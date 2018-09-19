@@ -23,7 +23,7 @@ type Conn struct {
 }
 
 // Connect to an ethereum network.
-func Connect(config config.EthereumNetwork) (Conn, error) {
+func NewConn(config config.EthereumNetwork) (Conn, error) {
 	ethclient, err := ethclient.Dial(config.URL)
 	if err != nil {
 		return Conn{}, err

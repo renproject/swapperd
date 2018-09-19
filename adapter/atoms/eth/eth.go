@@ -36,7 +36,7 @@ type EthereumAtom struct {
 
 // NewEthereumAtom returns a new Ethereum RequestAtom instance
 func NewEthereumAtom(network network.Network, conf config.EthereumNetwork, key keystore.EthereumKey, orderID [32]byte) (swap.Atom, error) {
-	conn, err := ethclient.Connect(conf)
+	conn, err := ethclient.NewConn(conf)
 	if err != nil {
 		return &EthereumAtom{}, err
 	}
