@@ -1,7 +1,10 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 )
@@ -42,8 +45,16 @@ func NewRenExNetwork(net string) config.RenExNetwork {
 }
 
 // New creates a new config object from the config data object
-func New(net, loc string) config.Config {
-	conf := Global
+func New(loc, net string) config.Config {
+	conf := config.Config{}
+	filename := fmt.Sprintf("%s/config-%s.json", loc, net)
+	data, err := ioutil.ReadFile(filename)
+	if err == nil {
+		if err := json.Unmarshal(data, &conf); err == nil {
+			return conf
+		}
+	}
+	conf = Global
 	conf.StoreLocation = loc + "/db"
 	conf.RenEx = NewRenExNetwork(net)
 	switch net {
@@ -51,18 +62,25 @@ func New(net, loc string) config.Config {
 		conf.RenEx.Orderbook = ""
 		conf.RenEx.Settlement = ""
 		conf.Ethereum.Swapper = "0xa80c64Cc2c3e29B44CaB2475F6eAd0D523715A4E"
-		return conf
 	case "falcon":
 		conf.RenEx.Orderbook = ""
 		conf.RenEx.Settlement = ""
 		conf.Ethereum.Swapper = ""
-		return conf
 	case "testnet":
 		conf.RenEx.Orderbook = ""
 		conf.RenEx.Settlement = ""
 		conf.Ethereum.Swapper = ""
-		return conf
 	default:
-		panic("unimplemented")
+		panic("Unknown republic network" + net)
 	}
+	SaveToFile(filename, conf)
+	return conf
+}
+
+func SaveToFile(filename string, conf config.Config) {
+	data, err := json.Marshal(conf)
+	if err != nil {
+		panic(err)
+	}
+	ioutil.WriteFile(filename, data, os.FileMode(0644))
 }
