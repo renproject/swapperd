@@ -184,7 +184,7 @@ func (renex *renex) getMatch(orderID [32]byte) error {
 		return err
 	}
 
-	match, err := renex.GetOrderMatch(orderID, timeStamp+24*60*60)
+	match, err := renex.GetOrderMatch(orderID, timeStamp+48*60*60)
 	if err != nil {
 		return err
 	}

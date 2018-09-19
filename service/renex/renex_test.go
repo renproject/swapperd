@@ -63,8 +63,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		rand.Read(aliceOrderID[:])
 		rand.Read(bobOrderID[:])
 
-		aliceCurrency := token.ETH
-		bobCurrency := token.BTC
+		aliceCurrency := token.BTC
+		bobCurrency := token.ETH
 
 		aliceSendValue := big.NewInt(100000)
 		bobSendValue := big.NewInt(100000)
@@ -99,14 +99,11 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		aliceState := state.NewState(stateAdapter.New(aliceLDB, loggr))
 		bobState := state.NewState(stateAdapter.New(bobLDB, loggr))
 
-		aliceRenEx, err := renexAdapter.NewMock(cfg, ksA, net, wd, aliceState, loggr)
+		mockBinder, err := renexAdapter.NewMockBinder(aliceMatch, bobMatch)
 		Expect(err).Should(BeNil())
 
-		bobRenEx, err := renexAdapter.NewMock(cfg, ksB, net, wd, bobState, loggr)
-		Expect(err).Should(BeNil())
-
-		Expect(aliceRenEx.(*renexAdapter.Mock).SubmitOrderMatch(aliceMatch)).Should(BeNil())
-		Expect(bobRenEx.(*renexAdapter.Mock).SubmitOrderMatch(bobMatch)).Should(BeNil())
+		aliceRenEx := renexAdapter.New(cfg, ksA, net, wd, aliceState, loggr, mockBinder)
+		bobRenEx := renexAdapter.New(cfg, ksB, net, wd, bobState, loggr, mockBinder)
 
 		return NewRenEx(aliceRenEx), NewRenEx(bobRenEx)
 	}

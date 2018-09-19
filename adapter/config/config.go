@@ -30,4 +30,5 @@ type RenExNetwork struct {
 	Watchdog   string `json:"watchdog"`
 	Ingress    string `json:"ingress"`
 	Settlement string `json:"settlement"`
+	Orderbook  string `json:"orderbook"`
 }
