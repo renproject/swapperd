@@ -59,31 +59,29 @@ func (binder *binder) GetOrderMatch(orderID order.ID, waitTill int64) (match.Mat
 	if err := binder.verifyOrder(orderID, waitTill); err != nil {
 		return nil, err
 	}
-
 	for {
-		PersonalOrder, ForeignOrder, ReceiveValue, SendValue, ReceiveCurrency, SendCurrency, err := binder.GetMatchDetails(&bind.CallOpts{}, orderID)
-		if err != nil {
-			return nil, err
+		matchDetails, err := binder.GetMatchDetails(&bind.CallOpts{}, orderID)
+		if err != nil || matchDetails.PriorityToken == matchDetails.SecondaryToken {
+			if time.Now().Unix() > waitTill {
+				return nil, fmt.Errorf("Timed out")
+			}
+			time.Sleep(10 * time.Second)
+			continue
 		}
-
-		if ReceiveCurrency != SendCurrency {
-			return match.NewMatch(PersonalOrder, ForeignOrder, SendValue, ReceiveValue, token.Token(SendCurrency), token.Token(ReceiveCurrency)), nil
+		if matchDetails.OrderIsBuy {
+			return match.NewMatch(orderID, matchDetails.MatchedID, matchDetails.PriorityVolume, matchDetails.SecondaryVolume, token.Token(matchDetails.PriorityToken), token.Token(matchDetails.SecondaryToken)), nil
 		}
-
-		if time.Now().Unix() > waitTill {
-			return nil, fmt.Errorf("Timed out")
-		}
-		time.Sleep(15 * time.Second)
+		return match.NewMatch(orderID, matchDetails.MatchedID, matchDetails.SecondaryVolume, matchDetails.PriorityVolume, token.Token(matchDetails.SecondaryToken), token.Token(matchDetails.PriorityToken)), nil
 	}
 }
 
 func (binder *binder) verifyOrder(orderID order.ID, waitTill int64) error {
 	for {
 		addr, err := binder.Orderbook.OrderTrader(&bind.CallOpts{}, orderID)
-		if err != nil {
-			return err
-		}
-		if bytes.Compare(addr.Bytes(), []byte{}) == 0 && time.Now().Unix() < waitTill {
+		if err != nil || bytes.Compare(addr.Bytes(), []byte{}) == 0 {
+			if time.Now().Unix() > waitTill {
+				return fmt.Errorf("Timed out")
+			}
 			time.Sleep(10 * time.Second)
 			continue
 		}
