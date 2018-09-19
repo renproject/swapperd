@@ -3,8 +3,6 @@ package guardian
 import (
 	"fmt"
 	"log"
-
-	"github.com/republicprotocol/renex-swapper-go/domain/swap"
 )
 
 var (
@@ -29,15 +27,17 @@ type Guardian interface {
 
 type guardian struct {
 	Adapter
-	notifyCh chan struct{}
-	doneCh   chan struct{}
+	refundStatus map[[32]byte]bool
+	notifyCh     chan struct{}
+	doneCh       chan struct{}
 }
 
 func NewGuardian(adapter Adapter) Guardian {
 	return &guardian{
-		Adapter:  adapter,
-		notifyCh: make(chan struct{}, 1),
-		doneCh:   make(chan struct{}, 1),
+		Adapter:      adapter,
+		refundStatus: map[[32]byte]bool{},
+		notifyCh:     make(chan struct{}, 1),
+		doneCh:       make(chan struct{}, 1),
 	}
 }
 
@@ -46,6 +46,7 @@ func (g *guardian) Start() <-chan error {
 	log.Println("Starting the guardian......")
 	go func() {
 		defer log.Println("Ending the guardian......")
+		defer close(errs)
 		for {
 			select {
 			case <-g.doneCh:
@@ -53,37 +54,14 @@ func (g *guardian) Start() <-chan error {
 			case <-g.notifyCh:
 				swaps, err := g.RefundableSwaps()
 				if err != nil {
-					if err == ErrSwapRedeemed {
-						continue
-					}
 					errs <- err
 					return
 				}
 				if len(swaps) < 1000 {
-					for i := range swaps {
-						go func(i int) {
-							if err := g.Refund(swaps[i]); err != nil {
-								errs <- err
-								return
-							}
-							if g.Status(swaps[i]) == swap.StatusRefunded {
-								g.DeleteSwap(swaps[i])
-							}
-						}(i)
-					}
+					g.RefundMultiple(swaps, errs)
 					continue
 				}
-				for i := range swaps[:1000] {
-					go func(i int) {
-						if err := g.Refund(swaps[i]); err != nil {
-							errs <- err
-							return
-						}
-						if g.Status(swaps[i]) == swap.StatusRefunded {
-							g.DeleteSwap(swaps[i])
-						}
-					}(i)
-				}
+				g.RefundMultiple(swaps[:1000], errs)
 			}
 		}
 	}()
@@ -96,4 +74,23 @@ func (g *guardian) Notify() {
 
 func (g *guardian) Stop() {
 	g.doneCh <- struct{}{}
+}
+
+func (g *guardian) RefundMultiple(swaps [][32]byte, errs chan error) {
+	for i := range swaps {
+		go func(i int) {
+			if g.refundStatus[swaps[i]] {
+				return
+			}
+			g.refundStatus[swaps[i]] = true
+			if err := g.Refund(swaps[i]); err != nil {
+				errs <- err
+			}
+			if err := g.DeleteIfRefunded(swaps[i]); err != nil {
+				errs <- err
+			}
+			g.refundStatus[swaps[i]] = false
+			return
+		}(i)
+	}
 }
