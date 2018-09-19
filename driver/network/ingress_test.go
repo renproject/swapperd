@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/republicprotocol/renex-swapper-go/adapter/network"
-	"github.com/republicprotocol/renex-swapper-go/domains/order"
-	. "github.com/republicprotocol/renex-swapper-go/drivers/network"
+	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	. "github.com/republicprotocol/renex-swapper-go/driver/network"
 )
 
 var _ = Describe("Ingress Network Driver", func() {
