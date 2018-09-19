@@ -5,65 +5,37 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
-	config "github.com/republicprotocol/renex-swapper-go/adapter/configs/general"
-	"github.com/republicprotocol/renex-swapper-go/adapter/configs/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapter/configs/network"
+	"github.com/republicprotocol/renex-swapper-go/driver/config"
+	"github.com/republicprotocol/renex-swapper-go/driver/keystore"
 )
 
 func main() {
 	home := getHome()
-	ethNet := flag.String("ethereum", "kovan", "Which ethereum network to use")
-	btcNet := flag.String("bitcoin", "testnet", "Which bitcoin network to use")
-
-	keystore.NewKeystore([]uint32{0, 1}, []string{*btcNet, *ethNet}, home+"/.swapper/keystore.json")
-
-	cfg, err := config.LoadConfig(home + "/.swapper/config.json")
-	if err != nil {
+	loc := flag.String("loc", home+"/.swapper", "Location of the swapper's home directory")
+	repNet := flag.String("republic", "testnet", "Which republic protocol network to use")
+	flag.Parse()
+	cmd := exec.Command("mkdir", "-p", *loc)
+	if err := cmd.Run(); err != nil {
 		panic(err)
 	}
-
-	addresses := []string{}
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter your ethereum address(es): (\033[32mClick Enter to Finish\033[m) \nAddress>")
-	for {
-		text, err := reader.ReadString('\n')
-		if err != nil {
-			panic(err)
-		}
-		if text == "\n" {
-			break
-		}
-		addresses = append(addresses, strings.Trim(text, "\r\n"))
-		fmt.Print("Address>")
-	}
-	cfg.AuthorizedAddresses = addresses
-	cfg.Watchdog = "renex-watchdog-testnet.herokuapp.com"
-
-	if err := cfg.Update(); err != nil {
-		panic(err)
-	}
-
-	net, err := network.LoadNetwork(home + "/.swapper/network.json")
+	fmt.Print("Enter a passphrase (this is used to encrypt your keystore files): ")
+	passphraseText, err := reader.ReadString('\n')
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Print("Enter Bitcoin Node IP Address: (<ipaddress>:<port>): ")
-	ipAddr, _ := reader.ReadString('\n')
-	fmt.Print("Enter Bitcoin RPC UserName: ")
-	rpcUser, _ := reader.ReadString('\n')
-	fmt.Print("Enter Bitcoin RPC Password: ")
-	rpcPass, _ := reader.ReadString('\n')
-
-	net.Bitcoin.Password = strings.Trim(rpcPass, "\r\n")
-	net.Bitcoin.User = strings.Trim(rpcUser, "\r\n")
-	net.Bitcoin.URL = strings.Trim(ipAddr, "\r\n")
-
-	if err := net.Update(); err != nil {
+	passphrase := strings.Trim(passphraseText, "\r\n")
+	if err := keystore.GenerateFile(*loc, *repNet, passphrase); err != nil {
 		panic(err)
 	}
+	// addr := readAddress(reader)
+
+	_ = config.New(*loc, *repNet)
+	// cfg.AuthorizedAddresses = []string{addr}
+	// config.SaveToFile(fmt.Sprintf("%s/config-%s.json", *loc, *repNet), cfg)
 }
 
 func getHome() string {
@@ -79,4 +51,21 @@ func getHome() string {
 	}
 
 	panic("unknown Operating System")
+}
+
+func readAddress(reader *bufio.Reader) string {
+	fmt.Print("Enter your RenEx ethereum address: ")
+	text, err := reader.ReadString('\n')
+	if err != nil {
+		panic(err)
+	}
+	addr := strings.Trim(text, "\r\n")
+	if len(addr) == 40 {
+		addr = "0x" + addr
+	}
+	if len(addr) != 42 {
+		fmt.Println("Please enter a valid ethereum address")
+		return readAddress(reader)
+	}
+	return addr
 }
