@@ -55,10 +55,8 @@ type state struct {
 }
 
 type State interface {
-	AddSwap([32]byte) error
-	DeleteSwap([32]byte) error
-	ExecutableSwaps(bool) ([][32]byte, error)
-	RefundableSwaps() ([][32]byte, error)
+	Guardian
+	RenEx
 
 	InitiateDetails([32]byte) ([32]byte, int64, error)
 	PutInitiateDetails([32]byte, [32]byte, int64) error
@@ -81,7 +79,6 @@ type State interface {
 
 	PutRedeemable([32]byte) error
 	IsRedeemable([32]byte) bool
-	Complained([32]byte) bool
 	Redeemed([32]byte) error
 }
 
@@ -90,133 +87,6 @@ func NewState(adapter Adapter) State {
 		Adapter: adapter,
 		swapMu:  new(sync.RWMutex),
 	}
-}
-
-func (state *state) AddSwap(orderID [32]byte) error {
-	state.swapMu.Lock()
-	defer state.swapMu.Unlock()
-	pendingSwapsRawBytes, err := state.Read([]byte("Pending Swaps:"))
-	pendingSwaps := PendingSwaps{}
-
-	if err == nil {
-		if err := json.Unmarshal(pendingSwapsRawBytes, &pendingSwaps); err != nil {
-			return err
-		}
-	}
-
-	pendingSwaps.Swaps = append(pendingSwaps.Swaps, orderID)
-
-	pendingSwapsProcessedBytes, err := json.Marshal(pendingSwaps)
-	if err != nil {
-		return err
-	}
-
-	return state.Write([]byte("Pending Swaps:"), pendingSwapsProcessedBytes)
-}
-
-func (state *state) DeleteSwap(orderID [32]byte) error {
-	state.swapMu.Lock()
-	defer state.swapMu.Unlock()
-	defer state.LogInfo(orderID, "deleted the swap and its details")
-
-	pendingSwapsRawBytes, err := state.Read([]byte("Pending Swaps:"))
-	if err != nil {
-		return err
-	}
-
-	pendingSwaps := PendingSwaps{}
-	if err := json.Unmarshal(pendingSwapsRawBytes, &pendingSwaps); err != nil {
-		return err
-	}
-
-	for i, swap := range pendingSwaps.Swaps {
-		if swap == orderID {
-			if len(pendingSwaps.Swaps) == 1 {
-				pendingSwaps.Swaps = [][32]byte{}
-				break
-			}
-
-			if i == 0 {
-				pendingSwaps.Swaps = pendingSwaps.Swaps[1:]
-				break
-			}
-
-			pendingSwaps.Swaps = append(pendingSwaps.Swaps[:i-1], pendingSwaps.Swaps[i:]...)
-			break
-		}
-	}
-
-	pendingSwapsProcessedBytes, err := json.Marshal(pendingSwaps)
-	if err != nil {
-		return err
-	}
-
-	return state.Write([]byte("Pending Swaps:"), pendingSwapsProcessedBytes)
-}
-
-func (state *state) pendingSwaps() ([][32]byte, error) {
-	pendingSwapsBytes, err := state.Read([]byte("Pending Swaps:"))
-	if err != nil {
-		return [][32]byte{}, nil
-	}
-
-	pendingSwaps := PendingSwaps{}
-	if err := json.Unmarshal(pendingSwapsBytes, &pendingSwaps); err != nil {
-		return nil, err
-	}
-
-	return pendingSwaps.Swaps, nil
-}
-
-func (state *state) ExecutableSwaps(fullsync bool) ([][32]byte, error) {
-	state.swapMu.RLock()
-	pendingSwaps, err := state.pendingSwaps()
-	state.swapMu.RUnlock()
-	state.swapMu.Lock()
-	defer state.swapMu.Unlock()
-	if err != nil {
-		return nil, err
-	}
-	if fullsync {
-		return state.executableFullSync(pendingSwaps)
-	}
-	return state.executablePartialSync(pendingSwaps)
-}
-
-func (state *state) executableFullSync(pendingSwaps [][32]byte) ([][32]byte, error) {
-	executableSwaps := [][32]byte{}
-	for _, pendingSwap := range pendingSwaps {
-		if state.Status(pendingSwap) != "COMPLAINED" {
-			executableSwaps = append(executableSwaps, pendingSwap)
-		}
-	}
-	return executableSwaps, nil
-}
-
-func (state *state) executablePartialSync(pendingSwaps [][32]byte) ([][32]byte, error) {
-	executableSwaps := [][32]byte{}
-	for _, pendingSwap := range pendingSwaps {
-		if state.Status(pendingSwap) == "UNKNOWN" {
-			executableSwaps = append(executableSwaps, pendingSwap)
-		}
-	}
-	return executableSwaps, nil
-}
-
-func (state *state) RefundableSwaps() ([][32]byte, error) {
-	state.swapMu.RLock()
-	pendingSwaps, err := state.pendingSwaps()
-	state.swapMu.RUnlock()
-	if err != nil {
-		return nil, err
-	}
-	refundableSwaps := [][32]byte{}
-	for _, pendingSwap := range pendingSwaps {
-		if state.Status(pendingSwap) == "COMPLAINED" {
-			refundableSwaps = append(refundableSwaps, pendingSwap)
-		}
-	}
-	return refundableSwaps, nil
 }
 
 func (state *state) PutInitiateDetails(orderID [32]byte, hashLock [32]byte, expiry int64) error {
@@ -343,17 +213,6 @@ func (state *state) AtomExists(orderID [32]byte) bool {
 func (state *state) IsRedeemable(orderID [32]byte) bool {
 	_, err := state.Read(append([]byte("Redeemable"), orderID[:]...))
 	if err != nil {
-		return false
-	}
-	return true
-}
-
-func (state *state) Complained(orderID [32]byte) bool {
-	statusBytes, err := state.Read(append([]byte("Status:"), orderID[:]...))
-	if err != nil {
-		return false
-	}
-	if string(statusBytes) != "COMPLAINED" {
 		return false
 	}
 	return true
