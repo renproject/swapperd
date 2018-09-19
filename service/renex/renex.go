@@ -10,8 +10,9 @@ import (
 
 type renex struct {
 	Adapter
-	notifyCh chan struct{}
-	doneCh   chan struct{}
+	swapStatuses map[[32]byte]bool
+	notifyCh     chan struct{}
+	doneCh       chan struct{}
 }
 
 type RenEx interface {
@@ -24,16 +25,16 @@ type RenEx interface {
 
 func NewRenEx(adapter Adapter) RenEx {
 	return &renex{
-		Adapter:  adapter,
-		notifyCh: make(chan struct{}, 1),
-		doneCh:   make(chan struct{}, 1),
+		Adapter:      adapter,
+		swapStatuses: map[[32]byte]bool{},
+		notifyCh:     make(chan struct{}, 1),
+		doneCh:       make(chan struct{}, 1),
 	}
 }
 
 // Run runs the watch object on the given order id
 func (renex *renex) Start() <-chan error {
 	errs := make(chan error)
-	fullsync := true
 	log.Println("Starting the watcher......")
 	go func() {
 		defer close(errs)
@@ -43,43 +44,38 @@ func (renex *renex) Start() <-chan error {
 			case <-renex.doneCh:
 				return
 			case <-renex.notifyCh:
-				swaps, err := renex.ExecutableSwaps(fullsync)
-				if fullsync {
-					fullsync = false
-				}
+				swaps, err := renex.ExecutableSwaps()
 				if err != nil {
 					errs <- err
 					continue
 				}
 				if len(swaps) < 1000 {
-					for i := range swaps {
-						go func(i int) {
-							if err := renex.Swap(swaps[i]); err != nil {
-								errs <- err
-								return
-							}
-							if renex.Status(swaps[i]) == swap.StatusRedeemed {
-								renex.DeleteSwap(swaps[i])
-							}
-						}(i)
-					}
+					renex.SwapMultiple(swaps, errs)
 					continue
 				}
-				for i := range swaps[:1000] {
-					go func(i int) {
-						if err := renex.Swap(swaps[i]); err != nil {
-							errs <- err
-							return
-						}
-						if renex.Status(swaps[i]) == swap.StatusRedeemed {
-							renex.DeleteSwap(swaps[i])
-						}
-					}(i)
-				}
+				renex.SwapMultiple(swaps[:1000], errs)
 			}
 		}
 	}()
 	return errs
+}
+
+func (renex *renex) SwapMultiple(swaps [][32]byte, errs chan error) {
+	for i := range swaps {
+		go func(i int) {
+			if renex.swapStatuses[swaps[i]] {
+				return
+			}
+			renex.swapStatuses[swaps[i]] = true
+			if err := renex.Swap(swaps[i]); err != nil {
+				errs <- err
+			}
+			if err := renex.DeleteIfRedeemedOrExpired(swaps[i]); err != nil {
+				errs <- err
+			}
+			renex.swapStatuses[swaps[i]] = false
+		}(i)
+	}
 }
 
 func (renex *renex) Add(orderID [32]byte) error {
@@ -134,6 +130,43 @@ func (renex *renex) Swap(orderID [32]byte) error {
 	return nil
 }
 
+func (renex *renex) initiate(orderID [32]byte) error {
+	renex.LogInfo(orderID, "starting the atomic swap")
+
+	if err := renex.PutStatus(orderID, swap.StatusPending); err != nil {
+		return err
+	}
+
+	renex.LogInfo(orderID, "started the atomic swap")
+	return nil
+}
+
+func (renex *renex) getMatch(orderID [32]byte) error {
+	renex.LogInfo(orderID, "waiting for the match to be found")
+
+	timeStamp, err := renex.OrderTimeStamp(orderID)
+	if err != nil {
+		return err
+	}
+
+	match, err := renex.GetOrderMatch(orderID, timeStamp+48*60*60)
+	if err != nil {
+		renex.LogInfo(orderID, "deleting expired or unauthorized order")
+		return renex.PutStatus(orderID, swap.StatusExpired)
+	}
+
+	if err := renex.PutMatch(orderID, match); err != nil {
+		return err
+	}
+
+	if err := renex.PutStatus(orderID, swap.StatusMatched); err != nil {
+		return err
+	}
+
+	renex.LogInfo(orderID, fmt.Sprintf("<----------> (%s)", order.Fmt(match.ForeignOrderID())))
+	return nil
+}
+
 func (renex *renex) setInfo(orderID [32]byte) error {
 	renex.LogInfo(orderID, "submitting address")
 	m, err := renex.Match(orderID)
@@ -159,44 +192,4 @@ func (renex *renex) execute(orderID [32]byte) error {
 		return err
 	}
 	return swap.Execute()
-}
-
-func (renex *renex) initiate(orderID [32]byte) error {
-	renex.LogInfo(orderID, "starting the atomic swap")
-
-	if err := renex.PutOrderTimeStamp(orderID); err != nil {
-		return err
-	}
-
-	if err := renex.PutStatus(orderID, "PENDING"); err != nil {
-		return err
-	}
-
-	renex.LogInfo(orderID, "started the atomic swap")
-	return nil
-}
-
-func (renex *renex) getMatch(orderID [32]byte) error {
-	renex.LogInfo(orderID, "waiting for the match to be found")
-
-	timeStamp, err := renex.OrderTimeStamp(orderID)
-	if err != nil {
-		return err
-	}
-
-	match, err := renex.GetOrderMatch(orderID, timeStamp+48*60*60)
-	if err != nil {
-		return err
-	}
-
-	if err := renex.PutMatch(orderID, match); err != nil {
-		return err
-	}
-
-	if err := renex.PutStatus(orderID, "MATCHED"); err != nil {
-		return err
-	}
-
-	renex.LogInfo(orderID, fmt.Sprintf("<----------> (%s)", order.Fmt(match.ForeignOrderID())))
-	return nil
 }
