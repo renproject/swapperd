@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/utils"
 )
 
 // ErrKeyFileExists is returned when the keystore file exists, and the user is
@@ -19,14 +18,14 @@ var ErrKeyFileExists = errors.New("Keystore file exists")
 var ErrKeyFileDoesNotExist = errors.New("Keystore file doesnot exist")
 
 // LoadFromFile
-func LoadFromFile(repNetwork string, passphrase string) keystore.Keystore {
+func LoadFromFile(repNetwork, loc, passphrase string) keystore.Keystore {
 	var ethLoc, btcLoc string
 	if passphrase == "" {
-		ethLoc = fmt.Sprintf(utils.GetHome()+"/.swapper/ethereum-%s-unsafe.json", repNetwork)
-		btcLoc = fmt.Sprintf(utils.GetHome()+"/.swapper/bitcoin-%s-unsafe.json", repNetwork)
+		ethLoc = fmt.Sprintf("%s/ethereum-%s-unsafe.json", loc, repNetwork)
+		btcLoc = fmt.Sprintf("%s/bitcoin-%s-unsafe.json", loc, repNetwork)
 	} else {
-		ethLoc = fmt.Sprintf(utils.GetHome()+"/.swapper/ethereum-%s.json", repNetwork)
-		btcLoc = fmt.Sprintf(utils.GetHome()+"/.swapper/bitcoin-%s.json", repNetwork)
+		ethLoc = fmt.Sprintf("%s/ethereum-%s.json", loc, repNetwork)
+		btcLoc = fmt.Sprintf("%s/bitcoin-%s.json", loc, repNetwork)
 	}
 
 	ethNet, btcNet := getSpecificNetworks(repNetwork)
@@ -55,14 +54,14 @@ func GenerateRandom(repNetwork string) keystore.Keystore {
 }
 
 // GenerateFile
-func GenerateFile(repNetwork string, passphrase string) error {
+func GenerateFile(loc string, repNetwork string, passphrase string) error {
 	var ethLoc, btcLoc string
 	if passphrase == "" {
-		ethLoc = fmt.Sprintf(utils.GetHome()+"/.swapper/ethereum-%s-unsafe.json", repNetwork)
-		btcLoc = fmt.Sprintf(utils.GetHome()+"/.swapper/bitcoin-%s-unsafe.json", repNetwork)
+		ethLoc = fmt.Sprintf("%s/ethereum-%s-unsafe.json", loc, repNetwork)
+		btcLoc = fmt.Sprintf("%s/bitcoin-%s-unsafe.json", loc, repNetwork)
 	} else {
-		ethLoc = fmt.Sprintf(utils.GetHome()+"/.swapper/ethereum-%s.json", repNetwork)
-		btcLoc = fmt.Sprintf(utils.GetHome()+"/.swapper/bitcoin-%s.json", repNetwork)
+		ethLoc = fmt.Sprintf("%s/ethereum-%s.json", loc, repNetwork)
+		btcLoc = fmt.Sprintf("%s/bitcoin-%s.json", loc, repNetwork)
 	}
 	ethNet, btcNet := getSpecificNetworks(repNetwork)
 	if err := StoreKeyToFile(ethLoc, "ethereum", ethNet, passphrase); err != nil {
