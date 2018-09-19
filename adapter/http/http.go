@@ -2,7 +2,6 @@ package http
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -19,7 +18,7 @@ var ErrInvalidOrderIDLength = errors.New("invalid order id length")
 
 type Adapter interface {
 	WhoAmI(challenge string) (WhoAmISigned, error)
-	PostOrder(order PostOrder) (PostOrder, error)
+	PostOrder(order PostOrderRequest) (PostOrderResponse, error)
 	GetStatus(orderID string) (Status, error)
 	GetBalances() (Balances, error)
 }
@@ -53,13 +52,10 @@ func (adapter *adapter) WhoAmI(challenge string) (WhoAmISigned, error) {
 	}, nil
 }
 
-func (adapter *adapter) PostOrder(order PostOrder) (PostOrder, error) {
+func (adapter *adapter) PostOrder(order PostOrderRequest) (PostOrderResponse, error) {
 	orderID, err := UnmarshalOrderID(order.OrderID)
 	if err != nil {
-		return PostOrder{}, err
-	}
-	if err := validate(orderID, order.Signature, adapter.config.AuthorizedAddresses); err != nil {
-		return PostOrder{}, err
+		return PostOrderResponse{}, err
 	}
 	go func() {
 		if err := adapter.renex.Add(orderID); err != nil {
@@ -69,7 +65,7 @@ func (adapter *adapter) PostOrder(order PostOrder) (PostOrder, error) {
 	}()
 	key := adapter.keystr.GetKey(token.ETH).(keystore.EthereumKey)
 	sig, err := key.Sign(orderID[:])
-	return PostOrder{
+	return PostOrderResponse{
 		order.OrderID,
 		MarshalSignature(sig),
 	}, nil
@@ -124,7 +120,7 @@ func bitcoinBalance(conf config.Config, key keystore.BitcoinKey) (Balance, error
 }
 
 func ethereumBalance(conf config.Config, key keystore.EthereumKey) (Balance, error) {
-	conn, err := eth.Connect(conf.Ethereum)
+	conn, err := eth.NewConn(conf.Ethereum)
 	if err != nil {
 		return Balance{}, err
 	}
@@ -136,32 +132,4 @@ func ethereumBalance(conf config.Config, key keystore.EthereumKey) (Balance, err
 		Address: key.Address.String(),
 		Amount:  bal.Uint64(),
 	}, nil
-}
-
-func validate(id [32]byte, signature string, addresses []string) error {
-	sig, err := UnmarshalSignature(signature)
-	if err != nil {
-		return err
-	}
-
-	message := append([]byte("Republic Protocol: open: "), id[:]...)
-	signatureData := crypto.Keccak256([]byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d", len(message))), message)
-
-	marshalledPubKey, err := crypto.Ecrecover(signatureData, sig)
-	if err != nil {
-		return err
-	}
-
-	ecdsaPubKey, err := crypto.UnmarshalPubkey(marshalledPubKey)
-	if err != nil {
-		return err
-	}
-	addr := crypto.PubkeyToAddress(*ecdsaPubKey)
-
-	for _, address := range addresses {
-		if address == addr.String() {
-			return nil
-		}
-	}
-	return errors.New("Unauthorized Public Key")
 }

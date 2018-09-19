@@ -29,10 +29,17 @@ type Status struct {
 	Status  string `json:"status"`
 }
 
-// PostOrder data obje
-type PostOrder struct {
+// PostOrderResponse data object is the json interface of the post /order
+// response
+type PostOrderResponse struct {
 	OrderID   string `json:"orderID"`
 	Signature string `json:"signature"`
+}
+
+// PostOrderRequest data object is the json interface of the post /order
+// request
+type PostOrderRequest struct {
+	OrderID string `json:"orderID"`
 }
 
 type Balance struct {

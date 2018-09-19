@@ -46,7 +46,7 @@ func RecoveryHandler(h netHttp.Handler) netHttp.Handler {
 // function adds the order id to the queue.
 func PostOrdersHandler(adapter http.Adapter) netHttp.HandlerFunc {
 	return func(w netHttp.ResponseWriter, r *netHttp.Request) {
-		postOrder := http.PostOrder{}
+		postOrder := http.PostOrderRequest{}
 		if err := json.NewDecoder(r.Body).Decode(&postOrder); err != nil {
 			writeError(w, netHttp.StatusBadRequest, fmt.Sprintf("cannot decode json into post order format: %v", err))
 			return
