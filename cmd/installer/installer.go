@@ -31,11 +31,11 @@ func main() {
 	if err := keystore.GenerateFile(*loc, *repNet, passphrase); err != nil {
 		panic(err)
 	}
-	// addr := readAddress(reader)
+	addr := readAddress(reader)
 
-	_ = config.New(*loc, *repNet)
-	// cfg.AuthorizedAddresses = []string{addr}
-	// config.SaveToFile(fmt.Sprintf("%s/config-%s.json", *loc, *repNet), cfg)
+	cfg := config.New(*loc, *repNet)
+	cfg.AuthorizedAddresses = []string{addr}
+	config.SaveToFile(fmt.Sprintf("%s/config-%s.json", *loc, *repNet), cfg)
 }
 
 func getHome() string {

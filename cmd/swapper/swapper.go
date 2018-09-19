@@ -31,7 +31,7 @@ func main() {
 	location := flag.String("loc", getHome()+"/.swapper", "Location of the swapper directory")
 	flag.Parse()
 
-	conf := configDriver.New(*repNet, *location)
+	conf := configDriver.New(*location, *repNet)
 	ks := keystoreDriver.LoadFromFile(*repNet, *location, *keyphrase)
 	db, err := storeDriver.NewLevelDB(conf.StoreLocation)
 	if err != nil {
