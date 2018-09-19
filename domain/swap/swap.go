@@ -14,6 +14,10 @@ const (
 	// local persistent storage.
 	StatusUnknown = Status("UNKNOWN")
 
+	// StatusPending is returned when the swapper is waiting for the match to be
+	// found.
+	StatusPending = Status("PENDING")
+
 	// StatusMatched is returned when the match is found for the givn order ID.
 	StatusMatched = Status("MATCHED")
 
@@ -61,6 +65,9 @@ const (
 
 	// StatusAudited is returned after the swap is audited.
 	StatusAudited = Status("AUDITED")
+
+	// StatusExpired is returned if the given swap is expred.
+	StatusExpired = Status("EXPIRED")
 )
 
 type Request struct {
