@@ -38,7 +38,7 @@ var _ = Describe("ether", func() {
 	BeforeSuite(func() {
 		config, err := config.LoadConfig(confPath)
 		Expect(err).ShouldNot(HaveOccurred())
-		conn, err = ethclient.NewConn(config)
+		conn, err = ethclient.NewConnWithConfig(config)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		own, err := owner.LoadOwner(ownPath)

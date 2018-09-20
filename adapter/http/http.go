@@ -121,7 +121,7 @@ func bitcoinBalance(conf config.Config, key keystore.BitcoinKey) (Balance, error
 }
 
 func ethereumBalance(conf config.Config, key keystore.EthereumKey) (Balance, error) {
-	conn, err := eth.NewConn(conf.Ethereum)
+	conn, err := eth.NewConnWithConfig(conf.Ethereum)
 	if err != nil {
 		return Balance{}, err
 	}

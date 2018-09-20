@@ -22,17 +22,22 @@ type Conn struct {
 	RenExAtomicSwapper common.Address
 }
 
-// Connect to an ethereum network.
-func NewConn(config config.EthereumNetwork) (Conn, error) {
-	ethclient, err := ethclient.Dial(config.URL)
+// NewConnWithConfig creates a new ethereum connection with the given config
+// file.
+func NewConnWithConfig(config config.EthereumNetwork) (Conn, error) {
+	return NewConn(config.URL, config.Network, config.Swapper)
+}
+
+// NewConn creates a new ethereum connection with the given config parameters.
+func NewConn(url, network, swapperAddress string) (Conn, error) {
+	ethclient, err := ethclient.Dial(url)
 	if err != nil {
 		return Conn{}, err
 	}
-
 	return Conn{
 		Client:             ethclient,
-		Network:            config.Network,
-		RenExAtomicSwapper: common.HexToAddress(config.Swapper),
+		Network:            network,
+		RenExAtomicSwapper: common.HexToAddress(swapperAddress),
 	}, nil
 }
 

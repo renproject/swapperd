@@ -31,7 +31,7 @@ type binder struct {
 }
 
 func NewBinder(conf config.Config) (Binder, error) {
-	conn, err := ethclient.NewConn(conf.Ethereum)
+	conn, err := ethclient.NewConnWithConfig(conf.Ethereum)
 	if err != nil {
 		return nil, err
 	}
