@@ -2,6 +2,7 @@ package network
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -9,26 +10,52 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/republicprotocol/renex-ingress-go/httpadapter"
+	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 	"github.com/republicprotocol/renex-swapper-go/adapter/network"
 	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/utils"
 )
 
 type ingress struct {
 	hostAddress string
+	ethKey      keystore.EthereumKey
 }
 
-func NewIngress(hostAddress string) network.Network {
+func NewIngress(hostAddress string, ethKey keystore.EthereumKey) network.Network {
 	return &ingress{
 		hostAddress: hostAddress,
+		ethKey:      ethKey,
 	}
 }
 
 func (ingress *ingress) SendOwnerAddress(orderID order.ID, address []byte) error {
-	req := httpadapter.PostAddressRequest{
-		OrderID: hex.EncodeToString(orderID[:]),
+	info := httpadapter.PostAddressInfo{
+		OrderID: base64.StdEncoding.EncodeToString(orderID[:]),
 		Address: hex.EncodeToString(address),
 	}
+
+	infoBytes, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	hash := crypto.Keccak256(infoBytes)
+
+	signature, err := crypto.Sign(hash, ingress.ethKey.PrivateKey)
+	if err != nil {
+		return err
+	}
+	sig65, err := utils.ToBytes65(signature)
+	if err != nil {
+		return err
+	}
+
+	req := httpadapter.PostAddressRequest{
+		Info:      info,
+		Signature: httpadapter.MarshalSignature(sig65),
+	}
+
 	data, err := json.MarshalIndent(req, "", "  ")
 	if err != nil {
 		return err
@@ -42,14 +69,41 @@ func (ingress *ingress) SendOwnerAddress(orderID order.ID, address []byte) error
 	if resp.StatusCode == 201 {
 		return nil
 	}
-	return fmt.Errorf("Unexpected status code: %d", resp.StatusCode)
+
+	respBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return fmt.Errorf("Unexpected status error %d: %s", resp.StatusCode, respBytes)
 }
 
 func (ingress *ingress) SendSwapDetails(orderID order.ID, swapDetails []byte) error {
-	req := httpadapter.PostSwapRequest{
-		OrderID: hex.EncodeToString(orderID[:]),
+	info := httpadapter.PostSwapInfo{
+		OrderID: base64.StdEncoding.EncodeToString(orderID[:]),
 		Swap:    hex.EncodeToString(swapDetails),
 	}
+
+	infoBytes, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	hash := crypto.Keccak256(infoBytes)
+
+	signature, err := crypto.Sign(hash, ingress.ethKey.PrivateKey)
+	if err != nil {
+		return err
+	}
+	sig65, err := utils.ToBytes65(signature)
+	if err != nil {
+		return err
+	}
+
+	req := httpadapter.PostSwapRequest{
+		Info:      info,
+		Signature: httpadapter.MarshalSignature(sig65),
+	}
+
 	data, err := json.MarshalIndent(req, "", "  ")
 	if err != nil {
 		return err
@@ -63,7 +117,13 @@ func (ingress *ingress) SendSwapDetails(orderID order.ID, swapDetails []byte) er
 	if resp.StatusCode == 201 {
 		return nil
 	}
-	return fmt.Errorf("Unexpected status code: %d", resp.StatusCode)
+
+	respBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return fmt.Errorf("Unexpected error %d: %s", resp.StatusCode, respBytes)
 }
 
 func (ingress *ingress) ReceiveOwnerAddress(orderID order.ID, waitTill int64) ([]byte, error) {
