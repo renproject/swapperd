@@ -28,5 +28,9 @@
   name = "github.com/ethereum/go-ethereum"
   version = "1.8.12"
 
+[[constraint]]
+  name = "github.com/republicprotocol/renex-ingress-go"
+  branch = "nightly"
+
 [prune]
   go-tests = true

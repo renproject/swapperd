@@ -12,10 +12,8 @@
   name = "github.com/btcsuite/btcd"
   packages = [
     "btcec",
-    "btcjson",
     "chaincfg",
     "chaincfg/chainhash",
-    "rpcclient",
     "txscript",
     "wire"
   ]
@@ -38,16 +36,10 @@
   revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/btcsuite/go-socks"
-  packages = ["socks"]
-  revision = "4720035b7bfd2a9bb130b1c184f8bbe41b6f0d0f"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/btcsuite/websocket"
+  name = "github.com/certifi/gocertifi"
   packages = ["."]
-  revision = "31079b6807923eb23992c421b114992b95131b55"
+  revision = "deb3ae2ef2610fde3330947281941c562861188b"
+  version = "2018.01.18"
 
 [[projects]]
   name = "github.com/ethereum/go-ethereum"
@@ -79,6 +71,12 @@
   ]
   revision = "37685930d953bcbe023f9bc65b135a8d8b8f1488"
   version = "v1.8.12"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/getsentry/raven-go"
+  packages = ["."]
+  revision = "084a9de9eb0361fbd5ded14b55c84e5493a5d7f6"
 
 [[projects]]
   name = "github.com/go-stack/stack"
@@ -206,16 +204,22 @@
   version = "v1.1"
 
 [[projects]]
-  branch = "master"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
+  branch = "nightly"
   name = "github.com/republicprotocol/renex-ingress-go"
   packages = [
     "httpadapter",
     "ingress"
   ]
-  revision = "339d6e9f3e35844ee9f8d3b3b428b5c0e4e2d150"
+  revision = "a5d9eee995d261863d3911998fb0556fdaa8f4fe"
 
 [[projects]]
-  branch = "master"
+  branch = "develop"
   name = "github.com/republicprotocol/republic-go"
   packages = [
     "crypto",
@@ -230,7 +234,7 @@
     "stackint/asm",
     "swarm"
   ]
-  revision = "9b3d5010a69b3a9859186969656c7176d2cffd7f"
+  revision = "2963c9cab59137d5447c472b6adae4e85002165b"
 
 [[projects]]
   branch = "master"
@@ -369,6 +373,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "877f6819b1a2e8e6712f243fb875f6351f597731ed75017572c00b881c32eb60"
+  inputs-digest = "ead3b9032bb405641e1cbcf15f877bac39aee994fbfec3c729a51fc8a0cd52a5"
   solver-name = "gps-cdcl"
   solver-version = 1
