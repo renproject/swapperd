@@ -247,11 +247,7 @@ func (swap *swap) initiate() error {
 		return err
 	}
 
-	if err := swap.PutAtomDetails(swap.order.PersonalOrderID(), details); err != nil {
-		return err
-	}
-
-	if err := swap.PutRedeemable(orderID); err != nil {
+	if err := swap.PutPersonalAtom(swap.order.PersonalOrderID(), details); err != nil {
 		return err
 	}
 
@@ -266,7 +262,7 @@ func (swap *swap) initiate() error {
 func (swap *swap) sendDetails() error {
 	orderID := swap.order.PersonalOrderID()
 	swap.LogInfo(orderID, "sending the swap details")
-	personalAtomBytes, err := swap.AtomDetails(orderID)
+	personalAtomBytes, err := swap.PersonalAtom(orderID)
 	if err != nil {
 		return err
 	}
@@ -291,7 +287,7 @@ func (swap *swap) receiveDetails() error {
 		return err
 	}
 
-	if err := swap.PutAtomDetails(foreignOrderID, foreignAtomBytes); err != nil {
+	if err := swap.PutForeignAtom(personalOrderID, foreignAtomBytes); err != nil {
 		return err
 	}
 
@@ -306,7 +302,7 @@ func (swap *swap) redeem() error {
 	orderID := swap.order.PersonalOrderID()
 	swap.LogInfo(orderID, "redeeming the swap details")
 
-	details, err := swap.AtomDetails(swap.order.ForeignOrderID())
+	details, err := swap.ForeignAtom(orderID)
 	if err != nil {
 		return err
 	}
@@ -324,10 +320,6 @@ func (swap *swap) redeem() error {
 		return err
 	}
 
-	if err := swap.Redeemed(orderID); err != nil {
-		return err
-	}
-
 	if err := swap.PutStatus(orderID, swapDomain.StatusRedeemed); err != nil {
 		return err
 	}
@@ -340,7 +332,7 @@ func (swap *swap) responderAudit() error {
 	orderID := swap.order.PersonalOrderID()
 	swap.LogInfo(orderID, "auditing the swap")
 
-	details, err := swap.AtomDetails(swap.order.ForeignOrderID())
+	details, err := swap.ForeignAtom(orderID)
 	if err != nil {
 		return err
 	}
@@ -387,7 +379,7 @@ func (swap *swap) requestorAudit() error {
 	orderID := swap.order.PersonalOrderID()
 	swap.LogInfo(orderID, "auditing the swap")
 
-	details, err := swap.AtomDetails(swap.order.ForeignOrderID())
+	details, err := swap.ForeignAtom(orderID)
 	if err != nil {
 		return err
 	}

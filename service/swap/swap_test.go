@@ -32,8 +32,8 @@ import (
 var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 
 	buildConfigs := func() (config.Config, keystore.Keystore, keystore.Keystore) {
-		config := configDriver.New("nightly")
-		keys := utils.LoadTestKeys()
+		config := configDriver.New("", "nightly")
+		keys := utils.LoadTestKeys("../../secrets/test.json")
 
 		btcKeyA, err := keystore.NewBitcoinKey(keys.Alice.Bitcoin, "mainnet")
 		Expect(err).ShouldNot(HaveOccurred())
@@ -64,8 +64,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		rand.Read(aliceOrderID[:])
 		rand.Read(bobOrderID[:])
 
-		aliceCurrency := uint32(1)
-		bobCurrency := uint32(0)
+		aliceCurrency := token.ETH
+		bobCurrency := token.BTC
 
 		aliceSendValue := big.NewInt(100000)
 		bobSendValue := big.NewInt(100000)
@@ -116,9 +116,9 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		net := networkDriver.NewMock()
 		sendAddresses(matchA.PersonalOrderID(), matchB.PersonalOrderID(), ksA, ksB, net)
 		aliceSwapper, bobSwapper := buildSwappers(matchA, matchB, conf, ksA, ksB, net)
-		aliceSwap, err := aliceSwapper.New(matchA.PersonalOrderID())
+		aliceSwap, err := aliceSwapper.NewSwap(matchA.PersonalOrderID())
 		Expect(err).Should(BeNil())
-		bobSwap, err := bobSwapper.New(matchB.PersonalOrderID())
+		bobSwap, err := bobSwapper.NewSwap(matchB.PersonalOrderID())
 		Expect(err).Should(BeNil())
 		return aliceSwap, bobSwap
 	}
