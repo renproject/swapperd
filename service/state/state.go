@@ -12,52 +12,30 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
 )
 
-// SwapStatus stores the swap status
-type SwapStatus struct {
-	Status swap.Status `json:"status"`
-}
-
-// OrderTimeStamp stores the timestamp when the order is submitted to the
-// swapper
-type OrderTimeStamp struct {
-	TimeStamp int64 `json:"timeStamp"`
-}
-
-// SwapInitiateDetails stores the initiate details
-type SwapInitiateDetails struct {
-	Expiry   int64    `json:"expiry"`
-	HashLock [32]byte `json:"hashLock"`
-}
-
-// SwapRedeemDetails stores the redeem details
-type SwapRedeemDetails struct {
-	Secret [32]byte `json:"secret"`
-}
-
-// SwapMatch stores the swap status
-type SwapMatch struct {
-	PersonalOrderID [32]byte    `json:"personalOrderID"`
+type SwapDetails struct {
+	TimeStamp       int64       `json:"timeStamp"`
+	Status          swap.Status `json:"status"`
+	Expiry          int64       `json:"expiry"`
+	HashLock        [32]byte    `json:"hashLock"`
+	Secret          [32]byte    `json:"secret"`
 	ForeignOrderID  [32]byte    `json:"foreignOrderID"`
 	SendValue       *big.Int    `json:"sendValue"`
 	ReceiveValue    *big.Int    `json:"receiveValue"`
 	SendCurrency    token.Token `json:"sendCurrency"`
 	ReceiveCurrency token.Token `json:"receiveCurrency"`
-}
-
-// PendingSwaps stores all the swaps that are pending
-type PendingSwaps struct {
-	Swaps [][32]byte `json:"pendingSwaps"`
+	PersonalAtom    []byte      `json:"personalAtom"`
+	ForeignAtom     []byte      `json:"foreignAtom"`
 }
 
 type state struct {
-	swapMu *sync.RWMutex
+	swapMu    *sync.RWMutex
+	swapCache map[[32]byte]SwapDetails
+	swapList  [][32]byte
 	Adapter
 }
 
 type State interface {
-	Guardian
-	RenEx
-
+	ActiveSwapList
 	InitiateDetails([32]byte) ([32]byte, int64, error)
 	PutInitiateDetails([32]byte, [32]byte, int64) error
 
@@ -70,187 +48,240 @@ type State interface {
 	Match([32]byte) (match.Match, error)
 	PutMatch([32]byte, match.Match) error
 
-	OrderTimeStamp([32]byte) (int64, error)
-	PutOrderTimeStamp([32]byte) error
+	SwapTimestamp([32]byte) (int64, error)
+	PutSwapTimestamp([32]byte) error
 
-	AtomDetails([32]byte) ([]byte, error)
-	PutAtomDetails([32]byte, []byte) error
-	AtomExists([32]byte) bool
+	PersonalAtom([32]byte) ([]byte, error)
+	PutPersonalAtom([32]byte, []byte) error
 
-	PutRedeemable([32]byte) error
-	IsRedeemable([32]byte) bool
-	Redeemed([32]byte) error
+	ForeignAtom([32]byte) ([]byte, error)
+	PutForeignAtom([32]byte, []byte) error
+
+	AtomsExist([32]byte) bool
 }
 
 func NewState(adapter Adapter) State {
 	return &state{
-		Adapter: adapter,
-		swapMu:  new(sync.RWMutex),
+		Adapter:   adapter,
+		swapCache: map[[32]byte]SwapDetails{},
+		swapMu:    new(sync.RWMutex),
 	}
 }
 
+// PutInitiateDetails into both persistent storage and in memory cache.
 func (state *state) PutInitiateDetails(orderID [32]byte, hashLock [32]byte, expiry int64) error {
-	swapInitiateDetails := SwapInitiateDetails{
-		Expiry:   expiry,
-		HashLock: hashLock,
-	}
-	initiateDetailsBytes, err := json.Marshal(swapInitiateDetails)
-	if err != nil {
+	swap := state.swapCache[orderID]
+	swap.HashLock = hashLock
+	swap.Expiry = expiry
+	if err := state.WriteSwapDetails(orderID, swap); err != nil {
 		return err
 	}
-	return state.Write(append([]byte("Initiate Details:"), orderID[:]...), initiateDetailsBytes)
-}
-
-func (state *state) InitiateDetails(orderID [32]byte) ([32]byte, int64, error) {
-	initiateDetailsBytes, err := state.Read(append([]byte("Initiate Details:"), orderID[:]...))
-	if err != nil {
-		return [32]byte{}, 0, err
-	}
-	swapInitiateDetails := SwapInitiateDetails{}
-
-	if err := json.Unmarshal(initiateDetailsBytes, &swapInitiateDetails); err != nil {
-		return [32]byte{}, 0, err
-	}
-
-	return swapInitiateDetails.HashLock, swapInitiateDetails.Expiry, nil
-}
-
-func (state *state) PutRedeemDetails(orderID [32]byte, secret [32]byte) error {
-	swapRedeemDetails := SwapRedeemDetails{
-		Secret: secret,
-	}
-	redeemDetailsBytes, err := json.Marshal(swapRedeemDetails)
-	if err != nil {
-		return err
-	}
-	return state.Write(append([]byte("Redeem Details:"), orderID[:]...), redeemDetailsBytes)
-}
-
-func (state *state) RedeemDetails(orderID [32]byte) ([32]byte, error) {
-	redeemDetailsBytes, err := state.Read(append([]byte("Redeem Details:"), orderID[:]...))
-	if err != nil {
-		return [32]byte{}, err
-	}
-	swapRedeemDetails := SwapRedeemDetails{}
-
-	if err := json.Unmarshal(redeemDetailsBytes, &swapRedeemDetails); err != nil {
-		return [32]byte{}, err
-	}
-
-	return swapRedeemDetails.Secret, nil
-}
-
-func (state *state) PutStatus(orderID [32]byte, status swap.Status) error {
-	swapStatus := SwapStatus{
-		Status: status,
-	}
-	statusBytes, err := json.Marshal(swapStatus)
-	if err != nil {
-		return err
-	}
-	return state.Write(append([]byte("Status:"), orderID[:]...), statusBytes)
-}
-
-func (state *state) Status(orderID [32]byte) swap.Status {
-	statusBytes, err := state.Read(append([]byte("Status:"), orderID[:]...))
-	if err != nil {
-		return "UNKNOWN"
-	}
-	swapStatus := SwapStatus{}
-
-	if err := json.Unmarshal(statusBytes, &swapStatus); err != nil {
-		return "UNKNOWN"
-	}
-	return swapStatus.Status
-}
-
-func (state *state) PutMatch(orderID [32]byte, m match.Match) error {
-	match := SwapMatch{
-		PersonalOrderID: m.PersonalOrderID(),
-		ForeignOrderID:  m.ForeignOrderID(),
-		SendValue:       m.SendValue(),
-		ReceiveValue:    m.ReceiveValue(),
-		SendCurrency:    m.SendCurrency(),
-		ReceiveCurrency: m.ReceiveCurrency(),
-	}
-
-	matchBytes, err := json.Marshal(match)
-	if err != nil {
-		return err
-	}
-	return state.Write(append([]byte("Match:"), orderID[:]...), matchBytes)
-}
-
-func (state *state) Match(orderID [32]byte) (match.Match, error) {
-	matchBytes, err := state.Read(append([]byte("Match:"), orderID[:]...))
-	if err != nil {
-		return nil, err
-	}
-	swapMatch := SwapMatch{}
-
-	if err := json.Unmarshal(matchBytes, &swapMatch); err != nil {
-		return nil, err
-	}
-	return match.NewMatch(swapMatch.PersonalOrderID, swapMatch.ForeignOrderID, swapMatch.SendValue, swapMatch.ReceiveValue, swapMatch.SendCurrency, swapMatch.ReceiveCurrency), nil
-}
-
-func (state *state) PutAtomDetails(orderID [32]byte, data []byte) error {
-	return state.Write(append([]byte("Atom Details:"), orderID[:]...), data)
-}
-
-func (state *state) AtomDetails(orderID [32]byte) ([]byte, error) {
-	return state.Read(append([]byte("Atom Details:"), orderID[:]...))
-}
-
-func (state *state) AtomExists(orderID [32]byte) bool {
-	atomDerails, err := state.AtomDetails(orderID)
-	if err != nil || bytes.Compare(atomDerails, []byte{}) == 0 {
-		return false
-	}
-	return true
-}
-
-func (state *state) IsRedeemable(orderID [32]byte) bool {
-	_, err := state.Read(append([]byte("Redeemable"), orderID[:]...))
-	if err != nil {
-		return false
-	}
-	return true
-}
-
-func (state *state) PutRedeemable(orderID [32]byte) error {
-	return state.Write(append([]byte("Redeemable"), orderID[:]...), orderID[:])
-}
-
-func (state *state) Redeemed(orderID [32]byte) error {
-	err := state.Delete(append([]byte("Redeemable"), orderID[:]...))
-	if err != nil {
-		return err
-	}
+	state.swapCache[orderID] = swap
 	return nil
 }
 
-func (state *state) PutOrderTimeStamp(orderID [32]byte) error {
-	data, err := json.Marshal(
-		OrderTimeStamp{
-			TimeStamp: time.Now().Unix(),
-		},
-	)
+// InitiateDetails tries to get the initiate details from in memory cache if
+// they do not exist it tries to read from the persistent storage.
+func (state *state) InitiateDetails(orderID [32]byte) ([32]byte, int64, error) {
+	swap := state.swapCache[orderID]
+	if swap.HashLock != [32]byte{} && swap.Expiry != 0 {
+		return swap.HashLock, swap.Expiry, nil
+	}
+	swap, err := state.ReadSwapDetails(orderID)
+	if err != nil {
+		return [32]byte{}, 0, err
+	}
+	state.swapCache[orderID] = swap
+	return swap.HashLock, swap.Expiry, nil
+}
+
+// PutRedeemDetails into both persistent storage and in memory cache.
+func (state *state) PutRedeemDetails(orderID [32]byte, secret [32]byte) error {
+	swap := state.swapCache[orderID]
+	swap.Secret = secret
+	if err := state.WriteSwapDetails(orderID, swap); err != nil {
+		return err
+	}
+	state.swapCache[orderID] = swap
+	return nil
+}
+
+// RedeemDetails tries to get the redeem details from in memory cache if
+// they do not exist it tries to read from the persistent storage.
+func (state *state) RedeemDetails(orderID [32]byte) ([32]byte, error) {
+	swap := state.swapCache[orderID]
+	if swap.Secret != [32]byte{} {
+		return swap.Secret, nil
+	}
+	swap, err := state.ReadSwapDetails(orderID)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	state.swapCache[orderID] = swap
+	return swap.Secret, nil
+}
+
+// PutStatus into both persistent storage and in memory cache.
+func (state *state) PutStatus(orderID [32]byte, status swap.Status) error {
+	swap := state.swapCache[orderID]
+	swap.Status = status
+	if err := state.WriteSwapDetails(orderID, swap); err != nil {
+		return err
+	}
+	state.swapCache[orderID] = swap
+	return nil
+}
+
+// Status tries to get the swap status from in memory cache if it does not exist
+// it tries to read from the persistent storage.
+func (state *state) Status(orderID [32]byte) swap.Status {
+	swapDetails := state.swapCache[orderID]
+	if swapDetails.Status != swap.Status("") {
+		return swapDetails.Status
+	}
+	swapDetails, err := state.ReadSwapDetails(orderID)
+	if err != nil {
+		return swap.StatusUnknown
+	}
+	state.swapCache[orderID] = swapDetails
+	return swapDetails.Status
+}
+
+// PutMatch into both persistent storage and in memory cache.
+func (state *state) PutMatch(orderID [32]byte, match match.Match) error {
+	swap := state.swapCache[orderID]
+	swap.ForeignOrderID = match.ForeignOrderID()
+	swap.SendValue = match.SendValue()
+	swap.ReceiveValue = match.ReceiveValue()
+	swap.SendCurrency = match.SendCurrency()
+	swap.ReceiveCurrency = match.ReceiveCurrency()
+	if err := state.WriteSwapDetails(orderID, swap); err != nil {
+		return err
+	}
+	state.swapCache[orderID] = swap
+	return nil
+}
+
+// Match tries to get the match details from in memory cache if they do not
+// exist it tries to read from the persistent storage.
+func (state *state) Match(orderID [32]byte) (match.Match, error) {
+	swap := state.swapCache[orderID]
+	if swap.ForeignOrderID != [32]byte{} {
+		return match.NewMatch(orderID, swap.ForeignOrderID, swap.SendValue, swap.ReceiveValue, swap.SendCurrency, swap.ReceiveCurrency), nil
+	}
+	swap, err := state.ReadSwapDetails(orderID)
+	if err != nil {
+		return nil, err
+	}
+	state.swapCache[orderID] = swap
+	return match.NewMatch(orderID, swap.ForeignOrderID, swap.SendValue, swap.ReceiveValue, swap.SendCurrency, swap.ReceiveCurrency), nil
+}
+
+// PutPersonalAtom into both persistent storage and in memory cache.
+func (state *state) PutPersonalAtom(orderID [32]byte, atomDetails []byte) error {
+	swap := state.swapCache[orderID]
+	swap.PersonalAtom = atomDetails
+	if err := state.WriteSwapDetails(orderID, swap); err != nil {
+		return err
+	}
+	state.swapCache[orderID] = swap
+	return nil
+}
+
+// PersonalAtom tries to get the personal atom details from in memory cache if
+// they do not exist it tries to read from the persistent storage.
+func (state *state) PersonalAtom(orderID [32]byte) ([]byte, error) {
+	swap := state.swapCache[orderID]
+	if bytes.Compare(swap.PersonalAtom, []byte{}) != 0 {
+		return swap.PersonalAtom, nil
+	}
+	swap, err := state.ReadSwapDetails(orderID)
+	if err != nil {
+		return []byte{}, err
+	}
+	state.swapCache[orderID] = swap
+	return swap.PersonalAtom, nil
+}
+
+// PutForeignAtom into both persistent storage and in memory cache.
+func (state *state) PutForeignAtom(orderID [32]byte, atomDetails []byte) error {
+	swap := state.swapCache[orderID]
+	swap.ForeignAtom = atomDetails
+	if err := state.WriteSwapDetails(orderID, swap); err != nil {
+		return err
+	}
+	state.swapCache[orderID] = swap
+	return nil
+}
+
+// ForeignAtom tries to get the foreign atom details from in memory cache if
+// they do not exist it tries to read from the persistent storage.
+func (state *state) ForeignAtom(orderID [32]byte) ([]byte, error) {
+	swap := state.swapCache[orderID]
+	if bytes.Compare(swap.ForeignAtom, []byte{}) != 0 {
+		return swap.ForeignAtom, nil
+	}
+	swap, err := state.ReadSwapDetails(orderID)
+	if err != nil {
+		return []byte{}, err
+	}
+	state.swapCache[orderID] = swap
+	return swap.ForeignAtom, nil
+}
+
+// AtomsExist checks whether the atoms are created beforehand.
+func (state *state) AtomsExist(orderID [32]byte) bool {
+	swapAtomDetails, err := state.ReadSwapDetails(orderID)
+	if err != nil || (bytes.Compare(swapAtomDetails.PersonalAtom, []byte{}) == 0 && bytes.Compare(swapAtomDetails.ForeignAtom, []byte{}) == 0) {
+		return false
+	}
+	return true
+}
+
+// PutSwapTimestamp into both persistent storage and in memory cache.
+func (state *state) PutSwapTimestamp(orderID [32]byte) error {
+	swap := state.swapCache[orderID]
+	swap.TimeStamp = time.Now().Unix()
+	if err := state.WriteSwapDetails(orderID, swap); err != nil {
+		return err
+	}
+	state.swapCache[orderID] = swap
+	return nil
+}
+
+// SwapTimestamp tries to get the redeem details from in memory cache if
+// they do not exist it tries to read from the persistent storage.
+func (state *state) SwapTimestamp(orderID [32]byte) (int64, error) {
+	swap := state.swapCache[orderID]
+	if swap.TimeStamp != 0 {
+		return swap.TimeStamp, nil
+	}
+	swap, err := state.ReadSwapDetails(orderID)
+	if err != nil {
+		return 0, err
+	}
+	state.swapCache[orderID] = swap
+	return swap.TimeStamp, nil
+}
+
+// WriteSwapDetails to persistent storage
+func (state *state) WriteSwapDetails(orderID [32]byte, swapDetails SwapDetails) error {
+	data, err := json.Marshal(swapDetails)
 	if err != nil {
 		return err
 	}
-	return state.Write(append([]byte("OrderTimeStamp:"), orderID[:]...), data)
+	return state.Write(append([]byte("Swap Details:"), orderID[:]...), data)
 }
 
-func (state *state) OrderTimeStamp(orderID [32]byte) (int64, error) {
-	tsBytes, err := state.Read(append([]byte("OrderTimeStamp:"), orderID[:]...))
+// ReadSwapDetails from persistent storage
+func (state *state) ReadSwapDetails(orderID [32]byte) (SwapDetails, error) {
+	data, err := state.Read(append([]byte("Swap Details:"), orderID[:]...))
 	if err != nil {
-		return 0, err
+		return SwapDetails{}, err
 	}
-	timeStamp := OrderTimeStamp{}
-
-	if err := json.Unmarshal(tsBytes, &timeStamp); err != nil {
-		return 0, err
+	swapDetails := SwapDetails{}
+	if err = json.Unmarshal(data, &swapDetails); err != nil {
+		return SwapDetails{}, err
 	}
-	return timeStamp.TimeStamp, nil
+	return swapDetails, nil
 }
