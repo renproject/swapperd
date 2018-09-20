@@ -55,22 +55,20 @@ func (swapper *swapperAdapter) NewSwap(orderID order.ID) (swap.Atom, swap.Atom, 
 		return nil, nil, nil, nil, err
 	}
 
-	if swapper.AtomExists(match.PersonalOrderID()) {
-		details, err := swapper.AtomDetails(match.PersonalOrderID())
+	if swapper.AtomsExist(match.PersonalOrderID()) {
+		personalAtomDetails, err := swapper.PersonalAtom(match.PersonalOrderID())
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
-		if err := personalAtom.Deserialize(details); err != nil {
+		if err := personalAtom.Deserialize(personalAtomDetails); err != nil {
 			return nil, nil, nil, nil, err
 		}
-	}
 
-	if swapper.AtomExists(match.ForeignOrderID()) {
-		details, err := swapper.AtomDetails(match.ForeignOrderID())
+		foreignAtomDetails, err := swapper.ForeignAtom(match.PersonalOrderID())
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
-		if err := foreignAtom.Deserialize(details); err != nil {
+		if err := foreignAtom.Deserialize(foreignAtomDetails); err != nil {
 			return nil, nil, nil, nil, err
 		}
 	}
