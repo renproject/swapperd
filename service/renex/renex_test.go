@@ -31,7 +31,7 @@ import (
 var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 
 	buildConfigs := func() (config.Config, keystore.Keystore, keystore.Keystore) {
-		config := configDriver.New("nightly")
+		config := configDriver.New("", "nightly")
 		keys := utils.LoadTestKeys("../../secrets/test.json")
 
 		btcKeyA, err := keystore.NewBitcoinKey(keys.Alice.Bitcoin, "mainnet")
@@ -63,8 +63,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		rand.Read(aliceOrderID[:])
 		rand.Read(bobOrderID[:])
 
-		aliceCurrency := token.BTC
-		bobCurrency := token.ETH
+		aliceCurrency := token.ETH
+		bobCurrency := token.BTC
 
 		aliceSendValue := big.NewInt(100000)
 		bobSendValue := big.NewInt(100000)

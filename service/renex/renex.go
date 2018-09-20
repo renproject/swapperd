@@ -144,7 +144,7 @@ func (renex *renex) initiate(orderID [32]byte) error {
 func (renex *renex) getMatch(orderID [32]byte) error {
 	renex.LogInfo(orderID, "waiting for the match to be found")
 
-	timeStamp, err := renex.OrderTimeStamp(orderID)
+	timeStamp, err := renex.SwapTimestamp(orderID)
 	if err != nil {
 		return err
 	}
