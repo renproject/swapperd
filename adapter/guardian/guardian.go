@@ -7,7 +7,6 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/eth"
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapter/network"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	"github.com/republicprotocol/renex-swapper-go/service/guardian"
 	"github.com/republicprotocol/renex-swapper-go/service/logger"
@@ -18,12 +17,12 @@ import (
 type guardianAdapter struct {
 	config.Config
 	keystore.Keystore
-	network.Network
+	swap.Network
 	logger.Logger
 	state.State
 }
 
-func New(conf config.Config, ks keystore.Keystore, net network.Network, state state.State, logger logger.Logger) guardian.Adapter {
+func New(conf config.Config, ks keystore.Keystore, net swap.Network, state state.State, logger logger.Logger) guardian.Adapter {
 	return &guardianAdapter{
 		Config:   conf,
 		Keystore: ks,
@@ -44,7 +43,7 @@ func (guardian *guardianAdapter) Refund(orderID [32]byte) error {
 		return err
 	}
 
-	details, err := guardian.AtomDetails(match.PersonalOrderID())
+	details, err := guardian.PersonalAtom(match.PersonalOrderID())
 	if err != nil {
 		return err
 	}
@@ -56,7 +55,7 @@ func (guardian *guardianAdapter) Refund(orderID [32]byte) error {
 	return personalAtom.Refund()
 }
 
-func buildAtom(network network.Network, key keystore.Keystore, config config.Config, t token.Token, orderID [32]byte) (swap.Atom, error) {
+func buildAtom(network swap.Network, key keystore.Keystore, config config.Config, t token.Token, orderID [32]byte) (swap.Atom, error) {
 	switch t {
 	case token.BTC:
 		btcKey := key.GetKey(t).(keystore.BitcoinKey)

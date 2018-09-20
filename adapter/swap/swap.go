@@ -9,8 +9,6 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/eth"
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapter/network"
-	"github.com/republicprotocol/renex-swapper-go/adapter/watchdog"
 	"github.com/republicprotocol/renex-swapper-go/domain/order"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	"github.com/republicprotocol/renex-swapper-go/service/logger"
@@ -19,15 +17,15 @@ import (
 )
 
 type swapperAdapter struct {
-	network.Network
-	watchdog.Watchdog
+	swap.Network
+	swap.Watchdog
 	state.State
 	logger.Logger
 	config   config.Config
 	keystore keystore.Keystore
 }
 
-func New(cfg config.Config, ks keystore.Keystore, network network.Network, watchdog watchdog.Watchdog, state state.State, logger logger.Logger) swap.SwapperAdapter {
+func New(cfg config.Config, ks keystore.Keystore, network swap.Network, watchdog swap.Watchdog, state state.State, logger logger.Logger) swap.SwapperAdapter {
 	return &swapperAdapter{
 		config:   cfg,
 		keystore: ks,
@@ -76,7 +74,7 @@ func (swapper *swapperAdapter) NewSwap(orderID order.ID) (swap.Atom, swap.Atom, 
 	return personalAtom, foreignAtom, match, swapper, nil
 }
 
-func buildAtom(network network.Network, key keystore.Keystore, config config.Config, t token.Token, orderID [32]byte) (swap.Atom, error) {
+func buildAtom(network swap.Network, key keystore.Keystore, config config.Config, t token.Token, orderID [32]byte) (swap.Atom, error) {
 	switch t {
 	case token.BTC:
 		btcKey := key.GetKey(t).(keystore.BitcoinKey)

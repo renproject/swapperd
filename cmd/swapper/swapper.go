@@ -10,8 +10,10 @@ import (
 
 	guardianAdapter "github.com/republicprotocol/renex-swapper-go/adapter/guardian"
 	"github.com/republicprotocol/renex-swapper-go/adapter/http"
+	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 	renexAdapter "github.com/republicprotocol/renex-swapper-go/adapter/renex"
 	stateAdapter "github.com/republicprotocol/renex-swapper-go/adapter/state"
+	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	configDriver "github.com/republicprotocol/renex-swapper-go/driver/config"
 	httpDriver "github.com/republicprotocol/renex-swapper-go/driver/http"
 	keystoreDriver "github.com/republicprotocol/renex-swapper-go/driver/keystore"
@@ -39,7 +41,7 @@ func main() {
 	}
 	logger := loggerDriver.NewStdOut()
 	state := state.NewState(stateAdapter.New(db, logger))
-	ingressNet := network.NewIngress(conf.RenEx.Ingress)
+	ingressNet := network.NewIngress(conf.RenEx.Ingress, ks.GetKey(token.ETH).(keystore.EthereumKey))
 	nopWatchdog := watchdogDriver.NewMock()
 
 	binder, err := renexAdapter.NewBinder(conf)

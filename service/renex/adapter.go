@@ -13,12 +13,7 @@ type Adapter interface {
 	state.State
 	logger.Logger
 	swap.Swapper
-
-	SendOwnerAddress(order.ID, []byte) error
-	ReceiveOwnerAddress(order.ID, int64) ([]byte, error)
-	ReceiveSwapDetails(order.ID, int64) ([]byte, error)
-	SendSwapDetails(order.ID, []byte) error
-
+	swap.Network
 	GetOrderMatch(orderID order.ID, waitTill int64) (match.Match, error)
 	GetAddress(token.Token) []byte
 }

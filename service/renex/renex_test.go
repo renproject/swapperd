@@ -63,8 +63,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		rand.Read(aliceOrderID[:])
 		rand.Read(bobOrderID[:])
 
-		aliceCurrency := token.ETH
-		bobCurrency := token.BTC
+		aliceCurrency := token.BTC
+		bobCurrency := token.ETH
 
 		aliceSendValue := big.NewInt(100000)
 		bobSendValue := big.NewInt(100000)

@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
-	"github.com/republicprotocol/renex-swapper-go/adapter/watchdog"
+	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
 type renexWatchdog struct {
@@ -15,7 +15,7 @@ type renexWatchdog struct {
 
 // NewRenEx creates a new RenExWatchdog object, that interacts with the
 // RenEx watchdog over http.
-func NewRenEx(config config.Config) watchdog.Watchdog {
+func NewRenEx(config config.Config) swap.Watchdog {
 	return &renexWatchdog{
 		ipAddress: config.RenEx.Watchdog,
 	}

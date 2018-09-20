@@ -2,7 +2,10 @@ package state
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -60,6 +63,7 @@ type State interface {
 	AtomsExist([32]byte) bool
 }
 
+// NewState creates a new state interface
 func NewState(adapter Adapter) State {
 	return &state{
 		Adapter:   adapter,
@@ -266,6 +270,7 @@ func (state *state) SwapTimestamp(orderID [32]byte) (int64, error) {
 
 // WriteSwapDetails to persistent storage
 func (state *state) WriteSwapDetails(orderID [32]byte, swapDetails SwapDetails) error {
+	state.PrintSwapDetails(swapDetails)
 	data, err := json.Marshal(swapDetails)
 	if err != nil {
 		return err
@@ -284,4 +289,22 @@ func (state *state) ReadSwapDetails(orderID [32]byte) (SwapDetails, error) {
 		return SwapDetails{}, err
 	}
 	return swapDetails, nil
+}
+
+// PrintSwapDetails to Std Out
+func (state *state) PrintSwapDetails(swapDetails SwapDetails) {
+	fmt.Printf("\n\n\n\t\tSTATE UPDATED\n\n")
+	fmt.Printf("Timestamp: %d\n", swapDetails.TimeStamp)
+	fmt.Printf("Status: %s\n", swapDetails.Status)
+	fmt.Printf("Expiry: %d\n", swapDetails.Expiry)
+	fmt.Printf("Hash Lock: %s\n", base64.StdEncoding.EncodeToString(swapDetails.HashLock[:]))
+	fmt.Printf("Secret: %s\n", base64.StdEncoding.EncodeToString(swapDetails.Secret[:]))
+	fmt.Printf("Foreign Order ID: %s\n", base64.StdEncoding.EncodeToString(swapDetails.ForeignOrderID[:]))
+	fmt.Printf("Send Value: %v\n", swapDetails.SendValue)
+	fmt.Printf("Receive Value: %v\n", swapDetails.ReceiveValue)
+	fmt.Printf("Send Currency: %d\n", swapDetails.SendCurrency)
+	fmt.Printf("Receive Currency: %d\n", swapDetails.ReceiveCurrency)
+	fmt.Printf("Personal Atom: %v\n", hex.EncodeToString(swapDetails.PersonalAtom[:]))
+	fmt.Printf("Foreign Atom: %v\n", hex.EncodeToString(swapDetails.ForeignAtom[:]))
+	fmt.Println("-------------------------------------------------------------")
 }

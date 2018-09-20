@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/republicprotocol/renex-swapper-go/adapter/network"
 	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
 type mock struct {
@@ -16,7 +16,7 @@ type mock struct {
 	mu                *sync.RWMutex
 }
 
-func NewMock() network.Network {
+func NewMock() swap.Network {
 	return &mock{
 		traderAddresses:   map[order.ID][]byte{},
 		traderSwapDetails: map[order.ID][]byte{},

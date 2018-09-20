@@ -17,18 +17,8 @@ type SwapperAdapter interface {
 type Adapter interface {
 	logger.Logger
 	state.State
-
-	SendOwnerAddress(order.ID, []byte) error
-	ReceiveOwnerAddress(order.ID, int64) ([]byte, error)
-	ReceiveSwapDetails(order.ID, int64) ([]byte, error)
-	SendSwapDetails(order.ID, []byte) error
-
-	ComplainDelayedAddressSubmission([32]byte) error
-	ComplainDelayedRequestorInitiation([32]byte) error
-	ComplainWrongRequestorInitiation([32]byte) error
-	ComplainDelayedResponderInitiation([32]byte) error
-	ComplainWrongResponderInitiation([32]byte) error
-	ComplainDelayedRequestorRedemption([32]byte) error
+	Network
+	Watchdog
 }
 
 type Atom interface {
@@ -43,4 +33,20 @@ type Atom interface {
 	GetFromAddress() ([]byte, error)
 	PriorityCode() uint32
 	RedeemedAt() (int64, error)
+}
+
+type Network interface {
+	SendOwnerAddress(order.ID, []byte) error
+	SendSwapDetails(order.ID, []byte) error
+	ReceiveOwnerAddress(order.ID, int64) ([]byte, error)
+	ReceiveSwapDetails(order.ID, int64) ([]byte, error)
+}
+
+type Watchdog interface {
+	ComplainDelayedAddressSubmission([32]byte) error
+	ComplainDelayedRequestorInitiation([32]byte) error
+	ComplainWrongRequestorInitiation([32]byte) error
+	ComplainDelayedResponderInitiation([32]byte) error
+	ComplainWrongResponderInitiation([32]byte) error
+	ComplainDelayedRequestorRedemption([32]byte) error
 }

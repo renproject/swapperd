@@ -13,7 +13,6 @@ import (
 	ethclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapter/network"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
@@ -30,12 +29,12 @@ type EthereumAtom struct {
 	client  ethclient.Conn
 	key     keystore.EthereumKey
 	binding *bindings.RenExAtomicSwapper
-	network network.Network
+	network swap.Network
 	data    EthereumData
 }
 
 // NewEthereumAtom returns a new Ethereum RequestAtom instance
-func NewEthereumAtom(network network.Network, conf config.EthereumNetwork, key keystore.EthereumKey, orderID [32]byte) (swap.Atom, error) {
+func NewEthereumAtom(network swap.Network, conf config.EthereumNetwork, key keystore.EthereumKey, orderID [32]byte) (swap.Atom, error) {
 	conn, err := ethclient.NewConn(conf)
 	if err != nil {
 		return &EthereumAtom{}, err

@@ -1,11 +1,11 @@
 package watchdog
 
-import "github.com/republicprotocol/renex-swapper-go/adapter/watchdog"
+import "github.com/republicprotocol/renex-swapper-go/service/swap"
 
 type mock struct {
 }
 
-func NewMock() watchdog.Watchdog {
+func NewMock() swap.Watchdog {
 	return &mock{}
 }
 

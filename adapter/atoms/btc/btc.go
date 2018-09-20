@@ -9,7 +9,6 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapter/network"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
@@ -31,12 +30,12 @@ type BitcoinAtom struct {
 	key        keystore.BitcoinKey
 	orderID    [32]byte
 	connection btc.Conn
-	network    network.Network
+	network    swap.Network
 	data       BitcoinData
 }
 
 // NewBitcoinAtom returns a new Bitcoin Atom instance
-func NewBitcoinAtom(network network.Network, conf config.BitcoinNetwork, key keystore.BitcoinKey, orderID [32]byte) (swap.Atom, error) {
+func NewBitcoinAtom(network swap.Network, conf config.BitcoinNetwork, key keystore.BitcoinKey, orderID [32]byte) (swap.Atom, error) {
 	conn, err := btc.NewConnWithConfig(conf)
 	if err != nil {
 		return nil, err

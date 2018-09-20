@@ -13,8 +13,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/republicprotocol/renex-ingress-go/httpadapter"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapter/network"
 	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/service/swap"
 	"github.com/republicprotocol/renex-swapper-go/utils"
 )
 
@@ -23,7 +23,7 @@ type ingress struct {
 	ethKey      keystore.EthereumKey
 }
 
-func NewIngress(hostAddress string, ethKey keystore.EthereumKey) network.Network {
+func NewIngress(hostAddress string, ethKey keystore.EthereumKey) swap.Network {
 	return &ingress{
 		hostAddress: hostAddress,
 		ethKey:      ethKey,

@@ -52,7 +52,7 @@ func (g *guardian) Start() <-chan error {
 			case <-g.doneCh:
 				return
 			case <-g.notifyCh:
-				swaps, err := g.RefundableSwaps()
+				swaps, err := g.ExpiredSwaps()
 				if err != nil {
 					errs <- err
 					return
