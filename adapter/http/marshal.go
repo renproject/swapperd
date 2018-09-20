@@ -44,7 +44,7 @@ type PostOrderRequest struct {
 
 type Balance struct {
 	Address string `json:"address"`
-	Amount  uint64 `json:"amount"`
+	Amount  string `json:"amount"`
 }
 
 type Balances struct {

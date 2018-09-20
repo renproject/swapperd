@@ -2,6 +2,7 @@ package http
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -115,7 +116,7 @@ func bitcoinBalance(conf config.Config, key keystore.BitcoinKey) (Balance, error
 	}
 	return Balance{
 		Address: key.AddressString,
-		Amount:  uint64(balance),
+		Amount:  strconv.FormatInt(balance, 10),
 	}, nil
 }
 
@@ -130,6 +131,6 @@ func ethereumBalance(conf config.Config, key keystore.EthereumKey) (Balance, err
 	}
 	return Balance{
 		Address: key.Address.String(),
-		Amount:  bal.Uint64(),
+		Amount:  bal.String(),
 	}, nil
 }
