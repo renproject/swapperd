@@ -56,7 +56,10 @@ func GenerateRandomBitcoinKey(network, passphrase string) ([]byte, error) {
 // DecodeBitcoinKey decrypts a bitcoin key using the given passphrase. If an
 // empty passphrase is given this function decodes an unencrypted bitcoin key.
 func DecodeBitcoinKey(key []byte, btcNetwork string, passphrase string) (keystore.BitcoinKey, error) {
-	return keystore.BitcoinKey{}, nil
+	if passphrase != "" {
+		return decodeEncryptedBitcoinKey(key, btcNetwork, passphrase)
+	}
+	return decodePlainBitcoinKey(key, btcNetwork)
 }
 
 func decodePlainBitcoinKey(key []byte, btcNetwork string) (keystore.BitcoinKey, error) {
@@ -68,7 +71,6 @@ func decodePlainBitcoinKey(key []byte, btcNetwork string) (keystore.BitcoinKey, 
 func decodeEncryptedBitcoinKey(encryptedKey []byte, btcNetwork string, passphrase string) (keystore.BitcoinKey, error) {
 	encryptedBtcKey := EncryptedBitcoinKey{}
 	json.Unmarshal(encryptedKey, &encryptedBtcKey)
-
 	hash := sha256.Sum256([]byte(passphrase))
 	block, err := aes.NewCipher(hash[:])
 	if err != nil {
