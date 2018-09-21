@@ -19,14 +19,13 @@ func NewSwapper(adapter SwapperAdapter) Swapper {
 }
 
 func (swapper *swapper) NewSwap(orderID order.ID, req Request) (Swap, error) {
-	personalAtom, foreignAtom, match, adapter, err := swapper.adapter.NewSwap(orderID, req)
+	personalAtom, foreignAtom, _, adapter, err := swapper.adapter.NewSwap(orderID, req)
 	if err != nil {
 		return nil, err
 	}
 	return &swap{
 		personalAtom: personalAtom,
 		foreignAtom:  foreignAtom,
-		order:        match,
 		Adapter:      adapter,
 	}, nil
 }
