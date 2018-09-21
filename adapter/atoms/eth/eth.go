@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -72,10 +73,12 @@ func (atom *EthereumAtom) Initiate(to []byte, hash [32]byte, value *big.Int, exp
 	atom.key.TransactOpts.Value = prevValue
 	atom.key.TransactOpts.GasLimit = prevGasLimit
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to initiate on the Ethereum blockchain: %v", err)
 	}
-	_, err = atom.client.PatchedWaitMined(atom.context, tx)
-	return err
+	if _, err := atom.client.PatchedWaitMined(atom.context, tx); err != nil {
+		return fmt.Errorf("Failed to wait for the mined transaction on Ethereum blockchain: %v", err)
+	}
+	return nil
 }
 
 // Redeem an Atom swap by calling a function on ethereum
@@ -85,9 +88,11 @@ func (atom *EthereumAtom) Redeem(secret [32]byte) error {
 	tx, err := atom.binding.Redeem(atom.key.TransactOpts, atom.data.SwapID, secret)
 	atom.key.TransactOpts.GasLimit = prevGasLimit
 	if err == nil {
-		_, err = atom.client.PatchedWaitMined(atom.context, tx)
+		if _, err := atom.client.PatchedWaitMined(atom.context, tx); err != nil {
+			return err
+		}
+		return nil
 	}
-
 	return err
 }
 
@@ -110,7 +115,10 @@ func (atom *EthereumAtom) Refund() error {
 	tx, err := atom.binding.Refund(atom.key.TransactOpts, atom.data.SwapID)
 	atom.key.TransactOpts.GasLimit = prevGasLimit
 	if err == nil {
-		_, err = atom.client.PatchedWaitMined(atom.context, tx)
+		if _, err := atom.client.PatchedWaitMined(atom.context, tx); err != nil {
+			return err
+		}
+		return nil
 	}
 	return err
 }

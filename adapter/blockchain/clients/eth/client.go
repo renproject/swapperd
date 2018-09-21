@@ -2,7 +2,6 @@ package eth
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -95,9 +94,6 @@ func (b *Conn) PatchedWaitMined(ctx context.Context, tx *types.Transaction) (*ty
 		receipt, err := bind.WaitMined(ctx, b.Client, tx)
 		if err != nil {
 			return nil, err
-		}
-		if receipt.Status != 1 {
-			return nil, fmt.Errorf("Transaction reverted")
 		}
 		return receipt, nil
 	}

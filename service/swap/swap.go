@@ -154,8 +154,8 @@ func (swap *swap) respond() error {
 
 	if swap.Status(personalOrderID) == swapDomain.StatusAudited {
 		if err := swap.initiate(); err != nil {
-			swap.LogError(personalOrderID, fmt.Sprintf("failed to initiate %v", personalOrderID))
-			return fmt.Errorf("failed to initiate %v", personalOrderID)
+			swap.LogError(personalOrderID, fmt.Sprintf("failed to initiate %v", err))
+			return fmt.Errorf("failed to initiate %v", err)
 		}
 	} else {
 		swap.LogInfo(personalOrderID, "skipping initiate")
@@ -163,8 +163,8 @@ func (swap *swap) respond() error {
 
 	if swap.Status(personalOrderID) == swapDomain.StatusInitiated {
 		if err := swap.sendDetails(); err != nil {
-			swap.LogError(personalOrderID, fmt.Sprintf("failed to send details %v", personalOrderID))
-			return fmt.Errorf("failed to send details %v", personalOrderID)
+			swap.LogError(personalOrderID, fmt.Sprintf("failed to send details %v", err))
+			return fmt.Errorf("failed to send details %v", err)
 		}
 	} else {
 		swap.LogInfo(personalOrderID, "skipping send details")
@@ -189,8 +189,8 @@ func (swap *swap) respond() error {
 
 	if swap.Status(personalOrderID) == swapDomain.StatusRedeemDetailsAcquired {
 		if err := swap.redeem(); err != nil {
-			swap.LogError(personalOrderID, fmt.Sprintf("failed to redeem %v", personalOrderID))
-			return fmt.Errorf("failed to redeem %v", personalOrderID)
+			swap.LogError(personalOrderID, fmt.Sprintf("failed to redeem %v", err))
+			return fmt.Errorf("failed to redeem %v", err)
 		}
 	} else {
 		swap.LogInfo(personalOrderID, "skipping redeem")
@@ -316,12 +316,12 @@ func (swap *swap) redeem() error {
 		return err
 	}
 
-	if err := swap.foreignAtom.Redeem(secret); err != nil {
+	if err := swap.PutStatus(orderID, swapDomain.StatusRedeemed); err != nil {
 		return err
 	}
 
-	if err := swap.PutStatus(orderID, swapDomain.StatusRedeemed); err != nil {
-		return err
+	if err := swap.foreignAtom.Redeem(secret); err != nil {
+		return nil
 	}
 
 	swap.LogInfo(orderID, "redeemed the swap details")

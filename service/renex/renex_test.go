@@ -14,10 +14,10 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/republicprotocol/renex-swapper-go/service/renex"
 	"github.com/republicprotocol/renex-swapper-go/service/state"
+	swapService "github.com/republicprotocol/renex-swapper-go/service/swap"
 
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapter/network"
 	renexAdapter "github.com/republicprotocol/renex-swapper-go/adapter/renex"
 	stateAdapter "github.com/republicprotocol/renex-swapper-go/adapter/state"
 
@@ -66,10 +66,10 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		aliceCurrency := token.BTC
 		bobCurrency := token.ETH
 
-		aliceSendValue := big.NewInt(100000)
-		bobSendValue := big.NewInt(100000)
-		aliceReceiveValue := big.NewInt(100000)
-		bobReceiveValue := big.NewInt(100000)
+		aliceSendValue := big.NewInt(10000)
+		bobSendValue := big.NewInt(10000)
+		aliceReceiveValue := big.NewInt(10000)
+		bobReceiveValue := big.NewInt(10000)
 
 		aliceOrder := match.NewMatch(aliceOrderID, bobOrderID, aliceSendValue, aliceReceiveValue, aliceCurrency, bobCurrency)
 		bobOrder := match.NewMatch(bobOrderID, aliceOrderID, bobSendValue, bobReceiveValue, bobCurrency, aliceCurrency)
@@ -77,7 +77,7 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		return aliceOrder, bobOrder
 	}
 
-	sendAddresses := func(aliceOrderID, bobOrderID [32]byte, aliceKS, bobKS keystore.Keystore, net network.Network) {
+	sendAddresses := func(aliceOrderID, bobOrderID [32]byte, aliceKS, bobKS keystore.Keystore, net swapService.Network) {
 		AliceBtcKey := aliceKS.GetKey(token.BTC).(keystore.BitcoinKey)
 		BobEthKey := bobKS.GetKey(token.ETH).(keystore.EthereumKey)
 		err := net.SendOwnerAddress(aliceOrderID, []byte(AliceBtcKey.AddressString))
@@ -86,7 +86,7 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		Expect(err).Should(BeNil())
 	}
 
-	buildRenExWatchers := func(aliceMatch, bobMatch match.Match, cfg config.Config, ksA, ksB keystore.Keystore, net network.Network) (RenEx, RenEx) {
+	buildRenExWatchers := func(aliceMatch, bobMatch match.Match, cfg config.Config, ksA, ksB keystore.Keystore, net swapService.Network) (RenEx, RenEx) {
 		wd := watchdog.NewMock()
 		loggr := loggerDriver.NewStdOut()
 

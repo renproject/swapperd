@@ -74,6 +74,8 @@ func NewState(adapter Adapter) State {
 
 // PutInitiateDetails into both persistent storage and in memory cache.
 func (state *state) PutInitiateDetails(orderID [32]byte, hashLock [32]byte, expiry int64) error {
+	state.swapMu.Lock()
+	defer state.swapMu.Unlock()
 	swap := state.swapCache[orderID]
 	swap.HashLock = hashLock
 	swap.Expiry = expiry
@@ -87,6 +89,8 @@ func (state *state) PutInitiateDetails(orderID [32]byte, hashLock [32]byte, expi
 // InitiateDetails tries to get the initiate details from in memory cache if
 // they do not exist it tries to read from the persistent storage.
 func (state *state) InitiateDetails(orderID [32]byte) ([32]byte, int64, error) {
+	state.swapMu.RLock()
+	defer state.swapMu.RUnlock()
 	swap := state.swapCache[orderID]
 	if swap.HashLock != [32]byte{} && swap.Expiry != 0 {
 		return swap.HashLock, swap.Expiry, nil
@@ -101,6 +105,8 @@ func (state *state) InitiateDetails(orderID [32]byte) ([32]byte, int64, error) {
 
 // PutRedeemDetails into both persistent storage and in memory cache.
 func (state *state) PutRedeemDetails(orderID [32]byte, secret [32]byte) error {
+	state.swapMu.Lock()
+	defer state.swapMu.Unlock()
 	swap := state.swapCache[orderID]
 	swap.Secret = secret
 	if err := state.WriteSwapDetails(orderID, swap); err != nil {
@@ -113,6 +119,8 @@ func (state *state) PutRedeemDetails(orderID [32]byte, secret [32]byte) error {
 // RedeemDetails tries to get the redeem details from in memory cache if
 // they do not exist it tries to read from the persistent storage.
 func (state *state) RedeemDetails(orderID [32]byte) ([32]byte, error) {
+	state.swapMu.RLock()
+	defer state.swapMu.RUnlock()
 	swap := state.swapCache[orderID]
 	if swap.Secret != [32]byte{} {
 		return swap.Secret, nil
@@ -127,6 +135,8 @@ func (state *state) RedeemDetails(orderID [32]byte) ([32]byte, error) {
 
 // PutStatus into both persistent storage and in memory cache.
 func (state *state) PutStatus(orderID [32]byte, status swap.Status) error {
+	state.swapMu.Lock()
+	defer state.swapMu.Unlock()
 	swap := state.swapCache[orderID]
 	swap.Status = status
 	if err := state.WriteSwapDetails(orderID, swap); err != nil {
@@ -139,6 +149,8 @@ func (state *state) PutStatus(orderID [32]byte, status swap.Status) error {
 // Status tries to get the swap status from in memory cache if it does not exist
 // it tries to read from the persistent storage.
 func (state *state) Status(orderID [32]byte) swap.Status {
+	state.swapMu.RLock()
+	defer state.swapMu.RUnlock()
 	swapDetails := state.swapCache[orderID]
 	if swapDetails.Status != swap.Status("") {
 		return swapDetails.Status
@@ -153,6 +165,8 @@ func (state *state) Status(orderID [32]byte) swap.Status {
 
 // PutMatch into both persistent storage and in memory cache.
 func (state *state) PutMatch(orderID [32]byte, match match.Match) error {
+	state.swapMu.Lock()
+	defer state.swapMu.Unlock()
 	swap := state.swapCache[orderID]
 	swap.ForeignOrderID = match.ForeignOrderID()
 	swap.SendValue = match.SendValue()
@@ -169,6 +183,8 @@ func (state *state) PutMatch(orderID [32]byte, match match.Match) error {
 // Match tries to get the match details from in memory cache if they do not
 // exist it tries to read from the persistent storage.
 func (state *state) Match(orderID [32]byte) (match.Match, error) {
+	state.swapMu.RLock()
+	defer state.swapMu.RUnlock()
 	swap := state.swapCache[orderID]
 	if swap.ForeignOrderID != [32]byte{} {
 		return match.NewMatch(orderID, swap.ForeignOrderID, swap.SendValue, swap.ReceiveValue, swap.SendCurrency, swap.ReceiveCurrency), nil
@@ -183,6 +199,8 @@ func (state *state) Match(orderID [32]byte) (match.Match, error) {
 
 // PutPersonalAtom into both persistent storage and in memory cache.
 func (state *state) PutPersonalAtom(orderID [32]byte, atomDetails []byte) error {
+	state.swapMu.Lock()
+	defer state.swapMu.Unlock()
 	swap := state.swapCache[orderID]
 	swap.PersonalAtom = atomDetails
 	if err := state.WriteSwapDetails(orderID, swap); err != nil {
@@ -195,6 +213,8 @@ func (state *state) PutPersonalAtom(orderID [32]byte, atomDetails []byte) error 
 // PersonalAtom tries to get the personal atom details from in memory cache if
 // they do not exist it tries to read from the persistent storage.
 func (state *state) PersonalAtom(orderID [32]byte) ([]byte, error) {
+	state.swapMu.RLock()
+	defer state.swapMu.RUnlock()
 	swap := state.swapCache[orderID]
 	if bytes.Compare(swap.PersonalAtom, []byte{}) != 0 {
 		return swap.PersonalAtom, nil
@@ -209,6 +229,8 @@ func (state *state) PersonalAtom(orderID [32]byte) ([]byte, error) {
 
 // PutForeignAtom into both persistent storage and in memory cache.
 func (state *state) PutForeignAtom(orderID [32]byte, atomDetails []byte) error {
+	state.swapMu.Lock()
+	defer state.swapMu.Unlock()
 	swap := state.swapCache[orderID]
 	swap.ForeignAtom = atomDetails
 	if err := state.WriteSwapDetails(orderID, swap); err != nil {
@@ -221,6 +243,8 @@ func (state *state) PutForeignAtom(orderID [32]byte, atomDetails []byte) error {
 // ForeignAtom tries to get the foreign atom details from in memory cache if
 // they do not exist it tries to read from the persistent storage.
 func (state *state) ForeignAtom(orderID [32]byte) ([]byte, error) {
+	state.swapMu.RLock()
+	defer state.swapMu.RUnlock()
 	swap := state.swapCache[orderID]
 	if bytes.Compare(swap.ForeignAtom, []byte{}) != 0 {
 		return swap.ForeignAtom, nil
@@ -235,6 +259,8 @@ func (state *state) ForeignAtom(orderID [32]byte) ([]byte, error) {
 
 // AtomsExist checks whether the atoms are created beforehand.
 func (state *state) AtomsExist(orderID [32]byte) bool {
+	state.swapMu.RLock()
+	defer state.swapMu.RUnlock()
 	swapAtomDetails, err := state.ReadSwapDetails(orderID)
 	if err != nil || (bytes.Compare(swapAtomDetails.PersonalAtom, []byte{}) == 0 && bytes.Compare(swapAtomDetails.ForeignAtom, []byte{}) == 0) {
 		return false
@@ -244,6 +270,8 @@ func (state *state) AtomsExist(orderID [32]byte) bool {
 
 // PutSwapTimestamp into both persistent storage and in memory cache.
 func (state *state) PutSwapTimestamp(orderID [32]byte) error {
+	state.swapMu.Lock()
+	defer state.swapMu.Unlock()
 	swap := state.swapCache[orderID]
 	swap.TimeStamp = time.Now().Unix()
 	if err := state.WriteSwapDetails(orderID, swap); err != nil {
@@ -256,6 +284,8 @@ func (state *state) PutSwapTimestamp(orderID [32]byte) error {
 // SwapTimestamp tries to get the redeem details from in memory cache if
 // they do not exist it tries to read from the persistent storage.
 func (state *state) SwapTimestamp(orderID [32]byte) (int64, error) {
+	state.swapMu.RLock()
+	defer state.swapMu.RUnlock()
 	swap := state.swapCache[orderID]
 	if swap.TimeStamp != 0 {
 		return swap.TimeStamp, nil
@@ -294,17 +324,17 @@ func (state *state) ReadSwapDetails(orderID [32]byte) (SwapDetails, error) {
 // PrintSwapDetails to Std Out
 func (state *state) PrintSwapDetails(swapDetails SwapDetails) {
 	fmt.Printf("\n\n\n\t\tSTATE UPDATED\n\n")
-	fmt.Printf("Timestamp: %d\n", swapDetails.TimeStamp)
-	fmt.Printf("Status: %s\n", swapDetails.Status)
-	fmt.Printf("Expiry: %d\n", swapDetails.Expiry)
-	fmt.Printf("Hash Lock: %s\n", base64.StdEncoding.EncodeToString(swapDetails.HashLock[:]))
-	fmt.Printf("Secret: %s\n", base64.StdEncoding.EncodeToString(swapDetails.Secret[:]))
-	fmt.Printf("Foreign Order ID: %s\n", base64.StdEncoding.EncodeToString(swapDetails.ForeignOrderID[:]))
-	fmt.Printf("Send Value: %v\n", swapDetails.SendValue)
-	fmt.Printf("Receive Value: %v\n", swapDetails.ReceiveValue)
-	fmt.Printf("Send Currency: %d\n", swapDetails.SendCurrency)
-	fmt.Printf("Receive Currency: %d\n", swapDetails.ReceiveCurrency)
-	fmt.Printf("Personal Atom: %v\n", hex.EncodeToString(swapDetails.PersonalAtom[:]))
-	fmt.Printf("Foreign Atom: %v\n", hex.EncodeToString(swapDetails.ForeignAtom[:]))
-	fmt.Println("-------------------------------------------------------------")
+	fmt.Printf("\tTimestamp: %d\n\n", swapDetails.TimeStamp)
+	fmt.Printf("\tStatus: %s\n\n", swapDetails.Status)
+	fmt.Printf("\tExpiry: %d\n\n", swapDetails.Expiry)
+	fmt.Printf("\tHash Lock: %s\n\n", base64.StdEncoding.EncodeToString(swapDetails.HashLock[:]))
+	fmt.Printf("\tSecret: %s\n\n", base64.StdEncoding.EncodeToString(swapDetails.Secret[:]))
+	fmt.Printf("\tForeign Order ID: %s\n\n", base64.StdEncoding.EncodeToString(swapDetails.ForeignOrderID[:]))
+	fmt.Printf("\tSend Value: %v\n\n", swapDetails.SendValue)
+	fmt.Printf("\tReceive Value: %v\n\n", swapDetails.ReceiveValue)
+	fmt.Printf("\tSend Currency: %d\n\n", swapDetails.SendCurrency)
+	fmt.Printf("\tReceive Currency: %d\n\n", swapDetails.ReceiveCurrency)
+	fmt.Printf("\tPersonal Atom: %v\n\n", hex.EncodeToString(swapDetails.PersonalAtom[:]))
+	fmt.Printf("\tForeign Atom: %v\n\n", hex.EncodeToString(swapDetails.ForeignAtom[:]))
+	fmt.Print("-------------------------------------------------------------\n\n\n")
 }

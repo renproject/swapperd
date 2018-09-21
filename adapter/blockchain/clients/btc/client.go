@@ -138,7 +138,7 @@ func (conn Conn) WaitTillMined(txHash *chainhash.Hash, confirmations int64) erro
 }
 
 func (conn Conn) GetUnspentOutputs(address string) (UnspentOutputs, error) {
-	resp, err := http.Get(fmt.Sprintf(conn.URL + "/unspent?active=" + address + "&confirmations=1"))
+	resp, err := http.Get(fmt.Sprintf(conn.URL + "/unspent?active=" + address + "&confirmations=0"))
 	if err != nil {
 		return UnspentOutputs{}, err
 	}
