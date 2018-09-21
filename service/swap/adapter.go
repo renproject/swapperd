@@ -4,14 +4,28 @@ import (
 	"math/big"
 
 	"github.com/republicprotocol/renex-swapper-go/domain/match"
-
 	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	"github.com/republicprotocol/renex-swapper-go/service/logger"
 	"github.com/republicprotocol/renex-swapper-go/service/state"
 )
 
+type Request struct {
+	UID                [32]byte    `json:"uid"`
+	TimeLock           int64       `json:"timeLock"`
+	Secret             [32]byte    `json:"secret"`
+	SecretHash         [32]byte    `json:"secretHash"`
+	SendToAddress      string      `json:"sendToAddress"`
+	ReceiveFromAddress string      `json:"receiveFromAddress"`
+	SendValue          *big.Int    `json:"sendValue"`
+	ReceiveValue       *big.Int    `json:"sendValue"`
+	SendToken          token.Token `json:"sendToken"`
+	ReceiveToken       token.Token `json:"receiveToken"`
+	GoesFirst          bool        `json:"goesFirst"`
+}
+
 type SwapperAdapter interface {
-	NewSwap(order.ID) (Atom, Atom, match.Match, Adapter, error)
+	NewSwap(order.ID, Request) (Atom, Atom, match.Match, Adapter, error)
 }
 
 type Adapter interface {
@@ -22,17 +36,11 @@ type Adapter interface {
 }
 
 type Atom interface {
-	Initiate(to []byte, hash [32]byte, value *big.Int, expiry int64) error
+	Initiate() error
 	Refund() error
 	AuditSecret() (secret [32]byte, err error)
 	Redeem(secret [32]byte) error
-	Audit() ([32]byte, []byte, *big.Int, int64, error)
-	WaitForCounterRedemption() error
-	Serialize() ([]byte, error)
-	Deserialize([]byte) error
-	GetFromAddress() ([]byte, error)
-	PriorityCode() uint32
-	RedeemedAt() (int64, error)
+	Audit() error
 }
 
 type Network interface {
