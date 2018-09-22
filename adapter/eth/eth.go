@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -11,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
+	swapDomain "github.com/republicprotocol/renex-swapper-go/domain/swap"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
@@ -20,12 +22,12 @@ type ethereumAtom struct {
 	context context.Context
 	client  Conn
 	key     keystore.EthereumKey
-	req     swap.Request
+	req     swapDomain.Request
 	binder  *RenExAtomicSwapper
 }
 
 // NewEthereumAtom returns a new Ethereum RequestAtom instance
-func NewEthereumAtom(conf config.EthereumNetwork, key keystore.EthereumKey, req swap.Request) (swap.Atom, error) {
+func NewEthereumAtom(conf config.EthereumNetwork, key keystore.EthereumKey, req swapDomain.Request) (swap.Atom, error) {
 	conn, err := NewConnWithConfig(conf)
 	if err != nil {
 		return nil, err
@@ -36,7 +38,7 @@ func NewEthereumAtom(conf config.EthereumNetwork, key keystore.EthereumKey, req 
 		return nil, err
 	}
 
-	addr, expiry, err := buildValues(req)
+	addr, expiry, err := buildValues(req, key.Address.String())
 	if err != nil {
 		return nil, err
 	}
@@ -45,6 +47,7 @@ func NewEthereumAtom(conf config.EthereumNetwork, key keystore.EthereumKey, req 
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Swap ID: ", hex.EncodeToString(id[:]))
 
 	req.TimeLock = expiry
 
@@ -60,6 +63,7 @@ func NewEthereumAtom(conf config.EthereumNetwork, key keystore.EthereumKey, req 
 
 // Initiate a new Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Initiate() error {
+	fmt.Println("Initiating the atomic swap on ethereum blockchain")
 	initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return err
@@ -79,12 +83,13 @@ func (atom *ethereumAtom) Initiate() error {
 	if err != nil {
 		return fmt.Errorf("Failed to initiate on the Ethereum blockchain: %v", err)
 	}
-
+	fmt.Println("Initiated the atomic swap on ethereum blockchain")
 	return nil
 }
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Refund() error {
+	fmt.Println("Refunding the atomic swap on ethereum blockchain")
 	refundable, err := atom.binder.Refundable(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return err
@@ -99,12 +104,14 @@ func (atom *ethereumAtom) Refund() error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("Refunded the atomic swap on ethereum blockchain")
 	return nil
 }
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) AuditSecret() ([32]byte, error) {
 	for {
+		fmt.Println("Waiting for counter party redemption ......  on ethereum blockchain")
 		secret, err := atom.binder.AuditSecret(&bind.CallOpts{}, atom.id)
 		if err != nil {
 			return [32]byte{}, err
@@ -123,6 +130,7 @@ func (atom *ethereumAtom) AuditSecret() ([32]byte, error) {
 // Audit an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Audit() error {
 	for {
+		fmt.Println("Waiting for counter party initiation ......  on ethereum blockchain")
 		auditReport, err := atom.binder.Audit(&bind.CallOpts{}, atom.id)
 		if err != nil {
 			return err
@@ -166,20 +174,20 @@ func (atom *ethereumAtom) Audit() error {
 
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Redeem(secret [32]byte) error {
+	fmt.Println("redeeming the atomic swap on ethereum blockchain")
+
 	prevGasLimit := atom.key.TransactOpts.GasLimit
 	atom.key.TransactOpts.GasLimit = 3000000
-	tx, err := atom.binder.Redeem(atom.key.TransactOpts, atom.id, secret)
+	_, err := atom.binder.Redeem(atom.key.TransactOpts, atom.id, secret)
 	atom.key.TransactOpts.GasLimit = prevGasLimit
-	if err == nil {
-		if _, err := atom.client.PatchedWaitMined(atom.context, tx); err != nil {
-			return err
-		}
-		return nil
+	if err != nil {
+		return err
 	}
-	return err
+	fmt.Println("redeemed the atomic swap on ethereum blockchain")
+	return nil
 }
 
-func buildValues(req swap.Request) (string, int64, error) {
+func buildValues(req swapDomain.Request, personalAddr string) (string, int64, error) {
 	var addr string
 	var expiry int64
 	if req.SendToken != token.ETH && req.ReceiveToken != token.ETH {
@@ -195,7 +203,7 @@ func buildValues(req swap.Request) (string, int64, error) {
 	if req.SendToken == token.ETH {
 		addr = req.SendToAddress
 	} else {
-		addr = req.ReceiveFromAddress
+		addr = personalAddr
 	}
 
 	return addr, expiry, nil
