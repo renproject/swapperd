@@ -8,8 +8,8 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
+	swapDomain "github.com/republicprotocol/renex-swapper-go/domain/swap"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
-	"github.com/republicprotocol/renex-swapper-go/service/swap"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -128,7 +128,7 @@ func addressToPubKeyHash(addr string, chainParams *chaincfg.Params) (*btcutil.Ad
 	return Addr, nil
 }
 
-func buildInitiateScript(personalAddress string, req swap.Request, Net *chaincfg.Params) ([]byte, string, error) {
+func buildInitiateScript(personalAddress string, req swapDomain.Request, Net *chaincfg.Params) ([]byte, string, error) {
 	var PayerAddress, SpenderAddress string
 	var locktime int64
 
