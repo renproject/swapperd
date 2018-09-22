@@ -47,16 +47,28 @@ func NewConn(chain, url string) (Conn, error) {
 	}, nil
 }
 
-func (conn *conn) GetFundingTransaction(address string) ([]byte, error) {
-	return nil, nil
-}
-
 func (conn *conn) GetScriptFromSpentP2SH(address string) ([]byte, error) {
-	return nil, nil
-}
-
-func (conn *conn) TransactionCount(address string) (int64, error) {
-	return 0, nil
+	for {
+		addrInfo, err := conn.GetRawAddressInformation(address)
+		if err != nil {
+			return nil, err
+		}
+		if addrInfo.TxCount > 1 {
+			break
+		}
+	}
+	addrInfo, err := conn.GetRawAddressInformation(address)
+	if err != nil {
+		return nil, err
+	}
+	for _, tx := range addrInfo.Transactions {
+		for i := range tx.Inputs {
+			if tx.Inputs[i].PrevOut.Address == addrInfo.Address {
+				return hex.DecodeString(tx.Inputs[0].Script)
+			}
+		}
+	}
+	return nil, fmt.Errorf("No spending transactions")
 }
 
 func (conn *conn) SignTransaction(tx *wire.MsgTx, key keystore.BitcoinKey, fee int64) (*wire.MsgTx, bool, error) {
@@ -85,7 +97,7 @@ func (conn *conn) SignTransaction(tx *wire.MsgTx, key keystore.BitcoinKey, fee i
 		if value <= 0 {
 			break
 		}
-		hashBytes, err := hex.DecodeString(j.TxID)
+		hashBytes, err := hex.DecodeString(j.TxHash)
 		if err != nil {
 			return nil, false, err
 		}
@@ -150,7 +162,7 @@ func (conn *conn) WaitTillMined(txHash *chainhash.Hash, confirmations int64) err
 }
 
 func (conn *conn) GetUnspentOutputs(address string) (UnspentOutputs, error) {
-	resp, err := http.Get(fmt.Sprintf(conn.URL + "/unspent?active=" + address + "&confirmations=1"))
+	resp, err := http.Get(fmt.Sprintf(conn.URL + "/unspent?active=" + address + "&confirmations=0"))
 	if err != nil {
 		return UnspentOutputs{}, err
 	}
@@ -199,6 +211,20 @@ func (conn *conn) GetRawTransaction(txhash string) (RawTransaction, error) {
 	return transaction, nil
 }
 
+func (conn *conn) GetRawAddressInformation(addr string) (RawAddress, error) {
+	resp, err := http.Get(fmt.Sprintf(conn.URL + "/rawaddr/" + addr))
+	if err != nil {
+		return RawAddress{}, err
+	}
+	defer resp.Body.Close()
+	addrBytes, err := ioutil.ReadAll(resp.Body)
+	addressInfo := RawAddress{}
+	if err := json.Unmarshal(addrBytes, &addressInfo); err != nil {
+		return RawAddress{}, err
+	}
+	return addressInfo, nil
+}
+
 func (conn *conn) Mined(txhash string, confirmations int64) (bool, error) {
 	if confirmations <= 0 {
 		return true, nil
@@ -241,6 +267,11 @@ type RawTransaction struct {
 	Outputs          []Output `json:"out"`
 }
 
+type RawAddress struct {
+	Address      string           `json:"address"`
+	TxCount      int64            `json:"n_tx"`
+	Transactions []RawTransaction `json:"txs"`
+}
 type Input struct {
 	PrevOut PreviousOut `json:"prev_out"`
 	Script  string      `json:"script"`
@@ -251,6 +282,7 @@ type PreviousOut struct {
 	Value            uint64 `json:"value"`
 	TransactionIndex uint64 `json:"tx_index"`
 	VoutNumber       uint8  `json:"n"`
+	Address          string `json:"addr"`
 }
 
 type Output struct {
@@ -268,7 +300,7 @@ type LatestBlock struct {
 }
 
 type UnspentOutput struct {
-	TxID         string `json:"tx_hash"`
+	TxHash       string `json:"tx_hash"`
 	Vout         uint32 `json:"tx_output_n"`
 	ScriptPubKey string `json:"script"`
 	Amount       int64  `json:"value"`
