@@ -2,6 +2,8 @@ package state
 
 import (
 	"encoding/json"
+	"fmt"
+	"sync"
 	"time"
 
 	"github.com/republicprotocol/renex-swapper-go/domain/swap"
@@ -17,15 +19,20 @@ type ActiveSwapList interface {
 	DeleteIfRedeemedOrExpired(orderID [32]byte) error
 }
 
-type SwapList struct {
+type ProtectedSwapList struct {
+	mu   *sync.RWMutex
 	List [][32]byte `json:"list"`
 }
 
-func (list *SwapList) Add(item [32]byte) {
+func (list *ProtectedSwapList) Add(item [32]byte) {
+	list.mu.Lock()
+	defer list.mu.Unlock()
 	list.List = append(list.List, item)
 }
 
-func (list *SwapList) Delete(item [32]byte) {
+func (list *ProtectedSwapList) Delete(item [32]byte) {
+	list.mu.Lock()
+	defer list.mu.Unlock()
 	for i, swap := range list.List {
 		if swap == item {
 			list.List = append(list.List[:i], list.List[i+1:]...)
@@ -34,11 +41,16 @@ func (list *SwapList) Delete(item [32]byte) {
 	}
 }
 
+func NewProtectedSwapList() ProtectedSwapList {
+	return ProtectedSwapList{
+		mu:   new(sync.RWMutex),
+		List: [][32]byte{},
+	}
+}
+
 func (state *state) AddSwap(orderID [32]byte) error {
-	state.swapMu.Lock()
-	defer state.swapMu.Unlock()
 	defer state.LogInfo(orderID, "adding swap to the active list")
-	pendingSwaps := SwapList{}
+	pendingSwaps := NewProtectedSwapList()
 	pendingSwapsRawBytes, err := state.Read([]byte("Pending Swaps:"))
 	if err == nil {
 		if err := json.Unmarshal(pendingSwapsRawBytes, &pendingSwaps); err != nil {
@@ -46,6 +58,11 @@ func (state *state) AddSwap(orderID [32]byte) error {
 		}
 	}
 	pendingSwaps.Add(orderID)
+	fmt.Print("Add to list")
+	if err := state.PutAddTimestamp(orderID); err != nil {
+		return err
+	}
+	fmt.Print("Add to list done")
 	pendingSwapsProcessedBytes, err := json.Marshal(pendingSwaps)
 	if err != nil {
 		return err
@@ -54,14 +71,12 @@ func (state *state) AddSwap(orderID [32]byte) error {
 }
 
 func (state *state) DeleteSwap(orderID [32]byte) error {
-	state.swapMu.Lock()
-	defer state.swapMu.Unlock()
 	defer state.LogInfo(orderID, "removing swap from the active list")
 	pendingSwapsRawBytes, err := state.Read([]byte("Pending Swaps:"))
 	if err != nil {
 		return err
 	}
-	pendingSwaps := SwapList{}
+	pendingSwaps := NewProtectedSwapList()
 	if err := json.Unmarshal(pendingSwapsRawBytes, &pendingSwaps); err != nil {
 		return err
 	}
@@ -74,13 +89,11 @@ func (state *state) DeleteSwap(orderID [32]byte) error {
 }
 
 func (state *state) PendingSwaps() ([][32]byte, error) {
-	state.swapMu.RLock()
-	defer state.swapMu.RUnlock()
 	pendingSwapsBytes, err := state.Read([]byte("Pending Swaps:"))
 	if err != nil {
 		return [][32]byte{}, nil
 	}
-	pendingSwaps := SwapList{}
+	pendingSwaps := NewProtectedSwapList()
 	if err := json.Unmarshal(pendingSwapsBytes, &pendingSwaps); err != nil {
 		return nil, err
 	}
@@ -94,7 +107,7 @@ func (state *state) ExecutableSwaps() ([][32]byte, error) {
 		return nil, err
 	}
 	for _, pendingSwap := range pendingSwaps {
-		if state.Status(pendingSwap) == swap.StatusComplained {
+		if state.Status(pendingSwap) == swap.StatusExpired {
 			continue
 		}
 		exectableSwaps = append(exectableSwaps, pendingSwap)
@@ -109,11 +122,8 @@ func (state *state) ExpiredSwaps() ([][32]byte, error) {
 	}
 	refundableSwaps := [][32]byte{}
 	for _, pendingSwap := range pendingSwaps {
-		_, expiry, err := state.InitiateDetails(pendingSwap)
-		if err != nil {
-			continue
-		}
-		if expiry < time.Now().Unix() {
+		swapDet := state.ReadSwapDetails(pendingSwap)
+		if swapDet.Request.TimeLock < time.Now().Unix() {
 			refundableSwaps = append(refundableSwaps, pendingSwap)
 		}
 	}
@@ -121,14 +131,14 @@ func (state *state) ExpiredSwaps() ([][32]byte, error) {
 }
 
 func (state *state) DeleteIfRefunded(orderID [32]byte) error {
-	if state.Status(orderID) == swap.StatusRefunded {
+	if state.Status(orderID) == swap.StatusExpired {
 		return state.DeleteSwap(orderID)
 	}
 	return nil
 }
 
 func (state *state) DeleteIfRedeemedOrExpired(orderID [32]byte) error {
-	if state.Status(orderID) == swap.StatusRedeemed || state.Status(orderID) == swap.StatusExpired {
+	if state.Status(orderID) == swap.StatusExpired || state.Status(orderID) == swap.StatusSettled {
 		return state.DeleteSwap(orderID)
 	}
 	return nil
