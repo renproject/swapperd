@@ -10,6 +10,7 @@ import (
 
 	"github.com/republicprotocol/renex-swapper-go/driver/config"
 	"github.com/republicprotocol/renex-swapper-go/driver/keystore"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 func main() {
@@ -21,18 +22,16 @@ func main() {
 	if err := cmd.Run(); err != nil {
 		panic(err)
 	}
-	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Enter a passphrase (this is used to encrypt your keystore files): ")
-	passphraseText, err := reader.ReadString('\n')
-	if err != nil {
-		panic(err)
+	bytePassphrase, err := terminal.ReadPassword(0)
+	if err == nil {
+		fmt.Println("\nPassphrase typed: " + string(bytePassphrase))
 	}
-	passphrase := strings.Trim(passphraseText, "\r\n")
+	passphrase := strings.Trim(string(bytePassphrase), "\r\n")
 	if err := keystore.GenerateFile(*loc, *repNet, passphrase); err != nil {
 		panic(err)
 	}
-	addr := readAddress(reader)
-
+	addr := readAddress()
 	cfg := config.New(*loc, *repNet)
 	cfg.AuthorizedAddresses = []string{addr}
 	config.SaveToFile(fmt.Sprintf("%s/config-%s.json", *loc, *repNet), cfg)
@@ -53,8 +52,9 @@ func getHome() string {
 	panic("unknown Operating System")
 }
 
-func readAddress(reader *bufio.Reader) string {
-	fmt.Print("Enter your RenEx ethereum address: ")
+func readAddress() string {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter your RenEx Ethereum address: ")
 	text, err := reader.ReadString('\n')
 	if err != nil {
 		panic(err)
@@ -64,8 +64,8 @@ func readAddress(reader *bufio.Reader) string {
 		addr = "0x" + addr
 	}
 	if len(addr) != 42 {
-		fmt.Println("Please enter a valid ethereum address")
-		return readAddress(reader)
+		fmt.Println("Please enter a valid Ethereum address")
+		return readAddress()
 	}
 	return addr
 }
