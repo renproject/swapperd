@@ -18,7 +18,7 @@ var ErrKeyFileExists = errors.New("Keystore file exists")
 var ErrKeyFileDoesNotExist = errors.New("Keystore file doesnot exist")
 
 // LoadFromFile
-func LoadFromFile(repNetwork, loc, passphrase string) keystore.Keystore {
+func LoadFromFile(repNetwork, loc, passphrase string) (keystore.Keystore, error) {
 	var ethLoc, btcLoc string
 	if passphrase == "" {
 		ethLoc = fmt.Sprintf("%s/ethereum-%s-unsafe.json", loc, repNetwork)
@@ -28,29 +28,35 @@ func LoadFromFile(repNetwork, loc, passphrase string) keystore.Keystore {
 		btcLoc = fmt.Sprintf("%s/bitcoin-%s.json", loc, repNetwork)
 	}
 
-	ethNet, btcNet := getSpecificNetworks(repNetwork)
+	ethNet, btcNet, err := getSpecificNetworks(repNetwork)
+	if err != nil {
+		return nil, err
+	}
 	ethKey, err := LoadKeyFromFile(ethLoc, "ethereum", ethNet, passphrase)
 	if err != nil {
-		panic("unimplemented")
+		return nil, err
 	}
 	btcKey, err := LoadKeyFromFile(btcLoc, "bitcoin", btcNet, passphrase)
 	if err != nil {
-		panic("unimplemented")
+		return nil, err
 	}
-	return keystore.New(btcKey, ethKey)
+	return keystore.New(btcKey, ethKey), nil
 }
 
-func GenerateRandom(repNetwork string) keystore.Keystore {
-	ethNet, btcNet := getSpecificNetworks(repNetwork)
+func GenerateRandom(repNetwork string) (keystore.Keystore, error) {
+	ethNet, btcNet, err := getSpecificNetworks(repNetwork)
+	if err != nil {
+		return nil, err
+	}
 	ethKey, err := keystore.RandomEthereumKey(ethNet)
 	if err != nil {
-		panic("unimplemented")
+		return nil, err
 	}
 	btcKey, err := keystore.RandomBitcoinKey(btcNet)
 	if err != nil {
-		panic("unimplemented")
+		return nil, err
 	}
-	return keystore.New(ethKey, btcKey)
+	return keystore.New(ethKey, btcKey), nil
 }
 
 // GenerateFile
@@ -63,7 +69,10 @@ func GenerateFile(loc string, repNetwork string, passphrase string) error {
 		ethLoc = fmt.Sprintf("%s/ethereum-%s.json", loc, repNetwork)
 		btcLoc = fmt.Sprintf("%s/bitcoin-%s.json", loc, repNetwork)
 	}
-	ethNet, btcNet := getSpecificNetworks(repNetwork)
+	ethNet, btcNet, err := getSpecificNetworks(repNetwork)
+	if err != nil {
+		return err
+	}
 	if err := StoreKeyToFile(ethLoc, "ethereum", ethNet, passphrase); err != nil {
 		return err
 	}
@@ -120,7 +129,7 @@ func generateRandomKey(chain, network, passphrase string) ([]byte, error) {
 	case "ethereum":
 		return GenerateRandomEthereumKey(passphrase)
 	default:
-		panic("unimplemented")
+		return nil, fmt.Errorf("Unsupported blockchain %s", chain)
 	}
 }
 
@@ -131,19 +140,19 @@ func decodeKey(data []byte, chain, network, passphrase string) (keystore.Key, er
 	case "ethereum":
 		return DecodeEthereumKey(data, network, passphrase)
 	default:
-		panic("unimplemented")
+		return nil, fmt.Errorf("Unsupported blockchain %s", chain)
 	}
 }
 
-func getSpecificNetworks(repNetwork string) (string, string) {
+func getSpecificNetworks(repNetwork string) (string, string, error) {
 	switch repNetwork {
 	case "nightly":
-		return "kovan", "testnet"
+		return "kovan", "testnet", nil
 	case "falcon":
-		return "kovan", "testnet"
+		return "kovan", "testnet", nil
 	case "testnet":
-		return "kovan", "testnet"
+		return "kovan", "testnet", nil
 	default:
-		panic("unimplemented")
+		return "", "", fmt.Errorf("Unknown RenEx network %s", repNetwork)
 	}
 }
