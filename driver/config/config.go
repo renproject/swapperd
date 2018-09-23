@@ -14,7 +14,7 @@ var Global = config.Config{
 	Version:             "0.1.0",
 	SupportedCurrencies: []string{"ETH", "BTC"},
 	Ethereum:            EthereumKovan,
-	Bitcoin:             BitcoinMainnet,
+	Bitcoin:             BitcoinTestnet,
 }
 
 // EthereumKovan is the ethereum config object on the kovan testnet
