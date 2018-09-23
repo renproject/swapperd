@@ -25,8 +25,8 @@ func main() {
 	}
 	fmt.Print("Enter a passphrase (this is used to encrypt your keystore files): ")
 	bytePassphrase, err := terminal.ReadPassword(0)
-	if err == nil {
-		fmt.Println("\nPassphrase typed: " + string(bytePassphrase))
+	if err != nil {
+		panic(err)
 	}
 	passphrase := strings.Trim(string(bytePassphrase), "\r\n")
 	if err := keystore.GenerateFile(*loc, *repNet, passphrase); err != nil {
@@ -40,7 +40,7 @@ func main() {
 
 func getHome() string {
 	system := runtime.GOOS
-	switch system{
+	switch system {
 	case "window":
 		return os.Getenv("userprofile")
 	case "linux", "darwin":
@@ -52,7 +52,7 @@ func getHome() string {
 
 func readAddress() string {
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter your RenEx Ethereum address: ")
+	fmt.Print("\nEnter your RenEx Ethereum address: ")
 	text, err := reader.ReadString('\n')
 	if err != nil {
 		panic(err)
