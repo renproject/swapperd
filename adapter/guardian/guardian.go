@@ -3,10 +3,11 @@ package guardian
 import (
 	"fmt"
 
-	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/btc"
-	"github.com/republicprotocol/renex-swapper-go/adapter/atoms/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/btc"
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
+	"github.com/republicprotocol/renex-swapper-go/adapter/eth"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
+	swapDomain "github.com/republicprotocol/renex-swapper-go/domain/swap"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	"github.com/republicprotocol/renex-swapper-go/service/guardian"
 	"github.com/republicprotocol/renex-swapper-go/service/logger"
@@ -17,52 +18,41 @@ import (
 type guardianAdapter struct {
 	config.Config
 	keystore.Keystore
-	swap.Network
 	logger.Logger
 	state.State
 }
 
-func New(conf config.Config, ks keystore.Keystore, net swap.Network, state state.State, logger logger.Logger) guardian.Adapter {
+func New(conf config.Config, ks keystore.Keystore, state state.State, logger logger.Logger) guardian.Adapter {
 	return &guardianAdapter{
 		Config:   conf,
 		Keystore: ks,
-		Network:  net,
 		State:    state,
 		Logger:   logger,
 	}
 }
 
 func (guardian *guardianAdapter) Refund(orderID [32]byte) error {
-	match, err := guardian.Match(orderID)
+	req, err := guardian.SwapRequest(orderID)
 	if err != nil {
 		return err
 	}
 
-	personalAtom, err := buildAtom(guardian.Network, guardian.Keystore, guardian.Config, match.SendCurrency(), match.PersonalOrderID())
+	personalAtom, err := buildAtom(guardian.Keystore, guardian.Config, req.SendToken, req)
 	if err != nil {
-		return err
-	}
-
-	details, err := guardian.PersonalAtom(match.PersonalOrderID())
-	if err != nil {
-		return err
-	}
-
-	if err := personalAtom.Deserialize(details); err != nil {
 		return err
 	}
 
 	return personalAtom.Refund()
 }
 
-func buildAtom(network swap.Network, key keystore.Keystore, config config.Config, t token.Token, orderID [32]byte) (swap.Atom, error) {
+func buildAtom(key keystore.Keystore, config config.Config, t token.Token, req swapDomain.Request) (swap.Atom, error) {
 	switch t {
 	case token.BTC:
 		btcKey := key.GetKey(t).(keystore.BitcoinKey)
-		return btc.NewBitcoinAtom(network, config.Bitcoin, btcKey, orderID)
+		return btc.NewBitcoinAtom(config.Bitcoin, btcKey, req)
 	case token.ETH:
 		ethKey := key.GetKey(t).(keystore.EthereumKey)
-		return eth.NewEthereumAtom(network, config.Ethereum, ethKey, orderID)
+		return eth.NewEthereumAtom(config.Ethereum, ethKey, req)
 	}
 	return nil, fmt.Errorf("Atom Build Failed")
 }
