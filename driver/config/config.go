@@ -61,7 +61,7 @@ func New(loc, net string) config.Config {
 	case "nightly":
 		conf.RenEx.Orderbook = ""
 		conf.RenEx.Settlement = ""
-		conf.Ethereum.Swapper = "0xa80c64Cc2c3e29B44CaB2475F6eAd0D523715A4E"
+		conf.Ethereum.Swapper = "0x9231e9859c8773C17ac896B7fa505AB271F14ea4"
 	case "falcon":
 		conf.RenEx.Orderbook = ""
 		conf.RenEx.Settlement = ""
