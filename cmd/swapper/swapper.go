@@ -34,7 +34,10 @@ func main() {
 	flag.Parse()
 
 	conf := configDriver.New(*location, *repNet)
-	ks := keystoreDriver.LoadFromFile(*repNet, *location, *keyphrase)
+	ks, err := keystoreDriver.LoadFromFile(*repNet, *location, *keyphrase)
+	if err != nil {
+		panic(err)
+	}
 	db, err := storeDriver.NewLevelDB(conf.StoreLocation)
 	if err != nil {
 		panic(err)
@@ -50,7 +53,7 @@ func main() {
 	}
 
 	renexSwapper := renex.NewRenEx(renexAdapter.New(conf, ks, ingressNet, nopWatchdog, state, logger, binder))
-	guardian := guardian.NewGuardian(guardianAdapter.New(conf, ks, ingressNet, state, logger))
+	guardian := guardian.NewGuardian(guardianAdapter.New(conf, ks, state, logger))
 
 	errCh1 := renexSwapper.Start()
 	renexSwapper.Notify()
