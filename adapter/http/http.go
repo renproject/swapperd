@@ -6,9 +6,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
-	"github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
+	"github.com/republicprotocol/renex-swapper-go/adapter/btc"
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
+	"github.com/republicprotocol/renex-swapper-go/adapter/eth"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	"github.com/republicprotocol/renex-swapper-go/service/renex"
