@@ -2,21 +2,21 @@ package utils
 
 import (
 	"os"
+	"runtime"
 
 	"github.com/btcsuite/btcd/chaincfg"
 )
 
 func GetHome() string {
-	winHome := os.Getenv("userprofile")
-	unixHome := os.Getenv("HOME")
-	if winHome != "" {
-		return winHome
+	system := runtime.GOOS
+	switch system{
+	case "window":
+		return os.Getenv("userprofile")
+	case "linux", "darwin":
+		return os.Getenv("HOME")
+	default:
+		panic("unknown Operating System")
 	}
-
-	if unixHome != "" {
-		return unixHome
-	}
-	panic("unknown Operating System")
 }
 
 func GetChainParams(network string) *chaincfg.Params {
