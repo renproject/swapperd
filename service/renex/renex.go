@@ -1,10 +1,12 @@
 package renex
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
 	"log"
+	"time"
 
-	"github.com/republicprotocol/renex-swapper-go/domain/order"
 	"github.com/republicprotocol/renex-swapper-go/domain/swap"
 )
 
@@ -68,10 +70,22 @@ func (renex *renex) SwapMultiple(swaps [][32]byte, errs chan error) {
 			}
 			renex.swapStatuses[swaps[i]] = true
 			if err := renex.Swap(swaps[i]); err != nil {
-				errs <- err
+				select {
+				case _, ok := <-renex.doneCh:
+					if !ok {
+						return
+					}
+				case errs <- err:
+				}
 			}
 			if err := renex.DeleteIfRedeemedOrExpired(swaps[i]); err != nil {
-				errs <- err
+				select {
+				case _, ok := <-renex.doneCh:
+					if !ok {
+						return
+					}
+				case errs <- err:
+				}
 			}
 			renex.swapStatuses[swaps[i]] = false
 		}(i)
@@ -91,105 +105,89 @@ func (renex *renex) Stop() {
 }
 
 func (renex *renex) Swap(orderID [32]byte) error {
-	if renex.Status(orderID) == swap.StatusUnknown {
-		if err := renex.initiate(orderID); err != nil {
-			renex.LogError(orderID, fmt.Sprintf("failed to initiate the watcher on %v", err))
-			return fmt.Errorf("failed to initiate the watcher on %v", err)
+	if renex.Status(orderID) == swap.StatusOpen {
+		req, err := renex.buildRequest(orderID)
+		if err != nil {
+			return err
 		}
-	} else {
-		renex.LogInfo(orderID, "skipping watcher initiation")
+		if err := renex.PutSwapRequest(orderID, req); err != nil {
+			return err
+		}
+		if err := renex.PutStatus(orderID, swap.StatusSettling); err != nil {
+			return err
+		}
 	}
 
-	if renex.Status(orderID) == "PENDING" {
-		if err := renex.getMatch(orderID); err != nil {
-			renex.LogError(orderID, fmt.Sprintf("failed to get the matching order %v", err))
-			return fmt.Errorf("failed to get the matching order %v", err)
+	if renex.Status(orderID) == swap.StatusSettling {
+		req, err := renex.SwapRequest(orderID)
+		if err != nil {
+			return err
 		}
-	} else {
-		renex.LogInfo(orderID, "skipping get match")
-	}
-
-	if renex.Status(orderID) == "MATCHED" {
-		if err := renex.setInfo(orderID); err != nil {
-			renex.LogError(orderID, fmt.Sprintf("failed to send address %v", err))
-			return fmt.Errorf("failed to send address %v", err)
+		swapInst, err := renex.NewSwap(req)
+		if err != nil {
+			return err
 		}
-	} else {
-		renex.LogInfo(orderID, "skipping address submission")
-	}
-
-	if renex.Status(orderID) != "REDEEMED" && renex.Status(orderID) != "REFUNDED" && renex.Status(orderID) != swap.StatusComplained {
-		if err := renex.execute(orderID); err != nil {
-			renex.LogError(orderID, fmt.Sprintf("failed to execute the atomic swap %v", err))
-			return fmt.Errorf("failed to execute the atomic swap %v", err)
+		if err := swapInst.Execute(); err != nil {
+			return err
 		}
-	} else {
-		renex.LogInfo(orderID, "skipping address submission")
+		if err := renex.PutStatus(orderID, swap.StatusSettled); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (renex *renex) initiate(orderID [32]byte) error {
-	renex.LogInfo(orderID, "starting the atomic swap")
-
-	if err := renex.PutStatus(orderID, swap.StatusPending); err != nil {
-		return err
-	}
-
-	renex.LogInfo(orderID, "started the atomic swap")
-	return nil
-}
-
-func (renex *renex) getMatch(orderID [32]byte) error {
-	renex.LogInfo(orderID, "waiting for the match to be found")
-
-	timeStamp, err := renex.SwapTimestamp(orderID)
+func (renex *renex) buildRequest(orderID [32]byte) (swap.Request, error) {
+	fmt.Println("Building Request.... ")
+	req := swap.Request{}
+	timeStamp, err := renex.AddTimestamp(orderID)
 	if err != nil {
-		return err
+		return req, err
 	}
 
-	match, err := renex.GetOrderMatch(orderID, timeStamp+48*60*60)
+	req.UID = orderID
+	ordMatch, err := renex.GetOrderMatch(orderID, timeStamp+48*60*60)
 	if err != nil {
-		renex.LogInfo(orderID, "deleting expired or unauthorized order")
-		return renex.PutStatus(orderID, swap.StatusExpired)
+		return req, err
 	}
 
-	if err := renex.PutMatch(orderID, match); err != nil {
-		return err
+	sendToAddress, receiveFromAddress := renex.GetAddresses(ordMatch.ReceiveToken, ordMatch.SendToken)
+	req.SendToken = ordMatch.SendToken
+	req.ReceiveToken = ordMatch.ReceiveToken
+	req.SendValue = ordMatch.SendValue
+	req.ReceiveValue = ordMatch.ReceiveValue
+
+	if req.SendToken > req.ReceiveToken {
+		req.GoesFirst = true
+		rand.Read(req.Secret[:])
+		req.SecretHash = sha256.Sum256(req.Secret[:])
+		req.TimeLock = time.Now().Unix() + 48*60*60
+	} else {
+		req.GoesFirst = false
 	}
 
-	if err := renex.PutStatus(orderID, swap.StatusMatched); err != nil {
-		return err
+	if err := renex.SendSwapDetails(req.UID, SwapDetails{
+		SecretHash:         req.SecretHash,
+		TimeLock:           req.TimeLock,
+		SendToAddress:      sendToAddress,
+		ReceiveFromAddress: receiveFromAddress,
+	}); err != nil {
+		return req, err
 	}
 
-	renex.LogInfo(orderID, fmt.Sprintf("<----------> (%s)", order.Fmt(match.ForeignOrderID())))
-	return nil
-}
-
-func (renex *renex) setInfo(orderID [32]byte) error {
-	renex.LogInfo(orderID, "submitting address")
-	m, err := renex.Match(orderID)
+	foreignDetails, err := renex.ReceiveSwapDetails(ordMatch.ForeignOrderID, timeStamp+48*60*60)
 	if err != nil {
-		return err
+		return req, err
 	}
 
-	if err := renex.SendOwnerAddress(orderID, renex.GetAddress(m.ReceiveCurrency())); err != nil {
-		return err
+	req.SendToAddress = foreignDetails.SendToAddress
+	req.ReceiveFromAddress = foreignDetails.ReceiveFromAddress
+	if !req.GoesFirst {
+		req.SecretHash = foreignDetails.SecretHash
+		req.TimeLock = foreignDetails.TimeLock
 	}
 
-	if err := renex.PutStatus(orderID, swap.StatusInfoSubmitted); err != nil {
-		return err
-	}
-
-	renex.LogInfo(orderID, "submitted the address")
-	return nil
-}
-
-func (renex *renex) execute(orderID [32]byte) error {
-	swap, err := renex.NewSwap(orderID)
-	if err != nil {
-		return err
-	}
-	return swap.Execute()
+	fmt.Println("Request Build.... Success")
+	return req, nil
 }

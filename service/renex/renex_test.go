@@ -3,10 +3,10 @@ package renex_test
 import (
 	"crypto/rand"
 	"math/big"
-	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/republicprotocol/renex-swapper-go/domain/match"
+	"github.com/republicprotocol/renex-swapper-go/domain/swap"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	"github.com/republicprotocol/renex-swapper-go/utils"
 
@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/republicprotocol/renex-swapper-go/service/renex"
 	"github.com/republicprotocol/renex-swapper-go/service/state"
-	swapService "github.com/republicprotocol/renex-swapper-go/service/swap"
 
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
@@ -55,38 +54,44 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		ksA := keystore.New(btcKeyA, ethKeyA)
 		ksB := keystore.New(btcKeyB, ethKeyB)
 
-		return config, ksA, ksB
+		return config, ksB, ksA
 	}
 
-	buildMatches := func() (match.Match, match.Match) {
+	buildMatches := func() (swap.Match, swap.Match) {
 		var aliceOrderID, bobOrderID [32]byte
 		rand.Read(aliceOrderID[:])
 		rand.Read(bobOrderID[:])
 
-		aliceCurrency := token.BTC
-		bobCurrency := token.ETH
+		aliceToken := token.BTC
+		bobToken := token.ETH
 
-		aliceSendValue := big.NewInt(10000)
-		bobSendValue := big.NewInt(10000)
-		aliceReceiveValue := big.NewInt(10000)
-		bobReceiveValue := big.NewInt(10000)
+		aliceSendValue := big.NewInt(30000)
+		bobSendValue := big.NewInt(30000)
+		aliceReceiveValue := big.NewInt(30000)
+		bobReceiveValue := big.NewInt(30000)
 
-		aliceOrder := match.NewMatch(aliceOrderID, bobOrderID, aliceSendValue, aliceReceiveValue, aliceCurrency, bobCurrency)
-		bobOrder := match.NewMatch(bobOrderID, aliceOrderID, bobSendValue, bobReceiveValue, bobCurrency, aliceCurrency)
+		aliceOrder := swap.Match{
+			PersonalOrderID: aliceOrderID,
+			ForeignOrderID:  bobOrderID,
+			SendValue:       aliceSendValue,
+			ReceiveValue:    aliceReceiveValue,
+			SendToken:       aliceToken,
+			ReceiveToken:    bobToken,
+		}
+
+		bobOrder := swap.Match{
+			PersonalOrderID: bobOrderID,
+			ForeignOrderID:  aliceOrderID,
+			SendValue:       bobSendValue,
+			ReceiveValue:    bobReceiveValue,
+			SendToken:       bobToken,
+			ReceiveToken:    aliceToken,
+		}
 
 		return aliceOrder, bobOrder
 	}
 
-	sendAddresses := func(aliceOrderID, bobOrderID [32]byte, aliceKS, bobKS keystore.Keystore, net swapService.Network) {
-		AliceBtcKey := aliceKS.GetKey(token.BTC).(keystore.BitcoinKey)
-		BobEthKey := bobKS.GetKey(token.ETH).(keystore.EthereumKey)
-		err := net.SendOwnerAddress(aliceOrderID, []byte(AliceBtcKey.AddressString))
-		Expect(err).Should(BeNil())
-		err = net.SendOwnerAddress(bobOrderID, []byte(BobEthKey.Address.String()))
-		Expect(err).Should(BeNil())
-	}
-
-	buildRenExWatchers := func(aliceMatch, bobMatch match.Match, cfg config.Config, ksA, ksB keystore.Keystore, net swapService.Network) (RenEx, RenEx) {
+	buildRenExWatchers := func(aliceMatch, bobMatch swap.Match, cfg config.Config, ksA, ksB keystore.Keystore, net Network) (RenEx, RenEx) {
 		wd := watchdog.NewMock()
 		loggr := loggerDriver.NewStdOut()
 
@@ -112,35 +117,37 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		conf, ksA, ksB := buildConfigs()
 		matchA, matchB := buildMatches()
 		net := networkDriver.NewMock()
-		sendAddresses(matchA.PersonalOrderID(), matchB.PersonalOrderID(), ksA, ksB, net)
 		alice, bob := buildRenExWatchers(matchA, matchB, conf, ksA, ksB, net)
-		return matchA.PersonalOrderID(), matchB.PersonalOrderID(), alice, bob
+		return matchA.PersonalOrderID, matchB.PersonalOrderID, alice, bob
 	}
 
 	It("can do an eth - btc atomic swap using renex", func() {
 		aliceID, bobID, alice, bob := buildRenExSwappers()
-		wg := &sync.WaitGroup{}
-		wg.Add(1)
+
 		go func() {
-			defer wg.Done()
 			defer GinkgoRecover()
 			err := <-alice.Start()
 			Expect(err).ShouldNot(HaveOccurred())
 		}()
 
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			defer GinkgoRecover()
 			err := <-bob.Start()
 			Expect(err).ShouldNot(HaveOccurred())
 		}()
 
-		alice.Add(aliceID)
+		Expect(alice.Add(aliceID)).Should(BeNil())
 		alice.Notify()
-		bob.Add(bobID)
+
+		Expect(bob.Add(bobID)).Should(BeNil())
 		bob.Notify()
 
-		wg.Wait()
+		for {
+			if alice.Status(aliceID) == swap.StatusSettled && bob.Status(bobID) == swap.StatusSettled {
+				break
+			}
+			time.Sleep(5 * time.Second)
+		}
+
 	})
 })
