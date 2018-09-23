@@ -1,65 +1,40 @@
 package network
 
 import (
-	"bytes"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/republicprotocol/renex-swapper-go/domain/order"
-	"github.com/republicprotocol/renex-swapper-go/service/swap"
+	"github.com/republicprotocol/renex-swapper-go/service/renex"
 )
 
 type mock struct {
-	traderAddresses   map[order.ID][]byte
-	traderSwapDetails map[order.ID][]byte
+	traderSwapDetails map[[32]byte]renex.SwapDetails
 	mu                *sync.RWMutex
 }
 
-func NewMock() swap.Network {
+func NewMock() renex.Network {
 	return &mock{
-		traderAddresses:   map[order.ID][]byte{},
-		traderSwapDetails: map[order.ID][]byte{},
+		traderSwapDetails: map[[32]byte]renex.SwapDetails{},
 		mu:                new(sync.RWMutex),
 	}
 }
 
-func (mock *mock) SendOwnerAddress(orderID order.ID, address []byte) error {
-	mock.mu.Lock()
-	defer mock.mu.Unlock()
-	mock.traderAddresses[orderID] = address
-	return nil
-}
-
-func (mock *mock) SendSwapDetails(orderID order.ID, swapDetails []byte) error {
+func (mock *mock) SendSwapDetails(orderID [32]byte, swapDetails renex.SwapDetails) error {
 	mock.mu.Lock()
 	defer mock.mu.Unlock()
 	mock.traderSwapDetails[orderID] = swapDetails
 	return nil
 }
 
-func (mock *mock) ReceiveOwnerAddress(orderID order.ID, waitTill int64) ([]byte, error) {
+func (mock *mock) ReceiveSwapDetails(orderID [32]byte, waitTill int64) (renex.SwapDetails, error) {
+	det := renex.SwapDetails{}
 	for {
-		mock.mu.Lock()
-		details := mock.traderAddresses[orderID]
-		mock.mu.Unlock()
-		if bytes.Compare(details, []byte{}) != 0 {
-			return details, nil
-		}
-		if time.Now().Unix() > waitTill {
-			break
-		}
-		time.Sleep(10 * time.Second)
-	}
-	return []byte{}, fmt.Errorf("Timed Out")
-}
-
-func (mock *mock) ReceiveSwapDetails(orderID order.ID, waitTill int64) ([]byte, error) {
-	for {
-		mock.mu.Lock()
+		mock.mu.RLock()
 		details := mock.traderSwapDetails[orderID]
-		mock.mu.Unlock()
-		if bytes.Compare(details, []byte{}) != 0 {
+		mock.mu.RUnlock()
+		if details != det {
 			return details, nil
 		}
 		if time.Now().Unix() > waitTill {
@@ -67,5 +42,5 @@ func (mock *mock) ReceiveSwapDetails(orderID order.ID, waitTill int64) ([]byte, 
 		}
 		time.Sleep(10 * time.Second)
 	}
-	return []byte{}, fmt.Errorf("Timed Out")
+	return det, fmt.Errorf("Timed Out")
 }

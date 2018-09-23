@@ -27,16 +27,16 @@ package network_test
 // 		return NewIngress(fmt.Sprintf("renex-ingress-%s.herokuapp.com", network), ethKeyA)
 // 	}
 
-// 	randomDetails := func() (order.ID, []byte, error) {
+// 	randomDetails := func() ([32]byte, []byte, error) {
 // 		orderID := [32]byte{}
 // 		address := make([]byte, 20)
 // 		if _, err := rand.Read(orderID[:]); err != nil {
-// 			return order.ID{}, nil, err
+// 			return [32]byte{}, nil, err
 // 		}
 // 		if _, err := rand.Read(address); err != nil {
-// 			return order.ID{}, nil, err
+// 			return [32]byte{}, nil, err
 // 		}
-// 		return order.ID(orderID), address, nil
+// 		return [32]byte(orderID), address, nil
 // 	}
 
 // 	Context("when communicating with nightly ingress", func() {
