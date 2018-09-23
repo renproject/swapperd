@@ -1,8 +1,7 @@
 package eth
 
 import (
-	"context"
-	"encoding/hex"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"math/big"
@@ -14,16 +13,17 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 	swapDomain "github.com/republicprotocol/renex-swapper-go/domain/swap"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
+	"github.com/republicprotocol/renex-swapper-go/service/logger"
 	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
 type ethereumAtom struct {
-	id      [32]byte
-	context context.Context
-	client  Conn
-	key     keystore.EthereumKey
-	req     swapDomain.Request
-	binder  *RenExAtomicSwapper
+	id     [32]byte
+	client Conn
+	key    keystore.EthereumKey
+	req    swapDomain.Request
+	logger logger.Logger
+	binder *RenExAtomicSwapper
 }
 
 // NewEthereumAtom returns a new Ethereum RequestAtom instance
@@ -47,28 +47,31 @@ func NewEthereumAtom(conf config.EthereumNetwork, key keystore.EthereumKey, req 
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Swap ID: ", hex.EncodeToString(id[:]))
 
+	fmt.Printf("Swap ID: %s\n", base64.StdEncoding.EncodeToString(id[:]))
+	// logger.LogDebug(req.UID, fmt.Sprintf("Swap ID: %s", base64.StdEncoding.EncodeToString(id[:])))
 	req.TimeLock = expiry
 
 	return &ethereumAtom{
-		context: context.Background(),
-		client:  conn,
-		key:     key,
-		binder:  contract,
-		req:     req,
-		id:      id,
+		client: conn,
+		key:    key,
+		binder: contract,
+		// logger:  logger,
+		req: req,
+		id:  id,
 	}, nil
 }
 
 // Initiate a new Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Initiate() error {
-	fmt.Println("Initiating the atomic swap on ethereum blockchain")
+	// atom.logger.LogInfo(atom.req.UID, "Initiating on Ethereum blockchain")
+	fmt.Println("Initiating on Ethereum blockchain")
 	initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return err
 	}
 	if !initiatable {
+		//		atom.logger.LogInfo(atom.req.UID, "Skipping initiation as it is already initiated")
 		return swap.ErrSwapAlreadyInitiated
 	}
 
@@ -79,11 +82,12 @@ func (atom *ethereumAtom) Initiate() error {
 	_, err = atom.binder.Initiate(atom.key.TransactOpts, atom.id, common.HexToAddress(atom.req.SendToAddress), atom.req.SecretHash, big.NewInt(atom.req.TimeLock))
 	atom.key.TransactOpts.Value = prevValue
 	atom.key.TransactOpts.GasLimit = prevGasLimit
-
 	if err != nil {
 		return fmt.Errorf("Failed to initiate on the Ethereum blockchain: %v", err)
 	}
 	fmt.Println("Initiated the atomic swap on ethereum blockchain")
+	// atom.logger.LogInfo(atom.req.UID,
+	// 	fmt.Sprintf("Initiated the atomic swap on ethereum blockchain (TX Hash): %s", tx.Hash().String()))
 	return nil
 }
 
@@ -95,7 +99,7 @@ func (atom *ethereumAtom) Refund() error {
 		return err
 	}
 	if !refundable {
-		return swap.ErrNotRefundable
+		return swap.ErrSwapAlreadyRedeemedOrRefunded
 	}
 	prevGasLimit := atom.key.TransactOpts.GasLimit
 	atom.key.TransactOpts.GasLimit = 3000000
@@ -175,10 +179,16 @@ func (atom *ethereumAtom) Audit() error {
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Redeem(secret [32]byte) error {
 	fmt.Println("redeeming the atomic swap on ethereum blockchain")
-
+	redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
+	if err != nil {
+		return err
+	}
+	if !redeemable {
+		return swap.ErrSwapAlreadyRedeemedOrRefunded
+	}
 	prevGasLimit := atom.key.TransactOpts.GasLimit
 	atom.key.TransactOpts.GasLimit = 3000000
-	_, err := atom.binder.Redeem(atom.key.TransactOpts, atom.id, secret)
+	_, err = atom.binder.Redeem(atom.key.TransactOpts, atom.id, secret)
 	atom.key.TransactOpts.GasLimit = prevGasLimit
 	if err != nil {
 		return err
