@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/republicprotocol/renex-ingress-go/httpadapter"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/domain/order"
 	"github.com/republicprotocol/renex-swapper-go/service/renex"
 	"github.com/republicprotocol/renex-swapper-go/utils"
 )

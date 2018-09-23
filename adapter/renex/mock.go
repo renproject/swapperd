@@ -1,7 +1,6 @@
 package renex
 
 import (
-	"github.com/republicprotocol/renex-swapper-go/domain/order"
 	"github.com/republicprotocol/renex-swapper-go/domain/swap"
 )
 

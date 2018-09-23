@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/republicprotocol/renex-swapper-go/domain/order"
 	"github.com/republicprotocol/renex-swapper-go/service/renex"
 )
 

@@ -83,7 +83,7 @@ func (atom *bitcoinAtom) Initiate() error {
 		return err
 	}
 
-	if bal, err := atom.Balance(atom.scriptAddr); bal != atom.req.SendValue.Int64() || err != nil {
+	if bal, err := atom.Balance(atom.scriptAddr); bal == atom.req.SendValue.Int64() || err != nil {
 		if err != nil {
 			return err
 		}
