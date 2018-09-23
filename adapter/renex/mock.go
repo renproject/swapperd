@@ -6,11 +6,11 @@ import (
 )
 
 type mockBinder struct {
-	orderbook map[order.ID]swap.Match
+	orderbook map[[32]byte]swap.Match
 }
 
 func NewMockBinder(matches ...swap.Match) (Binder, error) {
-	orderbook := map[order.ID]swap.Match{}
+	orderbook := map[[32]byte]swap.Match{}
 	for _, match := range matches {
 		orderbook[match.PersonalOrderID] = match
 	}
@@ -20,7 +20,7 @@ func NewMockBinder(matches ...swap.Match) (Binder, error) {
 }
 
 // GetOrderMatch gets the order match from the mock renex adapter.
-func (binder *mockBinder) GetOrderMatch(orderID order.ID, waitTill int64) (swap.Match, error) {
+func (binder *mockBinder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Match, error) {
 	return binder.orderbook[orderID], nil
 }
 

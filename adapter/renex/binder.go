@@ -18,7 +18,7 @@ var (
 )
 
 type Binder interface {
-	GetOrderMatch(orderID order.ID, waitTill int64) (swap.Match, error)
+	GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Match, error)
 }
 
 type binder struct {
@@ -52,7 +52,7 @@ func NewBinder(conf config.Config) (Binder, error) {
 
 // GetOrderMatch checks if a match is found and returns the match object. It
 // keeps doing it until an order match is found or the waitTill time.
-func (binder *binder) GetOrderMatch(orderID order.ID, waitTill int64) (swap.Match, error) {
+func (binder *binder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Match, error) {
 	if err := binder.verifyOrder(orderID, waitTill); err != nil {
 		return swap.Match{}, err
 	}
@@ -86,7 +86,7 @@ func (binder *binder) GetOrderMatch(orderID order.ID, waitTill int64) (swap.Matc
 	}
 }
 
-func (binder *binder) verifyOrder(orderID order.ID, waitTill int64) error {
+func (binder *binder) verifyOrder(orderID [32]byte, waitTill int64) error {
 	for {
 		addr, err := binder.Orderbook.OrderTrader(&bind.CallOpts{}, orderID)
 		if err != nil || bytes.Compare(addr.Bytes(), []byte{}) == 0 {
