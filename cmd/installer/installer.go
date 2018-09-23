@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"os"
@@ -23,12 +24,8 @@ func main() {
 	if err := cmd.Run(); err != nil {
 		panic(err)
 	}
-	fmt.Print("Enter a passphrase (this is used to encrypt your keystore files): ")
-	bytePassphrase, err := terminal.ReadPassword(0)
-	if err != nil {
-		panic(err)
-	}
-	passphrase := strings.Trim(string(bytePassphrase), "\r\n")
+	fmt.Println("The following passphrase is used to encrypt your keystore files")
+	passphrase := readPassphrase()
 	if err := keystore.GenerateFile(*loc, *repNet, passphrase); err != nil {
 		panic(err)
 	}
@@ -46,13 +43,13 @@ func getHome() string {
 	case "linux", "darwin":
 		return os.Getenv("HOME")
 	default:
-		panic("unknown Operating System")
+		panic("unknown operating system")
 	}
 }
 
 func readAddress() string {
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("\nEnter your RenEx Ethereum address: ")
+	fmt.Print("enter your RenEx Ethereum address: ")
 	text, err := reader.ReadString('\n')
 	if err != nil {
 		panic(err)
@@ -66,4 +63,24 @@ func readAddress() string {
 		return readAddress()
 	}
 	return addr
+}
+
+func readPassphrase() string {
+	fmt.Print("passphrase: ")
+	bytePassphrase, err := terminal.ReadPassword(0)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println()
+	fmt.Print("reenter passphrase: ")
+	bytePassphraseReenter, err := terminal.ReadPassword(0)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println()
+	if bytes.Compare(bytePassphrase, bytePassphraseReenter) != 0 {
+		fmt.Println("passphrase mismatch, please try again")
+		return readPassphrase()
+	}
+	return strings.Trim(string(bytePassphrase), "\r\n")
 }

@@ -33,14 +33,17 @@ fi
 unzip swapper.zip
 chmod +x bin/swapper
 chmod +x bin/installer
+chmod +x bin/install.sh
 
 ./bin/installer < /dev/tty
+./bin/install.sh
 
 # clean up zip files
 rm swapper.zip
 
 # clean up installer files
 rm bin/installer
+rm bin/install.sh
 
 # make sure the binary is installed in the path
 if ! [ -x "$(command -v swapper)" ]; then

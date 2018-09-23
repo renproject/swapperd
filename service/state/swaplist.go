@@ -2,7 +2,6 @@ package state
 
 import (
 	"encoding/json"
-	"fmt"
 	"sync"
 	"time"
 
@@ -58,11 +57,9 @@ func (state *state) AddSwap(orderID [32]byte) error {
 		}
 	}
 	pendingSwaps.Add(orderID)
-	fmt.Print("Add to list")
 	if err := state.PutAddTimestamp(orderID); err != nil {
 		return err
 	}
-	fmt.Print("Add to list done")
 	pendingSwapsProcessedBytes, err := json.Marshal(pendingSwaps)
 	if err != nil {
 		return err

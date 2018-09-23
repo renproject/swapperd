@@ -1,6 +1,6 @@
 # RenEx Atomic Swapper
 
-The RenEx Atomic Swapper is built and officially supported by, the Republic Protocol team. It can be used to execute atomic swaps between Ethereum and Bitcoin, and while it can be used independently of RenEx, it is designed for use with https://testnet.ren.exchange. Using this software, traders will be able to open Ethereum to Bitcoin orders on https://testnet.ren.exchange.
+The RenEx Atomic Swapper is built and officially supported by, the Republic Protocol team. It can be used to execute atomic swaps between Ethereum and Bitcoin, and while it can be used independently of RenEx, it is designed for use with https://ren.exchange. Using this software, traders will be able to open Ethereum to Bitcoin orders on https://ren.exchange.
     
 ## Installation
 
@@ -8,9 +8,7 @@ The RenEx Atomic Swapper is built and officially supported by, the Republic Prot
 
 #### Prerequisites
 
-1. Bitcoin Node
-2. Curl
-3. Metamask
+1. Curl
 
 #### Steps
 
@@ -18,9 +16,7 @@ The RenEx Atomic Swapper is built and officially supported by, the Republic Prot
 
 `curl https://releases.republicprotocol.com/swapper/install.sh -sSf | sh`
 
-2. When prompted, enter the Ethereum address that you will use with https://testnet.ren.exchange. This Ethereum address must hold all trading fees but does not hold the funds used for swapping. The swapper uses this address to distinguish between trades opened by RenEx vs. other malicious websites.
-
-3. When prompted enter the required Bitcoin Node information. You will need its IP address, the RPC port, and the RPC credentials (username/password).
+2. When prompted, enter the Ethereum address that you will use with https://ren.exchange. This Ethereum address must hold all trading fees but does not hold the funds used for swapping. The swapper uses this address to distinguish between trades opened by RenEx vs. other malicious websites.
 
 ### Windows
 
@@ -28,7 +24,7 @@ The RenEx Atomic Swapper is built and officially supported by, the Republic Prot
 
 ## Usage
 
-The RenEx Atomic Swapper is designed for use with https://testnet.ren.exchange. 
+The RenEx Atomic Swapper is designed for use with https://ren.exchange. 
 
 IMPORTANT: The RenEx Atomic Swapper must be running at all times. If it is not running, it will not be able to execute atomic swaps. If you fail to execute an atomic swap for matching orders, your trading account being fined, resulting in the loss of funds.
 

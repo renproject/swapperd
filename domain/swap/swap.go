@@ -9,6 +9,10 @@ import (
 type Status string
 
 const (
+	// StatusUnknown is returned when the swap information is not found in the
+	// local persistent storage.
+	StatusUnknown = Status("UNKNOWN")
+
 	// StatusOpen is returned when the swap is waiting for the match to be
 	// found.
 	StatusOpen = Status("OPEN")

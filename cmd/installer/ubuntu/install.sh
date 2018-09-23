@@ -12,8 +12,9 @@ StartLimitBurst=0
 KillSignal=SIGHUP
 
 [Install]
-WantedBy=default.target" >> /etc/systemd/system/swapper.service
+WantedBy=default.target" >> swapper.service
 
+sudo mv swapper.service /etc/systemd/system/swapper.service
 sudo systemctl daemon-reload
 sudo systemctl enable swapper.service
 sudo systemctl start swapper.service
