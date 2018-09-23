@@ -3,12 +3,10 @@ package eth
 import (
 	"context"
 	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -72,44 +70,9 @@ func (b *Conn) Transfer(to common.Address, from *bind.TransactOpts, value int64)
 
 	// Why is there no ethclient.Transfer?
 	bound := bind.NewBoundContract(to, abi.ABI{}, nil, b.Client, nil)
-	tx, err := bound.Transfer(transactor)
+	_, err := bound.Transfer(transactor)
 	if err != nil {
 		return err
 	}
-	_, err = b.PatchedWaitMined(context.Background(), tx)
-	return err
-}
-
-// PatchedWaitMined waits for tx to be mined on the blockchain.
-// It stops waiting when the context is canceled.
-//
-// TODO: THIS DOES NOT WORK WITH PARITY, WHICH SENDS A TRANSACTION RECEIPT UPON
-// RECEIVING A TX, NOT AFTER IT'S MINED
-func (b *Conn) PatchedWaitMined(ctx context.Context, tx *types.Transaction) (*types.Receipt, error) {
-	switch b.Network {
-	case "ganache":
-		time.Sleep(100 * time.Millisecond)
-		return nil, nil
-	default:
-		receipt, err := bind.WaitMined(ctx, b.Client, tx)
-		if err != nil {
-			return nil, err
-		}
-		return receipt, nil
-	}
-}
-
-// PatchedWaitDeployed waits for a contract deployment transaction and returns the on-chain
-// contract address when it is mined. It stops waiting when ctx is canceled.
-//
-// TODO: THIS DOES NOT WORK WITH PARITY, WHICH SENDS A TRANSACTION RECEIPT UPON
-// RECEIVING A TX, NOT AFTER IT'S MINED
-func (b *Conn) PatchedWaitDeployed(ctx context.Context, tx *types.Transaction) (common.Address, error) {
-	switch b.Network {
-	case "ganache":
-		time.Sleep(100 * time.Millisecond)
-		return common.Address{}, nil
-	default:
-		return bind.WaitDeployed(ctx, b.Client, tx)
-	}
+	return nil
 }
