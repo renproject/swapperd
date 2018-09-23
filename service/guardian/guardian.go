@@ -84,10 +84,22 @@ func (g *guardian) RefundMultiple(swaps [][32]byte, errs chan error) {
 			}
 			g.refundStatus[swaps[i]] = true
 			if err := g.Refund(swaps[i]); err != nil {
-				errs <- err
+				select {
+				case _, ok := <-g.doneCh:
+					if !ok {
+						return
+					}
+				case errs <- err:
+				}
 			}
 			if err := g.DeleteIfRefunded(swaps[i]); err != nil {
-				errs <- err
+				select {
+				case _, ok := <-g.doneCh:
+					if !ok {
+						return
+					}
+				case errs <- err:
+				}
 			}
 			g.refundStatus[swaps[i]] = false
 			return
