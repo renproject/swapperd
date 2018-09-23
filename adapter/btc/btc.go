@@ -83,7 +83,7 @@ func (atom *bitcoinAtom) Initiate() error {
 		return err
 	}
 
-	if bal, err := atom.Balance(atom.scriptAddr); bal > 0 || err != nil {
+	if bal, err := atom.Balance(atom.scriptAddr); bal != atom.req.SendValue.Int64() || err != nil {
 		if err != nil {
 			return err
 		}
@@ -143,9 +143,7 @@ func (atom *bitcoinAtom) AuditSecret() ([32]byte, error) {
 	for _, push := range pushes {
 		if sha256.Sum256(push) == atom.req.SecretHash {
 			var secret [32]byte
-			for i := 0; i < 32; i++ {
-				secret[i] = push[i]
-			}
+			copy(secret[:], push)
 			fmt.Println("... success")
 			return secret, nil
 		}
@@ -161,6 +159,13 @@ func (atom *bitcoinAtom) Refund() error {
 	}
 	output := outs.Outputs[0]
 
+	if bal, err := atom.Balance(atom.scriptAddr); bal == 0 || err != nil {
+		if err != nil {
+			return err
+		}
+		return swap.ErrSwapAlreadyRedeemedOrRefunded
+	}
+
 	// create bitcoin script to pay to the user's personal address
 	payToAddrScript, err := txscript.PayToAddrScript(atom.key.Address)
 	if err != nil {
@@ -168,9 +173,13 @@ func (atom *bitcoinAtom) Refund() error {
 	}
 
 	// build transaction
-	txHash, err := chainhash.NewHashFromStr(output.TxHash)
+	hashBytes, err := hex.DecodeString(output.TxHash)
 	if err != nil {
-		return NewErrRefund(err)
+		return NewErrRedeem(err)
+	}
+	txHash, err := chainhash.NewHash(hashBytes)
+	if err != nil {
+		return NewErrRedeem(err)
 	}
 	refundTx := wire.NewMsgTx(atom.txVersion)
 	refundTx.AddTxIn(wire.NewTxIn(wire.NewOutPoint(txHash, output.Vout), nil, nil))
@@ -242,6 +251,13 @@ func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 		return NewErrRedeem(err)
 	}
 	output := outs.Outputs[0]
+
+	if bal, err := atom.Balance(atom.scriptAddr); bal == 0 || err != nil {
+		if err != nil {
+			return err
+		}
+		return swap.ErrSwapAlreadyRedeemedOrRefunded
+	}
 
 	// create bitcoin script to pay to the user's personal address
 	payToAddrScript, err := txscript.PayToAddrScript(atom.key.Address)
