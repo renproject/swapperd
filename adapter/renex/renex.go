@@ -16,28 +16,32 @@ type renexAdapter struct {
 	keystore.Keystore
 	logger.Logger
 	swap.Swapper
-	swap.Network
+	renex.Network
 	Binder
 }
 
-func New(config config.Config, keystore keystore.Keystore, network swap.Network, watchdog swap.Watchdog, state state.State, logger logger.Logger, binder Binder) renex.Adapter {
+func New(config config.Config, keystore keystore.Keystore, network renex.Network, watchdog swap.Watchdog, state state.State, logger logger.Logger, binder Binder) renex.Adapter {
 	return &renexAdapter{
 		Keystore: keystore,
 		State:    state,
 		Logger:   logger,
 		Network:  network,
 		Binder:   binder,
-		Swapper:  swap.NewSwapper(swapAdapter.New(config, keystore, network, watchdog, state, logger)),
+		Swapper:  swap.NewSwapper(swapAdapter.New(config, keystore, watchdog, logger)),
 	}
 }
 
 // GetAddress corresponding to the given token.
-func (renex *renexAdapter) GetAddress(tok token.Token) []byte {
+func (renex *renexAdapter) GetAddresses(tok1, tok2 token.Token) (string, string) {
+	return renex.getAddress(tok1), renex.getAddress(tok2)
+}
+
+func (renex *renexAdapter) getAddress(tok token.Token) string {
 	switch tok {
 	case token.BTC:
-		return []byte(renex.Keystore.GetKey(tok).(keystore.BitcoinKey).AddressString)
+		return renex.Keystore.GetKey(tok).(keystore.BitcoinKey).AddressString
 	case token.ETH:
-		return []byte(renex.Keystore.GetKey(tok).(keystore.EthereumKey).Address.String())
+		return renex.Keystore.GetKey(tok).(keystore.EthereumKey).Address.String()
 	default:
 		panic("Unexpected token")
 	}
