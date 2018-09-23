@@ -3,4 +3,4 @@ package swap
 import "errors"
 
 var ErrSwapAlreadyInitiated = errors.New("Duplicate swap initiation")
-var ErrNotRefundable = errors.New("Swap not refundable")
+var ErrSwapAlreadyRedeemedOrRefunded = errors.New("The swap is already redeemed or refunded")

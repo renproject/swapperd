@@ -1,10 +1,10 @@
 package swap
 
-import "github.com/republicprotocol/renex-swapper-go/domain/order"
+import "github.com/republicprotocol/renex-swapper-go/domain/swap"
 
 // Swapper is the interface for an atomic swapper object
 type Swapper interface {
-	NewSwap(orderID order.ID, req Request) (Swap, error)
+	NewSwap(req swap.Request) (Swap, error)
 }
 
 type swapper struct {
@@ -18,12 +18,13 @@ func NewSwapper(adapter SwapperAdapter) Swapper {
 	}
 }
 
-func (swapper *swapper) NewSwap(orderID order.ID, req Request) (Swap, error) {
-	personalAtom, foreignAtom, _, adapter, err := swapper.adapter.NewSwap(orderID, req)
+func (swapper *swapper) NewSwap(req swap.Request) (Swap, error) {
+	personalAtom, foreignAtom, adapter, err := swapper.adapter.NewSwap(req)
 	if err != nil {
 		return nil, err
 	}
-	return &swap{
+	return &swapExec{
+		req:          req,
 		personalAtom: personalAtom,
 		foreignAtom:  foreignAtom,
 		Adapter:      adapter,
