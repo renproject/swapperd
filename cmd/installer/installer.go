@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/republicprotocol/renex-swapper-go/driver/config"
@@ -38,18 +39,15 @@ func main() {
 }
 
 func getHome() string {
-	winHome := os.Getenv("userprofile")
-	unixHome := os.Getenv("HOME")
-
-	if winHome != "" {
-		return winHome
+	system := runtime.GOOS
+	switch system{
+	case "window":
+		return os.Getenv("userprofile")
+	case "linux", "darwin":
+		return os.Getenv("HOME")
+	default:
+		panic("unknown Operating System")
 	}
-
-	if unixHome != "" {
-		return unixHome
-	}
-
-	panic("unknown Operating System")
 }
 
 func readAddress() string {
