@@ -5,15 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/republicprotocol/renex-swapper-go/domain/match"
-	"github.com/republicprotocol/renex-swapper-go/domain/token"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	bindings "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/bindings/eth"
-	ethclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/domain/order"
+	"github.com/republicprotocol/renex-swapper-go/domain/swap"
+	"github.com/republicprotocol/renex-swapper-go/domain/token"
 )
 
 var (
@@ -21,27 +18,27 @@ var (
 )
 
 type Binder interface {
-	GetOrderMatch(orderID order.ID, waitTill int64) (match.Match, error)
+	GetOrderMatch(orderID order.ID, waitTill int64) (swap.Match, error)
 }
 
 type binder struct {
 	config.Config
-	*bindings.Orderbook
-	*bindings.RenExSettlement
+	*Orderbook
+	*RenExSettlement
 }
 
 func NewBinder(conf config.Config) (Binder, error) {
-	conn, err := ethclient.NewConnWithConfig(conf.Ethereum)
+	conn, err := NewConnWithConfig(conf)
 	if err != nil {
 		return nil, err
 	}
 
-	settlement, err := bindings.NewRenExSettlement(common.HexToAddress(conf.RenEx.Settlement), bind.ContractBackend(conn.Client))
+	settlement, err := NewRenExSettlement(conn.RenExSettlement, bind.ContractBackend(conn.Client))
 	if err != nil {
 		return nil, err
 	}
 
-	orderbook, err := bindings.NewOrderbook(common.HexToAddress(conf.RenEx.Orderbook), bind.ContractBackend(conn.Client))
+	orderbook, err := NewOrderbook(common.HexToAddress(conf.RenEx.Orderbook), bind.ContractBackend(conn.Client))
 	if err != nil {
 		return nil, err
 	}
@@ -55,23 +52,37 @@ func NewBinder(conf config.Config) (Binder, error) {
 
 // GetOrderMatch checks if a match is found and returns the match object. It
 // keeps doing it until an order match is found or the waitTill time.
-func (binder *binder) GetOrderMatch(orderID order.ID, waitTill int64) (match.Match, error) {
+func (binder *binder) GetOrderMatch(orderID order.ID, waitTill int64) (swap.Match, error) {
 	if err := binder.verifyOrder(orderID, waitTill); err != nil {
-		return nil, err
+		return swap.Match{}, err
 	}
 	for {
 		matchDetails, err := binder.GetMatchDetails(&bind.CallOpts{}, orderID)
 		if err != nil || matchDetails.PriorityToken == matchDetails.SecondaryToken {
 			if time.Now().Unix() > waitTill {
-				return nil, fmt.Errorf("Timed out")
+				return swap.Match{}, fmt.Errorf("Timed out")
 			}
 			time.Sleep(10 * time.Second)
 			continue
 		}
 		if matchDetails.OrderIsBuy {
-			return match.NewMatch(orderID, matchDetails.MatchedID, matchDetails.PriorityVolume, matchDetails.SecondaryVolume, token.Token(matchDetails.PriorityToken), token.Token(matchDetails.SecondaryToken)), nil
+			return swap.Match{
+				PersonalOrderID: orderID,
+				ForeignOrderID:  matchDetails.MatchedID,
+				SendValue:       matchDetails.PriorityVolume,
+				ReceiveValue:    matchDetails.SecondaryVolume,
+				SendToken:       token.Token(matchDetails.PriorityToken),
+				ReceiveToken:    token.Token(matchDetails.SecondaryToken),
+			}, nil
 		}
-		return match.NewMatch(orderID, matchDetails.MatchedID, matchDetails.SecondaryVolume, matchDetails.PriorityVolume, token.Token(matchDetails.SecondaryToken), token.Token(matchDetails.PriorityToken)), nil
+		return swap.Match{
+			PersonalOrderID: orderID,
+			ForeignOrderID:  matchDetails.MatchedID,
+			SendValue:       matchDetails.SecondaryVolume,
+			ReceiveValue:    matchDetails.PriorityVolume,
+			SendToken:       token.Token(matchDetails.SecondaryToken),
+			ReceiveToken:    token.Token(matchDetails.PriorityToken),
+		}, nil
 	}
 }
 
