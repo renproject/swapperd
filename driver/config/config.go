@@ -59,17 +59,17 @@ func New(loc, net string) config.Config {
 	conf.RenEx = NewRenExNetwork(net)
 	switch net {
 	case "nightly":
-		conf.RenEx.Orderbook = ""
-		conf.RenEx.Settlement = ""
+		conf.RenEx.Orderbook = "0x376127aDc18260fc238eBFB6626b2F4B59eC9b66"
+		conf.RenEx.Settlement = "0x5f25233ca99104D31612D4fB937B090d5A2EbB75"
 		conf.Ethereum.Swapper = "0x9231e9859c8773C17ac896B7fa505AB271F14ea4"
 	case "falcon":
 		conf.RenEx.Orderbook = ""
 		conf.RenEx.Settlement = ""
-		conf.Ethereum.Swapper = ""
+		conf.Ethereum.Swapper = "0x9231e9859c8773C17ac896B7fa505AB271F14ea4"
 	case "testnet":
 		conf.RenEx.Orderbook = ""
 		conf.RenEx.Settlement = ""
-		conf.Ethereum.Swapper = ""
+		conf.Ethereum.Swapper = "0x9231e9859c8773C17ac896B7fa505AB271F14ea4"
 	default:
 		panic("Unknown republic network" + net)
 	}

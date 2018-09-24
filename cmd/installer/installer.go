@@ -18,7 +18,7 @@ import (
 func main() {
 	home := getHome()
 	loc := flag.String("loc", home+"/.swapper", "Location of the swapper's home directory")
-	repNet := flag.String("republic", "testnet", "Which republic protocol network to use")
+	repNet := flag.String("network", "testnet", "Which republic protocol network to use")
 	flag.Parse()
 	cmd := exec.Command("mkdir", "-p", *loc)
 	if err := cmd.Run(); err != nil {
