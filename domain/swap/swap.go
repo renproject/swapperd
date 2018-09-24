@@ -17,9 +17,9 @@ const (
 	// found.
 	StatusOpen = Status("OPEN")
 
-	// StatusSettling is returned when the swapper is waiting for the swap to
+	// StatusConfirmed is returned when the swapper is waiting for the swap to
 	// finish.
-	StatusSettling = Status("SETTLING")
+	StatusConfirmed = Status("CONFIRMED")
 
 	// StatusSettled is returned when the swap is redeemed.
 	StatusSettled = Status("SETTLED")

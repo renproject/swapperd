@@ -113,12 +113,12 @@ func (renex *renex) Swap(orderID [32]byte) error {
 		if err := renex.PutSwapRequest(orderID, req); err != nil {
 			return err
 		}
-		if err := renex.PutStatus(orderID, swap.StatusSettling); err != nil {
+		if err := renex.PutStatus(orderID, swap.StatusConfirmed); err != nil {
 			return err
 		}
 	}
 
-	if renex.Status(orderID) == swap.StatusSettling {
+	if renex.Status(orderID) == swap.StatusConfirmed {
 		req, err := renex.SwapRequest(orderID)
 		if err != nil {
 			return err

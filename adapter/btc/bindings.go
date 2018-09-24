@@ -112,7 +112,7 @@ func sign(tx *wire.MsgTx, idx int, pkScript []byte, key keystore.BitcoinKey) (si
 	if err != nil {
 		return nil, nil, err
 	}
-	return sig, key.PrivateKey.PubKey().SerializeCompressed(), nil
+	return sig, key.PublicKey, nil
 }
 
 func addressToPubKeyHash(addr string, chainParams *chaincfg.Params) (*btcutil.AddressPubKeyHash, error) {
