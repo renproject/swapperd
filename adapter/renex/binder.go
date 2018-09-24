@@ -100,7 +100,7 @@ func (binder *binder) verifyOrder(orderID [32]byte, waitTill int64) error {
 			if strings.ToLower(addr.String()) == strings.ToLower(authorizedAddr) {
 				return nil
 			}
+			fmt.Printf("Expected submitting Trader Address %s to equal Authorized trader Address %s\n", addr.String(), authorizedAddr)
 		}
-		return ErrVerificationFailed
 	}
 }
