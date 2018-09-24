@@ -7,6 +7,7 @@ import (
 	netHttp "net/http"
 	"os"
 	"os/signal"
+	"runtime"
 
 	guardianAdapter "github.com/republicprotocol/renex-swapper-go/adapter/guardian"
 	"github.com/republicprotocol/renex-swapper-go/adapter/http"
@@ -91,16 +92,13 @@ func main() {
 }
 
 func getHome() string {
-	winHome := os.Getenv("userprofile")
-	unixHome := os.Getenv("HOME")
-
-	if winHome != "" {
-		return winHome
+	system := runtime.GOOS
+	switch system{
+	case "window":
+		return os.Getenv("userprofile")
+	case "linux", "darwin":
+		return os.Getenv("HOME")
+	default:
+		panic("unknown Operating System")
 	}
-
-	if unixHome != "" {
-		return unixHome
-	}
-
-	panic("unknown Operating System")
 }
