@@ -3,6 +3,7 @@ package renex
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -96,7 +97,7 @@ func (binder *binder) verifyOrder(orderID [32]byte, waitTill int64) error {
 			continue
 		}
 		for _, authorizedAddr := range binder.AuthorizedAddresses {
-			if addr.String() == authorizedAddr {
+			if strings.ToLower(addr.String()) == strings.ToLower(authorizedAddr) {
 				return nil
 			}
 		}
