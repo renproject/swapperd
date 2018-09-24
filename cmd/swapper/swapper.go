@@ -42,6 +42,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Println(ks.GetKey(token.ETH).(keystore.EthereumKey).Address.String())
+	fmt.Println(ks.GetKey(token.BTC).(keystore.BitcoinKey).AddressString)
+
 	logger := loggerDriver.NewStdOut()
 	state := state.NewState(stateAdapter.New(db, logger))
 	ingressNet := network.NewIngress(conf.RenEx.Ingress, ks.GetKey(token.ETH).(keystore.EthereumKey))

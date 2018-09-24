@@ -1,7 +1,6 @@
 package renex
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 	"time"
@@ -56,6 +55,8 @@ func (binder *binder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Matc
 	if err := binder.verifyOrder(orderID, waitTill); err != nil {
 		return swap.Match{}, err
 	}
+	fmt.Println("Waiting for the match to be found on RenEx")
+	defer func() { fmt.Println("Match found") }()
 	for {
 		matchDetails, err := binder.GetMatchDetails(&bind.CallOpts{}, orderID)
 		if err != nil || matchDetails.PriorityToken == matchDetails.SecondaryToken {
@@ -89,7 +90,7 @@ func (binder *binder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Matc
 func (binder *binder) verifyOrder(orderID [32]byte, waitTill int64) error {
 	for {
 		addr, err := binder.Orderbook.OrderTrader(&bind.CallOpts{}, orderID)
-		if err != nil || bytes.Compare(addr.Bytes(), []byte{}) == 0 {
+		if err != nil || addr.String() == "0x0000000000000000000000000000000000000000" {
 			if time.Now().Unix() > waitTill {
 				return fmt.Errorf("Timed out")
 			}
