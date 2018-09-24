@@ -167,6 +167,7 @@ func (renex *renex) buildRequest(orderID [32]byte) (swap.Request, error) {
 		req.GoesFirst = false
 	}
 
+	fmt.Println("Communicating swap details")
 	if err := renex.SendSwapDetails(req.UID, SwapDetails{
 		SecretHash:         req.SecretHash,
 		TimeLock:           req.TimeLock,
@@ -175,11 +176,13 @@ func (renex *renex) buildRequest(orderID [32]byte) (swap.Request, error) {
 	}); err != nil {
 		return req, err
 	}
+	fmt.Println("Swap details sent")
 
 	foreignDetails, err := renex.ReceiveSwapDetails(ordMatch.ForeignOrderID, timeStamp+48*60*60)
 	if err != nil {
 		return req, err
 	}
+	fmt.Println(foreignDetails)
 
 	req.SendToAddress = foreignDetails.SendToAddress
 	req.ReceiveFromAddress = foreignDetails.ReceiveFromAddress
