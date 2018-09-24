@@ -2,7 +2,6 @@ package network
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -36,7 +35,7 @@ func (ingress *ingress) SendSwapDetails(orderID [32]byte, swapDetails renex.Swap
 	}
 
 	info := httpadapter.PostSwapInfo{
-		OrderID: base64.StdEncoding.EncodeToString(orderID[:]),
+		OrderID: hex.EncodeToString(orderID[:]),
 		Swap:    hex.EncodeToString(swapBytes),
 	}
 
