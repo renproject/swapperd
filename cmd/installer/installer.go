@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/republicprotocol/renex-swapper-go/driver/config"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/republicprotocol/renex-swapper-go/driver/config"
 
 	"github.com/republicprotocol/renex-swapper-go/driver/keystore"
 	"github.com/republicprotocol/renex-swapper-go/utils"
@@ -46,12 +47,16 @@ func readAddress() string {
 	if err != nil {
 		panic(err)
 	}
-	addr := strings.Trim(text, "\r\n")
+	addr := strings.TrimSpace(text)
 	if len(addr) == 42 && addr[:2] == "0x" {
 		addr = addr[2:]
 	}
-	addrBytes, err := hex.DecodeString(addr)
-	if err != nil || len(addrBytes) == 40 {
+	if len(addr) != 40 {
+		fmt.Println("Please enter a valid Ethereum address")
+		return readAddress()
+	}
+	_, err = hex.DecodeString(addr)
+	if err != nil {
 		fmt.Println("Please enter a valid Ethereum address")
 		return readAddress()
 	}
