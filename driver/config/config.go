@@ -21,36 +21,36 @@ var RenExMainnet = config.RenExNetwork{
 	Network:    "mainnet",
 	Ingress:    "renex-ingress-mainnet.herokuapp.com",
 	Settlement: "0x908262dE0366E42d029B0518D5276762c92B21e1",
-	Orderbook:  "0xd5fAEF6b5eE44391FFaa42d732c88b86C73ed287",
+	Orderbook:  "0x6b8bB175c092DE7d81860B18DB360B734A2598e0",
 }
 
 // RenExTestnet is the RenEx config object on the testnet
 var RenExTestnet = config.RenExNetwork{
 	Network:    "testnet",
 	Ingress:    "renex-ingress-testnet.herokuapp.com",
-	Settlement: "0x908262dE0366E42d029B0518D5276762c92B21e1",
-	Orderbook:  "0xd5fAEF6b5eE44391FFaa42d732c88b86C73ed287",
+	Settlement: "",
+	Orderbook:  "",
 }
 
 // RenExNightly is the RenEx config object on the nightly testnet
 var RenExNightly = config.RenExNetwork{
 	Network:    "nightly",
 	Ingress:    "renex-ingress-nightly.herokuapp.com",
-	Settlement: "0x5f25233ca99104D31612D4fB937B090d5A2EbB75",
-	Orderbook:  "0x376127aDc18260fc238eBFB6626b2F4B59eC9b66",
+	Settlement: "",
+	Orderbook:  "",
 }
 
 // EthereumMainnet is the ethereum config object on the kovan testnet
 var EthereumMainnet = config.EthereumNetwork{
 	Network: "mainnet",
-	Swapper: "0x6b8bB175c092DE7d81860B18DB360B734A2598e0",
+	Swapper: "0xd5fAEF6b5eE44391FFaa42d732c88b86C73ed287",
 	URL:     "https://mainnet.infura.io",
 }
 
 // EthereumKovan is the ethereum config object on the kovan testnet
 var EthereumKovan = config.EthereumNetwork{
 	Network: "kovan",
-	Swapper: "0x9231e9859c8773C17ac896B7fa505AB271F14ea4",
+	Swapper: "",
 	URL:     "https://kovan.infura.io",
 }
 
