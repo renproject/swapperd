@@ -30,7 +30,7 @@ else
   exit 1
 fi
 
-unzip swapper.zip
+unzip -o swapper.zip
 chmod +x bin/swapper
 chmod +x bin/installer
 
@@ -38,9 +38,27 @@ chmod +x bin/installer
 
 # make sure the swapper service is started when booted
 if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
-  chmod +x install.sh
-  ./install.sh
-  rm install.sh
+  sudo echo "[Unit]
+Description=RenEx's Swapper Daemon
+After=network.target
+
+[Service]
+ExecStart=$HOME/.swapper/bin/swapper --loc $HOME/.swapper
+Restart=on-failure
+StartLimitBurst=0
+
+# Specifies which signal to use when killing a service. Defaults to SIGTERM.
+# SIGHUP gives parity time to exit cleanly before SIGKILL (default 90s)
+KillSignal=SIGHUP
+
+[Install]
+WantedBy=default.target" > swapper.service
+
+  sudo mv swapper.service /etc/systemd/system/swapper.service
+  sudo systemctl daemon-reload
+  sudo systemctl enable swapper.service
+  sudo systemctl start swapper.service
+
 elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
   echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
@@ -61,7 +79,7 @@ elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
     <key>StandardErrorPath</key>
     <string>/var/log/swapper.log</string>
   </dict>
-</plist>" >> com.republicprotocol.plist
+</plist>" > com.republicprotocol.plist
   sudo mv com.republicprotocol.plist /Library/LaunchDaemons/com.republicprotocol.plist
   sudo chown root /Library/LaunchDaemons/com.republicprotocol.plist
   sudo launchctl load -w /Library/LaunchDaemons/com.republicprotocol.plist
@@ -83,28 +101,28 @@ if ! [ -x "$(command -v swapper)" ]; then
 
   if [ "$shell" = 'zsh' ] ; then
     if [ -f "$HOME/.zprofile" ] ; then
-      echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.zprofile
+      echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.zprofile
       swapper_home=$HOME/.zprofile
     elif [ -f "$HOME/.zshrc" ] ; then
-      echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.zshrc
+      echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.zshrc
       swapper_home=$HOME/.zshrc
     elif [ -f "$HOME/.profile" ] ; then
-      echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.profile
+      echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.profile
       swapper_home=$HOME/.profile
     fi
   elif  [ "$shell" = 'bash' ] ; then
     if [ -f "$HOME/.bash_profile" ] ; then
-      echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.bash_profile
+      echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.bash_profile
       swapper_home=$HOME/.bash_profile
     elif [ -f "$HOME/.bashrc" ] ; then
-      echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.bashrc
+      echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.bashrc
       swapper_home=$HOME/.bashrc
     elif [ -f "$HOME/.profile" ] ; then
-      echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.profile
+      echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.profile
       swapper_home=$HOME/.profile
     fi
   elif [ -f "$HOME/.profile" ] ; then
-    echo 'export PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.profile
+    echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.profile
   fi
 
   echo ''
