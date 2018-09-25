@@ -2,35 +2,37 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
+	"github.com/republicprotocol/renex-swapper-go/driver/config"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 
-	"github.com/republicprotocol/renex-swapper-go/driver/config"
 	"github.com/republicprotocol/renex-swapper-go/driver/keystore"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 func main() {
 	home := getHome()
 	loc := flag.String("loc", home+"/.swapper", "Location of the swapper's home directory")
 	repNet := flag.String("network", "testnet", "Which republic protocol network to use")
+	passphrase := flag.String("passphrase", "", "Passphrase to encrypt your key files")
+
 	flag.Parse()
+
 	cmd := exec.Command("mkdir", "-p", *loc)
 	if err := cmd.Run(); err != nil {
 		panic(err)
 	}
-	fmt.Println("The following passphrase is used to encrypt your keystore files")
-	passphrase := readPassphrase()
-	if err := keystore.GenerateFile(*loc, *repNet, passphrase); err != nil {
+	cfg ,err  := config.New(*loc, *repNet)
+	if err != nil {
+		panic(err)
+	}
+	if err := keystore.GenerateFile(cfg, *passphrase); err != nil {
 		panic(err)
 	}
 	addr := readAddress()
-	cfg := config.New(*loc, *repNet)
 	cfg.AuthorizedAddresses = []string{addr}
 	config.SaveToFile(fmt.Sprintf("%s/config-%s.json", *loc, *repNet), cfg)
 }
@@ -63,24 +65,4 @@ func readAddress() string {
 		return readAddress()
 	}
 	return addr
-}
-
-func readPassphrase() string {
-	fmt.Print("passphrase: ")
-	bytePassphrase, err := terminal.ReadPassword(0)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println()
-	fmt.Print("reenter passphrase: ")
-	bytePassphraseReenter, err := terminal.ReadPassword(0)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println()
-	if bytes.Compare(bytePassphrase, bytePassphraseReenter) != 0 {
-		fmt.Println("passphrase mismatch, please try again")
-		return readPassphrase()
-	}
-	return strings.Trim(string(bytePassphrase), "\r\n")
 }

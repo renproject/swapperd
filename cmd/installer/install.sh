@@ -34,7 +34,40 @@ unzip -o swapper.zip
 chmod +x bin/swapper
 chmod +x bin/installer
 
-./bin/installer < /dev/tty
+# get passphrase from user
+while :
+do
+  echo "Please enter a passphrase to encrypt your key files"
+  read -s PASSWORDFirst
+  echo "Please re-enter the passphrase"
+  read -s PASSWORDSecond
+  if [ $PASSWORDFirst = $PASSWORDSecond ]
+  then
+    if [ "$PASSWORDFirst" = "" ]
+    then
+      echo "${RED}You are trying to use an empty passphrase, this means your keystores will not be encrypted are you sure (y/N): ${NC}"
+      while :
+      do
+        read choice
+        choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]')
+        echo
+        if [ "$choice" = "" ] || [ "$choice" = "y" ] || [ "$choice" = "yes" ]
+        then
+          break
+        elif [ "$choice" = "n" ] || [ "$choice" = "no" ]
+        then
+          exit 0
+        else
+         echo "Please enter (y/N)"
+        fi
+      done
+    fi
+    break
+  else
+    echo "${RED}The two passwords you enter are different. Try again ${NC}"
+  fi
+done
+./bin/installer -passphrase $PASSWORD< /dev/tty
 
 # make sure the swapper service is started when booted
 if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
