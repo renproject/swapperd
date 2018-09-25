@@ -70,28 +70,10 @@ func readPassphrase() string {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println()
 	if bytes.Compare(bytePassphrase, bytePassphraseReenter) != 0 {
 		fmt.Println("\nPassphrase mismatch, please try again")
 		return readPassphrase()
 	}
-	if string(bytePassphrase) == "" {
-		verifyPassphrase()
-	}
 	return strings.Trim(string(bytePassphrase), "\r\n")
-}
-
-func verifyPassphrase() bool {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("You are trying to use an empty passphrase, this means your keystores will not be encrypted are you sure (y/N): ")
-	text, err := reader.ReadString('\n')
-	if err != nil {
-		panic(err)
-	}
-	choice := strings.Trim(text, "\r\n")
-	switch choice {
-	case "", "N", "No", "no":
-
-	case "Y", "Yes", "yes":
-
-	}
 }
