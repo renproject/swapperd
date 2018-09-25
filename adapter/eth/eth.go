@@ -75,6 +75,7 @@ func (atom *ethereumAtom) Initiate() error {
 		return swap.ErrSwapAlreadyInitiated
 	}
 
+	// TODO: Fix data race on transact opts
 	prevValue := atom.key.TransactOpts.Value
 	prevGasLimit := atom.key.TransactOpts.GasLimit
 	atom.key.TransactOpts.Value = atom.req.SendValue
@@ -197,6 +198,7 @@ func (atom *ethereumAtom) Redeem(secret [32]byte) error {
 	return nil
 }
 
+// TODO: change req to personalReq
 func buildValues(req swapDomain.Request, personalAddr string) (string, int64, error) {
 	var addr string
 	var expiry int64
@@ -207,6 +209,7 @@ func buildValues(req swapDomain.Request, personalAddr string) (string, int64, er
 	if (req.GoesFirst && req.SendToken == token.ETH) || (!req.GoesFirst && req.ReceiveToken == token.ETH) {
 		expiry = req.TimeLock
 	} else {
+		// TODO: Document times
 		expiry = req.TimeLock - 24*60*60
 	}
 
