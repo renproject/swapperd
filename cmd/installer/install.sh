@@ -7,7 +7,8 @@ NC='\033[0m'
 
 # install unzip if command not found
 if ! [ -x "$(command -v unzip)" ];then
-  sudo apt-get install unzip
+  echo "please install unzip"
+  exit 0
 fi
 
 # creating working directory
@@ -51,18 +52,25 @@ do
         read choice </dev/tty
         choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]')
         echo
-        if [ "$choice" = "" ] || [ "$choice" = "y" ] || [ "$choice" = "yes" ]
+        if [ "$choice" = "y" ] || [ "$choice" = "yes" ]
         then
+          confirm="yes"
           break
-        elif [ "$choice" = "n" ] || [ "$choice" = "no" ]
+        elif [ "$choice" = "" ] || [ "$choice" = "n" ] || [ "$choice" = "no" ]
         then
-          exit 0
+          confirm="no"
+          break
         else
          echo "Please enter (y/N)"
         fi
       done
     fi
-    break
+    if [ "$confirm" = "yes" ]
+    then
+      break
+    else
+      continue
+    fi
   else
     echo "${RED}The two passwords you enter are different. Try again ${NC}"
   fi
@@ -99,7 +107,7 @@ elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
 <plist version=\"1.0\">
   <dict>
     <key>Label</key>
-    <string>com.republicprotocol.swapper</string>
+    <string>exchange.ren.swapper</string>
     <key>ProgramArguments</key>
     <array>
         <string>$HOME/.swapper/bin/swapper</string>
@@ -115,10 +123,10 @@ elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
     <key>StandardErrorPath</key>
     <string>/var/log/swapper.log</string>
   </dict>
-</plist>" > com.republicprotocol.plist
-  sudo mv com.republicprotocol.plist /Library/LaunchAgents/com.republicprotocol.plist
-  sudo chown root /Library/LaunchAgents/com.republicprotocol.plist
-  sudo launchctl load -w /Library/LaunchAgents/com.republicprotocol.plist
+</plist>" > exchange.ren.swapper.plist
+  sudo mv exchange.ren.swapper.plist /Library/LaunchAgents/exchange.ren.swapper.plist
+  sudo chown root /Library/LaunchAgents/exchange.ren.swapper.plist
+  sudo launchctl load -w /Library/LaunchAgents/exchange.ren.swapper.plist
 else
   echo 'unsupported OS type or architecture'
   cd ..
@@ -167,7 +175,3 @@ if ! [ -x "$(command -v swapper)" ]; then
 fi
 
 echo "RenEx Atomic Swapper is installed now. Great!"
-echo ''
-echo "To get started you need RenEx Atomic Swapper's bin directory ($HOME/.swapper/bin) in your PATH"
-echo "environment variable. Next time you log in this will be done"
-echo "automatically."

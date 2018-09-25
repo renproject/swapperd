@@ -17,7 +17,7 @@ import (
 func main() {
 	home := utils.GetHome()
 	loc := flag.String("loc", home+"/.swapper", "Location of the swapper's home directory")
-	repNet := flag.String("network", "testnet", "Which republic protocol network to use")
+	repNet := flag.String("network", "mainnet", "Which republic protocol network to use")
 	passphrase := flag.String("passphrase", "", "Passphrase to encrypt your key files")
 
 	flag.Parse()
