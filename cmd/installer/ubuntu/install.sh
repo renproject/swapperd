@@ -1,9 +1,11 @@
+#!/bin/sh
+
 sudo echo "[Unit]
 Description=RenEx's Swapper Daemon
 After=network.target
 
 [Service]
-ExecStart=/home/ubuntu/.swapper/bin/swapper 
+ExecStart=%h/.swapper/bin/swapper
 Restart=on-failure
 StartLimitBurst=0
 
