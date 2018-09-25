@@ -47,7 +47,7 @@ func readAddress() string {
 	if err != nil {
 		panic(err)
 	}
-	addr := strings.Trim(text, "\r\n")
+	addr := strings.TrimSpace(text)
 	if len(addr) == 42 && addr[:2] == "0x" {
 		addr = addr[2:]
 	}

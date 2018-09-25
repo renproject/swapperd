@@ -1,10 +1,5 @@
 #!/bin/sh
 
-# define color escape codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-NC='\033[0m'
-
 # install unzip if command not found
 if ! [ -x "$(command -v unzip)" ];then
   echo "please install unzip"
@@ -46,7 +41,7 @@ do
   then
     if [ "$PASSWORD" = "" ]
     then
-      echo "${RED}You are trying to use an empty passphrase, this means your keystores will not be encrypted are you sure (y/N): ${NC}"
+      echo "You are trying to use an empty passphrase, this means your keystores will not be encrypted are you sure (y/N): "
       while :
       do
         read choice </dev/tty
@@ -64,19 +59,27 @@ do
          echo "Please enter (y/N)"
         fi
       done
+    else
+      break
     fi
+
     if [ "$confirm" = "yes" ]
     then
       break
-    else
-      continue
     fi
   else
-    echo "${RED}The two passwords you enter are different. Try again ${NC}"
+    echo "The two passwords you enter are different. Try again."
   fi
 done
 
-sudo ./bin/installer -passphrase $PASSWORD < /dev/tty
+if [ "$PASSWORD" = "" ]
+then
+  PASSPHRASE=""
+else
+  PASSPHRASE="--passphrase $PASSWORD"
+fi
+
+./bin/installer $PASSPHRASE < /dev/tty
 
 # make sure the swapper service is started when booted
 if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
@@ -85,7 +88,7 @@ Description=RenEx's Swapper Daemon
 After=network.target
 
 [Service]
-ExecStart=$HOME/.swapper/bin/swapper --loc $HOME/.swapper --passphrase $PASSWORD
+ExecStart=$HOME/.swapper/bin/swapper --loc $HOME/.swapper $PASSPHRASE
 Restart=on-failure
 StartLimitBurst=0
 
@@ -102,6 +105,15 @@ WantedBy=default.target" > swapper.service
   sudo systemctl start swapper.service
 
 elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
+  if [ "$PASSWORD" = "" ]
+  then
+    PASSPHRASE=""
+  else
+    PASSPHRASE="
+        <string>-passphrase</string>
+        <string>$PASSWORD</string>"
+  fi
+
   echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
 <plist version=\"1.0\">
@@ -112,21 +124,19 @@ elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
     <array>
         <string>$HOME/.swapper/bin/swapper</string>
         <string>-loc</string>
-        <string>$HOME/.swapper</string>
-        <string>-passphrase</string>
-        <string>$PASSWORD</string>
+        <string>$HOME/.swapper</string>$PASSPHRASE
     </array>
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/var/log/swapper.log</string>
+    <string>$HOME/.swapper/swapper.log</string>
     <key>StandardErrorPath</key>
-    <string>/var/log/swapper.log</string>
+    <string>$HOME/.swapper/swapper.log</string>
   </dict>
 </plist>" > exchange.ren.swapper.plist
-  sudo mv exchange.ren.swapper.plist /Library/LaunchAgents/exchange.ren.swapper.plist
-  sudo chown root /Library/LaunchAgents/exchange.ren.swapper.plist
-  sudo launchctl load -w /Library/LaunchAgents/exchange.ren.swapper.plist
+  mv exchange.ren.swapper.plist "$HOME/Library/LaunchAgents/exchange.ren.swapper.plist"
+  chmod +x "$HOME/Library/LaunchAgents/exchange.ren.swapper.plist"
+  launchctl load -w "$HOME/Library/LaunchAgents/exchange.ren.swapper.plist"
 else
   echo 'unsupported OS type or architecture'
   cd ..
@@ -171,7 +181,7 @@ if ! [ -x "$(command -v swapper)" ]; then
 
   echo ''
   echo 'If you are using a custom shell, make sure you update your PATH.'
-  echo "${GREEN}export PATH=\$PATH:\$HOME/.swapper/bin ${NC}"
+  echo "export PATH=\$PATH:\$HOME/.swapper/bin"
 fi
 
 echo "RenEx Atomic Swapper is installed now. Great!"
