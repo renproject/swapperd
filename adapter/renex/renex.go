@@ -20,14 +20,14 @@ type renexAdapter struct {
 	Binder
 }
 
-func New(config config.Config, keystore keystore.Keystore, network renex.Network, watchdog swap.Watchdog, state state.State, logger logger.Logger, binder Binder) renex.Adapter {
+func New(config config.Config, keystore keystore.Keystore, network renex.Network, state state.State, logger logger.Logger, binder Binder) renex.Adapter {
 	return &renexAdapter{
 		Keystore: keystore,
 		State:    state,
 		Logger:   logger,
 		Network:  network,
 		Binder:   binder,
-		Swapper:  swap.NewSwapper(swapAdapter.New(config, keystore, watchdog, logger)),
+		Swapper:  swap.NewSwapper(swapAdapter.New(config, keystore, logger)),
 	}
 }
 

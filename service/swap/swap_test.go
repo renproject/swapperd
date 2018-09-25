@@ -25,7 +25,6 @@ import (
 
 	configDriver "github.com/republicprotocol/renex-swapper-go/driver/config"
 	loggerDriver "github.com/republicprotocol/renex-swapper-go/driver/logger"
-	"github.com/republicprotocol/renex-swapper-go/driver/watchdog"
 )
 
 var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
@@ -109,10 +108,9 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 	}
 
 	buildSwappers := func(cfg config.Config, ksA, ksB keystore.Keystore) (Swapper, Swapper) {
-		wd := watchdog.NewMock()
 		loggr := loggerDriver.NewStdOut()
-		swapperAlice := NewSwapper(swap.New(cfg, ksA, wd, loggr))
-		swapperBob := NewSwapper(swap.New(cfg, ksB, wd, loggr))
+		swapperAlice := NewSwapper(swap.New(cfg, ksA, loggr))
+		swapperBob := NewSwapper(swap.New(cfg, ksB, loggr))
 		return swapperAlice, swapperBob
 	}
 

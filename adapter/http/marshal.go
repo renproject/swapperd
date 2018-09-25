@@ -6,14 +6,15 @@ import (
 	"fmt"
 
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
+	"github.com/republicprotocol/renex-swapper-go/domain/token"
 )
 
 // WhoAmI data object contains the swapper's internal information.
 type WhoAmI struct {
-	Challenge           string   `json:"challenge"`
-	Version             string   `json:"version"`
-	AuthorizedAddresses []string `json:"authorizedAddresses"`
-	SupportedCurrencies []string `json:"supportedCurrencies"`
+	Challenge           string        `json:"challenge"`
+	Version             string        `json:"version"`
+	AuthorizedAddresses []string      `json:"authorizedAddresses"`
+	SupportedCurrencies []token.Token `json:"supportedCurrencies"`
 }
 
 // WhoAmISigned data object contains the WhoAmI object, and the validating

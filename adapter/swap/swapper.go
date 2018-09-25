@@ -14,17 +14,15 @@ import (
 )
 
 type swapperAdapter struct {
-	swap.Watchdog
 	logger.Logger
 	config   config.Config
 	keystore keystore.Keystore
 }
 
-func New(cfg config.Config, ks keystore.Keystore, watchdog swap.Watchdog, logger logger.Logger) swap.SwapperAdapter {
+func New(cfg config.Config, ks keystore.Keystore, logger logger.Logger) swap.SwapperAdapter {
 	return &swapperAdapter{
 		config:   cfg,
 		keystore: ks,
-		Watchdog: watchdog,
 		Logger:   logger,
 	}
 }
@@ -39,6 +37,10 @@ func (swapper *swapperAdapter) NewSwap(req swapDomain.Request) (swap.Atom, swap.
 		return nil, nil, nil, err
 	}
 	return personalAtom, foreignAtom, swapper, nil
+}
+
+func (swapper *swapperAdapter) Complain(UID [32]byte) error {
+	return nil
 }
 
 func buildAtom(key keystore.Keystore, config config.Config, t token.Token, req swapDomain.Request) (swap.Atom, error) {
