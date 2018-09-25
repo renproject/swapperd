@@ -4,8 +4,6 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/ethereum/go-ethereum/crypto"
-
 	"github.com/republicprotocol/renex-swapper-go/adapter/btc"
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/eth"
@@ -44,9 +42,8 @@ func (adapter *adapter) WhoAmI(challenge string) (WhoAmISigned, error) {
 	if err != nil {
 		return WhoAmISigned{}, err
 	}
-	infoHash := crypto.Keccak256(infoBytes)
 	ethKey := adapter.keystr.GetKey(token.ETH).(keystore.EthereumKey)
-	sig, err := ethKey.Sign(infoHash)
+	sig, err := ethKey.Sign(infoBytes)
 	return WhoAmISigned{
 		Signature: MarshalSignature(sig),
 		WhoAmI:    whoAmI,
