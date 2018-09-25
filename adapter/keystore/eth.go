@@ -2,6 +2,7 @@ package keystore
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -39,5 +40,5 @@ func RandomEthereumKey(network string) (EthereumKey, error) {
 }
 
 func (ethKey *EthereumKey) Sign(msg []byte) ([]byte, error) {
-	return crypto.Sign(msg, ethKey.PrivateKey)
+	return crypto.Sign(crypto.Keccak256([]byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d", len(msg))), msg), ethKey.PrivateKey)
 }
