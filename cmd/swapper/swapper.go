@@ -15,13 +15,12 @@ import (
 	renexAdapter "github.com/republicprotocol/renex-swapper-go/adapter/renex"
 	stateAdapter "github.com/republicprotocol/renex-swapper-go/adapter/state"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
-	configDriver "github.com/republicprotocol/renex-swapper-go/driver/config"
+	"github.com/republicprotocol/renex-swapper-go/driver/config"
 	httpDriver "github.com/republicprotocol/renex-swapper-go/driver/http"
 	keystoreDriver "github.com/republicprotocol/renex-swapper-go/driver/keystore"
 	loggerDriver "github.com/republicprotocol/renex-swapper-go/driver/logger"
 	"github.com/republicprotocol/renex-swapper-go/driver/network"
 	storeDriver "github.com/republicprotocol/renex-swapper-go/driver/store"
-	watchdogDriver "github.com/republicprotocol/renex-swapper-go/driver/watchdog"
 	"github.com/republicprotocol/renex-swapper-go/service/guardian"
 	"github.com/republicprotocol/renex-swapper-go/service/renex"
 	"github.com/republicprotocol/renex-swapper-go/service/state"
@@ -29,35 +28,36 @@ import (
 
 func main() {
 	port := flag.String("port", "18516", "HTTP Atom port")
-	repNet := flag.String("network", "testnet", "Republic Protocol Network")
+	repNet := flag.String("network", "mainnet", "Republic Protocol Network")
 	keyphrase := flag.String("passphrase", "", "Keyphrase to unlock keystore")
 	location := flag.String("loc", getHome()+"/.swapper", "Location of the swapper directory")
 	flag.Parse()
 
-	conf := configDriver.New(*location, *repNet)
-	ks, err := keystoreDriver.LoadFromFile(*repNet, *location, *keyphrase)
-	if err != nil {
-		panic(err)
-	}
-	db, err := storeDriver.NewLevelDB(conf.StoreLocation)
+	conf, err := config.New(*location, *repNet)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(ks.GetKey(token.ETH).(keystore.EthereumKey).Address.String())
-	fmt.Println(ks.GetKey(token.BTC).(keystore.BitcoinKey).AddressString)
+	ks, err := keystoreDriver.LoadFromFile(conf, *keyphrase)
+	if err != nil {
+		panic(err)
+	}
+
+	db, err := storeDriver.NewLevelDB(conf.HomeDir + "/db")
+	if err != nil {
+		panic(err)
+	}
 
 	logger := loggerDriver.NewStdOut()
 	state := state.NewState(stateAdapter.New(db, logger))
 	ingressNet := network.NewIngress(conf.RenEx.Ingress, ks.GetKey(token.ETH).(keystore.EthereumKey))
-	nopWatchdog := watchdogDriver.NewMock()
 
 	binder, err := renexAdapter.NewBinder(conf)
 	if err != nil {
 		panic(err)
 	}
 
-	renexSwapper := renex.NewRenEx(renexAdapter.New(conf, ks, ingressNet, nopWatchdog, state, logger, binder))
+	renexSwapper := renex.NewRenEx(renexAdapter.New(conf, ks, ingressNet, state, logger, binder))
 	guardian := guardian.NewGuardian(guardianAdapter.New(conf, ks, state, logger))
 
 	errCh1 := renexSwapper.Start()
@@ -97,7 +97,7 @@ func main() {
 
 func getHome() string {
 	system := runtime.GOOS
-	switch system{
+	switch system {
 	case "window":
 		return os.Getenv("userprofile")
 	case "linux", "darwin":

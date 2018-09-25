@@ -24,7 +24,6 @@ import (
 	loggerDriver "github.com/republicprotocol/renex-swapper-go/driver/logger"
 	networkDriver "github.com/republicprotocol/renex-swapper-go/driver/network"
 	storeDriver "github.com/republicprotocol/renex-swapper-go/driver/store"
-	"github.com/republicprotocol/renex-swapper-go/driver/watchdog"
 )
 
 var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
@@ -92,7 +91,6 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 	}
 
 	buildRenExWatchers := func(aliceMatch, bobMatch swap.Match, cfg config.Config, ksA, ksB keystore.Keystore, net Network) (RenEx, RenEx) {
-		wd := watchdog.NewMock()
 		loggr := loggerDriver.NewStdOut()
 
 		aliceLDB, err := storeDriver.NewLevelDB("/Users/susruth/go/src/github.com/republicprotocol/renex-swapper-go/temp/dbAlice")
@@ -107,8 +105,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 		mockBinder, err := renexAdapter.NewMockBinder(aliceMatch, bobMatch)
 		Expect(err).Should(BeNil())
 
-		aliceRenEx := renexAdapter.New(cfg, ksA, net, wd, aliceState, loggr, mockBinder)
-		bobRenEx := renexAdapter.New(cfg, ksB, net, wd, bobState, loggr, mockBinder)
+		aliceRenEx := renexAdapter.New(cfg, ksA, net, aliceState, loggr, mockBinder)
+		bobRenEx := renexAdapter.New(cfg, ksB, net, bobState, loggr, mockBinder)
 
 		return NewRenEx(aliceRenEx), NewRenEx(bobRenEx)
 	}

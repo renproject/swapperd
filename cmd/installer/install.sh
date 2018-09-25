@@ -38,17 +38,17 @@ chmod +x bin/installer
 while :
 do
   echo "Please enter a passphrase to encrypt your key files"
-  read -s PASSWORDFirst
+  read -s PASSWORD </dev/tty
   echo "Please re-enter the passphrase"
-  read -s PASSWORDSecond
-  if [ $PASSWORDFirst = $PASSWORDSecond ]
+  read -s PASSWORDCONFIRM </dev/tty
+  if [ "$PASSWORD" = "$PASSWORDCONFIRM" ]
   then
-    if [ "$PASSWORDFirst" = "" ]
+    if [ "$PASSWORD" = "" ]
     then
       echo "${RED}You are trying to use an empty passphrase, this means your keystores will not be encrypted are you sure (y/N): ${NC}"
       while :
       do
-        read choice
+        read choice </dev/tty
         choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]')
         echo
         if [ "$choice" = "" ] || [ "$choice" = "y" ] || [ "$choice" = "yes" ]
@@ -67,7 +67,8 @@ do
     echo "${RED}The two passwords you enter are different. Try again ${NC}"
   fi
 done
-./bin/installer -passphrase $PASSWORD< /dev/tty
+
+sudo ./bin/installer -passphrase $PASSWORD < /dev/tty
 
 # make sure the swapper service is started when booted
 if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
@@ -76,7 +77,7 @@ Description=RenEx's Swapper Daemon
 After=network.target
 
 [Service]
-ExecStart=$HOME/.swapper/bin/swapper --loc $HOME/.swapper
+ExecStart=$HOME/.swapper/bin/swapper --loc $HOME/.swapper --passphrase $PASSWORD
 Restart=on-failure
 StartLimitBurst=0
 
@@ -104,6 +105,8 @@ elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
         <string>$HOME/.swapper/bin/swapper</string>
         <string>-loc</string>
         <string>$HOME/.swapper</string>
+        <string>-passphrase</string>
+        <string>$PASSWORD</string>
     </array>
     <key>KeepAlive</key>
     <true/>
@@ -113,9 +116,9 @@ elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
     <string>/var/log/swapper.log</string>
   </dict>
 </plist>" > com.republicprotocol.plist
-  sudo mv com.republicprotocol.plist /Library/LaunchDaemons/com.republicprotocol.plist
-  sudo chown root /Library/LaunchDaemons/com.republicprotocol.plist
-  sudo launchctl load -w /Library/LaunchDaemons/com.republicprotocol.plist
+  sudo mv com.republicprotocol.plist /Library/LaunchAgents/com.republicprotocol.plist
+  sudo chown root /Library/LaunchAgents/com.republicprotocol.plist
+  sudo launchctl load -w /Library/LaunchAgents/com.republicprotocol.plist
 else
   echo 'unsupported OS type or architecture'
   cd ..
@@ -168,5 +171,3 @@ echo ''
 echo "To get started you need RenEx Atomic Swapper's bin directory ($HOME/.swapper/bin) in your PATH"
 echo "environment variable. Next time you log in this will be done"
 echo "automatically."
-echo ''
-echo "To configure your current shell run 'source ${swapper_home}'"

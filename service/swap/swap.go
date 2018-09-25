@@ -38,11 +38,11 @@ func (swap *swapExec) request(id [32]byte, secret [32]byte) error {
 
 	swap.LogInfo(swap.req.UID, "Auditing the atomic swap ")
 	if err := swap.foreignAtom.Audit(); err != nil {
-		if err := swap.ComplainWrongResponderInitiation(id); err != nil {
+		if err := swap.Complain(id); err != nil {
 			swap.LogError(id, fmt.Sprintf("failed to complain to the watch dog: %v", err))
 			return fmt.Errorf("failed to complain to the watch dog: %v", err)
 		}
-		return fmt.Errorf("incorrect swap complained to the watchdog: %v", err)
+		return fmt.Errorf("incorrect swap complaint sent: %v", err)
 	}
 	swap.LogInfo(swap.req.UID, "Audited the atomic swap ")
 
@@ -62,11 +62,11 @@ func (swap *swapExec) request(id [32]byte, secret [32]byte) error {
 func (swap *swapExec) respond(id [32]byte) error {
 	swap.LogInfo(swap.req.UID, "Auditing the atomic swap ")
 	if err := swap.foreignAtom.Audit(); err != nil {
-		if err := swap.ComplainWrongRequestorInitiation(id); err != nil {
+		if err := swap.Complain(id); err != nil {
 			swap.LogError(id, fmt.Sprintf("failed to complain to the watch dog: %v", err))
 			return fmt.Errorf("failed to complain to the watch dog: %v", err)
 		}
-		return fmt.Errorf("incorrect swap complained to the watchdog: %v", err)
+		return fmt.Errorf("incorrect swap complaint sent: %v", err)
 	}
 	swap.LogInfo(swap.req.UID, "Audited the atomic swap ")
 
@@ -83,11 +83,11 @@ func (swap *swapExec) respond(id [32]byte) error {
 	swap.LogInfo(swap.req.UID, "Auditing Secret ")
 	secret, err := swap.personalAtom.AuditSecret()
 	if err != nil {
-		if err := swap.ComplainDelayedRequestorRedemption(id); err != nil {
+		if err := swap.Complain(id); err != nil {
 			swap.LogError(id, fmt.Sprintf("failed to complain to the watch dog: %v", err))
 			return fmt.Errorf("failed to complain to the watch dog: %v", err)
 		}
-		return fmt.Errorf("incorrect swap complained to the watchdog: %v", err)
+		return fmt.Errorf("incorrect swap complaint sent: %v", err)
 	}
 	swap.LogInfo(swap.req.UID, "Secret Audit success")
 

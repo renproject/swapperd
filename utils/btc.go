@@ -9,7 +9,7 @@ import (
 
 func GetHome() string {
 	system := runtime.GOOS
-	switch system{
+	switch system {
 	case "window":
 		return os.Getenv("userprofile")
 	case "linux", "darwin":

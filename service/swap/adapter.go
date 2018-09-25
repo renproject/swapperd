@@ -11,7 +11,7 @@ type SwapperAdapter interface {
 
 type Adapter interface {
 	logger.Logger
-	Watchdog
+	Complain([32]byte) error
 }
 
 type Atom interface {
@@ -20,13 +20,4 @@ type Atom interface {
 	AuditSecret() (secret [32]byte, err error)
 	Redeem(secret [32]byte) error
 	Audit() error
-}
-
-// TODO: Remove watchdog for Complain([32]byte) error
-type Watchdog interface {
-	ComplainDelayedRequestorInitiation([32]byte) error
-	ComplainWrongRequestorInitiation([32]byte) error
-	ComplainDelayedResponderInitiation([32]byte) error
-	ComplainWrongResponderInitiation([32]byte) error
-	ComplainDelayedRequestorRedemption([32]byte) error
 }
