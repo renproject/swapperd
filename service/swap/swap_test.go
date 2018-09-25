@@ -30,6 +30,7 @@ import (
 
 var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 
+	// TODO: Fix the tests
 	buildConfigs := func() (config.Config, keystore.Keystore, keystore.Keystore) {
 		config := configDriver.New("", "nightly")
 		keys := utils.LoadTestKeys("../../secrets/test.json")
@@ -82,7 +83,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 			GoesFirst:          true,
 		}
 
-		areq, _ := json.Marshal(aliceReq)
+		areq, err := json.Marshal(aliceReq)
+		Expect(err).ShouldNot(HaveOccurred())
 		fmt.Println("Alice Request: ", hex.EncodeToString(areq))
 
 		bobReq := swapDomain.Request{
@@ -99,7 +101,8 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 			GoesFirst:          false,
 		}
 
-		breq, _ := json.Marshal(bobReq)
+		breq, err := json.Marshal(bobReq)
+		Expect(err).ShouldNot(HaveOccurred())
 		fmt.Println("Bob Request: ", hex.EncodeToString(breq))
 
 		return aliceReq, bobReq
@@ -126,6 +129,22 @@ var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {
 
 	It("can do an eth - btc atomic swap", func() {
 		aliceSwap, bobSwap := buildSwaps()
+
+		// TODO: Use co library
+		// co.ParBegin(
+		// 	func() {
+		// 		defer GinkgoRecover()
+		// 		err := aliceSwap.Execute()
+		// 		Expect(err).ShouldNot(HaveOccurred())
+		// 	},
+		// 	func() {
+		// 		defer GinkgoRecover()
+		// 		err := bobSwap.Execute()
+		// 		Expect(err).ShouldNot(HaveOccurred())
+		// 	})
+
+		////
+
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {

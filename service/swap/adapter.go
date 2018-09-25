@@ -22,8 +22,8 @@ type Atom interface {
 	Audit() error
 }
 
+// TODO: Remove watchdog for Complain([32]byte) error
 type Watchdog interface {
-	ComplainDelayedAddressSubmission([32]byte) error
 	ComplainDelayedRequestorInitiation([32]byte) error
 	ComplainWrongRequestorInitiation([32]byte) error
 	ComplainDelayedResponderInitiation([32]byte) error

@@ -83,6 +83,7 @@ func (atom *bitcoinAtom) Initiate() error {
 		return err
 	}
 
+	// FIXME: Change to greater than or equal to
 	if bal, err := atom.Balance(atom.scriptAddr); bal == atom.req.SendValue.Int64() || err != nil {
 		if err != nil {
 			return err
@@ -153,6 +154,7 @@ func (atom *bitcoinAtom) AuditSecret() ([32]byte, error) {
 
 // refund the Atomic Swap after expiry and withdraw funds from the HTLC.
 func (atom *bitcoinAtom) Refund() error {
+	// TODO: Use all the outputs
 	outs, err := atom.Conn.GetUnspentOutputs(atom.scriptAddr)
 	if err != nil {
 		return NewErrRefund(err)
@@ -202,6 +204,8 @@ func (atom *bitcoinAtom) Refund() error {
 	if err != nil {
 		return NewErrRefund(err)
 	}
+
+	// TODO: Remove this verify and force to verify before publishing Tx.
 	if atom.verify {
 		// verifying the refund script
 		e, err := txscript.NewEngine(scriptPubKey, refundTx, int(output.Vout),

@@ -34,10 +34,11 @@ func NewRenEx(adapter Adapter) RenEx {
 	}
 }
 
+// TODO: Change Start to Run
 // Run runs the watch object on the given order id
 func (renex *renex) Start() <-chan error {
 	errs := make(chan error)
-	log.Println("Starting the watcher......")
+	log.Println("Running the watcher......")
 	go func() {
 		defer close(errs)
 		defer log.Println("Stopping the watcher......")
@@ -51,6 +52,7 @@ func (renex *renex) Start() <-chan error {
 					errs <- err
 					continue
 				}
+				// TODO: Document the limitation
 				if len(swaps) < 1000 {
 					renex.SwapMultiple(swaps, errs)
 					continue
@@ -64,11 +66,14 @@ func (renex *renex) Start() <-chan error {
 
 func (renex *renex) SwapMultiple(swaps [][32]byte, errs chan error) {
 	for i := range swaps {
+		// TODO: Use co library
 		go func(i int) {
+			// TODO: Fix data race issues
 			if renex.swapStatuses[swaps[i]] {
 				return
 			}
 			renex.swapStatuses[swaps[i]] = true
+			defer func() { renex.swapStatuses[swaps[i]] = false }()
 			if err := renex.Swap(swaps[i]); err != nil {
 				select {
 				case _, ok := <-renex.doneCh:
@@ -87,7 +92,6 @@ func (renex *renex) SwapMultiple(swaps [][32]byte, errs chan error) {
 				case errs <- err:
 				}
 			}
-			renex.swapStatuses[swaps[i]] = false
 		}(i)
 	}
 }
@@ -141,6 +145,8 @@ func (renex *renex) Swap(orderID [32]byte) error {
 func (renex *renex) buildRequest(orderID [32]byte) (swap.Request, error) {
 	fmt.Println("Building Request.... ")
 	req := swap.Request{}
+
+	// TODO: Change it to AddedAtTimestamp
 	timeStamp, err := renex.AddTimestamp(orderID)
 	if err != nil {
 		return req, err

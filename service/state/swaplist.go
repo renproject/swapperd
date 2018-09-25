@@ -127,6 +127,7 @@ func (state *state) ExpiredSwaps() ([][32]byte, error) {
 	return refundableSwaps, nil
 }
 
+// TODO: check timestamp and delete if expired
 func (state *state) DeleteIfRefunded(orderID [32]byte) error {
 	if state.Status(orderID) == swap.StatusExpired {
 		return state.DeleteSwap(orderID)

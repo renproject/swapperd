@@ -46,7 +46,7 @@ func newInitiateScript(pkhMe, pkhThem *[ripemd160.Size]byte, locktime int64, sec
 
 	b.AddOp(txscript.OP_IF)
 	{
-		b.AddOp(txscript.OP_SIZE)
+		b.AddOp(txscript.OP_SIZE) // TODO: Update comments
 		b.AddData([]byte{32})
 		b.AddOp(txscript.OP_EQUALVERIFY)
 		b.AddOp(txscript.OP_SHA256)

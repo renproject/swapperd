@@ -5,7 +5,7 @@ type Config struct {
 	Version             string          `json:"version"`
 	SupportedCurrencies []string        `json:"supportedCurrencies"`
 	AuthorizedAddresses []string        `json:"authorizedAddresses"`
-	StoreLocation       string          `json:"storeLocation"`
+	HomeDir             string          `json:"homeDir"`
 	Ethereum            EthereumNetwork `json:"ethereum"`
 	Bitcoin             BitcoinNetwork  `json:"bitcoin"`
 	RenEx               RenExNetwork    `json:"renex"`
@@ -27,7 +27,6 @@ type BitcoinNetwork struct {
 // RenExNetwork is the renex specific config object
 type RenExNetwork struct {
 	Network    string `json:"network"`
-	Watchdog   string `json:"watchdog"`
 	Ingress    string `json:"ingress"`
 	Settlement string `json:"settlement"`
 	Orderbook  string `json:"orderbook"`

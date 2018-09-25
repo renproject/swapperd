@@ -35,6 +35,7 @@ func (swap *swapExec) request(id [32]byte, secret [32]byte) error {
 		swap.LogInfo(id, "swap already initiated")
 	}
 	swap.LogInfo(swap.req.UID, "Initiated the atomic swap ")
+
 	swap.LogInfo(swap.req.UID, "Auditing the atomic swap ")
 	if err := swap.foreignAtom.Audit(); err != nil {
 		if err := swap.ComplainWrongResponderInitiation(id); err != nil {
@@ -44,6 +45,7 @@ func (swap *swapExec) request(id [32]byte, secret [32]byte) error {
 		return fmt.Errorf("incorrect swap complained to the watchdog: %v", err)
 	}
 	swap.LogInfo(swap.req.UID, "Audited the atomic swap ")
+
 	swap.LogInfo(swap.req.UID, "Redeeming the atomic swap ")
 	if err := swap.foreignAtom.Redeem(secret); err != nil {
 		if err != ErrSwapAlreadyRedeemedOrRefunded {
@@ -53,6 +55,7 @@ func (swap *swapExec) request(id [32]byte, secret [32]byte) error {
 		swap.LogInfo(id, "swap already redeemed or refunded")
 	}
 	swap.LogInfo(swap.req.UID, "Redeemed the atomic swap ")
+
 	return nil
 }
 
@@ -66,6 +69,7 @@ func (swap *swapExec) respond(id [32]byte) error {
 		return fmt.Errorf("incorrect swap complained to the watchdog: %v", err)
 	}
 	swap.LogInfo(swap.req.UID, "Audited the atomic swap ")
+
 	swap.LogInfo(swap.req.UID, "Initiating the atomic swap ")
 	if err := swap.personalAtom.Initiate(); err != nil {
 		if err != ErrSwapAlreadyInitiated {
@@ -75,6 +79,7 @@ func (swap *swapExec) respond(id [32]byte) error {
 		swap.LogInfo(id, "swap already initiated")
 	}
 	swap.LogInfo(swap.req.UID, "Initiated the atomic swap ")
+
 	swap.LogInfo(swap.req.UID, "Auditing Secret ")
 	secret, err := swap.personalAtom.AuditSecret()
 	if err != nil {
@@ -85,6 +90,7 @@ func (swap *swapExec) respond(id [32]byte) error {
 		return fmt.Errorf("incorrect swap complained to the watchdog: %v", err)
 	}
 	swap.LogInfo(swap.req.UID, "Secret Audit success")
+
 	swap.LogInfo(swap.req.UID, "Redeeming the atomic swap ")
 	if err := swap.foreignAtom.Redeem(secret); err != nil {
 		if err != ErrSwapAlreadyRedeemedOrRefunded {
@@ -93,6 +99,7 @@ func (swap *swapExec) respond(id [32]byte) error {
 		}
 		swap.LogInfo(id, "swap already redeemed or refunded")
 	}
+
 	swap.LogInfo(swap.req.UID, "Redeemed the atomic swap ")
 	return nil
 }

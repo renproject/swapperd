@@ -90,17 +90,18 @@ const (
 // )
 
 type Request struct {
-	UID                [32]byte    `json:"uid"`
-	Secret             [32]byte    `json:"secret"`
-	SecretHash         [32]byte    `json:"secretHash"`
-	TimeLock           int64       `json:"timeLock"`
-	SendToAddress      string      `json:"sendToAddress"`
-	ReceiveFromAddress string      `json:"receiveFromAddress"`
-	SendValue          *big.Int    `json:"sendValue"`
-	ReceiveValue       *big.Int    `json:"receiveValue"`
-	SendToken          token.Token `json:"sendToken"`
-	ReceiveToken       token.Token `json:"receiveToken"`
-	GoesFirst          bool        `json:"goesFirst"`
+	UID                [32]byte `json:"uid"`
+	Secret             [32]byte `json:"secret"`
+	SecretHash         [32]byte `json:"secretHash"`
+	TimeLock           int64    `json:"timeLock"`
+	SendToAddress      string   `json:"sendToAddress"`
+	ReceiveFromAddress string   `json:"receiveFromAddress"`
+	// TODO: Big integers should be marshaled as an array of big-endian bytes.
+	SendValue    *big.Int    `json:"sendValue"`
+	ReceiveValue *big.Int    `json:"receiveValue"`
+	SendToken    token.Token `json:"sendToken"`
+	ReceiveToken token.Token `json:"receiveToken"`
+	GoesFirst    bool        `json:"goesFirst"`
 }
 
 // Match is the order match interface
