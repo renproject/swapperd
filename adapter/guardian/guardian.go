@@ -31,13 +31,18 @@ func New(conf config.Config, ks keystore.Keystore, state state.State, logger log
 	}
 }
 
-func (guardian *guardianAdapter) Refund(orderID [32]byte) error {
-	req, err := guardian.SwapRequest(orderID)
+// TODO: Check whether the atom is initiated before building the atom.
+func (adapter *guardianAdapter) Refund(orderID [32]byte) error {
+	if adapter.Status(orderID) == swapDomain.StatusOpen {
+		return guardian.ErrNotInitiated
+	}
+
+	req, err := adapter.SwapRequest(orderID)
 	if err != nil {
 		return err
 	}
 
-	personalAtom, err := buildAtom(guardian.Keystore, guardian.Config, req.SendToken, req)
+	personalAtom, err := buildAtom(adapter.Keystore, adapter.Config, req.SendToken, req)
 	if err != nil {
 		return err
 	}

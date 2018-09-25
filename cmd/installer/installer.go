@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/republicprotocol/renex-swapper-go/driver/config"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/republicprotocol/renex-swapper-go/driver/config"
 
 	"github.com/republicprotocol/renex-swapper-go/driver/keystore"
 	"github.com/republicprotocol/renex-swapper-go/utils"
@@ -27,7 +28,7 @@ func main() {
 		panic(err)
 	}
 
-	cfg ,err  := config.New(*loc, *repNet)
+	cfg, err := config.New(*loc, *repNet)
 	if err != nil {
 		panic(err)
 	}
@@ -51,10 +52,9 @@ func readAddress() string {
 		addr = addr[2:]
 	}
 	addrBytes, err := hex.DecodeString(addr)
-	if err != nil || len(addrBytes) == 40 {
+	if err != nil || len(addrBytes) != 20 {
 		fmt.Println("Please enter a valid Ethereum address")
 		return readAddress()
 	}
-	return addr
+	return "0x" + addr
 }
-

@@ -84,6 +84,9 @@ func (g *guardian) RefundMultiple(swaps [][32]byte, errs chan error) {
 			}
 			g.refundStatus[swaps[i]] = true
 			if err := g.Refund(swaps[i]); err != nil {
+				if err == ErrNotInitiated {
+					return
+				}
 				select {
 				case _, ok := <-g.doneCh:
 					if !ok {
