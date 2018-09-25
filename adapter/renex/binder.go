@@ -66,14 +66,22 @@ func (binder *binder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Matc
 			time.Sleep(10 * time.Second)
 			continue
 		}
+		priorityToken, err := token.TokenCodeToToken(matchDetails.PriorityToken)
+		if err != nil {
+			return swap.Match{}, err
+		}
+		secondaryToken, err := token.TokenCodeToToken(matchDetails.SecondaryToken)
+		if err != nil {
+			return swap.Match{}, err
+		}
 		if matchDetails.OrderIsBuy {
 			return swap.Match{
 				PersonalOrderID: orderID,
 				ForeignOrderID:  matchDetails.MatchedID,
 				SendValue:       matchDetails.PriorityVolume,
 				ReceiveValue:    matchDetails.SecondaryVolume,
-				SendToken:       token.Token(matchDetails.PriorityToken),
-				ReceiveToken:    token.Token(matchDetails.SecondaryToken),
+				SendToken:       priorityToken,
+				ReceiveToken:    secondaryToken,
 			}, nil
 		}
 		return swap.Match{
@@ -81,8 +89,8 @@ func (binder *binder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Matc
 			ForeignOrderID:  matchDetails.MatchedID,
 			SendValue:       matchDetails.SecondaryVolume,
 			ReceiveValue:    matchDetails.PriorityVolume,
-			SendToken:       token.Token(matchDetails.SecondaryToken),
-			ReceiveToken:    token.Token(matchDetails.PriorityToken),
+			SendToken:       secondaryToken,
+			ReceiveToken:    priorityToken,
 		}, nil
 	}
 }

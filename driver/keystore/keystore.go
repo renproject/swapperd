@@ -4,9 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 
+	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
+	"github.com/republicprotocol/renex-swapper-go/domain/token"
 )
 
 // ErrKeyFileExists is returned when the keystore file exists, and the user is
@@ -18,141 +19,124 @@ var ErrKeyFileExists = errors.New("Keystore file exists")
 var ErrKeyFileDoesNotExist = errors.New("Keystore file doesnot exist")
 
 // LoadFromFile
-func LoadFromFile(repNetwork, loc, passphrase string) (keystore.Keystore, error) {
-	var ethLoc, btcLoc string
-	if passphrase == "" {
-		ethLoc = fmt.Sprintf("%s/ethereum-%s-unsafe.json", loc, repNetwork)
-		btcLoc = fmt.Sprintf("%s/bitcoin-%s-unsafe.json", loc, repNetwork)
-	} else {
-		ethLoc = fmt.Sprintf("%s/ethereum-%s.json", loc, repNetwork)
-		btcLoc = fmt.Sprintf("%s/bitcoin-%s.json", loc, repNetwork)
+func LoadFromFile(conf config.Config, passphrase string) (keystore.Keystore, error) {
+	keys := []keystore.Key{}
+	for _, token := range conf.SupportedCurrencies {
+		var loc string
+		if passphrase == "" {
+			loc = fmt.Sprintf("%s/%s-%s-unsafe.json", conf.HomeDir, token, conf.RenEx.Network)
+		} else {
+			loc = fmt.Sprintf("%s/%s-%s.json", conf.HomeDir, token, conf.RenEx.Network)
+		}
+		key, err := LoadKeyFromFile(loc, passphrase, conf, token)
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, key)
 	}
-
-	ethNet, btcNet, err := getSpecificNetworks(repNetwork)
-	if err != nil {
-		return nil, err
-	}
-	ethKey, err := LoadKeyFromFile(ethLoc, "ethereum", ethNet, passphrase)
-	if err != nil {
-		return nil, err
-	}
-	btcKey, err := LoadKeyFromFile(btcLoc, "bitcoin", btcNet, passphrase)
-	if err != nil {
-		return nil, err
-	}
-	return keystore.New(btcKey, ethKey), nil
+	return keystore.New(keys...), nil
 }
 
-func GenerateRandom(repNetwork string) (keystore.Keystore, error) {
-	ethNet, btcNet, err := getSpecificNetworks(repNetwork)
-	if err != nil {
-		return nil, err
+func GenerateRandomKeystore(conf config.Config) (keystore.Keystore, error) {
+	keys := []keystore.Key{}
+	for _, token := range conf.SupportedCurrencies {
+		key, err := randomKey(conf, token)
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, key)
 	}
-	ethKey, err := keystore.RandomEthereumKey(ethNet)
-	if err != nil {
-		return nil, err
-	}
-	btcKey, err := keystore.RandomBitcoinKey(btcNet)
-	if err != nil {
-		return nil, err
-	}
-	return keystore.New(ethKey, btcKey), nil
+	return keystore.New(keys...), nil
 }
 
 // GenerateFile
-func GenerateFile(loc string, repNetwork string, passphrase string) error {
-	var ethLoc, btcLoc string
-	if passphrase == "" {
-		ethLoc = fmt.Sprintf("%s/ethereum-%s-unsafe.json", loc, repNetwork)
-		btcLoc = fmt.Sprintf("%s/bitcoin-%s-unsafe.json", loc, repNetwork)
-	} else {
-		ethLoc = fmt.Sprintf("%s/ethereum-%s.json", loc, repNetwork)
-		btcLoc = fmt.Sprintf("%s/bitcoin-%s.json", loc, repNetwork)
+func GenerateFile(conf config.Config, passphrase string) error {
+	for _, token := range conf.SupportedCurrencies {
+		var loc string
+		if passphrase == "" {
+			loc = fmt.Sprintf("%s/%s-%s-unsafe.json", conf.HomeDir, token, conf.RenEx.Network)
+		} else {
+			loc = fmt.Sprintf("%s/%s-%s.json", conf.HomeDir, token, conf.RenEx.Network)
+		}
+		if err := StoreKeyToFile(loc, passphrase, conf, token); err != nil {
+			return err
+		}
 	}
-	ethNet, btcNet, err := getSpecificNetworks(repNetwork)
-	if err != nil {
-		return err
-	}
-	if err := StoreKeyToFile(ethLoc, "ethereum", ethNet, passphrase); err != nil {
-		return err
-	}
-	return StoreKeyToFile(btcLoc, "bitcoin", btcNet, passphrase)
+	return nil
 }
 
 // LoadKeyFromFile loads a key from a file and tries to decrypt it using the
 // given passphrase. If the passphrase is empty, then it tries to load an
 // unencrypted key.
-func LoadKeyFromFile(loc, chain, network, passphrase string) (keystore.Key, error) {
+func LoadKeyFromFile(loc, passphrase string, conf config.Config, tok token.Token) (keystore.Key, error) {
 	data, err := ioutil.ReadFile(loc)
 	if err != nil {
 		return nil, ErrKeyFileDoesNotExist
 	}
-	return decodeKey(data, chain, network, passphrase)
+	return decodeKey(data, passphrase, conf, tok)
 }
 
 // StoreKeyToFile stores a key to a file after encrypting it using the given
 // passphrase. If the passphrase is empty, then it tries to load an unencrypted
 // key.
-func StoreKeyToFile(loc, chain, network, passphrase string) error {
+func StoreKeyToFile(loc, passphrase string, conf config.Config, tok token.Token) error {
 	if _, err := ioutil.ReadFile(loc); err == nil {
 		return ErrKeyFileExists
 	}
-	generatedKey, err := generateRandomKey(chain, network, passphrase)
+	generatedKey, err := generateRandomKey(passphrase, conf, tok)
 	if err != nil {
 		return err
 	}
 	return ioutil.WriteFile(loc, generatedKey, 0400)
 }
 
-// LoadKeyFromNet loads a key from the network and tries to decrypt it using
-// the given passphrase. If the  passphrase is empty, then it tries to load an
-// unencrypted key.
-func LoadKeyFromNet(url, chain, network, passphrase string) (keystore.Key, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, ErrKeyFileExists
+func randomKey(conf config.Config, tok token.Token) (keystore.Key, error) {
+	switch tok {
+	case token.BTC:
+		return keystore.RandomBitcoinKey(conf.Bitcoin.Network)
+	case token.ETH:
+		return keystore.RandomEthereumKey(conf.Ethereum.Network)
+	default:
+		return nil, token.ErrUnsupportedToken
 	}
-	if resp.StatusCode == 200 {
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-		return decodeKey(data, chain, network, passphrase)
-	}
-	return nil, fmt.Errorf("Unexpected status code: %d", resp.StatusCode)
 }
 
-func generateRandomKey(chain, network, passphrase string) ([]byte, error) {
-	switch chain {
-	case "bitcoin":
-		return GenerateRandomBitcoinKey(network, passphrase)
-	case "ethereum":
+func generateRandomKey(passphrase string, conf config.Config, tok token.Token) ([]byte, error) {
+	switch tok {
+	case token.BTC:
+		return GenerateRandomBitcoinKey(conf.Bitcoin.Network, passphrase)
+	case token.ETH:
 		return GenerateRandomEthereumKey(passphrase)
 	default:
-		return nil, fmt.Errorf("Unsupported blockchain %s", chain)
+		return nil, token.ErrUnsupportedToken
 	}
 }
 
-func decodeKey(data []byte, chain, network, passphrase string) (keystore.Key, error) {
-	switch chain {
-	case "bitcoin":
-		return DecodeBitcoinKey(data, network, passphrase)
-	case "ethereum":
-		return DecodeEthereumKey(data, network, passphrase)
+func decodeKey(data []byte, passphrase string, conf config.Config, tok token.Token) (keystore.Key, error) {
+	switch tok {
+	case token.BTC:
+		return DecodeBitcoinKey(data, conf.Bitcoin.Network, passphrase)
+	case token.ETH:
+		return DecodeEthereumKey(data, conf.Ethereum.Network, passphrase)
 	default:
-		return nil, fmt.Errorf("Unsupported blockchain %s", chain)
+		return nil, token.ErrUnsupportedToken
 	}
 }
 
-func getSpecificNetworks(repNetwork string) (string, string, error) {
-	switch repNetwork {
-	case "nightly":
-		return "kovan", "testnet", nil
-	case "falcon":
-		return "kovan", "testnet", nil
-	case "testnet":
-		return "kovan", "testnet", nil
-	default:
-		return "", "", fmt.Errorf("Unknown RenEx network %s", repNetwork)
-	}
-}
+// // LoadKeyFromNet loads a key from the network and tries to decrypt it using
+// // the given passphrase. If the  passphrase is empty, then it tries to load an
+// // unencrypted key.
+// func LoadKeyFromNet(url, chain, network, passphrase string) (keystore.Key, error) {
+// 	resp, err := http.Get(url)
+// 	if err != nil {
+// 		return nil, ErrKeyFileExists
+// 	}
+// 	if resp.StatusCode == 200 {
+// 		data, err := ioutil.ReadAll(resp.Body)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		return decodeKey(data, passphrase, network, )
+// 	}
+// 	return nil, fmt.Errorf("Unexpected status code: %d", resp.StatusCode)
+// }
