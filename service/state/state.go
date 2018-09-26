@@ -132,6 +132,7 @@ func (state *state) SwapRequest(orderID [32]byte) (swap.Request, error) {
 	}
 	swapDetails = state.ReadSwapDetails(orderID)
 	state.swapCache.Write(orderID, swapDetails)
+	PrintSwapRequest(swapDetails.Request)
 	return swapDetails.Request, nil
 }
 
@@ -158,7 +159,7 @@ func (state *state) ReadSwapDetails(orderID [32]byte) SwapDetails {
 }
 
 // PrintSwapRequest to Std Out
-func (state *state) PrintSwapRequest(swapRequest swap.Request) {
+func PrintSwapRequest(swapRequest swap.Request) {
 	fmt.Printf("\n\t\tSWAP REQUEST\n")
 	fmt.Printf("UID: %s\n", swapRequest.UID)
 	fmt.Printf("Expiry: %d\n", swapRequest.TimeLock)
@@ -168,8 +169,8 @@ func (state *state) PrintSwapRequest(swapRequest swap.Request) {
 	fmt.Printf("Receive From Address: %v\n", swapRequest.ReceiveFromAddress)
 	fmt.Printf("Send Value: %v\n", swapRequest.SendValue)
 	fmt.Printf("Receive Value: %v\n", swapRequest.ReceiveValue)
-	fmt.Printf("Send Token: %d\n", swapRequest.SendToken)
-	fmt.Printf("Receive Token: %d\n", swapRequest.ReceiveToken)
+	fmt.Printf("Send Token: %s\n", swapRequest.SendToken)
+	fmt.Printf("Receive Token: %s\n", swapRequest.ReceiveToken)
 	fmt.Printf("Goes First: %v\n", swapRequest.GoesFirst)
 	fmt.Print("-------------------------------------------------------------\n")
 }
