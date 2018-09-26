@@ -121,6 +121,7 @@ func (renex *renex) Swap(orderID [32]byte) error {
 			return err
 		}
 	}
+
 	if renex.Status(orderID) == swap.StatusConfirmed {
 		req, err := renex.SwapRequest(orderID)
 		if err != nil {
@@ -199,6 +200,6 @@ func (renex *renex) buildRequest(orderID [32]byte) (swap.Request, error) {
 		req.TimeLock = foreignDetails.TimeLock
 	}
 
-	fmt.Println("Request Build.... Success")
+	renex.PrintSwapRequest(req)
 	return req, nil
 }

@@ -50,6 +50,8 @@ type State interface {
 
 	AddTimestamp([32]byte) (int64, error)
 	PutAddTimestamp([32]byte) error
+
+	PrintSwapRequest(swap.Request)
 }
 
 // NewState creates a new state interface
@@ -132,7 +134,6 @@ func (state *state) SwapRequest(orderID [32]byte) (swap.Request, error) {
 	}
 	swapDetails = state.ReadSwapDetails(orderID)
 	state.swapCache.Write(orderID, swapDetails)
-	PrintSwapRequest(swapDetails.Request)
 	return swapDetails.Request, nil
 }
 
@@ -159,8 +160,8 @@ func (state *state) ReadSwapDetails(orderID [32]byte) SwapDetails {
 }
 
 // PrintSwapRequest to Std Out
-func PrintSwapRequest(swapRequest swap.Request) {
-	fmt.Printf("\n\t\tSWAP REQUEST\n")
+func (state *state) PrintSwapRequest(swapRequest swap.Request) {
+	fmt.Printf("\nSWAP REQUEST\n\n")
 	fmt.Printf("UID: %s\n", swapRequest.UID)
 	fmt.Printf("Expiry: %d\n", swapRequest.TimeLock)
 	fmt.Printf("Secret Hash: %s\n", base64.StdEncoding.EncodeToString(swapRequest.SecretHash[:]))
