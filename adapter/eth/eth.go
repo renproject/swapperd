@@ -86,6 +86,11 @@ func (atom *ethereumAtom) Initiate() error {
 	if err != nil {
 		return fmt.Errorf("Failed to initiate on the Ethereum blockchain: %v", err)
 	}
+
+	if err := atom.waitForInitiation(); err != nil {
+		return err
+	}
+
 	fmt.Println("Initiated the atomic swap on ethereum blockchain")
 	// atom.logger.LogInfo(atom.req.UID,
 	// 	fmt.Sprintf("Initiated the atomic swap on ethereum blockchain (TX Hash): %s", tx.Hash().String()))
@@ -115,65 +120,24 @@ func (atom *ethereumAtom) Refund() error {
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) AuditSecret() ([32]byte, error) {
-	for {
-		fmt.Println("Waiting for counter party redemption ......  on ethereum blockchain")
-		secret, err := atom.binder.AuditSecret(&bind.CallOpts{}, atom.id)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		if secret != [32]byte{} {
-			return secret, nil
-		}
-		if time.Now().Unix() > atom.req.TimeLock {
-			break
-		}
-		time.Sleep(1 * time.Minute)
+	if err := atom.waitForRedemption(); err != nil {
+		return [32]byte{}, err
 	}
-	return [32]byte{}, errors.New("Timed Out")
+	return atom.binder.AuditSecret(&bind.CallOpts{}, atom.id)
 }
 
 // Audit an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Audit() error {
-	for {
-		fmt.Println("Waiting for counter party initiation ......  on ethereum blockchain")
-		auditReport, err := atom.binder.Audit(&bind.CallOpts{}, atom.id)
-		if err != nil {
-			return err
-		}
-		if auditReport.To.String() != auditReport.From.String() {
-			break
-		}
-		if time.Now().Unix() > atom.req.TimeLock {
-			return errors.New("Timed Out")
-		}
-		time.Sleep(1 * time.Minute)
+	if err := atom.waitForInitiation(); err != nil {
+		return err
 	}
-
 	auditReport, err := atom.binder.Audit(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return err
 	}
-
-	if auditReport.From.String() != atom.req.ReceiveFromAddress {
-		return errors.New("From Address Mismatch")
-	}
-
-	if auditReport.SecretLock != atom.req.SecretHash {
-		return errors.New("Secret Hash Mismatch")
-	}
-
-	if auditReport.Timelock.Int64() != atom.req.TimeLock {
-		return errors.New("Time Locks Mismatch")
-	}
-
-	if auditReport.To.String() != atom.key.Address.String() {
-		return errors.New("To Address Mismatch")
-	}
-
 	if auditReport.Value.Cmp(atom.req.ReceiveValue) != 0 {
-		return errors.New("Receive Value Mismatch")
+		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", auditReport.Value, atom.req.ReceiveValue)
 	}
-
 	return nil
 }
 
@@ -192,6 +156,9 @@ func (atom *ethereumAtom) Redeem(secret [32]byte) error {
 	_, err = atom.binder.Redeem(atom.key.TransactOpts, atom.id, secret)
 	atom.key.TransactOpts.GasLimit = prevGasLimit
 	if err != nil {
+		return err
+	}
+	if err := atom.waitForRedemption(); err != nil {
 		return err
 	}
 	fmt.Println("redeemed the atomic swap on ethereum blockchain")
@@ -220,4 +187,40 @@ func buildValues(req swapDomain.Request, personalAddr string) (string, int64, er
 	}
 
 	return addr, expiry, nil
+}
+
+func (atom *ethereumAtom) waitForInitiation() error {
+	for {
+		fmt.Println("Waiting for initiation ......  on ethereum blockchain")
+		auditReport, err := atom.binder.Audit(&bind.CallOpts{}, atom.id)
+		if err != nil {
+			return err
+		}
+		if auditReport.To.String() != auditReport.From.String() {
+			break
+		}
+		if time.Now().Unix() > atom.req.TimeLock {
+			return errors.New("Timed Out")
+		}
+		time.Sleep(1 * time.Minute)
+	}
+	return nil
+}
+
+func (atom *ethereumAtom) waitForRedemption() error {
+	for {
+		fmt.Println("Waiting for counter party redemption ......  on ethereum blockchain")
+		secret, err := atom.binder.AuditSecret(&bind.CallOpts{}, atom.id)
+		if err != nil {
+			return err
+		}
+		if secret != [32]byte{} {
+			return nil
+		}
+		if time.Now().Unix() > atom.req.TimeLock {
+			break
+		}
+		time.Sleep(1 * time.Minute)
+	}
+	return errors.New("Timed Out")
 }

@@ -238,6 +238,9 @@ func (atom *bitcoinAtom) Audit() error {
 			fmt.Println(".... done")
 			return nil
 		}
+		if bal != 0 {
+			fmt.Printf("Expected receive value: %v actual value: %v\n", atom.req.ReceiveValue.Int64(), bal)
+		}
 		if time.Now().Unix() > atom.req.TimeLock {
 			break
 		}
@@ -324,3 +327,22 @@ func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 	fmt.Println("Redeemed on bitcoin blockchain")
 	return atom.PublishTransaction(redeemTxBuffer.Bytes())
 }
+
+// func (atom *bitcoinAtom) waitForInitiation(val *big.Int) error {
+// 	for {
+// 		fmt.Println("Auditing on bitcoin blockchain")
+// 		bal, err := atom.Conn.Balance(atom.scriptAddr)
+// 		if bal >= atom.req.ReceiveValue.Int64() {
+// 			return nil
+// 		}
+// 		if time.Now().Unix() > atom.req.TimeLock {
+// 			break
+// 		}
+// 		time.Sleep(1 * time.Minute)
+// 	}
+// 	return NewErrAudit(ErrTimedOut)
+// }
+
+// func (atom *bitcoinAtom) waitForRedemption() error {
+
+// }
