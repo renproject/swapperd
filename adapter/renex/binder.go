@@ -74,12 +74,13 @@ func (binder *binder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Matc
 		if err != nil {
 			return swap.Match{}, err
 		}
+
 		if matchDetails.OrderIsBuy {
 			return swap.Match{
 				PersonalOrderID: orderID,
 				ForeignOrderID:  matchDetails.MatchedID,
-				SendValue:       matchDetails.PriorityVolume.Add(matchDetails.PriorityVolume, matchDetails.PriorityFee),
-				ReceiveValue:    matchDetails.SecondaryVolume.Add(matchDetails.SecondaryVolume, matchDetails.SecondaryFee),
+				SendValue:       matchDetails.PriorityVolume.Add(matchDetails.PriorityVolume, matchDetails.PriorityFee).String(),
+				ReceiveValue:    matchDetails.SecondaryVolume.Add(matchDetails.SecondaryVolume, matchDetails.SecondaryFee).String(),
 				SendToken:       priorityToken,
 				ReceiveToken:    secondaryToken,
 			}, nil
@@ -87,8 +88,8 @@ func (binder *binder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Matc
 		return swap.Match{
 			PersonalOrderID: orderID,
 			ForeignOrderID:  matchDetails.MatchedID,
-			SendValue:       matchDetails.SecondaryVolume.Add(matchDetails.SecondaryVolume, matchDetails.SecondaryFee),
-			ReceiveValue:    matchDetails.PriorityVolume.Add(matchDetails.PriorityVolume, matchDetails.PriorityFee),
+			SendValue:       matchDetails.SecondaryVolume.Add(matchDetails.SecondaryVolume, matchDetails.SecondaryFee).String(),
+			ReceiveValue:    matchDetails.PriorityVolume.Add(matchDetails.PriorityVolume, matchDetails.PriorityFee).String(),
 			SendToken:       secondaryToken,
 			ReceiveToken:    priorityToken,
 		}, nil

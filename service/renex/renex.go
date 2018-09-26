@@ -121,20 +121,11 @@ func (renex *renex) Swap(orderID [32]byte) error {
 			return err
 		}
 	}
-
 	if renex.Status(orderID) == swap.StatusConfirmed {
-		ordMatch, err := renex.GetOrderMatch(orderID, time.Now().Unix()+48*60*60)
-		if err != nil {
-			return err
-		}
-
 		req, err := renex.SwapRequest(orderID)
 		if err != nil {
 			return err
 		}
-
-		req.ReceiveValue = ordMatch.ReceiveValue
-		req.SendValue = ordMatch.SendValue
 
 		swapInst, err := renex.NewSwap(req)
 		if err != nil {
@@ -147,7 +138,6 @@ func (renex *renex) Swap(orderID [32]byte) error {
 			return err
 		}
 	}
-
 	return nil
 }
 

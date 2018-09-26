@@ -1,8 +1,6 @@
 package swap
 
 import (
-	"math/big"
-
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
 )
 
@@ -97,8 +95,8 @@ type Request struct {
 	SendToAddress      string   `json:"sendToAddress"`
 	ReceiveFromAddress string   `json:"receiveFromAddress"`
 	// TODO: Big integers should be marshaled as an array of big-endian bytes.
-	SendValue    *big.Int    `json:"sendValue"`
-	ReceiveValue *big.Int    `json:"receiveValue"`
+	SendValue    string      `json:"sendValue"`
+	ReceiveValue string      `json:"receiveValue"`
 	SendToken    token.Token `json:"sendToken"`
 	ReceiveToken token.Token `json:"receiveToken"`
 	GoesFirst    bool        `json:"goesFirst"`
@@ -108,8 +106,8 @@ type Request struct {
 type Match struct {
 	PersonalOrderID [32]byte
 	ForeignOrderID  [32]byte
-	SendValue       *big.Int
-	ReceiveValue    *big.Int
+	SendValue       string
+	ReceiveValue    string
 	SendToken       token.Token
 	ReceiveToken    token.Token
 }

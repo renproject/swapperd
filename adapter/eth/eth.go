@@ -78,7 +78,12 @@ func (atom *ethereumAtom) Initiate() error {
 	// TODO: Fix data race on transact opts
 	prevValue := atom.key.TransactOpts.Value
 	prevGasLimit := atom.key.TransactOpts.GasLimit
-	atom.key.TransactOpts.Value = atom.req.SendValue
+	var ok bool
+	atom.key.TransactOpts.Value, ok = big.NewInt(0).SetString(atom.req.SendValue, 10)
+	if !ok {
+		return fmt.Errorf("Invalid Send Value: %s", atom.req.SendValue)
+	}
+
 	atom.key.TransactOpts.GasLimit = 3000000
 	_, err = atom.binder.Initiate(atom.key.TransactOpts, atom.id, common.HexToAddress(atom.req.SendToAddress), atom.req.SecretHash, big.NewInt(atom.req.TimeLock))
 	atom.key.TransactOpts.Value = prevValue
@@ -136,7 +141,11 @@ func (atom *ethereumAtom) Audit() error {
 		return err
 	}
 	fmt.Println(auditReport)
-	if auditReport.Value.Cmp(atom.req.ReceiveValue) != 0 {
+	recvValue, ok := big.NewInt(0).SetString(atom.req.ReceiveValue, 10)
+	if !ok {
+		return fmt.Errorf("Invalid Receive Value %s", recvValue)
+	}
+	if auditReport.Value.Cmp(recvValue) != 0 {
 		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.req.ReceiveValue, auditReport.Value)
 	}
 	return nil
