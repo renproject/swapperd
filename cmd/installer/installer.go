@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/republicprotocol/renex-swapper-go/driver/config"
-
 	"github.com/republicprotocol/renex-swapper-go/driver/keystore"
 	"github.com/republicprotocol/renex-swapper-go/utils"
 )
@@ -33,7 +32,9 @@ func main() {
 		panic(err)
 	}
 	if err := keystore.GenerateFile(cfg, *passphrase); err != nil {
-		panic(err)
+		if err != keystore.ErrKeyFileExists{
+			panic(err)
+		}
 	}
 	addr := readAddress()
 	cfg.AuthorizedAddresses = []string{addr}
