@@ -32,7 +32,7 @@ func NewEthereumAtom(conf config.EthereumNetwork, key keystore.EthereumKey, req 
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println(req)
 	contract, err := NewRenExAtomicSwapper(conn.RenExAtomicSwapper, bind.ContractBackend(conn.Client))
 	if err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ func (atom *ethereumAtom) Audit() error {
 	}
 	fmt.Println(auditReport)
 	if auditReport.Value.Cmp(atom.req.ReceiveValue) != 0 {
-		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", auditReport.Value, atom.req.ReceiveValue)
+		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.req.ReceiveValue, auditReport.Value)
 	}
 	return nil
 }
