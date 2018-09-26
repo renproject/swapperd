@@ -123,10 +123,19 @@ func (renex *renex) Swap(orderID [32]byte) error {
 	}
 
 	if renex.Status(orderID) == swap.StatusConfirmed {
+		ordMatch, err := renex.GetOrderMatch(orderID, time.Now().Unix()+48*60*60)
+		if err != nil {
+			return err
+		}
+
 		req, err := renex.SwapRequest(orderID)
 		if err != nil {
 			return err
 		}
+
+		req.ReceiveValue = ordMatch.ReceiveValue
+		req.SendValue = ordMatch.SendValue
+
 		swapInst, err := renex.NewSwap(req)
 		if err != nil {
 			return err
@@ -157,12 +166,15 @@ func (renex *renex) buildRequest(orderID [32]byte) (swap.Request, error) {
 	if err != nil {
 		return req, err
 	}
+	fmt.Println(ordMatch)
 
 	sendToAddress, receiveFromAddress := renex.GetAddresses(ordMatch.ReceiveToken, ordMatch.SendToken)
 	req.SendToken = ordMatch.SendToken
 	req.ReceiveToken = ordMatch.ReceiveToken
 	req.SendValue = ordMatch.SendValue
 	req.ReceiveValue = ordMatch.ReceiveValue
+
+	fmt.Println()
 
 	if req.SendToken > req.ReceiveToken {
 		req.GoesFirst = true

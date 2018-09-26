@@ -253,11 +253,18 @@ func (atom *bitcoinAtom) Audit() error {
 // HTLC.
 func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 	fmt.Println("Redeeming on bitcoin blockchain")
-	outs, err := atom.Conn.GetUnspentOutputs(atom.scriptAddr)
-	if err != nil {
-		return NewErrRedeem(err)
+	output := UnspentOutput{}
+
+	for {
+		outs, err := atom.Conn.GetUnspentOutputs(atom.scriptAddr)
+		if err != nil {
+			return NewErrRedeem(err)
+		}
+		if len(outs.Outputs) == 0 {
+			continue
+		}
+		output = outs.Outputs[0]
 	}
-	output := outs.Outputs[0]
 
 	if bal, err := atom.Balance(atom.scriptAddr); bal == 0 || err != nil {
 		if err != nil {
