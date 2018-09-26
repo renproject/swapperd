@@ -3,9 +3,10 @@ package btc
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -17,6 +18,7 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 	swapDomain "github.com/republicprotocol/renex-swapper-go/domain/swap"
+	"github.com/republicprotocol/renex-swapper-go/service/logger"
 	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
 
@@ -43,20 +45,19 @@ type Conn interface {
 }
 
 type bitcoinAtom struct {
-	scriptAddr   string
-	script       []byte
-	key          keystore.BitcoinKey
-	req          swapDomain.Request
-	txVersion    int32
-	fee          int64
-	sendValue    int64
-	receiveValue int64
-	verify       bool
+	scriptAddr string
+	script     []byte
+	key        keystore.BitcoinKey
+	req        swapDomain.Request
+	txVersion  int32
+	fee        int64
+	verify     bool
+	logger.Logger
 	Conn
 }
 
 // NewBitcoinAtom returns a new Bitcoin Atom instance
-func NewBitcoinAtom(conf config.BitcoinNetwork, key keystore.BitcoinKey, req swapDomain.Request) (swap.Atom, error) {
+func NewBitcoinAtom(conf config.BitcoinNetwork, key keystore.BitcoinKey, logger logger.Logger, req swapDomain.Request) (swap.Atom, error) {
 	conn, err := NewConnWithConfig(conf)
 	if err != nil {
 		return nil, err
@@ -65,46 +66,38 @@ func NewBitcoinAtom(conf config.BitcoinNetwork, key keystore.BitcoinKey, req swa
 	if err != nil {
 		return nil, err
 	}
-
-	sendValue, ok := big.NewInt(0).SetString(req.SendValue, 10)
-	if !ok {
-		return nil, fmt.Errorf("Invalid send value :%s", req.SendValue)
-	}
-
-	recvValue, ok := big.NewInt(0).SetString(req.ReceiveValue, 10)
-	if !ok {
-		return nil, fmt.Errorf("Invalid recv value :%s", req.ReceiveValue)
-	}
-
-	fmt.Println("Script Address: ", scriptAddr)
+	logger.LogInfo(req.UID, fmt.Sprintf("Bitcoin Atomic Swap ID: %s", scriptAddr))
 	return &bitcoinAtom{
-		scriptAddr:   scriptAddr,
-		script:       script,
-		key:          key,
-		req:          req,
-		txVersion:    2,
-		fee:          10000,
-		verify:       true,
-		sendValue:    sendValue.Int64(),
-		receiveValue: recvValue.Int64(),
-		Conn:         conn,
+		scriptAddr: scriptAddr,
+		script:     script,
+		key:        key,
+		req:        req,
+		txVersion:  2,
+		fee:        10000,
+		verify:     true,
+		Logger:     logger,
+		Conn:       conn,
 	}, nil
 }
 
 // initiate the atomic swap by funding a HTLC on the Bitcoin blockchain.
 func (atom *bitcoinAtom) Initiate() error {
-	fmt.Println("Initiating on bitcoin blockchain")
+	atom.LogInfo(atom.req.UID, "Initiating on bitcoin blockchain")
 	scriptAddr, err := btcutil.DecodeAddress(atom.scriptAddr, atom.Net())
 	if err != nil {
 		return err
 	}
 
-	// FIXME: Change to greater than or equal to
-	if bal, err := atom.Balance(atom.scriptAddr); bal == atom.sendValue || err != nil {
+	sendValue, err := strconv.ParseInt(atom.req.SendValue, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	if initiated, err := atom.initiated(); initiated || err != nil {
 		if err != nil {
 			return err
 		}
-		fmt.Println("Bitcoin swap initiated with send value ", atom.sendValue)
+		atom.LogDebug(atom.req.UID, fmt.Sprintf("Bitcoin swap initiated with send value %d", sendValue))
 		return swap.ErrSwapAlreadyInitiated
 	}
 
@@ -115,7 +108,7 @@ func (atom *bitcoinAtom) Initiate() error {
 
 	// creating unsigned transaction and adding transaction outputs
 	unsignedTx := wire.NewMsgTx(atom.txVersion)
-	unsignedTx.AddTxOut(wire.NewTxOut(atom.sendValue, initiateScriptP2SHPkScript))
+	unsignedTx.AddTxOut(wire.NewTxOut(sendValue, initiateScriptP2SHPkScript))
 
 	// signing a transaction with the given private key
 	stx, complete, err := atom.Conn.SignTransaction(unsignedTx, atom.key, atom.fee)
@@ -132,15 +125,145 @@ func (atom *bitcoinAtom) Initiate() error {
 	if err := stx.Serialize(&initiateTxBuffer); err != nil {
 		return NewErrInitiate(err)
 	}
-	fmt.Println("Initiated on bitcoin blockchain")
-	return atom.Conn.PublishTransaction(initiateTxBuffer.Bytes())
+
+	if err := atom.Conn.PublishTransaction(initiateTxBuffer.Bytes()); err != nil {
+		return err
+	}
+
+	for {
+		if initiated, err := atom.initiated(); initiated || err != nil {
+			if err != nil {
+				return err
+			}
+			break
+		}
+	}
+
+	atom.LogInfo(atom.req.UID, "Initiated on bitcoin blockchain")
+	return nil
+}
+
+func (atom *bitcoinAtom) Audit() error {
+	receiveValue, err := strconv.ParseInt(atom.req.ReceiveValue, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	for {
+		atom.LogInfo(atom.req.UID, "Auditing on bitcoin blockchain")
+		bal, _ := atom.Conn.Balance(atom.scriptAddr)
+		if bal >= receiveValue {
+			atom.LogInfo(atom.req.UID, "Audit successful on bitcoin blockchain")
+			return nil
+		}
+		if bal != 0 {
+			atom.LogDebug(atom.req.UID, fmt.Sprintf("Expected receive value: %v actual value: %v\n", receiveValue, bal))
+		}
+		if time.Now().Unix() > atom.req.TimeLock {
+			break
+		}
+		time.Sleep(1 * time.Minute)
+	}
+	return NewErrAudit(ErrTimedOut)
+}
+
+// redeem the Atomic Swap by revealing the secret and withdrawing funds from the
+// HTLC.
+func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
+	atom.LogInfo(atom.req.UID, "Redeeming on bitcoin blockchain")
+	output := UnspentOutput{}
+	receiveValue, err := strconv.ParseInt(atom.req.ReceiveValue, 10, 64)
+	if err != nil {
+		return err
+	}
+	for {
+		outs, err := atom.Conn.GetUnspentOutputs(atom.scriptAddr)
+		if err != nil {
+			return NewErrRedeem(err)
+		}
+		if len(outs.Outputs) != 0 {
+			output = outs.Outputs[0]
+			break
+		}
+	}
+
+	if bal, err := atom.Balance(atom.scriptAddr); bal == 0 || err != nil {
+		if err != nil {
+			return err
+		}
+		return swap.ErrSwapAlreadyRedeemedOrRefunded
+	}
+
+	// create bitcoin script to pay to the user's personal address
+	payToAddrScript, err := txscript.PayToAddrScript(atom.key.Address)
+	if err != nil {
+		return NewErrRedeem(err)
+	}
+
+	// build transaction
+	hashBytes, err := hex.DecodeString(output.TxHash)
+	if err != nil {
+		return NewErrRedeem(err)
+	}
+	txHash, err := chainhash.NewHash(hashBytes)
+	if err != nil {
+		return NewErrRedeem(err)
+	}
+	redeemTx := wire.NewMsgTx(atom.txVersion)
+	redeemTx.AddTxIn(wire.NewTxIn(wire.NewOutPoint(txHash, output.Vout), nil, nil))
+	redeemTx.AddTxOut(wire.NewTxOut(receiveValue-atom.fee, payToAddrScript))
+
+	// sign transaction
+	redeemSig, redeemPubKey, err := sign(redeemTx, int(output.Vout), atom.script, atom.key)
+	if err != nil {
+		return NewErrRedeem(err)
+	}
+
+	// build signature script
+	redeemSigScript, err := newRedeemScript(atom.script, redeemSig, redeemPubKey, secret)
+	if err != nil {
+		return NewErrRedeem(err)
+	}
+	redeemTx.TxIn[output.Vout].SignatureScript = redeemSigScript
+
+	if atom.verify {
+		// verifying the redeem script
+		scriptPubKey, err := hex.DecodeString(output.ScriptPubKey)
+		if err != nil {
+			return NewErrRefund(err)
+		}
+		e, err := txscript.NewEngine(scriptPubKey, redeemTx, int(output.Vout),
+			txscript.StandardVerifyFlags, txscript.NewSigCache(10),
+			txscript.NewTxSigHashes(redeemTx), receiveValue)
+		if err != nil {
+			return NewErrRedeem(err)
+		}
+		err = e.Execute()
+		if err != nil {
+			return NewErrRedeem(NewErrScriptExec(err))
+		}
+	}
+
+	// marshal signed transaction information
+	var redeemTxBuffer bytes.Buffer
+	redeemTxBuffer.Grow(redeemTx.SerializeSize())
+	if err := redeemTx.Serialize(&redeemTxBuffer); err != nil {
+		return NewErrRedeem(err)
+	}
+
+	atom.LogInfo(atom.req.UID, "Redeemed on bitcoin blockchain")
+	return atom.PublishTransaction(redeemTxBuffer.Bytes())
 }
 
 func (atom *bitcoinAtom) AuditSecret() ([32]byte, error) {
+	sendValue, err := strconv.ParseInt(atom.req.SendValue, 10, 64)
+	if err != nil {
+		return [32]byte{}, err
+	}
 	for {
-		fmt.Println("Auditing secret on bitcoin blockchain")
+		atom.LogInfo(atom.req.UID, "Auditing secret on bitcoin blockchain")
 		bal, err := atom.Conn.Balance(atom.scriptAddr)
-		if err == nil && bal < atom.sendValue {
+		if err == nil && bal < sendValue {
 			break
 		}
 		if time.Now().Unix() > atom.req.TimeLock {
@@ -162,7 +285,7 @@ func (atom *bitcoinAtom) AuditSecret() ([32]byte, error) {
 		if sha256.Sum256(push) == atom.req.SecretHash {
 			var secret [32]byte
 			copy(secret[:], push)
-			fmt.Println("... success")
+			atom.LogInfo(atom.req.UID, fmt.Sprintf("Audit secret successful on Bitcoin blockchain %s", base64.StdEncoding.EncodeToString(secret[:])))
 			return secret, nil
 		}
 	}
@@ -171,6 +294,10 @@ func (atom *bitcoinAtom) AuditSecret() ([32]byte, error) {
 
 // refund the Atomic Swap after expiry and withdraw funds from the HTLC.
 func (atom *bitcoinAtom) Refund() error {
+	sendValue, err := strconv.ParseInt(atom.req.SendValue, 10, 64)
+	if err != nil {
+		return err
+	}
 	// TODO: Use all the outputs
 	outs, err := atom.Conn.GetUnspentOutputs(atom.scriptAddr)
 	if err != nil {
@@ -202,7 +329,7 @@ func (atom *bitcoinAtom) Refund() error {
 	}
 	refundTx := wire.NewMsgTx(atom.txVersion)
 	refundTx.AddTxIn(wire.NewTxIn(wire.NewOutPoint(txHash, output.Vout), nil, nil))
-	refundTx.AddTxOut(wire.NewTxOut(atom.sendValue-atom.fee, payToAddrScript))
+	refundTx.AddTxOut(wire.NewTxOut(sendValue-atom.fee, payToAddrScript))
 
 	// sign transaction
 	refundSig, refundPubKey, err := sign(refundTx, int(output.Vout), atom.script, atom.key)
@@ -227,7 +354,7 @@ func (atom *bitcoinAtom) Refund() error {
 		// verifying the refund script
 		e, err := txscript.NewEngine(scriptPubKey, refundTx, int(output.Vout),
 			txscript.StandardVerifyFlags, txscript.NewSigCache(10),
-			txscript.NewTxSigHashes(refundTx), atom.sendValue)
+			txscript.NewTxSigHashes(refundTx), sendValue)
 		if err != nil {
 			return NewErrRefund(err)
 		}
@@ -246,127 +373,3 @@ func (atom *bitcoinAtom) Refund() error {
 
 	return atom.PublishTransaction(refundTxBuffer.Bytes())
 }
-
-func (atom *bitcoinAtom) Audit() error {
-	for {
-		fmt.Println("Auditing on bitcoin blockchain")
-		bal, _ := atom.Conn.Balance(atom.scriptAddr)
-		if bal >= atom.receiveValue {
-			fmt.Println(".... done")
-			return nil
-		}
-		if bal != 0 {
-			fmt.Printf("Expected receive value: %v actual value: %v\n", atom.receiveValue, bal)
-		}
-		if time.Now().Unix() > atom.req.TimeLock {
-			break
-		}
-		time.Sleep(1 * time.Minute)
-	}
-	return NewErrAudit(ErrTimedOut)
-}
-
-// redeem the Atomic Swap by revealing the secret and withdrawing funds from the
-// HTLC.
-func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
-	fmt.Println("Redeeming on bitcoin blockchain")
-	output := UnspentOutput{}
-
-	for {
-		outs, err := atom.Conn.GetUnspentOutputs(atom.scriptAddr)
-		if err != nil {
-			return NewErrRedeem(err)
-		}
-		if len(outs.Outputs) == 0 {
-			continue
-		}
-		output = outs.Outputs[0]
-	}
-
-	if bal, err := atom.Balance(atom.scriptAddr); bal == 0 || err != nil {
-		if err != nil {
-			return err
-		}
-		return swap.ErrSwapAlreadyRedeemedOrRefunded
-	}
-
-	// create bitcoin script to pay to the user's personal address
-	payToAddrScript, err := txscript.PayToAddrScript(atom.key.Address)
-	if err != nil {
-		return NewErrRedeem(err)
-	}
-
-	// build transaction
-	hashBytes, err := hex.DecodeString(output.TxHash)
-	if err != nil {
-		return NewErrRedeem(err)
-	}
-	txHash, err := chainhash.NewHash(hashBytes)
-	if err != nil {
-		return NewErrRedeem(err)
-	}
-	redeemTx := wire.NewMsgTx(atom.txVersion)
-	redeemTx.AddTxIn(wire.NewTxIn(wire.NewOutPoint(txHash, output.Vout), nil, nil))
-	redeemTx.AddTxOut(wire.NewTxOut(atom.receiveValue-atom.fee, payToAddrScript))
-
-	// sign transaction
-	redeemSig, redeemPubKey, err := sign(redeemTx, int(output.Vout), atom.script, atom.key)
-	if err != nil {
-		return NewErrRedeem(err)
-	}
-
-	// build signature script
-	redeemSigScript, err := newRedeemScript(atom.script, redeemSig, redeemPubKey, secret)
-	if err != nil {
-		return NewErrRedeem(err)
-	}
-	redeemTx.TxIn[output.Vout].SignatureScript = redeemSigScript
-
-	if atom.verify {
-		// verifying the redeem script
-		scriptPubKey, err := hex.DecodeString(output.ScriptPubKey)
-		if err != nil {
-			return NewErrRefund(err)
-		}
-		e, err := txscript.NewEngine(scriptPubKey, redeemTx, int(output.Vout),
-			txscript.StandardVerifyFlags, txscript.NewSigCache(10),
-			txscript.NewTxSigHashes(redeemTx), atom.receiveValue)
-		if err != nil {
-			return NewErrRedeem(err)
-		}
-		err = e.Execute()
-		if err != nil {
-			return NewErrRedeem(NewErrScriptExec(err))
-		}
-	}
-
-	// marshal signed transaction information
-	var redeemTxBuffer bytes.Buffer
-	redeemTxBuffer.Grow(redeemTx.SerializeSize())
-	if err := redeemTx.Serialize(&redeemTxBuffer); err != nil {
-		return NewErrRedeem(err)
-	}
-	fmt.Println("Redeem Transaction: ", hex.EncodeToString(redeemTxBuffer.Bytes()))
-
-	fmt.Println("Redeemed on bitcoin blockchain")
-	return atom.PublishTransaction(redeemTxBuffer.Bytes())
-}
-
-// func (atom *bitcoinAtom) waitForInitiation(val *big.Int) error {
-// 	for {
-// 		fmt.Println("Auditing on bitcoin blockchain")
-// 		bal, err := atom.Conn.Balance(atom.scriptAddr)
-// 		if bal >= atom.receiveValue {
-// 			return nil
-// 		}
-// 		if time.Now().Unix() > atom.req.TimeLock {
-// 			break
-// 		}
-// 		time.Sleep(1 * time.Minute)
-// 	}
-// 	return NewErrAudit(ErrTimedOut)
-// }
-
-// func (atom *bitcoinAtom) waitForRedemption() error {
-
-// }

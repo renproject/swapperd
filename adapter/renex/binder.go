@@ -10,6 +10,7 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/domain/swap"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
+	"github.com/republicprotocol/renex-swapper-go/service/logger"
 )
 
 var (
@@ -21,12 +22,13 @@ type Binder interface {
 }
 
 type binder struct {
+	logger.Logger
 	config.Config
 	*Orderbook
 	*RenExSettlement
 }
 
-func NewBinder(conf config.Config) (Binder, error) {
+func NewBinder(conf config.Config, logger logger.Logger) (Binder, error) {
 	conn, err := NewConnWithConfig(conf)
 	if err != nil {
 		return nil, err
@@ -43,6 +45,7 @@ func NewBinder(conf config.Config) (Binder, error) {
 	}
 
 	return &binder{
+		Logger:          logger,
 		Config:          conf,
 		Orderbook:       orderbook,
 		RenExSettlement: settlement,
@@ -55,8 +58,7 @@ func (binder *binder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Matc
 	if err := binder.verifyOrder(orderID, waitTill); err != nil {
 		return swap.Match{}, err
 	}
-	fmt.Println("Waiting for the match to be found on RenEx")
-	defer func() { fmt.Println("Match found") }()
+	binder.LogInfo(orderID, "Waiting for the match to be found on RenEx")
 	for {
 		matchDetails, err := binder.GetMatchDetails(&bind.CallOpts{}, orderID)
 		if err != nil || matchDetails.PriorityToken == matchDetails.SecondaryToken {
@@ -74,7 +76,7 @@ func (binder *binder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Matc
 		if err != nil {
 			return swap.Match{}, err
 		}
-
+		binder.LogInfo(orderID, fmt.Sprintf("matched with (%s)", matchDetails.MatchedID))
 		if matchDetails.OrderIsBuy {
 			return swap.Match{
 				PersonalOrderID: orderID,
@@ -110,7 +112,7 @@ func (binder *binder) verifyOrder(orderID [32]byte, waitTill int64) error {
 			if strings.ToLower(addr.String()) == strings.ToLower(authorizedAddr) {
 				return nil
 			}
-			fmt.Printf("Expected submitting Trader Address %s to equal Authorized trader Address %s\n", addr.String(), authorizedAddr)
+			binder.LogInfo(orderID, fmt.Sprintf("Expected submitting Trader Address %s to equal Authorized trader Address %s\n", addr.String(), authorizedAddr))
 		}
 	}
 }

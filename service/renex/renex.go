@@ -3,7 +3,6 @@ package renex
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"fmt"
 	"log"
 	"time"
 
@@ -143,7 +142,7 @@ func (renex *renex) Swap(orderID [32]byte) error {
 }
 
 func (renex *renex) buildRequest(orderID [32]byte) (swap.Request, error) {
-	fmt.Println("Building Request.... ")
+	renex.LogInfo(orderID, "building swap request")
 	req := swap.Request{}
 
 	// TODO: Change it to AddedAtTimestamp
@@ -157,15 +156,12 @@ func (renex *renex) buildRequest(orderID [32]byte) (swap.Request, error) {
 	if err != nil {
 		return req, err
 	}
-	fmt.Println(ordMatch)
 
 	sendToAddress, receiveFromAddress := renex.GetAddresses(ordMatch.ReceiveToken, ordMatch.SendToken)
 	req.SendToken = ordMatch.SendToken
 	req.ReceiveToken = ordMatch.ReceiveToken
 	req.SendValue = ordMatch.SendValue
 	req.ReceiveValue = ordMatch.ReceiveValue
-
-	fmt.Println()
 
 	if req.SendToken > req.ReceiveToken {
 		req.GoesFirst = true
@@ -176,7 +172,7 @@ func (renex *renex) buildRequest(orderID [32]byte) (swap.Request, error) {
 		req.GoesFirst = false
 	}
 
-	fmt.Println("Communicating swap details")
+	renex.LogInfo(req.UID, "communicating swap details")
 	if err := renex.SendSwapDetails(req.UID, SwapDetails{
 		SecretHash:         req.SecretHash,
 		TimeLock:           req.TimeLock,
@@ -185,13 +181,12 @@ func (renex *renex) buildRequest(orderID [32]byte) (swap.Request, error) {
 	}); err != nil {
 		return req, err
 	}
-	fmt.Println("Swap details sent")
 
 	foreignDetails, err := renex.ReceiveSwapDetails(ordMatch.ForeignOrderID, timeStamp+48*60*60)
 	if err != nil {
 		return req, err
 	}
-	fmt.Println(foreignDetails)
+	renex.LogInfo(req.UID, "communication successful")
 
 	req.SendToAddress = foreignDetails.SendToAddress
 	req.ReceiveFromAddress = foreignDetails.ReceiveFromAddress

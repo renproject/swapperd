@@ -28,11 +28,11 @@ func New(cfg config.Config, ks keystore.Keystore, logger logger.Logger) swap.Swa
 }
 
 func (swapper *swapperAdapter) NewSwap(req swapDomain.Request) (swap.Atom, swap.Atom, swap.Adapter, error) {
-	personalAtom, err := buildAtom(swapper.keystore, swapper.config, req.SendToken, req)
+	personalAtom, err := buildAtom(swapper.keystore, swapper.config, swapper.Logger, req.SendToken, req)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	foreignAtom, err := buildAtom(swapper.keystore, swapper.config, req.ReceiveToken, req)
+	foreignAtom, err := buildAtom(swapper.keystore, swapper.config, swapper.Logger, req.ReceiveToken, req)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -43,14 +43,14 @@ func (swapper *swapperAdapter) Complain(UID [32]byte) error {
 	return nil
 }
 
-func buildAtom(key keystore.Keystore, config config.Config, t token.Token, req swapDomain.Request) (swap.Atom, error) {
+func buildAtom(key keystore.Keystore, config config.Config, logger logger.Logger, t token.Token, req swapDomain.Request) (swap.Atom, error) {
 	switch t {
 	case token.BTC:
 		btcKey := key.GetKey(t).(keystore.BitcoinKey)
-		return btc.NewBitcoinAtom(config.Bitcoin, btcKey, req)
+		return btc.NewBitcoinAtom(config.Bitcoin, btcKey, logger, req)
 	case token.ETH:
 		ethKey := key.GetKey(t).(keystore.EthereumKey)
-		return eth.NewEthereumAtom(config.Ethereum, ethKey, req)
+		return eth.NewEthereumAtom(config.Ethereum, ethKey, logger, req)
 	}
 	return nil, fmt.Errorf("Atom Build Failed")
 }

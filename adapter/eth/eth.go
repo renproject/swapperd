@@ -27,12 +27,12 @@ type ethereumAtom struct {
 }
 
 // NewEthereumAtom returns a new Ethereum RequestAtom instance
-func NewEthereumAtom(conf config.EthereumNetwork, key keystore.EthereumKey, req swapDomain.Request) (swap.Atom, error) {
+func NewEthereumAtom(conf config.EthereumNetwork, key keystore.EthereumKey, logger logger.Logger, req swapDomain.Request) (swap.Atom, error) {
 	conn, err := NewConnWithConfig(conf)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(req)
+
 	contract, err := NewRenExAtomicSwapper(conn.RenExAtomicSwapper, bind.ContractBackend(conn.Client))
 	if err != nil {
 		return nil, err
@@ -48,63 +48,55 @@ func NewEthereumAtom(conf config.EthereumNetwork, key keystore.EthereumKey, req 
 		return nil, err
 	}
 
-	fmt.Printf("Swap ID: %s\n", base64.StdEncoding.EncodeToString(id[:]))
-	// logger.LogDebug(req.UID, fmt.Sprintf("Swap ID: %s", base64.StdEncoding.EncodeToString(id[:])))
+	logger.LogInfo(req.UID, fmt.Sprintf("Ethereum Atomic Swap ID: %s", base64.StdEncoding.EncodeToString(id[:])))
 	req.TimeLock = expiry
 
 	return &ethereumAtom{
 		client: conn,
 		key:    key,
 		binder: contract,
-		// logger:  logger,
-		req: req,
-		id:  id,
+		logger: logger,
+		req:    req,
+		id:     id,
 	}, nil
 }
 
 // Initiate a new Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Initiate() error {
-	// atom.logger.LogInfo(atom.req.UID, "Initiating on Ethereum blockchain")
-	fmt.Println("Initiating on Ethereum blockchain")
+	atom.logger.LogInfo(atom.req.UID, "Initiating on Ethereum blockchain")
 	initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return err
 	}
 	if !initiatable {
-		//		atom.logger.LogInfo(atom.req.UID, "Skipping initiation as it is already initiated")
 		return swap.ErrSwapAlreadyInitiated
 	}
-
-	// TODO: Fix data race on transact opts
-	prevValue := atom.key.TransactOpts.Value
-	prevGasLimit := atom.key.TransactOpts.GasLimit
-	var ok bool
-	atom.key.TransactOpts.Value, ok = big.NewInt(0).SetString(atom.req.SendValue, 10)
-	if !ok {
-		return fmt.Errorf("Invalid Send Value: %s", atom.req.SendValue)
-	}
-
-	atom.key.TransactOpts.GasLimit = 3000000
-	_, err = atom.binder.Initiate(atom.key.TransactOpts, atom.id, common.HexToAddress(atom.req.SendToAddress), atom.req.SecretHash, big.NewInt(atom.req.TimeLock))
-	atom.key.TransactOpts.Value = prevValue
-	atom.key.TransactOpts.GasLimit = prevGasLimit
-	if err != nil {
-		return fmt.Errorf("Failed to initiate on the Ethereum blockchain: %v", err)
-	}
-
-	if err := atom.waitForInitiation(); err != nil {
+	if err := atom.key.SubmitTx(
+		func(tops *bind.TransactOpts) error {
+			val, ok := big.NewInt(0).SetString(atom.req.SendValue, 10)
+			if !ok {
+				return fmt.Errorf("Invalid Send Value: %s", atom.req.SendValue)
+			}
+			prevValue := tops.Value
+			tops.Value = val
+			_, err := atom.binder.Initiate(atom.key.TransactOpts, atom.id, common.HexToAddress(atom.req.SendToAddress), atom.req.SecretHash, big.NewInt(atom.req.TimeLock))
+			atom.key.TransactOpts.Value = prevValue
+			return err
+		},
+		func() bool {
+			initiatable, _ := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
+			return !initiatable
+		},
+	); err != nil {
 		return err
 	}
-
-	fmt.Println("Initiated the atomic swap on ethereum blockchain")
-	// atom.logger.LogInfo(atom.req.UID,
-	// 	fmt.Sprintf("Initiated the atomic swap on ethereum blockchain (TX Hash): %s", tx.Hash().String()))
+	atom.logger.LogInfo(atom.req.UID, fmt.Sprintf("Initiated the atomic swap on Ethereum blockchain"))
 	return nil
 }
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Refund() error {
-	fmt.Println("Refunding the atomic swap on ethereum blockchain")
+	atom.logger.LogInfo(atom.req.UID, "Refunding the atomic swap on Ethereum blockchain")
 	refundable, err := atom.binder.Refundable(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return err
@@ -112,35 +104,61 @@ func (atom *ethereumAtom) Refund() error {
 	if !refundable {
 		return swap.ErrSwapAlreadyRedeemedOrRefunded
 	}
-	prevGasLimit := atom.key.TransactOpts.GasLimit
-	atom.key.TransactOpts.GasLimit = 3000000
-	_, err = atom.binder.Refund(atom.key.TransactOpts, atom.id)
-	atom.key.TransactOpts.GasLimit = prevGasLimit
-	if err != nil {
+	if err := atom.key.SubmitTx(
+		func(tops *bind.TransactOpts) error {
+			_, err = atom.binder.Refund(atom.key.TransactOpts, atom.id)
+			return err
+		},
+		func() bool {
+			refundable, _ := atom.binder.Refundable(&bind.CallOpts{}, atom.id)
+			return !refundable
+		},
+	); err != nil {
 		return err
 	}
-	fmt.Println("Refunded the atomic swap on ethereum blockchain")
+	atom.logger.LogInfo(atom.req.UID, "Refunded the atomic swap on Ethereum blockchain")
 	return nil
 }
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) AuditSecret() ([32]byte, error) {
-	if err := atom.waitForRedemption(); err != nil {
+	for {
+		atom.logger.LogInfo(atom.req.UID, "Auditing secret on ethereum blockchain")
+		redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		if !redeemable {
+			break
+		}
+		if time.Now().Unix() > atom.req.TimeLock {
+			return [32]byte{}, swap.ErrTimedOut
+		}
+	}
+	secret, err := atom.binder.AuditSecret(&bind.CallOpts{}, atom.id)
+	if err != nil {
 		return [32]byte{}, err
 	}
-	return atom.binder.AuditSecret(&bind.CallOpts{}, atom.id)
+	atom.logger.LogInfo(atom.req.UID, fmt.Sprintf("Audit success on ethereum blockchain secret=%s", base64.StdEncoding.EncodeToString(secret[:])))
+	return secret, nil
 }
 
 // Audit an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Audit() error {
-	if err := atom.waitForInitiation(); err != nil {
-		return err
+	for {
+		atom.logger.LogInfo(atom.req.UID, fmt.Sprintf("Waiting for initiation on ethereum blockchain"))
+		initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
+		if err != nil {
+			return err
+		}
+		if !initiatable {
+			break
+		}
 	}
 	auditReport, err := atom.binder.Audit(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return err
 	}
-	fmt.Println(auditReport)
 	recvValue, ok := big.NewInt(0).SetString(atom.req.ReceiveValue, 10)
 	if !ok {
 		return fmt.Errorf("Invalid Receive Value %s", recvValue)
@@ -148,12 +166,13 @@ func (atom *ethereumAtom) Audit() error {
 	if auditReport.Value.Cmp(recvValue) != 0 {
 		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.req.ReceiveValue, auditReport.Value)
 	}
+	atom.logger.LogInfo(atom.req.UID, fmt.Sprintf("Audit successful on Ethereum blockchain"))
 	return nil
 }
 
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Redeem(secret [32]byte) error {
-	fmt.Println("redeeming the atomic swap on ethereum blockchain")
+	atom.logger.LogInfo(atom.req.UID, "Redeeming the atomic swap on Ethereum blockchain")
 	redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return err
@@ -161,76 +180,38 @@ func (atom *ethereumAtom) Redeem(secret [32]byte) error {
 	if !redeemable {
 		return swap.ErrSwapAlreadyRedeemedOrRefunded
 	}
-	prevGasLimit := atom.key.TransactOpts.GasLimit
-	atom.key.TransactOpts.GasLimit = 3000000
-	_, err = atom.binder.Redeem(atom.key.TransactOpts, atom.id, secret)
-	atom.key.TransactOpts.GasLimit = prevGasLimit
-	if err != nil {
+
+	if err := atom.key.SubmitTx(
+		func(tops *bind.TransactOpts) error {
+			_, err = atom.binder.Redeem(atom.key.TransactOpts, atom.id, secret)
+			return err
+		},
+		func() bool {
+			refundable, _ := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
+			return !refundable
+		},
+	); err != nil {
 		return err
 	}
-	if err := atom.waitForRedemption(); err != nil {
-		return err
-	}
-	fmt.Println("redeemed the atomic swap on ethereum blockchain")
+	atom.logger.LogInfo(atom.req.UID, "Redeemed the atomic swap on Ethereum blockchain")
 	return nil
 }
 
-// TODO: change req to personalReq
 func buildValues(req swapDomain.Request, personalAddr string) (string, int64, error) {
 	var addr string
 	var expiry int64
 	if req.SendToken != token.ETH && req.ReceiveToken != token.ETH {
 		return "", 0, errors.New("Expected one of the tokens to be ethereum")
 	}
-
 	if (req.GoesFirst && req.SendToken == token.ETH) || (!req.GoesFirst && req.ReceiveToken == token.ETH) {
 		expiry = req.TimeLock
 	} else {
-		// TODO: Document times
 		expiry = req.TimeLock - 24*60*60
 	}
-
 	if req.SendToken == token.ETH {
 		addr = req.SendToAddress
 	} else {
 		addr = personalAddr
 	}
-
 	return addr, expiry, nil
-}
-
-func (atom *ethereumAtom) waitForInitiation() error {
-	for {
-		fmt.Println("Waiting for initiation ......  on ethereum blockchain")
-		auditReport, err := atom.binder.Audit(&bind.CallOpts{}, atom.id)
-		if err != nil {
-			return err
-		}
-		if auditReport.To.String() != auditReport.From.String() {
-			break
-		}
-		if time.Now().Unix() > atom.req.TimeLock {
-			return errors.New("Timed Out")
-		}
-		time.Sleep(1 * time.Minute)
-	}
-	return nil
-}
-
-func (atom *ethereumAtom) waitForRedemption() error {
-	for {
-		fmt.Println("Waiting for counter party redemption ......  on ethereum blockchain")
-		secret, err := atom.binder.AuditSecret(&bind.CallOpts{}, atom.id)
-		if err != nil {
-			return err
-		}
-		if secret != [32]byte{} {
-			return nil
-		}
-		if time.Now().Unix() > atom.req.TimeLock {
-			break
-		}
-		time.Sleep(1 * time.Minute)
-	}
-	return errors.New("Timed Out")
 }

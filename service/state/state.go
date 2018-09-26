@@ -161,17 +161,19 @@ func (state *state) ReadSwapDetails(orderID [32]byte) SwapDetails {
 
 // PrintSwapRequest to Std Out
 func (state *state) PrintSwapRequest(swapRequest swap.Request) {
-	fmt.Printf("\nSWAP REQUEST\n\n")
-	fmt.Printf("UID: %s\n", swapRequest.UID)
-	fmt.Printf("Expiry: %d\n", swapRequest.TimeLock)
-	fmt.Printf("Secret Hash: %s\n", base64.StdEncoding.EncodeToString(swapRequest.SecretHash[:]))
-	fmt.Printf("Secret: %s\n", base64.StdEncoding.EncodeToString(swapRequest.Secret[:]))
-	fmt.Printf("Send To Address: %v\n", swapRequest.SendToAddress)
-	fmt.Printf("Receive From Address: %v\n", swapRequest.ReceiveFromAddress)
-	fmt.Printf("Send Value: %v\n", swapRequest.SendValue)
-	fmt.Printf("Receive Value: %v\n", swapRequest.ReceiveValue)
-	fmt.Printf("Send Token: %s\n", swapRequest.SendToken)
-	fmt.Printf("Receive Token: %s\n", swapRequest.ReceiveToken)
-	fmt.Printf("Goes First: %v\n", swapRequest.GoesFirst)
-	fmt.Print("-------------------------------------------------------------\n")
+	state.LogInfo(swapRequest.UID, fmt.Sprintf("%s%s%s%s%s%s%s%s%s%s%s%s%s",
+		fmt.Sprintf("\nSWAP REQUEST\n\n"),
+		fmt.Sprintf("UID: %s\n", swapRequest.UID),
+		fmt.Sprintf("Expiry: %d\n", swapRequest.TimeLock),
+		fmt.Sprintf("Secret Hash: %s\n", base64.StdEncoding.EncodeToString(swapRequest.SecretHash[:])),
+		fmt.Sprintf("Secret: %s\n", base64.StdEncoding.EncodeToString(swapRequest.Secret[:])),
+		fmt.Sprintf("Send To Address: %v\n", swapRequest.SendToAddress),
+		fmt.Sprintf("Receive From Address: %v\n", swapRequest.ReceiveFromAddress),
+		fmt.Sprintf("Send Value: %v\n", swapRequest.SendValue),
+		fmt.Sprintf("Receive Value: %v\n", swapRequest.ReceiveValue),
+		fmt.Sprintf("Send Token: %s\n", swapRequest.SendToken),
+		fmt.Sprintf("Receive Token: %s\n", swapRequest.ReceiveToken),
+		fmt.Sprintf("Goes First: %v\n", swapRequest.GoesFirst),
+		fmt.Sprintf("-------------------------------------------------------------\n"),
+	))
 }
