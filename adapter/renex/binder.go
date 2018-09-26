@@ -78,8 +78,8 @@ func (binder *binder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Matc
 			return swap.Match{
 				PersonalOrderID: orderID,
 				ForeignOrderID:  matchDetails.MatchedID,
-				SendValue:       matchDetails.PriorityVolume,
-				ReceiveValue:    matchDetails.SecondaryVolume,
+				SendValue:       matchDetails.PriorityVolume.Add(matchDetails.PriorityVolume, matchDetails.PriorityFee),
+				ReceiveValue:    matchDetails.SecondaryVolume.Add(matchDetails.SecondaryVolume, matchDetails.SecondaryFee),
 				SendToken:       priorityToken,
 				ReceiveToken:    secondaryToken,
 			}, nil
@@ -87,8 +87,8 @@ func (binder *binder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Matc
 		return swap.Match{
 			PersonalOrderID: orderID,
 			ForeignOrderID:  matchDetails.MatchedID,
-			SendValue:       matchDetails.SecondaryVolume,
-			ReceiveValue:    matchDetails.PriorityVolume,
+			SendValue:       matchDetails.SecondaryVolume.Add(matchDetails.SecondaryVolume, matchDetails.SecondaryFee),
+			ReceiveValue:    matchDetails.PriorityVolume.Add(matchDetails.PriorityVolume, matchDetails.PriorityFee),
 			SendToken:       secondaryToken,
 			ReceiveToken:    priorityToken,
 		}, nil
