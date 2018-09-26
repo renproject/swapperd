@@ -88,6 +88,7 @@ func (atom *bitcoinAtom) Initiate() error {
 		if err != nil {
 			return err
 		}
+		fmt.Println("Bitcoin swap initiated with send value ", atom.req.SendValue.Int64())
 		return swap.ErrSwapAlreadyInitiated
 	}
 
