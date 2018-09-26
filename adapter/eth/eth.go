@@ -135,6 +135,7 @@ func (atom *ethereumAtom) Audit() error {
 	if err != nil {
 		return err
 	}
+	fmt.Println(auditReport)
 	if auditReport.Value.Cmp(atom.req.ReceiveValue) != 0 {
 		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", auditReport.Value, atom.req.ReceiveValue)
 	}
