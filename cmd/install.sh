@@ -28,7 +28,7 @@ echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 generate_service()
 {
 password=$1
-sudo echo "[Unit]
+echo "[Unit]
 Description=RenEx's Swapper Daemon
 After=network.target
 
@@ -42,7 +42,8 @@ StartLimitBurst=0
 KillSignal=SIGHUP
 
 [Install]
-WantedBy=default.target" > /etc/systemd/system/swapper.service
+WantedBy=default.target" > swapper.service
+sudo mv swapper.service /etc/systemd/system/swapper.service
 }
 
 # install unzip if command not found
