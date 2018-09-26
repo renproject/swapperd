@@ -13,6 +13,7 @@ import (
 type WhoAmI struct {
 	Challenge           string        `json:"challenge"`
 	Version             string        `json:"version"`
+	Network             string        `json:"network"`
 	AuthorizedAddresses []string      `json:"authorizedAddresses"`
 	SupportedCurrencies []token.Token `json:"supportedCurrencies"`
 }
@@ -65,6 +66,7 @@ func NewWhoAmI(challenge string, conf config.Config) WhoAmI {
 	return WhoAmI{
 		Challenge:           challenge,
 		Version:             conf.Version,
+		Network:             conf.RenEx.Network,
 		AuthorizedAddresses: conf.AuthorizedAddresses,
 		SupportedCurrencies: conf.SupportedCurrencies,
 	}
