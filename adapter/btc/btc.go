@@ -170,6 +170,12 @@ func (atom *bitcoinAtom) Audit() error {
 // HTLC.
 func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 	atom.LogInfo(atom.req.UID, "Redeeming on bitcoin blockchain")
+	if spent, err := atom.ScriptSpent(atom.scriptAddr); spent || err != nil {
+		if err != nil {
+			return err
+		}
+		return swap.ErrSwapAlreadyRedeemedOrRefunded
+	}
 	output := UnspentOutput{}
 	receiveValue, err := strconv.ParseInt(atom.req.ReceiveValue, 10, 64)
 	if err != nil {
@@ -184,13 +190,6 @@ func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 			output = outs.Outputs[0]
 			break
 		}
-	}
-
-	if spent, err := atom.ScriptSpent(atom.scriptAddr); spent || err != nil {
-		if err != nil {
-			return err
-		}
-		return swap.ErrSwapAlreadyRedeemedOrRefunded
 	}
 
 	// create bitcoin script to pay to the user's personal address
