@@ -52,7 +52,7 @@ func main() {
 	state := state.NewState(stateAdapter.New(db, logger))
 	ingressNet := network.NewIngress(conf.RenEx.Ingress, ks.GetKey(token.ETH).(keystore.EthereumKey))
 
-	binder, err := renexAdapter.NewBinder(conf)
+	binder, err := renexAdapter.NewBinder(conf, logger)
 	if err != nil {
 		panic(err)
 	}
