@@ -14,16 +14,14 @@ func NewSwapManager() SwapManager {
 	}
 }
 
-func (manager *SwapManager) Status(id [32]byte) bool {
-	manager.mu.RLock()
-	defer manager.mu.RUnlock()
-	return manager.statuses[id]
-}
-
-func (manager *SwapManager) Lock(id [32]byte) {
+func (manager *SwapManager) Lock(id [32]byte) bool {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
+	if manager.statuses[id] {
+		return false
+	}
 	manager.statuses[id] = true
+	return true
 }
 
 func (manager *SwapManager) Unlock(id [32]byte) {

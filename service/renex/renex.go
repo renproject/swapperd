@@ -66,10 +66,9 @@ func (renex *renex) Start() <-chan error {
 func (renex *renex) SwapMultiple(swaps [][32]byte, errs chan error) {
 	co.ParForAll(swaps, func(i int) {
 		swap := swaps[i]
-		if !renex.manager.Status(swap) {
+		if !renex.manager.Lock(swap) {
 			return
 		}
-		renex.manager.Lock(swap)
 		defer renex.manager.Unlock(swap)
 		if err := renex.Swap(swap); err != nil {
 			select {
