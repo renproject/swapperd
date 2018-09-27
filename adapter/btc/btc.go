@@ -28,7 +28,7 @@ type Conn interface {
 
 	// PublishTransaction should publish a signed transaction to the Bitcoin
 	// blockchain.
-	PublishTransaction(signedTransaction []byte) error
+	PublishTransaction(signedTransaction []byte, postCon func() (bool, error)) error
 
 	// Net should return the network information of the underlying
 	// Bitcoin blockchain.
@@ -42,6 +42,9 @@ type Conn interface {
 
 	// GetUnspentOutputs of the given address on Bitcoin blockchain.
 	GetUnspentOutputs(address string) (UnspentOutputs, error)
+
+	ScriptFunded(address string, value int64) (bool, int64, error)
+	ScriptSpent(address string) (bool, error)
 }
 
 type bitcoinAtom struct {
@@ -93,12 +96,19 @@ func (atom *bitcoinAtom) Initiate() error {
 		return err
 	}
 
-	if initiated, err := atom.initiated(); initiated || err != nil {
+	if sendValue == 0 {
+		atom.LogError(atom.req.UID, "Trying to send 0 Bitcoins")
+	}
+
+	if funded, value, err := atom.ScriptFunded(atom.scriptAddr, sendValue); value > 0 || funded || err != nil {
 		if err != nil {
 			return err
 		}
-		atom.LogDebug(atom.req.UID, fmt.Sprintf("Bitcoin swap initiated with send value %d", sendValue))
-		return swap.ErrSwapAlreadyInitiated
+		if funded {
+			atom.LogDebug(atom.req.UID, fmt.Sprintf("Bitcoin swap initiated with send value %d", sendValue))
+			return swap.ErrSwapAlreadyInitiated
+		}
+		sendValue = sendValue - value
 	}
 
 	initiateScriptP2SHPkScript, err := txscript.PayToAddrScript(scriptAddr)
@@ -126,17 +136,13 @@ func (atom *bitcoinAtom) Initiate() error {
 		return NewErrInitiate(err)
 	}
 
-	if err := atom.Conn.PublishTransaction(initiateTxBuffer.Bytes()); err != nil {
+	if err := atom.Conn.PublishTransaction(initiateTxBuffer.Bytes(),
+		func() (bool, error) {
+			success, _, err := atom.ScriptFunded(atom.scriptAddr, sendValue)
+			return success, err
+		},
+	); err != nil {
 		return err
-	}
-
-	for {
-		if initiated, err := atom.initiated(); initiated || err != nil {
-			if err != nil {
-				return err
-			}
-			break
-		}
 	}
 
 	atom.LogInfo(atom.req.UID, "Initiated on bitcoin blockchain")
@@ -150,21 +156,14 @@ func (atom *bitcoinAtom) Audit() error {
 	}
 
 	for {
-		atom.LogInfo(atom.req.UID, "Auditing on bitcoin blockchain")
-		bal, _ := atom.Conn.Balance(atom.scriptAddr)
-		if bal >= receiveValue {
-			atom.LogInfo(atom.req.UID, "Audit successful on bitcoin blockchain")
-			return nil
-		}
-		if bal != 0 {
-			atom.LogDebug(atom.req.UID, fmt.Sprintf("Expected receive value: %v actual value: %v\n", receiveValue, bal))
+		if funded, _, err := atom.ScriptFunded(atom.scriptAddr, receiveValue); funded || err != nil {
+			return err
 		}
 		if time.Now().Unix() > atom.req.TimeLock {
-			break
+			return NewErrAudit(ErrTimedOut)
 		}
-		time.Sleep(1 * time.Minute)
+		time.Sleep(15 * time.Second)
 	}
-	return NewErrAudit(ErrTimedOut)
 }
 
 // redeem the Atomic Swap by revealing the secret and withdrawing funds from the
@@ -187,7 +186,7 @@ func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 		}
 	}
 
-	if bal, err := atom.Balance(atom.scriptAddr); bal == 0 || err != nil {
+	if spent, err := atom.ScriptSpent(atom.scriptAddr); spent || err != nil {
 		if err != nil {
 			return err
 		}
@@ -251,25 +250,30 @@ func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 		return NewErrRedeem(err)
 	}
 
+	if err := atom.PublishTransaction(redeemTxBuffer.Bytes(),
+		func() (bool, error) {
+			return atom.ScriptSpent(atom.scriptAddr)
+		},
+	); err != nil {
+		return err
+	}
+
 	atom.LogInfo(atom.req.UID, "Redeemed on bitcoin blockchain")
-	return atom.PublishTransaction(redeemTxBuffer.Bytes())
+	return nil
 }
 
 func (atom *bitcoinAtom) AuditSecret() ([32]byte, error) {
-	sendValue, err := strconv.ParseInt(atom.req.SendValue, 10, 64)
-	if err != nil {
-		return [32]byte{}, err
-	}
 	for {
-		atom.LogInfo(atom.req.UID, "Auditing secret on bitcoin blockchain")
-		bal, err := atom.Conn.Balance(atom.scriptAddr)
-		if err == nil && bal < sendValue {
+		if spent, err := atom.ScriptSpent(atom.scriptAddr); spent || err != nil {
+			if err != nil {
+				return [32]byte{}, err
+			}
 			break
 		}
 		if time.Now().Unix() > atom.req.TimeLock {
 			return [32]byte{}, NewErrAuditSecret(ErrTimedOut)
 		}
-		time.Sleep(1 * time.Minute)
+		time.Sleep(15 * time.Second)
 	}
 
 	sigScript, err := atom.Conn.GetScriptFromSpentP2SH(atom.scriptAddr)
@@ -305,7 +309,7 @@ func (atom *bitcoinAtom) Refund() error {
 	}
 	output := outs.Outputs[0]
 
-	if bal, err := atom.Balance(atom.scriptAddr); bal == 0 || err != nil {
+	if spent, err := atom.ScriptSpent(atom.scriptAddr); spent || err != nil {
 		if err != nil {
 			return err
 		}
@@ -371,5 +375,14 @@ func (atom *bitcoinAtom) Refund() error {
 		return NewErrRefund(err)
 	}
 
-	return atom.PublishTransaction(refundTxBuffer.Bytes())
+	if err := atom.PublishTransaction(refundTxBuffer.Bytes(),
+		func() (bool, error) {
+			return atom.ScriptSpent(atom.scriptAddr)
+		},
+	); err != nil {
+		return err
+	}
+
+	atom.LogInfo(atom.req.UID, "Refunded the transaction on Bitcoin blockchain")
+	return nil
 }

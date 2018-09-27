@@ -173,7 +173,22 @@ func (conn *conn) GetUnspentOutputs(address string) (UnspentOutputs, error) {
 	return utxos, nil
 }
 
-func (conn *conn) PublishTransaction(signedTransaction []byte) error {
+func (conn *conn) PublishTransaction(signedTransaction []byte, postCon func() (bool, error)) error {
+	for {
+		if err := conn.publishTransaction(signedTransaction); err != nil {
+			return err
+		}
+		for i := 0; i < 20; i++ {
+			success, err := postCon()
+			if success || err != nil {
+				return err
+			}
+			time.Sleep(15 * time.Second)
+		}
+	}
+}
+
+func (conn *conn) publishTransaction(signedTransaction []byte) error {
 	data := url.Values{}
 	data.Set("tx", hex.EncodeToString(signedTransaction))
 	client := &http.Client{}
@@ -187,10 +202,6 @@ func (conn *conn) PublishTransaction(signedTransaction []byte) error {
 		return err
 	}
 	return nil
-}
-
-func (conn *conn) GetScriptCreationTransaction(address, scriptHash string) (*wire.MsgTx, error) {
-	return nil, nil
 }
 
 func (conn *conn) Net() *chaincfg.Params {
@@ -256,6 +267,22 @@ func (conn *conn) Mined(txhash string, confirmations int64) (bool, error) {
 	return false, nil
 }
 
+func (conn *conn) ScriptSpent(address string) (bool, error) {
+	rawAddress, err := conn.GetRawAddressInformation(address)
+	if err != nil {
+		return false, err
+	}
+	return rawAddress.Spent > 0, nil
+}
+
+func (conn *conn) ScriptFunded(address string, value int64) (bool, int64, error) {
+	rawAddress, err := conn.GetRawAddressInformation(address)
+	if err != nil {
+		return false, 0, err
+	}
+	return rawAddress.Received >= value, rawAddress.Received, nil
+}
+
 type RawTransaction struct {
 	BlockHeight      int64    `json:"block_height"`
 	VinSize          uint32   `json:"vin_sz"`
@@ -270,8 +297,12 @@ type RawTransaction struct {
 type RawAddress struct {
 	Address      string           `json:"address"`
 	TxCount      int64            `json:"n_tx"`
+	Received     int64            `json:"total_received"`
+	Spent        int64            `json:"total_spent"`
+	Balance      int64            `json:"final_balance"`
 	Transactions []RawTransaction `json:"txs"`
 }
+
 type Input struct {
 	PrevOut PreviousOut `json:"prev_out"`
 	Script  string      `json:"script"`

@@ -2,7 +2,6 @@ package btc
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
@@ -175,13 +174,4 @@ func buildInitiateScript(personalAddress string, req swapDomain.Request, Net *ch
 	}
 
 	return initiateScript, initiateScriptP2SH.EncodeAddress(), nil
-}
-
-func (atom *bitcoinAtom) initiated() (bool, error) {
-	sendValue, err := strconv.ParseInt(atom.req.SendValue, 10, 64)
-	if err != nil {
-		return false, err
-	}
-	bal, err := atom.Balance(atom.scriptAddr)
-	return (bal >= sendValue), err
 }
