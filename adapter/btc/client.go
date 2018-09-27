@@ -233,6 +233,7 @@ func (conn *conn) GetRawAddressInformation(addr string) (RawAddress, error) {
 	if err := json.Unmarshal(addrBytes, &addressInfo); err != nil {
 		return RawAddress{}, err
 	}
+	fmt.Println(addressInfo)
 	return addressInfo, nil
 }
 
