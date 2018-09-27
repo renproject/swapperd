@@ -6,14 +6,17 @@ import (
 	"log"
 	"time"
 
+	"github.com/republicprotocol/co-go"
+
 	"github.com/republicprotocol/renex-swapper-go/domain/swap"
+	"github.com/republicprotocol/renex-swapper-go/utils"
 )
 
 type renex struct {
 	Adapter
-	swapStatuses map[[32]byte]bool
-	notifyCh     chan struct{}
-	doneCh       chan struct{}
+	manager  utils.SwapManager
+	notifyCh chan struct{}
+	doneCh   chan struct{}
 }
 
 type RenEx interface {
@@ -26,10 +29,10 @@ type RenEx interface {
 
 func NewRenEx(adapter Adapter) RenEx {
 	return &renex{
-		Adapter:      adapter,
-		swapStatuses: map[[32]byte]bool{},
-		notifyCh:     make(chan struct{}, 1),
-		doneCh:       make(chan struct{}, 1),
+		Adapter:  adapter,
+		manager:  utils.NewSwapManager(),
+		notifyCh: make(chan struct{}, 1),
+		doneCh:   make(chan struct{}, 1),
 	}
 }
 
@@ -51,12 +54,7 @@ func (renex *renex) Start() <-chan error {
 					errs <- err
 					continue
 				}
-				// TODO: Document the limitation
-				if len(swaps) < 1000 {
-					renex.SwapMultiple(swaps, errs)
-					continue
-				}
-				renex.SwapMultiple(swaps[:1000], errs)
+				renex.SwapMultiple(swaps, errs)
 			}
 		}
 	}()
@@ -64,35 +62,32 @@ func (renex *renex) Start() <-chan error {
 }
 
 func (renex *renex) SwapMultiple(swaps [][32]byte, errs chan error) {
-	for i := range swaps {
-		// TODO: Use co library
-		go func(i int) {
-			// TODO: Fix data race issues
-			if renex.swapStatuses[swaps[i]] {
-				return
-			}
-			renex.swapStatuses[swaps[i]] = true
-			defer func() { renex.swapStatuses[swaps[i]] = false }()
-			if err := renex.Swap(swaps[i]); err != nil {
-				select {
-				case _, ok := <-renex.doneCh:
-					if !ok {
-						return
-					}
-				case errs <- err:
+	co.ParForAll(swaps, func(i int) {
+		swap := swaps[i]
+		if !renex.manager.Status(swap) {
+			return
+		}
+		renex.manager.Lock(swap)
+		defer renex.manager.Unlock(swap)
+		if err := renex.Swap(swap); err != nil {
+			select {
+			case _, ok := <-renex.doneCh:
+				if !ok {
+					return
 				}
+			case errs <- err:
 			}
-			if err := renex.DeleteIfRedeemedOrExpired(swaps[i]); err != nil {
-				select {
-				case _, ok := <-renex.doneCh:
-					if !ok {
-						return
-					}
-				case errs <- err:
+		}
+		if err := renex.DeleteIfRedeemedOrExpired(swaps[i]); err != nil {
+			select {
+			case _, ok := <-renex.doneCh:
+				if !ok {
+					return
 				}
+			case errs <- err:
 			}
-		}(i)
-	}
+		}
+	})
 }
 
 func (renex *renex) Add(orderID [32]byte) error {
