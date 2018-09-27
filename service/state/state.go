@@ -2,6 +2,7 @@ package state
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -163,7 +164,7 @@ func (state *state) ReadSwapDetails(orderID [32]byte) SwapDetails {
 func (state *state) PrintSwapRequest(swapRequest swap.Request) {
 	state.LogInfo(swapRequest.UID, fmt.Sprintf("%s%s%s%s%s%s%s%s%s%s%s%s%s",
 		fmt.Sprintf("\nSWAP REQUEST\n\n"),
-		fmt.Sprintf("UID: %s\n", swapRequest.UID),
+		fmt.Sprintf("UID: %s\n", hex.EncodeToString(swapRequest.UID[:])),
 		fmt.Sprintf("Expiry: %d\n", swapRequest.TimeLock),
 		fmt.Sprintf("Secret Hash: %s\n", base64.StdEncoding.EncodeToString(swapRequest.SecretHash[:])),
 		fmt.Sprintf("Secret: %s\n", base64.StdEncoding.EncodeToString(swapRequest.Secret[:])),

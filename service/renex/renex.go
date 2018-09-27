@@ -3,6 +3,7 @@ package renex
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"time"
@@ -64,6 +65,9 @@ func (renex *renex) Start() <-chan error {
 }
 
 func (renex *renex) SwapMultiple(swaps [][32]byte, errs chan error) {
+	for _, swap := range swaps {
+		fmt.Println(hex.EncodeToString(swap[:]))
+	}
 	co.ParForAll(swaps, func(i int) {
 		swap := swaps[i]
 		if !renex.manager.Lock(swap) {
