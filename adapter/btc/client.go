@@ -298,7 +298,7 @@ type RawAddress struct {
 	Address      string           `json:"address"`
 	TxCount      int64            `json:"n_tx"`
 	Received     int64            `json:"total_received"`
-	Spent        int64            `json:"total_spent"`
+	Spent        int64            `json:"total_sent"`
 	Balance      int64            `json:"final_balance"`
 	Transactions []RawTransaction `json:"txs"`
 }
