@@ -134,6 +134,7 @@ func (atom *ethereumAtom) AuditSecret() ([32]byte, error) {
 		if time.Now().Unix() > atom.req.TimeLock {
 			return [32]byte{}, swap.ErrTimedOut
 		}
+		time.Sleep(15 * time.Second)
 	}
 	secret, err := atom.binder.AuditSecret(&bind.CallOpts{}, atom.id)
 	if err != nil {
@@ -145,8 +146,8 @@ func (atom *ethereumAtom) AuditSecret() ([32]byte, error) {
 
 // Audit an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Audit() error {
+	atom.logger.LogInfo(atom.req.UID, fmt.Sprintf("Waiting for initiation on ethereum blockchain"))
 	for {
-		atom.logger.LogInfo(atom.req.UID, fmt.Sprintf("Waiting for initiation on ethereum blockchain"))
 		initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
 		if err != nil {
 			return err
@@ -154,6 +155,7 @@ func (atom *ethereumAtom) Audit() error {
 		if !initiatable {
 			break
 		}
+		time.Sleep(15 * time.Second)
 	}
 	auditReport, err := atom.binder.Audit(&bind.CallOpts{}, atom.id)
 	if err != nil {
