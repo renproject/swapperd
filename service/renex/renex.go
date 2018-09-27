@@ -3,6 +3,7 @@ package renex
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"fmt"
 	"log"
 	"time"
 
@@ -51,6 +52,7 @@ func (renex *renex) Start() <-chan error {
 			case <-renex.notifyCh:
 				swaps, err := renex.ExecutableSwaps()
 				if err != nil {
+					fmt.Println("Error while loading executable swaps")
 					errs <- err
 					continue
 				}
@@ -103,6 +105,7 @@ func (renex *renex) Stop() {
 }
 
 func (renex *renex) Swap(orderID [32]byte) error {
+	renex.LogInfo(orderID, "Watching RenEx Settlement for order matches")
 	if renex.Status(orderID) == swap.StatusOpen {
 		req, err := renex.buildRequest(orderID)
 		if err != nil {
