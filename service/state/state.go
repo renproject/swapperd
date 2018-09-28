@@ -49,8 +49,11 @@ type State interface {
 	SwapRequest([32]byte) (swap.Request, error)
 	PutSwapRequest([32]byte, swap.Request) error
 
-	AddTimestamp([32]byte) (int64, error)
-	PutAddTimestamp([32]byte) error
+	AddedAtTimestamp([32]byte) (int64, error)
+	PutAddedAtTimestamp([32]byte) error
+
+	SwapDetails([32]byte) SwapDetails
+	PutSwapDetails([32]byte, SwapDetails) error
 
 	PrintSwapRequest(swap.Request)
 }
@@ -70,7 +73,7 @@ func NewState(adapter Adapter) State {
 func (state *state) PutStatus(orderID [32]byte, status swap.Status) error {
 	swap := state.swapCache.Read(orderID)
 	swap.Status = status
-	if err := state.WriteSwapDetails(orderID, swap); err != nil {
+	if err := state.PutSwapDetails(orderID, swap); err != nil {
 		return err
 	}
 	state.swapCache.Write(orderID, swap)
@@ -84,7 +87,7 @@ func (state *state) Status(orderID [32]byte) swap.Status {
 	if swapDetails.Status != swap.Status("") {
 		return swapDetails.Status
 	}
-	swapDetails = state.ReadSwapDetails(orderID)
+	swapDetails = state.SwapDetails(orderID)
 	state.swapCache.Write(orderID, swapDetails)
 	if swapDetails.Status == swap.Status("") {
 		return swap.StatusOpen
@@ -92,25 +95,25 @@ func (state *state) Status(orderID [32]byte) swap.Status {
 	return swapDetails.Status
 }
 
-// PutAddTimestamp into both persistent storage and in memory cache.
-func (state *state) PutAddTimestamp(orderID [32]byte) error {
+// PutAddedAtTimestamp into both persistent storage and in memory cache.
+func (state *state) PutAddedAtTimestamp(orderID [32]byte) error {
 	swap := state.swapCache.Read(orderID)
 	swap.TimeStamp = time.Now().Unix()
-	if err := state.WriteSwapDetails(orderID, swap); err != nil {
+	if err := state.PutSwapDetails(orderID, swap); err != nil {
 		return err
 	}
 	state.swapCache.Write(orderID, swap)
 	return nil
 }
 
-// AddTimestamp tries to get the redeem details from in memory cache if
+// AddedAtTimestamp tries to get the redeem details from in memory cache if
 // they do not exist it tries to read from the persistent storage.
-func (state *state) AddTimestamp(orderID [32]byte) (int64, error) {
+func (state *state) AddedAtTimestamp(orderID [32]byte) (int64, error) {
 	swap := state.swapCache.Read(orderID)
 	if swap.TimeStamp != 0 {
 		return swap.TimeStamp, nil
 	}
-	swap = state.ReadSwapDetails(orderID)
+	swap = state.SwapDetails(orderID)
 	state.swapCache.Write(orderID, swap)
 	return swap.TimeStamp, nil
 }
@@ -119,27 +122,27 @@ func (state *state) AddTimestamp(orderID [32]byte) (int64, error) {
 func (state *state) PutSwapRequest(orderID [32]byte, req swap.Request) error {
 	swap := state.swapCache.Read(orderID)
 	swap.Request = req
-	if err := state.WriteSwapDetails(orderID, swap); err != nil {
+	if err := state.PutSwapDetails(orderID, swap); err != nil {
 		return err
 	}
 	state.swapCache.Write(orderID, swap)
 	return nil
 }
 
-// ReadSwapDetails from persistent storage
+// SwapDetails from persistent storage
 func (state *state) SwapRequest(orderID [32]byte) (swap.Request, error) {
 	req := swap.Request{}
 	swapDetails := state.swapCache.Read(orderID)
 	if swapDetails.Request != req {
 		return swapDetails.Request, nil
 	}
-	swapDetails = state.ReadSwapDetails(orderID)
+	swapDetails = state.SwapDetails(orderID)
 	state.swapCache.Write(orderID, swapDetails)
 	return swapDetails.Request, nil
 }
 
-// WriteSwapDetails to persistent storage
-func (state *state) WriteSwapDetails(orderID [32]byte, swapDetails SwapDetails) error {
+// PutSwapDetails to persistent storage
+func (state *state) PutSwapDetails(orderID [32]byte, swapDetails SwapDetails) error {
 	data, err := json.Marshal(swapDetails)
 	if err != nil {
 		return err
@@ -147,8 +150,8 @@ func (state *state) WriteSwapDetails(orderID [32]byte, swapDetails SwapDetails) 
 	return state.Write(append([]byte("Swap Details:"), orderID[:]...), data)
 }
 
-// ReadSwapDetails from persistent storage
-func (state *state) ReadSwapDetails(orderID [32]byte) SwapDetails {
+// SwapDetails from persistent storage
+func (state *state) SwapDetails(orderID [32]byte) SwapDetails {
 	data, err := state.Read(append([]byte("Swap Details:"), orderID[:]...))
 	if err != nil {
 		return SwapDetails{}

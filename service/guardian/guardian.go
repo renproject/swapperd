@@ -2,13 +2,14 @@ package guardian
 
 import (
 	"fmt"
-	"log"
+	"time"
+
+	"github.com/republicprotocol/co-go"
+	swapDomain "github.com/republicprotocol/renex-swapper-go/domain/swap"
 )
 
 var (
-	ErrSwapRedeemed  = fmt.Errorf("Swap Redeemed")
-	ErrNonRefundable = fmt.Errorf("Trying to refund a non refundable order")
-	ErrNotInitiated  = fmt.Errorf("Trying to refund a swap which is not initiated")
+	ErrNotRefundable = fmt.Errorf("Trying to refund a non refundable order")
 )
 
 func ErrAtomBuildFailed(err error) error {
@@ -20,92 +21,49 @@ func ErrRefundAfterRedeem(err error) error {
 }
 
 type Guardian interface {
-	Start() <-chan error
-	Notify()
-	Stop()
+	Run(chan<- error)
 }
 
 type guardian struct {
 	Adapter
-	refundStatus map[[32]byte]bool
-	notifyCh     chan struct{}
-	doneCh       chan struct{}
 }
 
 func NewGuardian(adapter Adapter) Guardian {
 	return &guardian{
-		Adapter:      adapter,
-		refundStatus: map[[32]byte]bool{},
-		notifyCh:     make(chan struct{}, 1),
-		doneCh:       make(chan struct{}, 1),
+		Adapter: adapter,
 	}
 }
 
-func (g *guardian) Start() <-chan error {
-	errs := make(chan error)
-	log.Println("Starting the guardian......")
-	go func() {
-		defer log.Println("Ending the guardian......")
-		defer close(errs)
-		for {
-			select {
-			case <-g.doneCh:
-				return
-			case <-g.notifyCh:
-				swaps, err := g.ExpiredSwaps()
-				if err != nil {
-					errs <- err
+func (g *guardian) Run(errCh chan<- error) {
+	for {
+		swaps := g.ActiveSwaps()
+		co.ParForAll(swaps, func(i int) {
+			swap := swaps[i]
+			details := g.SwapDetails(swap)
+			if details.Status == swapDomain.StatusOpen && time.Now().Unix() > details.TimeStamp+48*60*60 {
+				if err := g.PutStatus(swap, swapDomain.StatusExpired); err != nil {
+					errCh <- err
 					return
 				}
-				if len(swaps) < 1000 {
-					g.RefundMultiple(swaps, errs)
-					continue
-				}
-				g.RefundMultiple(swaps[:1000], errs)
 			}
-		}
-	}()
-	return errs
-}
-
-func (g *guardian) Notify() {
-	g.notifyCh <- struct{}{}
-}
-
-func (g *guardian) Stop() {
-	g.doneCh <- struct{}{}
-}
-
-func (g *guardian) RefundMultiple(swaps [][32]byte, errs chan error) {
-	for i := range swaps {
-		go func(i int) {
-			if g.refundStatus[swaps[i]] {
-				return
-			}
-			g.refundStatus[swaps[i]] = true
-			if err := g.Refund(swaps[i]); err != nil {
-				if err == ErrNotInitiated {
+			if details.Status == swapDomain.StatusConfirmed && time.Now().Unix() > details.Request.TimeLock {
+				if err := g.Refund(swap); err != nil {
+					if err == ErrNotRefundable {
+						return
+					}
+					errCh <- err
 					return
 				}
-				select {
-				case _, ok := <-g.doneCh:
-					if !ok {
-						return
-					}
-				case errs <- err:
+				if err := g.PutStatus(swap, swapDomain.StatusExpired); err != nil {
+					errCh <- err
+					return
 				}
 			}
-			if err := g.DeleteIfRefunded(swaps[i]); err != nil {
-				select {
-				case _, ok := <-g.doneCh:
-					if !ok {
-						return
-					}
-				case errs <- err:
-				}
+			if err := g.DeleteIfExpired(swap); err != nil {
+				errCh <- err
+				return
 			}
-			g.refundStatus[swaps[i]] = false
-			return
-		}(i)
+		})
+		time.Sleep(1 * time.Minute)
 	}
 }

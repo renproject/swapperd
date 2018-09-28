@@ -3,9 +3,6 @@ package renex
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
-	"log"
 	"time"
 
 	"github.com/republicprotocol/co-go"
@@ -16,99 +13,48 @@ import (
 
 type renex struct {
 	Adapter
-	manager  utils.SwapManager
-	notifyCh chan struct{}
-	doneCh   chan struct{}
+	manager utils.SwapManager
 }
 
 type RenEx interface {
-	Start() <-chan error
+	Run(errCh chan<- error)
 	Add([32]byte) error
 	Status([32]byte) swap.Status
-	Notify()
-	Stop()
 }
 
 func NewRenEx(adapter Adapter) RenEx {
 	return &renex{
-		Adapter:  adapter,
-		manager:  utils.NewSwapManager(),
-		notifyCh: make(chan struct{}, 1),
-		doneCh:   make(chan struct{}, 1),
+		Adapter: adapter,
+		manager: utils.NewSwapManager(),
 	}
 }
 
-// TODO: Change Start to Run
 // Run runs the watch object on the given order id
-func (renex *renex) Start() <-chan error {
-	errs := make(chan error)
-	log.Println("Running the watcher......")
-	go func() {
-		defer close(errs)
-		defer log.Println("Stopping the watcher......")
-		for {
-			select {
-			case <-renex.doneCh:
+func (renex *renex) Run(errCh chan<- error) {
+	for {
+		swaps := renex.ActiveSwaps()
+		go co.ParForAll(swaps, func(i int) {
+			swap := swaps[i]
+			if !renex.manager.Lock(swap) {
 				return
-			case <-renex.notifyCh:
-				swaps, err := renex.ExecutableSwaps()
-				if err != nil {
-					fmt.Println("Error while loading executable swaps")
-					errs <- err
-					continue
-				}
-				renex.SwapMultiple(swaps, errs)
 			}
-		}
-	}()
-	return errs
-}
-
-func (renex *renex) SwapMultiple(swaps [][32]byte, errs chan error) {
-	for _, swap := range swaps {
-		fmt.Println(hex.EncodeToString(swap[:]))
+			defer renex.manager.Unlock(swap)
+			if err := renex.Swap(swap); err != nil {
+				errCh <- err
+			}
+			if err := renex.DeleteIfSettled(swaps[i]); err != nil {
+				errCh <- err
+			}
+		})
+		time.Sleep(1 * time.Minute)
 	}
-	co.ParForAll(swaps, func(i int) {
-		swap := swaps[i]
-		if !renex.manager.Lock(swap) {
-			return
-		}
-		defer renex.manager.Unlock(swap)
-		if err := renex.Swap(swap); err != nil {
-			select {
-			case _, ok := <-renex.doneCh:
-				if !ok {
-					return
-				}
-			case errs <- err:
-			}
-		}
-		if err := renex.DeleteIfRedeemedOrExpired(swaps[i]); err != nil {
-			select {
-			case _, ok := <-renex.doneCh:
-				if !ok {
-					return
-				}
-			case errs <- err:
-			}
-		}
-	})
 }
 
 func (renex *renex) Add(orderID [32]byte) error {
 	return renex.AddSwap(orderID)
 }
 
-func (renex *renex) Notify() {
-	renex.notifyCh <- struct{}{}
-}
-
-func (renex *renex) Stop() {
-	renex.doneCh <- struct{}{}
-}
-
 func (renex *renex) Swap(orderID [32]byte) error {
-	renex.LogInfo(orderID, "Watching RenEx Settlement for order matches")
 	if renex.Status(orderID) == swap.StatusOpen {
 		req, err := renex.buildRequest(orderID)
 		if err != nil {
@@ -121,13 +67,11 @@ func (renex *renex) Swap(orderID [32]byte) error {
 			return err
 		}
 	}
-
 	if renex.Status(orderID) == swap.StatusConfirmed {
 		req, err := renex.SwapRequest(orderID)
 		if err != nil {
 			return err
 		}
-
 		swapInst, err := renex.NewSwap(req)
 		if err != nil {
 			return err
@@ -146,8 +90,7 @@ func (renex *renex) buildRequest(orderID [32]byte) (swap.Request, error) {
 	renex.LogInfo(orderID, "building swap request")
 	req := swap.Request{}
 
-	// TODO: Change it to AddedAtTimestamp
-	timeStamp, err := renex.AddTimestamp(orderID)
+	timeStamp, err := renex.AddedAtTimestamp(orderID)
 	if err != nil {
 		return req, err
 	}

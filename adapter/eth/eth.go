@@ -13,6 +13,7 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 	swapDomain "github.com/republicprotocol/renex-swapper-go/domain/swap"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
+	"github.com/republicprotocol/renex-swapper-go/service/guardian"
 	"github.com/republicprotocol/renex-swapper-go/service/logger"
 	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
@@ -102,7 +103,7 @@ func (atom *ethereumAtom) Refund() error {
 		return err
 	}
 	if !refundable {
-		return swap.ErrSwapAlreadyRedeemedOrRefunded
+		return guardian.ErrNotRefundable
 	}
 	if err := atom.key.SubmitTx(
 		func(tops *bind.TransactOpts) error {

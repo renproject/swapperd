@@ -54,10 +54,7 @@ func (ethKey *EthereumKey) SubmitTx(submitTx func(*bind.TransactOpts) error, pos
 	defer ethKey.Unlock()
 	for {
 		ethKey.TransactOpts.GasPrice = big.NewInt(20000000000)
-		err := submitTx(ethKey.TransactOpts)
-		if err != nil {
-			return err
-		}
+		submitTx(ethKey.TransactOpts)
 		for i := 0; i < 20; i++ {
 			if result := postCon(); result {
 				return nil

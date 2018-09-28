@@ -60,32 +60,19 @@ func main() {
 	renexSwapper := renex.NewRenEx(renexAdapter.New(conf, ks, ingressNet, state, logger, binder))
 	guardian := guardian.NewGuardian(guardianAdapter.New(conf, ks, state, logger))
 
-	errCh1 := renexSwapper.Start()
-	renexSwapper.Notify()
-
-	errCh2 := guardian.Start()
-	guardian.Notify()
-
+	errCh := make(chan error, 1)
+	go renexSwapper.Run(errCh)
+	go guardian.Run(errCh)
 	go func() {
-		for err := range errCh1 {
-			log.Println("Watcher Error :", err)
+		for err := range errCh {
+			fmt.Println("Swapper Error: ", err)
 		}
 	}()
-
-	go func() {
-		for err := range errCh2 {
-			log.Println("Guardian Error :", err)
-		}
-	}()
-
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
+		defer close(errCh)
 		_ = <-c
-		log.Println("Stopping the swapper service")
-		renexSwapper.Stop()
-		log.Println("Stopping the guardian service")
-		guardian.Stop()
 		log.Println("Stopping the atom box safely")
 		os.Exit(1)
 	}()

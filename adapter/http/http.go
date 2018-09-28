@@ -55,12 +55,11 @@ func (adapter *adapter) PostOrder(order PostOrderRequest) (PostOrderResponse, er
 	if err != nil {
 		return PostOrderResponse{}, err
 	}
-	go func() {
-		if err := adapter.renex.Add(orderID); err != nil {
-			return
-		}
-		adapter.renex.Notify()
-	}()
+
+	if err := adapter.renex.Add(orderID); err != nil {
+		return PostOrderResponse{}, err
+	}
+
 	key := adapter.keystr.GetKey(token.ETH).(keystore.EthereumKey)
 	sig, err := key.Sign(orderID[:])
 	return PostOrderResponse{

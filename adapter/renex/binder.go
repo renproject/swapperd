@@ -1,8 +1,8 @@
 package renex
 
 import (
+	"encoding/base64"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -69,16 +69,10 @@ func (binder *binder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Matc
 			time.Sleep(10 * time.Second)
 			continue
 		}
-
 		if !matchDetails.Settled {
 			time.Sleep(10 * time.Second)
 			continue
 		}
-
-		log.Printf("priority volume = %v", matchDetails.PriorityVolume)
-		log.Printf("secondary volume = %v", matchDetails.SecondaryVolume)
-		log.Printf("priority fee = %v", matchDetails.PriorityFee)
-		log.Printf("secondary fee = %v", matchDetails.SecondaryFee)
 
 		priorityToken, err := token.TokenCodeToToken(matchDetails.PriorityToken)
 		if err != nil {
@@ -88,7 +82,7 @@ func (binder *binder) GetOrderMatch(orderID [32]byte, waitTill int64) (swap.Matc
 		if err != nil {
 			return swap.Match{}, err
 		}
-		binder.LogInfo(orderID, fmt.Sprintf("matched with (%s)", matchDetails.MatchedID))
+		binder.LogInfo(orderID, fmt.Sprintf("matched with (%s%s%s)", pickColor(matchDetails.MatchedID), base64.StdEncoding.EncodeToString(matchDetails.MatchedID[:]), white))
 		if matchDetails.OrderIsBuy {
 			return swap.Match{
 				PersonalOrderID: orderID,
@@ -128,3 +122,9 @@ func (binder *binder) verifyOrder(orderID [32]byte, waitTill int64) error {
 		}
 	}
 }
+
+func pickColor(orderID [32]byte) string {
+	return fmt.Sprintf("\033[3%dm", int64(orderID[0])%7)
+}
+
+const white = "\033[m"

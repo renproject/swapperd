@@ -33,10 +33,6 @@ func New(conf config.Config, ks keystore.Keystore, state state.State, logger log
 
 // TODO: Check whether the atom is initiated before building the atom.
 func (adapter *guardianAdapter) Refund(orderID [32]byte) error {
-	if adapter.Status(orderID) == swapDomain.StatusOpen {
-		return guardian.ErrNotInitiated
-	}
-
 	req, err := adapter.SwapRequest(orderID)
 	if err != nil {
 		return err

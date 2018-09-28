@@ -3,7 +3,6 @@ package state
 import (
 	"encoding/json"
 	"sync"
-	"time"
 
 	"github.com/republicprotocol/renex-swapper-go/domain/swap"
 )
@@ -11,11 +10,10 @@ import (
 type ActiveSwapList interface {
 	AddSwap(orderID [32]byte) error
 	DeleteSwap(orderID [32]byte) error
-	PendingSwaps() ([][32]byte, error)
-	ExecutableSwaps() ([][32]byte, error)
-	ExpiredSwaps() ([][32]byte, error)
-	DeleteIfRefunded(orderID [32]byte) error
-	DeleteIfRedeemedOrExpired(orderID [32]byte) error
+	PendingSwaps() [][32]byte
+	ActiveSwaps() [][32]byte
+	DeleteIfSettled(orderID [32]byte) error
+	DeleteIfExpired(orderID [32]byte) error
 }
 
 type ProtectedSwapList struct {
@@ -57,7 +55,7 @@ func (state *state) AddSwap(orderID [32]byte) error {
 		}
 	}
 	pendingSwaps.Add(orderID)
-	if err := state.PutAddTimestamp(orderID); err != nil {
+	if err := state.PutAddedAtTimestamp(orderID); err != nil {
 		return err
 	}
 	pendingSwapsProcessedBytes, err := json.Marshal(pendingSwaps)
@@ -85,58 +83,38 @@ func (state *state) DeleteSwap(orderID [32]byte) error {
 	return state.Write([]byte("Pending Swaps:"), pendingSwapsProcessedBytes)
 }
 
-func (state *state) PendingSwaps() ([][32]byte, error) {
+func (state *state) PendingSwaps() [][32]byte {
 	pendingSwapsBytes, err := state.Read([]byte("Pending Swaps:"))
 	if err != nil {
-		return [][32]byte{}, nil
+		return nil
 	}
 	pendingSwaps := NewProtectedSwapList()
 	if err := json.Unmarshal(pendingSwapsBytes, &pendingSwaps); err != nil {
-		return nil, err
+		return nil
 	}
-	return pendingSwaps.List, nil
+	return pendingSwaps.List
 }
 
-func (state *state) ExecutableSwaps() ([][32]byte, error) {
+func (state *state) ActiveSwaps() [][32]byte {
 	exectableSwaps := [][32]byte{}
-	pendingSwaps, err := state.PendingSwaps()
-	if err != nil {
-		return nil, err
-	}
-	for _, pendingSwap := range pendingSwaps {
+	for _, pendingSwap := range state.PendingSwaps() {
 		if state.Status(pendingSwap) == swap.StatusExpired {
 			continue
 		}
 		exectableSwaps = append(exectableSwaps, pendingSwap)
 	}
-	return exectableSwaps, nil
+	return exectableSwaps
 }
 
-func (state *state) ExpiredSwaps() ([][32]byte, error) {
-	pendingSwaps, err := state.PendingSwaps()
-	if err != nil {
-		return nil, err
-	}
-	refundableSwaps := [][32]byte{}
-	for _, pendingSwap := range pendingSwaps {
-		swapDet := state.ReadSwapDetails(pendingSwap)
-		if swapDet.Request.TimeLock < time.Now().Unix() {
-			refundableSwaps = append(refundableSwaps, pendingSwap)
-		}
-	}
-	return refundableSwaps, nil
-}
-
-// TODO: check timestamp and delete if expired
-func (state *state) DeleteIfRefunded(orderID [32]byte) error {
+func (state *state) DeleteIfExpired(orderID [32]byte) error {
 	if state.Status(orderID) == swap.StatusExpired {
 		return state.DeleteSwap(orderID)
 	}
 	return nil
 }
 
-func (state *state) DeleteIfRedeemedOrExpired(orderID [32]byte) error {
-	if state.Status(orderID) == swap.StatusExpired || state.Status(orderID) == swap.StatusSettled {
+func (state *state) DeleteIfSettled(orderID [32]byte) error {
+	if state.Status(orderID) == swap.StatusSettled {
 		return state.DeleteSwap(orderID)
 	}
 	return nil

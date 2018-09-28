@@ -18,6 +18,7 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 	swapDomain "github.com/republicprotocol/renex-swapper-go/domain/swap"
+	"github.com/republicprotocol/renex-swapper-go/service/guardian"
 	"github.com/republicprotocol/renex-swapper-go/service/logger"
 	"github.com/republicprotocol/renex-swapper-go/service/swap"
 )
@@ -312,7 +313,7 @@ func (atom *bitcoinAtom) Refund() error {
 		if err != nil {
 			return err
 		}
-		return swap.ErrSwapAlreadyRedeemedOrRefunded
+		return guardian.ErrNotRefundable
 	}
 
 	// create bitcoin script to pay to the user's personal address

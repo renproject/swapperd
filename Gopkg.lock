@@ -373,8 +373,8 @@
 [[projects]]
   name = "gopkg.in/fatih/set.v0"
   packages = ["."]
-  revision = "2c768e3c5489976167bfc42b5c7c92ca783f4389"
-  version = "v0.2.1"
+  revision = "57907de300222151a123d29255ed17f5ed43fad3"
+  version = "v0.1.0"
 
 [[projects]]
   name = "gopkg.in/fsnotify.v1"
@@ -410,6 +410,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b1526f3a98afbad0e529e61072d79640e08c1af60eca9d8a8e0cfe7b6c362ba4"
+  inputs-digest = "1a88cd647f6e78f7ebdc489a4b3fa9e89047aa073cf657fa449bcb79ccde083b"
   solver-name = "gps-cdcl"
   solver-version = 1
