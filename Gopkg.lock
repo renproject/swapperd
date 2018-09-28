@@ -5,7 +5,7 @@
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "59944ff78bc1de686b0aba1444dfd380f48f03d4"
+  revision = "ff33da284e760fcdb03c33d37a719e5ed30ba844"
 
 [[projects]]
   branch = "master"
@@ -17,7 +17,7 @@
     "txscript",
     "wire"
   ]
-  revision = "86fed781132ac890ee03e906e4ecd5d6fa180c64"
+  revision = "2a560b2036bee5e3679ec2133eb6520b2f195213"
 
 [[projects]]
   branch = "master"
@@ -33,7 +33,7 @@
     "base58",
     "bech32"
   ]
-  revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
+  revision = "ab6388e0c60ae4834a1f57511e20c17b5f78be4b"
 
 [[projects]]
   name = "github.com/certifi/gocertifi"
@@ -81,14 +81,20 @@
 [[projects]]
   name = "github.com/go-stack/stack"
   packages = ["."]
-  revision = "259ab82a6cad3992b4e21ff5cac294ccb06474bc"
-  version = "v1.7.0"
+  revision = "2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a"
+  version = "v1.8.0"
 
 [[projects]]
   branch = "master"
   name = "github.com/golang/snappy"
   packages = ["."]
   revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
+
+[[projects]]
+  name = "github.com/google/uuid"
+  packages = ["."]
+  revision = "d460ce9f8df2e77fb1ba55ca87fafed96c607494"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/gorilla/context"
@@ -107,6 +113,18 @@
   name = "github.com/gxed/hashland"
   packages = ["keccakpg"]
   revision = "d9f6b97f8db22dd1e090fd0bbbe98f09cc7dd0a8"
+
+[[projects]]
+  name = "github.com/hpcloud/tail"
+  packages = [
+    ".",
+    "ratelimiter",
+    "util",
+    "watch",
+    "winfile"
+  ]
+  revision = "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/jbenet/go-base58"
@@ -139,13 +157,13 @@
   branch = "master"
   name = "github.com/mr-tron/base58"
   packages = ["base58"]
-  revision = "f84df45a6b88974a98d1473e9f0de0eac859a3d9"
+  revision = "9ad991d48a423a0e52c77eac173b1b589665492a"
 
 [[projects]]
   branch = "master"
   name = "github.com/multiformats/go-multiaddr"
   packages = ["."]
-  revision = "de7d6d81956bd35b2b64ca4244b3abb6489827ec"
+  revision = "a80cfc331ffff8bc519e401d8789d324196d1775"
 
 [[projects]]
   branch = "master"
@@ -175,8 +193,8 @@
     "reporters/stenographer/support/go-isatty",
     "types"
   ]
-  revision = "fa5fabab2a1bfbd924faf4c067d07ae414e2aedf"
-  version = "v1.5.0"
+  revision = "3774a09d95489ccaa16032e0770d08ea77ba6184"
+  version = "v1.6.0"
 
 [[projects]]
   name = "github.com/onsi/gomega"
@@ -194,14 +212,14 @@
     "matchers/support/goraph/util",
     "types"
   ]
-  revision = "62bff4df71bdbc266561a0caee19f0594b17c240"
-  version = "v1.4.0"
+  revision = "7615b9433f86a8bdf29709bf288bc4fd0636a369"
+  version = "v1.4.2"
 
 [[projects]]
   name = "github.com/pborman/uuid"
   packages = ["."]
-  revision = "e790cca94e6cc75c7064b1332e63811d4aae1a53"
-  version = "v1.1"
+  revision = "adf5a7427709b9deb95d29d3fa8a2bf9cfd388f1"
+  version = "v1.2"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -210,13 +228,19 @@
   version = "v0.8.0"
 
 [[projects]]
-  branch = "nightly"
+  branch = "master"
+  name = "github.com/republicprotocol/co-go"
+  packages = ["."]
+  revision = "4e299fdb0e808f64667498735da03fdc2e0e84c9"
+
+[[projects]]
+  branch = "develop"
   name = "github.com/republicprotocol/renex-ingress-go"
   packages = [
     "httpadapter",
     "ingress"
   ]
-  revision = "a5d9eee995d261863d3911998fb0556fdaa8f4fe"
+  revision = "510e28c63ffe78a3cd2386971c447d4d776a49b2"
 
 [[projects]]
   branch = "develop"
@@ -234,19 +258,19 @@
     "stackint/asm",
     "swarm"
   ]
-  revision = "2963c9cab59137d5447c472b6adae4e85002165b"
+  revision = "5bc7ef2c3505b2eeb66fadf384d17f80992360db"
 
 [[projects]]
-  branch = "master"
   name = "github.com/rjeczalik/notify"
   packages = ["."]
-  revision = "d152f3ce359a5464dc41e84a8919fc67e55bbbf0"
+  revision = "69d839f37b13a8cb7a78366f7633a4071cb43be7"
+  version = "v0.9.2"
 
 [[projects]]
   name = "github.com/rs/cors"
   packages = ["."]
-  revision = "ca016a06a5753f8ba03029c0aa5e54afb1bf713f"
-  version = "v1.4.0"
+  revision = "3fb1b69b103a84de38a19c3c6ec073dd6caa4d3f"
+  version = "v1.5.0"
 
 [[projects]]
   name = "github.com/spaolacci/murmur3"
@@ -271,7 +295,7 @@
     "leveldb/table",
     "leveldb/util"
   ]
-  revision = "e2150783cd35f5b607daca48afd8c57ec54cc995"
+  revision = "ae2bd5eed72d46b28834ec3f60db3a3ebedd8dbd"
 
 [[projects]]
   branch = "master"
@@ -283,7 +307,7 @@
     "scrypt",
     "sha3"
   ]
-  revision = "df8d4716b3472e4a531c33cedbe537dae921a1a9"
+  revision = "5295e8364332db77d75fce11f1d19c053919a9c9"
 
 [[projects]]
   branch = "master"
@@ -295,7 +319,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "1e491301e022f8f977054da4c2d852decd59571f"
+  revision = "4dfa2610cdf3b287375bbba5b8f2a14d3b01d8de"
 
 [[projects]]
   branch = "master"
@@ -304,7 +328,7 @@
     "cpu",
     "unix"
   ]
-  revision = "c11f84a56e43e20a78cee75a7c034031ecf57d1f"
+  revision = "dad3d9fb7b6e83d0f9ac8f54670f6334c3a287b4"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -344,13 +368,20 @@
     "imports",
     "internal/fastwalk"
   ]
-  revision = "465e6f399236d0ea2466584539d4eab4d3d83720"
+  revision = "1be7b45b4c8359a408756f1a626897c173a5be94"
 
 [[projects]]
   name = "gopkg.in/fatih/set.v0"
   packages = ["."]
-  revision = "57907de300222151a123d29255ed17f5ed43fad3"
-  version = "v0.1.0"
+  revision = "2c768e3c5489976167bfc42b5c7c92ca783f4389"
+  version = "v0.2.1"
+
+[[projects]]
+  name = "gopkg.in/fsnotify.v1"
+  packages = ["."]
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  source = "https://github.com/fsnotify/fsnotify.git"
+  version = "v1.4.7"
 
 [[projects]]
   branch = "v2"
@@ -365,6 +396,12 @@
   revision = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6"
 
 [[projects]]
+  branch = "v1"
+  name = "gopkg.in/tomb.v1"
+  packages = ["."]
+  revision = "dd632973f1e7218eb1089048e0798ec9ae7dceb8"
+
+[[projects]]
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
@@ -373,6 +410,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ead3b9032bb405641e1cbcf15f877bac39aee994fbfec3c729a51fc8a0cd52a5"
+  inputs-digest = "b1526f3a98afbad0e529e61072d79640e08c1af60eca9d8a8e0cfe7b6c362ba4"
   solver-name = "gps-cdcl"
   solver-version = 1
