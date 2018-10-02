@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -42,6 +41,11 @@ var (
 		Value: 0,
 		Usage: "amount of fee you want to pay for the withdraw transaction,", // todo: specify the unit here
 	}
+	portFlag = cli.Int64Flag{
+		Name:  "port",
+		Value: 18516,
+		Usage: "port on which the http server runs,",
+	}
 )
 
 func main() {
@@ -52,13 +56,13 @@ func main() {
 		{
 			Name:  "http",
 			Usage: "start running the swapper ",
-			Flags: []cli.Flag{networkFlag, keyPhraseFlag},
-			Action: func(c *cli.Context) error {
-				// swapper, err  := initializeSwapper(c)
-				// if err != nil {
-				// 	return err
-				// }
-				panic("Implement the http logic here")
+			Flags: []cli.Flag{networkFlag, keyPhraseFlag, portFlag},
+			Action: func(c *cli.Context) {
+				swapper, err := initializeSwapper(c)
+				if err != nil {
+					panic(err)
+				}
+				swapper.Http(c.Int64("port"))
 			},
 		},
 		{
@@ -85,7 +89,7 @@ func initializeSwapper(ctx *cli.Context) (swapper.Swapper, error) {
 	network := ctx.String("network")
 	keyPhrase := ctx.String("keyphrase")
 
-	cfg, err := config.New(path.Join(os.Getenv("HOME"), fmt.Sprintf(".swapper/%v-config.json", network)), network)
+	cfg, err := config.New(path.Join(os.Getenv("HOME"), ".swapper"), network)
 	if err != nil {
 		return nil, err
 	}
@@ -103,20 +107,9 @@ func withdraw(ctx *cli.Context, swapper swapper.Swapper) error {
 	if receiver == "" {
 		return errors.New("receiver address cannot be empty")
 	}
-	value := ctx.Float64("value")
-	if value == 0 {
-		return errors.New("please enter a valid withdraw amount ")
-	}
 	token := ctx.String("token")
 	if token == "" {
 		return errors.New("please enter a valid withdraw token")
 	}
-	fee := ctx.Float64("fee")
-	if fee == 0 {
-		return errors.New("please enter a valid withdraw fee")
-	}
-
-	swapper.Withdraw(token, receiver, value, fee)
-
-	return nil
+	return swapper.Withdraw(token, receiver, ctx.Float64("value"), ctx.Float64("fee"))
 }
