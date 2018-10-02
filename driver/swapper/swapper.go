@@ -18,8 +18,9 @@ import (
 
 type Swapper interface {
 	Http(port int64)
-	Withdraw(string, string, string, string) error
+	Withdraw(tk, to string, value, fee float64) error
 }
+
 type swapper struct {
 	httpAdapter  http.Adapter
 	renexSwapper renex.RenEx
