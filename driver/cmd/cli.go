@@ -1,14 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path"
 
-	"github.com/pkg/errors"
 	"github.com/republicprotocol/renex-swapper-go/driver/config"
-	keystoreDriver "github.com/republicprotocol/renex-swapper-go/driver/keystore"
+	"github.com/republicprotocol/renex-swapper-go/driver/keystore"
 	"github.com/republicprotocol/renex-swapper-go/driver/swapper"
 	"github.com/urfave/cli"
 )
@@ -18,17 +18,19 @@ var (
 	networkFlag = cli.StringFlag{
 		Name:  "network",
 		Value: "mainnet",
-		Usage: "name of the test network",
+		Usage: "name of the network",
 	}
 	keyPhraseFlag = cli.StringFlag{
 		Name:  "keyphrase",
-		Value: "",
 		Usage: "keyphrase to unlock the keystore file",
 	}
 	toFlag = cli.StringFlag{
 		Name:  "to",
-		Value: "",
-		Usage: "receiver address for withdraw",
+		Usage: "receiver address you want to withdraw the tokens to",
+	}
+	tokenFlag = cli.StringFlag{
+		Name:  "token",
+		Usage: "type of token you want to withdraw",
 	}
 	valueFlag = cli.Float64Flag{
 		Name:  "value",
@@ -88,7 +90,7 @@ func initializeSwapper(ctx *cli.Context) (swapper.Swapper, error) {
 		return nil, err
 	}
 
-	ks, err := keystoreDriver.LoadFromFile(cfg, keyPhrase)
+	ks, err := keystore.LoadFromFile(cfg, keyPhrase)
 	if err != nil {
 		return nil, err
 	}
