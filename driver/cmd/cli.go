@@ -44,6 +44,11 @@ var (
 		Value: 0,
 		Usage: "amount of token you want to withdraw,", // todo: specify the unit here
 	}
+	feeFlag = cli.Float64Flag{
+		Name:  "fee",
+		Value: 0,
+		Usage: "amount of fee you want to pay for the withdraw transaction,", // todo: specify the unit here
+	}
 )
 
 func main() {
@@ -54,7 +59,7 @@ func main() {
 		{
 			Name:  "http",
 			Usage: "start running the swapper ",
-			Flags: []cli.Flag{networkFlag},
+			Flags: []cli.Flag{networkFlag,keyPhraseFlag},
 			Action: func(c *cli.Context) error {
 				// swapper, err  := initializeSwapper(c)
 				// if err != nil {
