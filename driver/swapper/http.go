@@ -22,7 +22,6 @@ func (swapper *swapper) Http(port int64) {
 			fmt.Println("Swapper Error: ", err)
 		}
 	}()
-
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
@@ -31,8 +30,7 @@ func (swapper *swapper) Http(port int64) {
 		log.Println("Stopping the atom box safely")
 		os.Exit(1)
 	}()
-
-	log.Fatal(netHttp.ListenAndServe(fmt.Sprintf(":%s", port), NewServer(swapper.httpAdapter)))
+	log.Fatal(netHttp.ListenAndServe(fmt.Sprintf(":%d", port), NewServer(swapper.httpAdapter)))
 }
 
 // NewServer creates a new http handler
