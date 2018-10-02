@@ -1,18 +1,16 @@
 package swapper
 
 import (
-	"github.com/republicprotocol/renex-swapper-go/adapter/config"
-	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
+	"github.com/republicprotocol/renex-swapper-go/domain/token"
 )
 
-type Swapper struct {
-	config.Config
-	keystore.Keystore
+type Swapper interface {
+	Http(port int64)
+	Withdraw(token.Token, string, string, string)
+}
+type swapper struct {
 }
 
-func NewSwapper(config config.Config, keys keystore.Keystore) Swapper {
-	return Swapper{
-		Config:   config,
-		Keystore: keys,
-	}
+func NewSwapper() Swapper {
+	return &swapper{}
 }
