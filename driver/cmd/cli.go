@@ -15,6 +15,10 @@ import (
 
 // Define flags for commands
 var (
+	portFlag = cli.Int64Flag{
+		Name:  "port",
+		Usage: "the port you want to running your swapper.",
+	}
 	networkFlag = cli.StringFlag{
 		Name:  "network",
 		Value: "mainnet",
@@ -54,11 +58,17 @@ func main() {
 			Usage: "start running the swapper ",
 			Flags: []cli.Flag{networkFlag, keyPhraseFlag},
 			Action: func(c *cli.Context) error {
-				// swapper, err  := initializeSwapper(c)
-				// if err != nil {
-				// 	return err
-				// }
-				panic("Implement the http logic here")
+				swapper, err  := initializeSwapper(c)
+				if err != nil {
+					return err
+				}
+				port:= c.Int64("port")
+				if port == 0 {
+					return errors.New("please give a valid port numebr")
+				}
+				swapper.Http(port)
+
+				return nil
 			},
 		},
 		{
@@ -103,18 +113,13 @@ func withdraw(ctx *cli.Context, swapper swapper.Swapper) error {
 	if receiver == "" {
 		return errors.New("receiver address cannot be empty")
 	}
-	value := ctx.Float64("value")
-	if value == 0 {
-		return errors.New("please enter a valid withdraw amount ")
-	}
 	token := ctx.String("token")
 	if token == "" {
 		return errors.New("please enter a valid withdraw token")
 	}
+
+	value := ctx.Float64("value")
 	fee := ctx.Float64("fee")
-	if fee == 0 {
-		return errors.New("please enter a valid withdraw fee")
-	}
 
 	swapper.Withdraw(token, receiver, value, fee)
 
