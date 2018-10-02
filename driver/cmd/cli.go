@@ -22,7 +22,6 @@ const (
 	ETHDecimals = 18
 )
 
-
 // Define flags for commands
 var (
 	networkFlag = cli.StringFlag{
@@ -30,19 +29,16 @@ var (
 		Value: "mainnet",
 		Usage: "name of the test network",
 	}
-
 	keyPhraseFlag = cli.StringFlag{
 		Name:  "keyphrase",
 		Value: "",
 		Usage: "keyphrase to unlock the keystore file",
 	}
-
 	toFlag = cli.StringFlag{
 		Name:  "to",
 		Value: "",
 		Usage: "receiver address for withdraw",
 	}
-
 	valueFlag = cli.Float64Flag{
 		Name:  "value",
 		Value: 0,
@@ -71,12 +67,12 @@ func main() {
 			Name:  "withdraw",
 			Usage: "withdraw the funds in the swapper accounts",
 			Action: func(c *cli.Context) error {
-				swapper, err  := initializeSwapper(c)
+				swapper, err := initializeSwapper(c)
 				if err != nil {
 					return err
 				}
 
-				return withdraw(c,swapper)
+				return withdraw(c, swapper)
 			},
 		},
 	}
@@ -101,16 +97,16 @@ func initializeSwapper(ctx *cli.Context) (swapper.Swapper, error) {
 		return swapper.Swapper{}, err
 	}
 
-	return swapper.NewSwapper(cfg,ks), nil
+	return swapper.NewSwapper(cfg, ks), nil
 }
 
 func withdraw(ctx *cli.Context, swapper swapper.Swapper) error {
 	// Parse and validate the receiver address
 	receiver := ctx.String("to")
-	if receiver == ""{
+	if receiver == "" {
 		return errors.New("receiver address cannot be empty")
 	}
-	if !strings.HasPrefix(receiver, "0x"){
+	if !strings.HasPrefix(receiver, "0x") {
 		receiver = "0x" + receiver
 	}
 	if len(receiver) != 42 {
@@ -127,8 +123,8 @@ func withdraw(ctx *cli.Context, swapper swapper.Swapper) error {
 	// Parse and validate the token
 	tokenStr := strings.ToLower(strings.TrimSpace(ctx.String("token")))
 	var tk token.Token
-	switch tokenStr{
-	case "btc", "bitcoin":
+	switch tokenStr {
+	case "btc", "bitcoin", "xbt":
 		tk = token.BTC
 		valueBig, _ = big.NewFloat(value * math.Pow10(BTCDecimals)).Int(nil)
 	case "eth", "ethereum", "ether":
