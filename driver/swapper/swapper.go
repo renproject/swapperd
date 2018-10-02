@@ -1,12 +1,8 @@
 package swapper
 
-import (
-	"github.com/republicprotocol/renex-swapper-go/domain/token"
-)
-
 type Swapper interface {
 	Http(port int64)
-	Withdraw(token.Token, string, string, string)
+	Withdraw(tk, to string, value, fee float64)
 }
 type swapper struct {
 }
