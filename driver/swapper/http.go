@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	netHttp "net/http"
+	"os"
+	"os/signal"
 
 	"github.com/gorilla/mux"
 	"github.com/republicprotocol/renex-swapper-go/adapter/http"
@@ -12,6 +14,24 @@ import (
 )
 
 func (swapper *swapper) Http(port int64) {
+	errCh := make(chan error, 1)
+	go swapper.renexSwapper.Run(errCh)
+	go swapper.guardian.Run(errCh)
+	go func() {
+		for err := range errCh {
+			fmt.Println("Swapper Error: ", err)
+		}
+	}()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		defer close(errCh)
+		_ = <-c
+		log.Println("Stopping the atom box safely")
+		os.Exit(1)
+	}()
+
 	log.Fatal(netHttp.ListenAndServe(fmt.Sprintf(":%s", port), NewServer(swapper.httpAdapter)))
 }
 
