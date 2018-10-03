@@ -7,10 +7,10 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
+	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 )
 
 type Conn struct {
@@ -43,36 +43,38 @@ func (b *Conn) Balance(address common.Address) (*big.Int, error) {
 	return b.Client.PendingBalanceAt(context.Background(), address)
 }
 
-// NewAccount creates a new account and funds it with ether
-func (b *Conn) NewAccount(value int64, from *bind.TransactOpts) (common.Address, *bind.TransactOpts, error) {
-	account, err := crypto.GenerateKey()
-	if err != nil {
-		return common.Address{}, &bind.TransactOpts{}, err
-	}
-
-	accountAddress := crypto.PubkeyToAddress(account.PublicKey)
-	accountAuth := bind.NewKeyedTransactor(account)
-
-	return accountAddress, accountAuth, b.Transfer(accountAddress, from, value)
-}
-
 // Transfer is a helper function for sending ETH to an address
-func (b *Conn) Transfer(to common.Address, from *bind.TransactOpts, value int64) error {
-	transactor := &bind.TransactOpts{
-		From:     from.From,
-		Nonce:    from.Nonce,
-		Signer:   from.Signer,
-		Value:    big.NewInt(value),
-		GasPrice: from.GasPrice,
-		GasLimit: 30000,
-		Context:  from.Context,
+func (b *Conn) Transfer(to common.Address, key keystore.EthereumKey, value *big.Int) error {
+	if value.Cmp(big.NewInt(0)) == 0 {
+		balance, err := b.Balance(to)
+		if err != nil {
+			return err
+		}
+		value = balance.Sub(balance, big.NewInt(0).Exp(big.NewInt(10), big.NewInt(14), nil))
 	}
 
-	// Why is there no ethclient.Transfer?
-	bound := bind.NewBoundContract(to, abi.ABI{}, nil, b.Client, nil)
-	_, err := bound.Transfer(transactor)
+	nonceBefore, err := b.Client.PendingNonceAt(context.Background(), key.Address)
 	if err != nil {
 		return err
 	}
+
+	key.SubmitTx(func(tops *bind.TransactOpts) error {
+		tops.Value = value
+		// Why is there no ethclient.Transfer?
+		bound := bind.NewBoundContract(to, abi.ABI{}, nil, b.Client, nil)
+		_, err := bound.Transfer(tops)
+		if err != nil {
+			return err
+		}
+		return nil
+	}, func() bool {
+		nonceAfter, err := b.Client.PendingNonceAt(context.Background(), key.Address)
+		if err != nil {
+			return false
+		}
+		return nonceAfter > nonceBefore
+	},
+	)
+
 	return nil
 }

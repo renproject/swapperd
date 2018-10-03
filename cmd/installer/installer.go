@@ -18,10 +18,8 @@ func main() {
 	home := utils.GetHome()
 	loc := flag.String("loc", home+"/.swapper", "Location of the swapper's home directory")
 	repNet := flag.String("network", "mainnet", "Which republic protocol network to use")
-	passphrase := flag.String("passphrase", "", "Passphrase to encrypt your key files")
-
+	passphrase := flag.String("keyphrase", "", "Keyphrase to encrypt your key files")
 	flag.Parse()
-
 	cmd := exec.Command("mkdir", "-p", *loc)
 	if err := cmd.Run(); err != nil {
 		panic(err)

@@ -12,8 +12,7 @@ echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
     <key>ProgramArguments</key>
     <array>
         <string>$HOME/.swapper/bin/swapper</string>
-        <string>-loc</string>
-        <string>$HOME/.swapper</string>$password
+        <string>http</string>$password
     </array>
     <key>KeepAlive</key>
     <true/>
@@ -33,7 +32,7 @@ Description=RenEx's Swapper Daemon
 After=network.target
 
 [Service]
-ExecStart=$HOME/.swapper/bin/swapper --loc $HOME/.swapper $password
+ExecStart=$HOME/.swapper/bin/swapper http --location $HOME/.swapper $password
 Restart=on-failure
 StartLimitBurst=0
 
@@ -84,7 +83,7 @@ if ls "$HOME"/.swapper/BTC*.json 1> /dev/null 2>&1; then
       sudo systemctl daemon-reload
       sudo systemctl restart swapper.service
     elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
-      if [ "$(launchctl list | grep exchange.ren.swapper | wc -l)" -le 1 ]; then
+      if [ "$(launchctl list | grep exchange.ren.swapper | wc -l)" -ge 1 ]; then
         launchctl unload -w "$HOME/Library/LaunchAgents/exchange.ren.swapper.plist"
         sleep 5
       fi
@@ -97,16 +96,16 @@ if ls "$HOME"/.swapper/BTC*.json 1> /dev/null 2>&1; then
   fi
 fi
 
-# get passphrase from user
+# get keyphrase from user
 while :
 do
-  echo "Please enter a passphrase to encrypt your key files"
+  echo "Please enter a keyphrase to encrypt your key files"
   read -s PASSWORD </dev/tty
-  echo "Please re-enter the passphrase"
+  echo "Please re-enter the keyphrase"
   read -s PASSWORDCONFIRM </dev/tty
   if [ "$PASSWORD" = "$PASSWORDCONFIRM" ]; then
     if [ "$PASSWORD" = "" ]; then
-      echo "You are trying to use an empty passphrase, this means your keystores will not be encrypted are you sure (y/N): "
+      echo "You are trying to use an empty keyphrase, this means your keystores will not be encrypted are you sure (y/N): "
       while :
       do
         read choice </dev/tty
@@ -137,7 +136,7 @@ done
 if [ "$PASSWORD" = "" ]; then
   PASSPHRASE=""
 else
-  PASSPHRASE="--passphrase $PASSWORD"
+  PASSPHRASE="--keyphrase $PASSWORD"
 fi
 ./bin/installer $PASSPHRASE < /dev/tty
 
@@ -153,12 +152,12 @@ elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
     PASSPHRASE=""
   else
     PASSPHRASE="
-        <string>-passphrase</string>
+        <string>--keyphrase</string>
         <string>$PASSWORD</string>"
   fi
   generate_plist "$PASSPHRASE"
   chmod +x "$HOME/Library/LaunchAgents/exchange.ren.swapper.plist"
-  if [ "$(launchctl list | grep exchange.ren.swapper | wc -l)" -le 1 ]; then
+  if [ "$(launchctl list | grep exchange.ren.swapper | wc -l)" -ge 1 ]; then
     launchctl unload -w "$HOME/Library/LaunchAgents/exchange.ren.swapper.plist"
   fi
   launchctl load -w "$HOME/Library/LaunchAgents/exchange.ren.swapper.plist"
@@ -169,8 +168,52 @@ else
   exit 1
 fi
 
+# make sure the binary is installed in the path
+if ! [ -x "$(command -v swapper)" ]; then
+  path=$SHELL
+  shell=${path##*/}
+
+  if [ "$shell" = 'zsh' ] ; then
+    if [ -f "$HOME/.zprofile" ] ; then
+      echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.zprofile
+      swapper_home=$HOME/.zprofile
+    elif [ -f "$HOME/.zshrc" ] ; then
+      echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.zshrc
+      swapper_home=$HOME/.zshrc
+    elif [ -f "$HOME/.profile" ] ; then
+      echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.profile
+      swapper_home=$HOME/.profile
+    fi
+  elif  [ "$shell" = 'bash' ] ; then
+    if [ -f "$HOME/.bash_profile" ] ; then
+      echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.bash_profile
+      swapper_home=$HOME/.bash_profile
+    elif [ -f "$HOME/.bashrc" ] ; then
+      echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.bashrc
+      swapper_home=$HOME/.bashrc
+    elif [ -f "$HOME/.profile" ] ; then
+      echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.profile
+      swapper_home=$HOME/.profile
+    fi
+  elif [ -f "$HOME/.profile" ] ; then
+    echo '\nexport PATH=$PATH:$HOME/.swapper/bin' >> $HOME/.profile
+  fi
+
+  echo ''
+  echo 'If you are using a custom shell, make sure you update your PATH.'
+  echo "${GREEN}export PATH=\$PATH:\$HOME/.swapper/bin ${NC}"
+fi
+
 # clean up
 rm swapper.zip
 rm bin/installer
 
 echo "RenEx Atomic Swapper is installed now. Great!"
+
+if [ "$swapper_home" != '' ] ; then
+echo ''
+echo "To get started you need RenEx Atomic Swapper's bin directory ($HOME/.swapper/bin) in your PATH"
+echo "environment variable. Next time you log in this will be done automatically."
+echo ''
+echo "To get the swapper working with your current shell please run 'source ${swapper_home}'"
+fi

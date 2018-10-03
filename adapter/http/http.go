@@ -88,32 +88,23 @@ func (adapter *adapter) GetBalances() (Balances, error) {
 	if err != nil {
 		return Balances{}, err
 	}
-	btcBal, err := bitcoinBalance(
+	btcBal := bitcoinBalance(
 		adapter.config,
 		adapter.keystr.GetKey(token.BTC).(keystore.BitcoinKey),
 	)
-	if err != nil {
-		return Balances{}, err
-	}
 	return Balances{
 		Ethereum: ethBal,
 		Bitcoin:  btcBal,
 	}, nil
 }
 
-func bitcoinBalance(conf config.Config, key keystore.BitcoinKey) (Balance, error) {
-	conn, err := btc.NewConnWithConfig(conf.Bitcoin)
-	if err != nil {
-		return Balance{}, err
-	}
-	balance, err := conn.Balance(key.AddressString)
-	if err != nil {
-		return Balance{}, err
-	}
+func bitcoinBalance(conf config.Config, key keystore.BitcoinKey) Balance {
+	conn := btc.NewConnWithConfig(conf.Bitcoin)
+	balance := conn.Balance(key.AddressString, 0)
 	return Balance{
 		Address: key.AddressString,
 		Amount:  strconv.FormatInt(balance, 10),
-	}, nil
+	}
 }
 
 func ethereumBalance(conf config.Config, key keystore.EthereumKey) (Balance, error) {

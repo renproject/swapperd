@@ -1,95 +1,120 @@
 package main
 
 import (
-	"flag"
-	"fmt"
+	"errors"
 	"log"
-	netHttp "net/http"
 	"os"
-	"os/signal"
-	"runtime"
 
-	guardianAdapter "github.com/republicprotocol/renex-swapper-go/adapter/guardian"
-	"github.com/republicprotocol/renex-swapper-go/adapter/http"
-	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	renexAdapter "github.com/republicprotocol/renex-swapper-go/adapter/renex"
-	stateAdapter "github.com/republicprotocol/renex-swapper-go/adapter/state"
-	"github.com/republicprotocol/renex-swapper-go/domain/token"
 	"github.com/republicprotocol/renex-swapper-go/driver/config"
-	httpDriver "github.com/republicprotocol/renex-swapper-go/driver/http"
-	keystoreDriver "github.com/republicprotocol/renex-swapper-go/driver/keystore"
-	loggerDriver "github.com/republicprotocol/renex-swapper-go/driver/logger"
-	"github.com/republicprotocol/renex-swapper-go/driver/network"
-	storeDriver "github.com/republicprotocol/renex-swapper-go/driver/store"
-	"github.com/republicprotocol/renex-swapper-go/service/guardian"
-	"github.com/republicprotocol/renex-swapper-go/service/renex"
-	"github.com/republicprotocol/renex-swapper-go/service/state"
+	"github.com/republicprotocol/renex-swapper-go/driver/keystore"
+	"github.com/republicprotocol/renex-swapper-go/driver/swapper"
+	"github.com/republicprotocol/renex-swapper-go/utils"
+	"github.com/urfave/cli"
+)
+
+// Define flags for commands
+var (
+	locationFlag = cli.StringFlag{
+		Name:  "location",
+		Value: utils.GetHome() + "/.swapper",
+		Usage: "Home directory for RenEx Swapper",
+	}
+	networkFlag = cli.StringFlag{
+		Name:  "network",
+		Value: "mainnet",
+		Usage: "name of the network",
+	}
+	keyPhraseFlag = cli.StringFlag{
+		Name:  "keyphrase",
+		Usage: "keyphrase to unlock the keystore file",
+	}
+	toFlag = cli.StringFlag{
+		Name:  "to",
+		Usage: "receiver address you want to withdraw the tokens to",
+	}
+	tokenFlag = cli.StringFlag{
+		Name:  "token",
+		Usage: "type of token you want to withdraw",
+	}
+	valueFlag = cli.Float64Flag{
+		Name:  "value",
+		Value: 0,
+		Usage: "amount of token you want to withdraw (to withdraw 1 Eth " +
+			"use --value 1 --token eth) If this flag is not set the entire " +
+			"balance will be withdrawn",
+	}
+	portFlag = cli.Int64Flag{
+		Name:  "port",
+		Value: 18516,
+		Usage: "port on which the http server runs,",
+	}
 )
 
 func main() {
-	port := flag.String("port", "18516", "HTTP Atom port")
-	repNet := flag.String("network", "mainnet", "Republic Protocol Network")
-	keyphrase := flag.String("passphrase", "", "Keyphrase to unlock keystore")
-	location := flag.String("loc", getHome()+"/.swapper", "Location of the swapper directory")
-	flag.Parse()
+	app := cli.NewApp()
+	app.Name = "RenEx Swapper CLI"
+	app.Usage = ""
 
-	conf, err := config.New(*location, *repNet)
-	if err != nil {
-		panic(err)
+	// Define sub-commands
+	app.Commands = []cli.Command{
+		{
+			Name:  "http",
+			Usage: "start the RenEx swapper's http server",
+			Flags: []cli.Flag{networkFlag, locationFlag, keyPhraseFlag, portFlag},
+			Action: func(c *cli.Context) {
+				swapper, err := initializeSwapper(c)
+				if err != nil {
+					panic(err)
+				}
+				swapper.Http(c.Int64("port"))
+			},
+		},
+		{
+			Name:  "withdraw",
+			Usage: "withdraw the funds in the swapper accounts",
+			Flags: []cli.Flag{networkFlag, keyPhraseFlag, locationFlag, toFlag, tokenFlag, valueFlag},
+			Action: func(c *cli.Context) error {
+				swapper, err := initializeSwapper(c)
+				if err != nil {
+					return err
+				}
+				return withdraw(c, swapper)
+			},
+		},
 	}
 
-	ks, err := keystoreDriver.LoadFromFile(conf, *keyphrase)
+	err := app.Run(os.Args)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-
-	db, err := storeDriver.NewLevelDB(conf.HomeDir + "/db")
-	if err != nil {
-		panic(err)
-	}
-
-	logger := loggerDriver.NewStdOut()
-	state := state.NewState(stateAdapter.New(db, logger))
-	ingressNet := network.NewIngress(conf.RenEx.Ingress, ks.GetKey(token.ETH).(keystore.EthereumKey))
-
-	binder, err := renexAdapter.NewBinder(conf, logger)
-	if err != nil {
-		panic(err)
-	}
-
-	renexSwapper := renex.NewRenEx(renexAdapter.New(conf, ks, ingressNet, state, logger, binder))
-	guardian := guardian.NewGuardian(guardianAdapter.New(conf, ks, state, logger))
-
-	errCh := make(chan error, 1)
-	go renexSwapper.Run(errCh)
-	go guardian.Run(errCh)
-	go func() {
-		for err := range errCh {
-			fmt.Println("Swapper Error: ", err)
-		}
-	}()
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		defer close(errCh)
-		_ = <-c
-		log.Println("Stopping the atom box safely")
-		os.Exit(1)
-	}()
-
-	httpAdapter := http.NewAdapter(conf, ks, renexSwapper)
-	log.Println(fmt.Sprintf("0.0.0.0:%s", *port))
-	log.Fatal(netHttp.ListenAndServe(fmt.Sprintf(":%s", *port), httpDriver.NewServer(httpAdapter)))
 }
 
-func getHome() string {
-	system := runtime.GOOS
-	switch system {
-	case "window":
-		return os.Getenv("userprofile")
-	case "linux", "darwin":
-		return os.Getenv("HOME")
-	default:
-		panic("unknown Operating System")
+func initializeSwapper(ctx *cli.Context) (swapper.Swapper, error) {
+	network := ctx.String("network")
+	keyPhrase := ctx.String("keyphrase")
+	location := ctx.String("location")
+
+	cfg, err := config.New(location, network)
+	if err != nil {
+		return nil, err
 	}
+
+	ks, err := keystore.LoadFromFile(cfg, keyPhrase)
+	if err != nil {
+		return nil, err
+	}
+
+	return swapper.NewSwapper(cfg, ks), nil
+}
+
+func withdraw(ctx *cli.Context, swapper swapper.Swapper) error {
+	receiver := ctx.String("to")
+	if receiver == "" {
+		return errors.New("receiver address cannot be empty")
+	}
+	token := ctx.String("token")
+	if token == "" {
+		return errors.New("please enter a valid withdraw token")
+	}
+	return swapper.Withdraw(token, receiver, ctx.Float64("value"))
 }

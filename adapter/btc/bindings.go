@@ -175,3 +175,16 @@ func buildInitiateScript(personalAddress string, req swapDomain.Request, Net *ch
 
 	return initiateScript, initiateScriptP2SH.EncodeAddress(), nil
 }
+
+func verifyTransaction(scriptPubKey []byte, tx *wire.MsgTx, idx int, receiveValue int64) error {
+	e, err := txscript.NewEngine(scriptPubKey, tx, idx,
+		txscript.StandardVerifyFlags, txscript.NewSigCache(10),
+		txscript.NewTxSigHashes(tx), receiveValue)
+	if err != nil {
+		return err
+	}
+	if err := e.Execute(); err != nil {
+		return NewErrScriptExec(err)
+	}
+	return nil
+}

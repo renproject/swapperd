@@ -1,4 +1,4 @@
-package bitcoin
+package btc
 
 import (
 	"encoding/hex"
@@ -16,6 +16,7 @@ type PreviousOut struct {
 	Value            uint64 `json:"value"`
 	TransactionIndex uint64 `json:"tx_index"`
 	VoutNumber       uint8  `json:"n"`
+	Address          string `json:"addr"`
 }
 
 type Input struct {
@@ -34,7 +35,6 @@ type Transaction struct {
 	Version          uint8    `json:"ver"`
 	VinSize          uint32   `json:"vin_sz"`
 	VoutSize         uint32   `json:"vout_sz"`
-	LockTime         string   `json:"lock_time"`
 	Size             int64    `json:"size"`
 	RelayedBy        string   `json:"relayed_by"`
 	BlockHeight      int64    `json:"block_height"`
@@ -93,7 +93,7 @@ type MultiAddress struct {
 type UnspentOutput struct {
 	TransactionAge          string `json:"tx_age"`
 	TransactionHash         string `json:"tx_hash"`
-	TransactionIndex        uint64 `json:"tx_index"`
+	TransactionIndex        uint32 `json:"tx_index"`
 	TransactionOutputNumber uint32 `json:"tx_output_n"`
 	ScriptPubKey            string `json:"script"`
 	Amount                  int64  `json:"value"`
@@ -151,6 +151,7 @@ func (client BlockchainInfoClient) GetRawTransaction(txhash string) Transaction 
 	for {
 		resp, err := http.Get(fmt.Sprintf("%s/rawtx/%s", client.URL, txhash))
 		if err != nil {
+			fmt.Println(err)
 			time.Sleep(10 * time.Second)
 			continue
 		}
@@ -159,13 +160,14 @@ func (client BlockchainInfoClient) GetRawTransaction(txhash string) Transaction 
 		transaction := Transaction{}
 		if err := json.Unmarshal(txBytes, &transaction); err != nil {
 			time.Sleep(10 * time.Second)
+			fmt.Println(err)
 			continue
 		}
 		return transaction
 	}
 }
 
-func (client BlockchainInfoClient) GetRawAddressInformation(addr string) Address {
+func (client BlockchainInfoClient) GetRawAddressInformation(addr string) SingleAddress {
 	for {
 		resp, err := http.Get(fmt.Sprintf("%s/rawaddr/%s", client.URL, addr))
 		if err != nil {
@@ -174,7 +176,7 @@ func (client BlockchainInfoClient) GetRawAddressInformation(addr string) Address
 		}
 		defer resp.Body.Close()
 		addrBytes, err := ioutil.ReadAll(resp.Body)
-		addressInfo := Address{}
+		addressInfo := SingleAddress{}
 		if err := json.Unmarshal(addrBytes, &addressInfo); err != nil {
 			time.Sleep(10 * time.Second)
 			continue

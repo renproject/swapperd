@@ -69,7 +69,6 @@ func GenerateFile(conf config.Config, passphrase string) error {
 // given passphrase. If the passphrase is empty, then it tries to load an
 // unencrypted key.
 func LoadKeyFromFile(loc, passphrase string, conf config.Config, tok token.Token) (keystore.Key, error) {
-	fmt.Println(loc)
 	data, err := ioutil.ReadFile(loc)
 	if err != nil {
 		return nil, ErrKeyFileDoesNotExist
