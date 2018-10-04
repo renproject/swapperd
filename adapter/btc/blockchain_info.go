@@ -120,17 +120,25 @@ func (client BlockchainInfoClient) GetUnspentOutputs(address string, limit, conf
 	for {
 		resp, err := http.Get(fmt.Sprintf("%s/unspent?active=%s&confirmations=%d&limit=%d", client.URL, address, confitmations, limit))
 		if err != nil {
+			fmt.Println(err, " will try again in 10 sec")
 			time.Sleep(10 * time.Second)
 			continue
 		}
 		defer resp.Body.Close()
 		utxoBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
+			fmt.Println(err, " will try again in 10 sec")
 			time.Sleep(10 * time.Second)
 			continue
 		}
+		if string(utxoBytes) == "No free outputs to spend" {
+			return UnspentOutputs{
+				Outputs: []UnspentOutput{},
+			}
+		}
 		utxos := UnspentOutputs{}
 		if err := json.Unmarshal(utxoBytes, &utxos); err != nil {
+			fmt.Println(err, " will try again in 10 sec")
 			time.Sleep(10 * time.Second)
 			continue
 		}
