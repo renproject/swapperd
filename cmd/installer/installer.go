@@ -30,7 +30,7 @@ func main() {
 		panic(err)
 	}
 	if err := keystore.GenerateFile(cfg, *passphrase); err != nil {
-		if err != keystore.ErrKeyFileExists {
+		if err != keystore.NewErrKeyFileExists(cfg.HomeDir) {
 			panic(err)
 		}
 	}

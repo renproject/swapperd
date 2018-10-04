@@ -3,7 +3,6 @@ package keystore
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"math/big"
 	"sync"
 	"time"
 
@@ -53,8 +52,9 @@ func (ethKey *EthereumKey) SubmitTx(submitTx func(*bind.TransactOpts) error, pos
 	ethKey.Lock()
 	defer ethKey.Unlock()
 	for {
-		ethKey.TransactOpts.GasPrice = big.NewInt(20000000000)
-		submitTx(ethKey.TransactOpts)
+		if err := submitTx(ethKey.TransactOpts); err != nil {
+			return err
+		}
 		for i := 0; i < 20; i++ {
 			if result := postCon(); result {
 				return nil

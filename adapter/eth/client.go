@@ -46,7 +46,7 @@ func (b *Conn) Balance(address common.Address) (*big.Int, error) {
 
 // Transfer is a helper function for sending ETH to an address
 func (b *Conn) Transfer(to common.Address, key keystore.EthereumKey, value *big.Int) error {
-	balance, err := b.Balance(to)
+	balance, err := b.Balance(key.Address)
 	if err != nil {
 		return err
 	}
@@ -55,24 +55,38 @@ func (b *Conn) Transfer(to common.Address, key keystore.EthereumKey, value *big.
 		return fmt.Errorf("Not enough balance expected withdrawal: %v balance: %v", value, balance)
 	}
 
+	fee := big.NewInt(0).Mul(big.NewInt(21), big.NewInt(0).Exp(big.NewInt(10), big.NewInt(13), nil))
+	fmt.Println(balance, fee.Uint64())
+	if balance.Cmp(fee) <= 0 {
+		return fmt.Errorf("Not enough balance: %v", balance)
+	}
+
 	if value.Cmp(big.NewInt(0)) == 0 {
-		value = balance.Sub(balance, big.NewInt(0).Exp(big.NewInt(10), big.NewInt(14), nil))
+		value = balance.Sub(balance, fee)
 	}
 
 	nonceBefore, err := b.Client.PendingNonceAt(context.Background(), key.Address)
 	if err != nil {
 		return err
 	}
-
 	key.SubmitTx(func(tops *bind.TransactOpts) error {
-		tops.Value = value
+		txOpts := &bind.TransactOpts{
+			From:     tops.From,
+			Nonce:    tops.Nonce,
+			Signer:   tops.Signer,
+			Value:    value,
+			GasPrice: big.NewInt(10000000000),
+			GasLimit: 21000,
+			Context:  tops.Context,
+		}
 		// Why is there no ethclient.Transfer?
 		bound := bind.NewBoundContract(to, abi.ABI{}, nil, b.Client, nil)
-		tx, err := bound.Transfer(tops)
+		tx, err := bound.Transfer(txOpts)
 		if err != nil {
+			fmt.Println(err, txOpts.Value, txOpts.GasLimit)
 			return err
 		}
-		fmt.Printf("Transaction can bbe viewed at https://etherscan.io/tx/%s\n", tx.Hash().String())
+		fmt.Printf("Transaction can be viewed at https://etherscan.io/tx/%s\n", tx.Hash().String())
 		return nil
 	}, func() bool {
 		nonceAfter, err := b.Client.PendingNonceAt(context.Background(), key.Address)
