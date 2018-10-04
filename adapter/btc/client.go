@@ -172,7 +172,11 @@ func (conn *conn) SpendBalance(address string) (*wire.MsgTx, []byte, []int64, er
 		values = append(values, utxo.Amount)
 		tx.AddTxIn(wire.NewTxIn(wire.NewOutPoint(txHash, utxo.TransactionIndex), nil, nil))
 	}
-	return tx, nil, nil, nil
+	pkScriptBytes, err := hex.DecodeString(pkScript)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return tx, pkScriptBytes, values, nil
 }
 
 func (conn *conn) GetScriptFromSpentP2SH(address string) ([]byte, error) {
