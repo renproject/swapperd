@@ -1,7 +1,6 @@
 package keystore
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 
@@ -10,13 +9,17 @@ import (
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
 )
 
-// ErrKeyFileExists is returned when the keystore file exists, and the user is
+// NewErrKeyFileExists is returned when the keystore file exists, and the user is
 // trying to overwrite it.
-var ErrKeyFileExists = errors.New("Keystore file exists")
+func NewErrKeyFileExists(loc string) error {
+	return fmt.Errorf("Keystore file exists at %s", loc)
+}
 
-// ErrKeyFileDoesNotExist is returned when the keystore file doesnot exist, and
+// NewErrKeyFileDoesNotExist is returned when the keystore file doesnot exist, and
 // the user is trying to read from it.
-var ErrKeyFileDoesNotExist = errors.New("Keystore file doesnot exist")
+func NewErrKeyFileDoesNotExist(loc string) error {
+	return fmt.Errorf("Keystore file doesnot exist at %s", loc)
+}
 
 // LoadFromFile
 func LoadFromFile(conf config.Config, passphrase string) (keystore.Keystore, error) {
@@ -71,7 +74,7 @@ func GenerateFile(conf config.Config, passphrase string) error {
 func LoadKeyFromFile(loc, passphrase string, conf config.Config, tok token.Token) (keystore.Key, error) {
 	data, err := ioutil.ReadFile(loc)
 	if err != nil {
-		return nil, ErrKeyFileDoesNotExist
+		return nil, NewErrKeyFileDoesNotExist(loc)
 	}
 	return decodeKey(data, passphrase, conf, tok)
 }
@@ -81,7 +84,7 @@ func LoadKeyFromFile(loc, passphrase string, conf config.Config, tok token.Token
 // key.
 func StoreKeyToFile(loc, passphrase string, conf config.Config, tok token.Token) error {
 	if _, err := ioutil.ReadFile(loc); err == nil {
-		return ErrKeyFileExists
+		return NewErrKeyFileExists(loc)
 	}
 	generatedKey, err := generateRandomKey(passphrase, conf, tok)
 	if err != nil {

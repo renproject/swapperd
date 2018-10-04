@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -45,11 +46,16 @@ func (b *Conn) Balance(address common.Address) (*big.Int, error) {
 
 // Transfer is a helper function for sending ETH to an address
 func (b *Conn) Transfer(to common.Address, key keystore.EthereumKey, value *big.Int) error {
+	balance, err := b.Balance(to)
+	if err != nil {
+		return err
+	}
+
+	if value.Cmp(balance) > 0 {
+		return fmt.Errorf("Not enough balance expected withdrawal: %v balance: %v", value, balance)
+	}
+
 	if value.Cmp(big.NewInt(0)) == 0 {
-		balance, err := b.Balance(to)
-		if err != nil {
-			return err
-		}
 		value = balance.Sub(balance, big.NewInt(0).Exp(big.NewInt(10), big.NewInt(14), nil))
 	}
 
@@ -62,10 +68,11 @@ func (b *Conn) Transfer(to common.Address, key keystore.EthereumKey, value *big.
 		tops.Value = value
 		// Why is there no ethclient.Transfer?
 		bound := bind.NewBoundContract(to, abi.ABI{}, nil, b.Client, nil)
-		_, err := bound.Transfer(tops)
+		tx, err := bound.Transfer(tops)
 		if err != nil {
 			return err
 		}
+		fmt.Printf("Transaction can bbe viewed at https://etherscan.io/tx/%s\n", tx.Hash().String())
 		return nil
 	}, func() bool {
 		nonceAfter, err := b.Client.PendingNonceAt(context.Background(), key.Address)
@@ -75,6 +82,5 @@ func (b *Conn) Transfer(to common.Address, key keystore.EthereumKey, value *big.
 		return nonceAfter > nonceBefore
 	},
 	)
-
 	return nil
 }
