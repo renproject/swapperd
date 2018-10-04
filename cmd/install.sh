@@ -80,7 +80,6 @@ if ls "$HOME"/.swapper/BTC*.json 1> /dev/null 2>&1; then
   if ls "$HOME"/.swapper/ETH*.json 1> /dev/null 2>&1; then
     echo "RenEx Atomic Swapper has already been installed, updating..."
     if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
-      sudo systemctl daemon-reload
       sudo systemctl restart swapper.service
     elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
       if [ "$(launchctl list | grep exchange.ren.swapper | wc -l)" -ge 1 ]; then

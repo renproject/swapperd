@@ -18,7 +18,7 @@ func NewErrKeyFileExists(loc string) error {
 // NewErrKeyFileDoesNotExist is returned when the keystore file doesnot exist, and
 // the user is trying to read from it.
 func NewErrKeyFileDoesNotExist(loc string) error {
-	return fmt.Errorf("Keystore file doesnot exist at %s", loc)
+	return fmt.Errorf("Keystore file not found at %s", loc)
 }
 
 // LoadFromFile
@@ -90,7 +90,7 @@ func StoreKeyToFile(loc, passphrase string, conf config.Config, tok token.Token)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(loc, generatedKey, 0400)
+	return ioutil.WriteFile(loc, generatedKey, 0444)
 }
 
 func randomKey(conf config.Config, tok token.Token) (keystore.Key, error) {

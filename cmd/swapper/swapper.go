@@ -34,7 +34,7 @@ var (
 	}
 	tokenFlag = cli.StringFlag{
 		Name:  "token",
-		Usage: "type of token you want to withdraw",
+		Usage: "type of token you want to withdraw (options ETH, BTC)",
 	}
 	valueFlag = cli.Float64Flag{
 		Name:  "value",

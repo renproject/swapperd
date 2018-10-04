@@ -56,7 +56,6 @@ func (b *Conn) Transfer(to common.Address, key keystore.EthereumKey, value *big.
 	}
 
 	fee := big.NewInt(0).Mul(big.NewInt(21), big.NewInt(0).Exp(big.NewInt(10), big.NewInt(13), nil))
-	fmt.Println(balance, fee.Uint64())
 	if balance.Cmp(fee) <= 0 {
 		return fmt.Errorf("Not enough balance: %v", balance)
 	}
@@ -83,7 +82,6 @@ func (b *Conn) Transfer(to common.Address, key keystore.EthereumKey, value *big.
 		bound := bind.NewBoundContract(to, abi.ABI{}, nil, b.Client, nil)
 		tx, err := bound.Transfer(txOpts)
 		if err != nil {
-			fmt.Println(err, txOpts.Value, txOpts.GasLimit)
 			return err
 		}
 		fmt.Printf("Transaction can be viewed at https://etherscan.io/tx/%s\n", tx.Hash().String())
