@@ -133,6 +133,18 @@
   version = "1.0.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/kardianos/osext"
+  packages = ["."]
+  revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kardianos/service"
+  packages = ["."]
+  revision = "b1866cf76903d81b491fb668ba14f4b1322b2ca7"
+
+[[projects]]
   name = "github.com/lib/pq"
   packages = [
     ".",
@@ -332,7 +344,13 @@
   name = "golang.org/x/sys"
   packages = [
     "cpu",
-    "unix"
+    "unix",
+    "windows",
+    "windows/registry",
+    "windows/svc",
+    "windows/svc/debug",
+    "windows/svc/eventlog",
+    "windows/svc/mgr"
   ]
   revision = "e4b3c5e9061176387e7cea65e4dc5853801f3fb7"
 
@@ -416,6 +434,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d88f583f28886a3194366a7dd8d3c87da1a71e6bdcc3a7a385fe35f72bec72d3"
+  inputs-digest = "6d59dfb65f2459676f52f347eb061bf4702d50ea3a69ee79099053902bfe5a31"
   solver-name = "gps-cdcl"
   solver-version = 1
