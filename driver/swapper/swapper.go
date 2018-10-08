@@ -52,7 +52,7 @@ func NewSwapper(conf config.Config, keys keystore.Keystore) Swapper {
 }
 
 func (swapper *swapper) Http(port int64) {
-	db, err := storeDriver.NewLevelDB(swapper.conf.HomeDir + "/db")
+	db, err := storeDriver.NewLevelDB(swapper.conf.HomeDir)
 	if err != nil {
 		panic(err)
 	}

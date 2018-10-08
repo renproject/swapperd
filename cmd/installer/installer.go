@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/republicprotocol/renex-swapper-go/driver/config"
@@ -15,13 +14,12 @@ import (
 )
 
 func main() {
-	home := utils.GetHome()
-	loc := flag.String("loc", home+"/.swapper", "Location of the swapper's home directory")
+	loc := flag.String("location", utils.GetDefaultSwapperHome(), "Location of the swapper's home directory")
 	repNet := flag.String("network", "mainnet", "Which republic protocol network to use")
 	passphrase := flag.String("keyphrase", "", "Keyphrase to encrypt your key files")
 	flag.Parse()
-	cmd := exec.Command("mkdir", "-p", *loc)
-	if err := cmd.Run(); err != nil {
+
+	if err := utils.CreateDir(*loc); err != nil {
 		panic(err)
 	}
 

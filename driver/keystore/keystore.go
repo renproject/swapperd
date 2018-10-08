@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/republicprotocol/renex-swapper-go/utils"
+
 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
 	"github.com/republicprotocol/renex-swapper-go/domain/token"
@@ -27,9 +29,9 @@ func LoadFromFile(conf config.Config, passphrase string) (keystore.Keystore, err
 	for _, token := range conf.SupportedCurrencies {
 		var loc string
 		if passphrase == "" {
-			loc = fmt.Sprintf("%s/%s-%s-unsafe.json", conf.HomeDir, token, conf.RenEx.Network)
+			loc = utils.BuildKeystorePath(conf.HomeDir, string(token), conf.RenEx.Network, true)
 		} else {
-			loc = fmt.Sprintf("%s/%s-%s.json", conf.HomeDir, token, conf.RenEx.Network)
+			loc = utils.BuildKeystorePath(conf.HomeDir, string(token), conf.RenEx.Network, false)
 		}
 		key, err := LoadKeyFromFile(loc, passphrase, conf, token)
 		if err != nil {
@@ -57,9 +59,9 @@ func GenerateFile(conf config.Config, passphrase string) error {
 	for _, token := range conf.SupportedCurrencies {
 		var loc string
 		if passphrase == "" {
-			loc = fmt.Sprintf("%s/%s-%s-unsafe.json", conf.HomeDir, token, conf.RenEx.Network)
+			loc = utils.BuildKeystorePath(conf.HomeDir, string(token), conf.RenEx.Network, true)
 		} else {
-			loc = fmt.Sprintf("%s/%s-%s.json", conf.HomeDir, token, conf.RenEx.Network)
+			loc = utils.BuildKeystorePath(conf.HomeDir, string(token), conf.RenEx.Network, false)
 		}
 		if err := StoreKeyToFile(loc, passphrase, conf, token); err != nil {
 			return err

@@ -2,6 +2,7 @@ package store
 
 import (
 	"github.com/republicprotocol/renex-swapper-go/service/state"
+	"github.com/republicprotocol/renex-swapper-go/utils"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -10,6 +11,7 @@ type LevelDB struct {
 }
 
 func NewLevelDB(path string) (state.Store, error) {
+	path = utils.BuildDBPath(path)
 	db, err := leveldb.OpenFile(path, nil)
 	if err != nil {
 		return nil, err

@@ -16,7 +16,7 @@ import (
 var (
 	locationFlag = cli.StringFlag{
 		Name:  "location",
-		Value: utils.GetHome() + "/.swapper",
+		Value: utils.GetDefaultSwapperHome(),
 		Usage: "Home directory for RenEx Swapper",
 	}
 	networkFlag = cli.StringFlag{

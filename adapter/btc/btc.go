@@ -194,11 +194,13 @@ func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 		if err != nil {
 			return NewErrRedeem(err)
 		}
-
 		txIn.SignatureScript = redeemSigScript
-
-		verifyTransaction(scriptPubKey, redeemTx, int(txIn.PreviousOutPoint.Index), inputValues[i])
+		if err := verifyTransaction(scriptPubKey, redeemTx, int(txIn.PreviousOutPoint.Index), inputValues[i]); err != nil {
+			return NewErrRedeem(err)
+		}
 	}
+
+	atom.LogInfo(atom.req.UID, fmt.Sprintf("publishing the redeem transaction, can be viewed at https://www.blockchain.com/btc/tx/%s\n", redeemTx.TxHash().String()))
 
 	if err := atom.PublishTransaction(redeemTx,
 		func() bool {
@@ -283,9 +285,12 @@ func (atom *bitcoinAtom) Refund() error {
 
 		txIn.SignatureScript = refundSigScript
 
-		verifyTransaction(scriptPubKey, refundTx, int(txIn.PreviousOutPoint.Index), inputValues[i])
+		if err := verifyTransaction(scriptPubKey, refundTx, int(txIn.PreviousOutPoint.Index), inputValues[i]); err != nil {
+			return NewErrRefund(err)
+		}
 	}
 
+	atom.LogInfo(atom.req.UID, fmt.Sprintf("publishing the refund transaction, can be viewed at https://www.blockchain.com/btc/tx/%s\n", refundTx.TxHash().String()))
 	if err := atom.PublishTransaction(refundTx,
 		func() bool {
 			return atom.ScriptSpent(atom.scriptAddr)

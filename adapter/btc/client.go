@@ -170,7 +170,7 @@ func (conn *conn) SpendBalance(address string) (*wire.MsgTx, []byte, []int64, er
 			return nil, nil, nil, err
 		}
 		values = append(values, utxo.Amount)
-		tx.AddTxIn(wire.NewTxIn(wire.NewOutPoint(txHash, utxo.TransactionIndex), nil, nil))
+		tx.AddTxIn(wire.NewTxIn(wire.NewOutPoint(txHash, utxo.TransactionOutputNumber), nil, nil))
 	}
 	pkScriptBytes, err := hex.DecodeString(pkScript)
 	if err != nil {

@@ -212,11 +212,19 @@ func (client BlockchainInfoClient) PublishTransaction(signedTransaction []byte) 
 		return err
 	}
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	// TODO: Handle response and return an error if the transaction fails
 	resp, err := httpClient.Do(r)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+	stxResultBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	stxResult := string(stxResultBytes)
+
+	if !strings.Contains(stxResult, "Transaction Submitted") {
+		return fmt.Errorf("Error while submitting Bitcoin transaction: %s", stxResult)
+	}
 	return nil
 }
