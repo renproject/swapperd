@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/republicprotocol/renex-swapper-go/service/renex"
+	"github.com/republicprotocol/swapperd/service/renex"
 )
 
 type mock struct {

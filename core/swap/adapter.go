@@ -1,12 +1,12 @@
 package swap
 
 import (
-	"github.com/republicprotocol/renex-swapper-go/domain/swap"
-	"github.com/republicprotocol/renex-swapper-go/service/logger"
+	"github.com/republicprotocol/swapperd/core/logger"
+	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type SwapperAdapter interface {
-	NewSwap(swap.Request) (Atom, Atom, Adapter, error)
+	NewSwap(foundation.Swap) (Atom, Atom, Adapter, error)
 }
 
 type Adapter interface {

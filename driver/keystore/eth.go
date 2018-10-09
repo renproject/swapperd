@@ -8,7 +8,7 @@ import (
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pborman/uuid"
-	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
+	"github.com/republicprotocol/swapperd/adapter/keystore"
 )
 
 type plainEthereumKeyJSON struct {

@@ -11,11 +11,12 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/republicprotocol/renex-swapper-go/adapter/config"
-	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	swapDomain "github.com/republicprotocol/renex-swapper-go/domain/swap"
-	"github.com/republicprotocol/renex-swapper-go/service/logger"
-	"github.com/republicprotocol/renex-swapper-go/service/swap"
+	"github.com/republicprotocol/swapperd/adapter/config"
+	"github.com/republicprotocol/swapperd/adapter/keystore"
+	"github.com/republicprotocol/swapperd/core/logger"
+	"github.com/republicprotocol/swapperd/core/swap"
+	"github.com/republicprotocol/swapperd/core/swapper"
+	swapDomain "github.com/republicprotocol/swapperd/domain/swap"
 )
 
 type Conn interface {
@@ -62,9 +63,8 @@ type bitcoinAtom struct {
 }
 
 // NewBitcoinAtom returns a new Bitcoin Atom instance
-func NewBitcoinAtom(conf config.BitcoinNetwork, key keystore.BitcoinKey, logger logger.Logger, req swapDomain.Request) (swap.Atom, error) {
+func NewBitcoinAtom(conf config.BitcoinNetwork, key keystore.BitcoinKey, logger logger.Logger, req swapDomain.Request) (swapper.SwapContractBinder, error) {
 	conn := NewConnWithConfig(conf)
-
 	script, scriptAddr, err := buildInitiateScript(key.AddressString, req, conn.Net())
 	if err != nil {
 		return nil, err

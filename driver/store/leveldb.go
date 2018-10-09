@@ -1,8 +1,8 @@
 package store
 
 import (
-	"github.com/republicprotocol/renex-swapper-go/service/state"
-	"github.com/republicprotocol/renex-swapper-go/utils"
+	"github.com/republicprotocol/swapperd/service/state"
+	"github.com/republicprotocol/swapperd/utils"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 

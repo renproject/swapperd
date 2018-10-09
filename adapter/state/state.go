@@ -1,8 +1,8 @@
 package state
 
 import (
-	"github.com/republicprotocol/renex-swapper-go/service/logger"
-	"github.com/republicprotocol/renex-swapper-go/service/state"
+	"github.com/republicprotocol/swapperd/service/logger"
+	"github.com/republicprotocol/swapperd/service/state"
 )
 
 type stateAdapter struct {

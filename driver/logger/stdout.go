@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/republicprotocol/renex-swapper-go/service/logger"
+	"github.com/republicprotocol/swapperd/core/logger"
 )
 
 const white = "\033[m"

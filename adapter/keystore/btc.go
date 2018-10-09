@@ -4,8 +4,8 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
-	"github.com/republicprotocol/renex-swapper-go/domain/token"
-	"github.com/republicprotocol/renex-swapper-go/utils"
+	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/utils"
 )
 
 type BitcoinKey struct {
@@ -19,8 +19,8 @@ type BitcoinKey struct {
 	Compressed    bool
 }
 
-func (btcKey BitcoinKey) Token() token.Token {
-	return token.BTC
+func (btcKey BitcoinKey) Token() foundation.Token {
+	return foundation.TokenBTC
 }
 
 func NewBitcoinKey(wifString string, network string) (BitcoinKey, error) {

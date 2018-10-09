@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/republicprotocol/renex-swapper-go/utils"
+	"github.com/republicprotocol/swapperd/utils"
 
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"

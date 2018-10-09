@@ -1,14 +1,15 @@
 package keystore
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 
-	"github.com/republicprotocol/renex-swapper-go/utils"
+	"github.com/republicprotocol/swapperd/utils"
 
-	"github.com/republicprotocol/renex-swapper-go/adapter/config"
-	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/domain/token"
+	"github.com/republicprotocol/swapperd/adapter/config"
+	"github.com/republicprotocol/swapperd/adapter/keystore"
+	"github.com/republicprotocol/swapperd/foundation"
 )
 
 // NewErrKeyFileExists is returned when the keystore file exists, and the user is
@@ -22,6 +23,8 @@ func NewErrKeyFileExists(loc string) error {
 func NewErrKeyFileDoesNotExist(loc string) error {
 	return fmt.Errorf("Keystore file not found at %s", loc)
 }
+
+var ErrUnsupportedToken = errors.New("Unsupported Token")
 
 // LoadFromFile
 func LoadFromFile(conf config.Config, passphrase string) (keystore.Keystore, error) {
@@ -73,7 +76,7 @@ func GenerateFile(conf config.Config, passphrase string) error {
 // LoadKeyFromFile loads a key from a file and tries to decrypt it using the
 // given passphrase. If the passphrase is empty, then it tries to load an
 // unencrypted key.
-func LoadKeyFromFile(loc, passphrase string, conf config.Config, tok token.Token) (keystore.Key, error) {
+func LoadKeyFromFile(loc, passphrase string, conf config.Config, tok foundation.Token) (keystore.Key, error) {
 	data, err := ioutil.ReadFile(loc)
 	if err != nil {
 		return nil, NewErrKeyFileDoesNotExist(loc)
@@ -84,7 +87,7 @@ func LoadKeyFromFile(loc, passphrase string, conf config.Config, tok token.Token
 // StoreKeyToFile stores a key to a file after encrypting it using the given
 // passphrase. If the passphrase is empty, then it tries to load an unencrypted
 // key.
-func StoreKeyToFile(loc, passphrase string, conf config.Config, tok token.Token) error {
+func StoreKeyToFile(loc, passphrase string, conf config.Config, tok foundation.Token) error {
 	if _, err := ioutil.ReadFile(loc); err == nil {
 		return NewErrKeyFileExists(loc)
 	}
@@ -95,36 +98,36 @@ func StoreKeyToFile(loc, passphrase string, conf config.Config, tok token.Token)
 	return ioutil.WriteFile(loc, generatedKey, 0444)
 }
 
-func randomKey(conf config.Config, tok token.Token) (keystore.Key, error) {
+func randomKey(conf config.Config, tok foundation.Token) (keystore.Key, error) {
 	switch tok {
-	case token.BTC:
+	case foundation.TokenBTC:
 		return keystore.RandomBitcoinKey(conf.Bitcoin.Network)
-	case token.ETH:
+	case foundation.TokenWBTC:
 		return keystore.RandomEthereumKey(conf.Ethereum.Network)
 	default:
-		return nil, token.ErrUnsupportedToken
+		return nil, ErrUnsupportedToken
 	}
 }
 
-func generateRandomKey(passphrase string, conf config.Config, tok token.Token) ([]byte, error) {
+func generateRandomKey(passphrase string, conf config.Config, tok foundation.Token) ([]byte, error) {
 	switch tok {
-	case token.BTC:
+	case foundation.TokenBTC:
 		return GenerateRandomBitcoinKey(conf.Bitcoin.Network, passphrase)
-	case token.ETH:
+	case foundation.TokenWBTC:
 		return GenerateRandomEthereumKey(passphrase)
 	default:
-		return nil, token.ErrUnsupportedToken
+		return nil, ErrUnsupportedToken
 	}
 }
 
-func decodeKey(data []byte, passphrase string, conf config.Config, tok token.Token) (keystore.Key, error) {
+func decodeKey(data []byte, passphrase string, conf config.Config, tok foundation.Token) (keystore.Key, error) {
 	switch tok {
-	case token.BTC:
+	case foundation.TokenBTC:
 		return DecodeBitcoinKey(data, conf.Bitcoin.Network, passphrase)
-	case token.ETH:
+	case foundation.TokenWBTC:
 		return DecodeEthereumKey(data, conf.Ethereum.Network, passphrase)
 	default:
-		return nil, token.ErrUnsupportedToken
+		return nil, ErrUnsupportedToken
 	}
 }
 

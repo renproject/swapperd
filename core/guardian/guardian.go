@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/republicprotocol/co-go"
-	swapDomain "github.com/republicprotocol/renex-swapper-go/domain/swap"
+	swapDomain "github.com/republicprotocol/swapperd/domain/swap"
 )
 
 var (

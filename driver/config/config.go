@@ -6,14 +6,14 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/republicprotocol/renex-swapper-go/adapter/config"
-	"github.com/republicprotocol/renex-swapper-go/domain/token"
+	"github.com/republicprotocol/swapperd/adapter/config"
+	"github.com/republicprotocol/swapperd/foundation"
 )
 
 // Global is the default global config
 var Global = config.Config{
 	Version:             "0.1.0",
-	SupportedCurrencies: []token.Token{token.ETH, token.BTC},
+	SupportedCurrencies: []foundation.Token{foundation.TokenBTC, foundation.TokenWBTC},
 }
 
 // RenExMainnet is the RenEx config object on the mainnet

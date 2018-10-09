@@ -6,7 +6,7 @@ import (
 	netHttp "net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/republicprotocol/renex-swapper-go/adapter/http"
+	"github.com/republicprotocol/swapperd/adapter/http"
 	"github.com/rs/cors"
 )
 

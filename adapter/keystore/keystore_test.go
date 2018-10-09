@@ -4,8 +4,8 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	. "github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/domains/tokens"
+	. "github.com/republicprotocol/swapperd/adapter/keystore"
+	"github.com/republicprotocol/swapperd/domains/tokens"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

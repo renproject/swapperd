@@ -18,17 +18,17 @@ import (
 	"github.com/republicprotocol/swapperd/service/swap"
 )
 
-type ethereumAtom struct {
+type erc20Atom struct {
 	id     [32]byte
 	client Conn
 	key    keystore.EthereumKey
 	req    swapDomain.Request
 	logger logger.Logger
-	binder *RenExAtomicSwapper
+	binder *RenExAtomicSwapperERC20
 }
 
-// NewEthereumAtom returns a new Ethereum RequestAtom instance
-func NewEthereumAtom(conf config.EthereumNetwork, key keystore.EthereumKey, logger logger.Logger, req swapDomain.Request) (swap.Atom, error) {
+// NewERC20Atom returns a new ERC20 Atom instance
+func NewERC20Atom(conf config.EthereumNetwork, key keystore.EthereumKey, logger logger.Logger, req swapDomain.Request) (swap.Atom, error) {
 	conn, err := NewConnWithConfig(conf)
 	if err != nil {
 		return nil, err
@@ -49,10 +49,10 @@ func NewEthereumAtom(conf config.EthereumNetwork, key keystore.EthereumKey, logg
 		return nil, err
 	}
 
-	logger.LogInfo(req.UID, fmt.Sprintf("Ethereum Atomic Swap ID: %s", base64.StdEncoding.EncodeToString(id[:])))
+	logger.LogInfo(req.UID, fmt.Sprintf("ERC20 Atomic Swap ID: %s", base64.StdEncoding.EncodeToString(id[:])))
 	req.TimeLock = expiry
 
-	return &ethereumAtom{
+	return &erc20Atom{
 		client: conn,
 		key:    key,
 		binder: contract,
@@ -64,7 +64,7 @@ func NewEthereumAtom(conf config.EthereumNetwork, key keystore.EthereumKey, logg
 
 // Initiate a new Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Initiate() error {
-	atom.logger.LogInfo(atom.req.UID, "Initiating on Ethereum blockchain")
+	atom.logger.LogInfo(atom.req.UID, "Initiating on Ethereum blockchain for ERC20(%s)", atom.req.Token)
 	initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return err
@@ -91,13 +91,13 @@ func (atom *ethereumAtom) Initiate() error {
 	); err != nil {
 		return err
 	}
-	atom.logger.LogInfo(atom.req.UID, fmt.Sprintf("Initiated the atomic swap on Ethereum blockchain"))
+	atom.logger.LogInfo(atom.req.UID, fmt.Sprintf("Initiated the atomic swap on ERC20 blockchain"))
 	return nil
 }
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Refund() error {
-	atom.logger.LogInfo(atom.req.UID, "Refunding the atomic swap on Ethereum blockchain")
+	atom.logger.LogInfo(atom.req.UID, "Refunding the atomic swap on ERC20 blockchain")
 	refundable, err := atom.binder.Refundable(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func (atom *ethereumAtom) Refund() error {
 	); err != nil {
 		return err
 	}
-	atom.logger.LogInfo(atom.req.UID, "Refunded the atomic swap on Ethereum blockchain")
+	atom.logger.LogInfo(atom.req.UID, "Refunded the atomic swap on ERC20 blockchain")
 	return nil
 }
 
@@ -169,13 +169,13 @@ func (atom *ethereumAtom) Audit() error {
 	if auditReport.Value.Cmp(recvValue) != 0 {
 		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.req.ReceiveValue, auditReport.Value)
 	}
-	atom.logger.LogInfo(atom.req.UID, fmt.Sprintf("Audit successful on Ethereum blockchain"))
+	atom.logger.LogInfo(atom.req.UID, fmt.Sprintf("Audit successful on ERC20 blockchain"))
 	return nil
 }
 
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *ethereumAtom) Redeem(secret [32]byte) error {
-	atom.logger.LogInfo(atom.req.UID, "Redeeming the atomic swap on Ethereum blockchain")
+	atom.logger.LogInfo(atom.req.UID, "Redeeming the atomic swap on ERC20 blockchain")
 	redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return err
@@ -196,7 +196,7 @@ func (atom *ethereumAtom) Redeem(secret [32]byte) error {
 	); err != nil {
 		return err
 	}
-	atom.logger.LogInfo(atom.req.UID, "Redeemed the atomic swap on Ethereum blockchain")
+	atom.logger.LogInfo(atom.req.UID, "Redeemed the atomic swap on ERC20 blockchain")
 	return nil
 }
 

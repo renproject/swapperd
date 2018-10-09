@@ -11,17 +11,17 @@ package main
 //
 // 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 //
-// 	btcbindings "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/bindings/btc"
-// 	btcclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/btc"
-// 	"github.com/republicprotocol/renex-swapper-go/utils"
+// 	btcbindings "github.com/republicprotocol/swapperd/adapter/blockchain/bindings/btc"
+// 	btcclient "github.com/republicprotocol/swapperd/adapter/blockchain/clients/btc"
+// 	"github.com/republicprotocol/swapperd/utils"
 //
-// 	ethbindings "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/bindings/eth"
-// 	ethclient "github.com/republicprotocol/renex-swapper-go/adapter/blockchain/clients/eth"
+// 	ethbindings "github.com/republicprotocol/swapperd/adapter/blockchain/bindings/eth"
+// 	ethclient "github.com/republicprotocol/swapperd/adapter/blockchain/clients/eth"
 //
-// 	"github.com/republicprotocol/renex-swapper-go/adapter/config"
-// 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-// 	configDriver "github.com/republicprotocol/renex-swapper-go/driver/config"
-// 	keystoreDriver "github.com/republicprotocol/renex-swapper-go/driver/keystore"
+// 	"github.com/republicprotocol/swapperd/adapter/config"
+// 	"github.com/republicprotocol/swapperd/adapter/keystore"
+// 	configDriver "github.com/republicprotocol/swapperd/driver/config"
+// 	keystoreDriver "github.com/republicprotocol/swapperd/driver/keystore"
 // )
 //
 // func main() {

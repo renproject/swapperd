@@ -8,9 +8,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/republicprotocol/renex-swapper-go/driver/config"
-	"github.com/republicprotocol/renex-swapper-go/driver/keystore"
-	"github.com/republicprotocol/renex-swapper-go/utils"
+	"github.com/republicprotocol/swapperd/driver/config"
+	"github.com/republicprotocol/swapperd/driver/keystore"
+	"github.com/republicprotocol/swapperd/utils"
 )
 
 func main() {

@@ -1,8 +1,8 @@
 package swap
 
 import (
-	swapDomain "github.com/republicprotocol/renex-swapper-go/domain/swap"
-	"github.com/republicprotocol/renex-swapper-go/service/swap"
+	swapDomain "github.com/republicprotocol/swapperd/domain/swap"
+	"github.com/republicprotocol/swapperd/service/swap"
 )
 
 type swapAdapter struct {

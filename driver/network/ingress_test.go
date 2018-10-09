@@ -9,11 +9,11 @@ package network_test
 // 	"github.com/ethereum/go-ethereum/crypto"
 // 	. "github.com/onsi/ginkgo"
 // 	. "github.com/onsi/gomega"
-// 	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-// 	"github.com/republicprotocol/renex-swapper-go/adapter/network"
-// 	"github.com/republicprotocol/renex-swapper-go/domain/order"
-// 	. "github.com/republicprotocol/renex-swapper-go/driver/network"
-// 	"github.com/republicprotocol/renex-swapper-go/utils"
+// 	"github.com/republicprotocol/swapperd/adapter/keystore"
+// 	"github.com/republicprotocol/swapperd/adapter/network"
+// 	"github.com/republicprotocol/swapperd/domain/order"
+// 	. "github.com/republicprotocol/swapperd/driver/network"
+// 	"github.com/republicprotocol/swapperd/utils"
 // )
 
 // var _ = Describe("Ingress Network Driver", func() {

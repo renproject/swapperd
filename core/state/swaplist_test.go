@@ -5,10 +5,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/republicprotocol/renex-swapper-go/adapter/state"
-	"github.com/republicprotocol/renex-swapper-go/driver/logger"
-	"github.com/republicprotocol/renex-swapper-go/driver/store"
-	. "github.com/republicprotocol/renex-swapper-go/service/state"
+	"github.com/republicprotocol/swapperd/adapter/state"
+	"github.com/republicprotocol/swapperd/driver/logger"
+	"github.com/republicprotocol/swapperd/driver/store"
+	. "github.com/republicprotocol/swapperd/service/state"
 )
 
 var _ = Describe("State", func() {

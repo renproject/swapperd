@@ -11,20 +11,20 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/republicprotocol/renex-swapper-go/domain/token"
-	"github.com/republicprotocol/renex-swapper-go/utils"
+	"github.com/republicprotocol/swapperd/domain/token"
+	"github.com/republicprotocol/swapperd/utils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/renex-swapper-go/service/swap"
+	. "github.com/republicprotocol/swapperd/service/swap"
 
-	"github.com/republicprotocol/renex-swapper-go/adapter/config"
-	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/adapter/swap"
-	swapDomain "github.com/republicprotocol/renex-swapper-go/domain/swap"
+	"github.com/republicprotocol/swapperd/adapter/config"
+	"github.com/republicprotocol/swapperd/adapter/keystore"
+	"github.com/republicprotocol/swapperd/adapter/swap"
+	swapDomain "github.com/republicprotocol/swapperd/domain/swap"
 
-	configDriver "github.com/republicprotocol/renex-swapper-go/driver/config"
-	loggerDriver "github.com/republicprotocol/renex-swapper-go/driver/logger"
+	configDriver "github.com/republicprotocol/swapperd/driver/config"
+	loggerDriver "github.com/republicprotocol/swapperd/driver/logger"
 )
 
 var _ = Describe("Ethereum - Bitcoin Atomic Swap", func() {

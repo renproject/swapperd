@@ -3,7 +3,7 @@ package swap
 import (
 	"fmt"
 
-	"github.com/republicprotocol/renex-swapper-go/domain/swap"
+	"github.com/republicprotocol/swapperd/domain/swap"
 )
 
 type Swap interface {

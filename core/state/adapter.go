@@ -1,6 +1,6 @@
 package state
 
-import "github.com/republicprotocol/renex-swapper-go/service/logger"
+import "github.com/republicprotocol/swapperd/service/logger"
 
 type Adapter interface {
 	logger.Logger

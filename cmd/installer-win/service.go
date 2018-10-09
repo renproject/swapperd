@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/republicprotocol/renex-swapper-go/utils"
+	"github.com/republicprotocol/swapperd/utils"
 
 	"github.com/kardianos/service"
 )

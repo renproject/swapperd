@@ -1,6 +1,6 @@
 package swap
 
-import "github.com/republicprotocol/renex-swapper-go/domain/swap"
+import "github.com/republicprotocol/swapperd/domain/swap"
 
 // Swapper is the interface for an atomic swapper object
 type Swapper interface {

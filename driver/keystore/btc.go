@@ -14,8 +14,8 @@ import (
 	"github.com/btcsuite/btcutil"
 
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/utils"
+	"github.com/republicprotocol/swapperd/adapter/keystore"
+	"github.com/republicprotocol/swapperd/utils"
 )
 
 // ErrMalformedPadding is returned when padding cannot be stripped during

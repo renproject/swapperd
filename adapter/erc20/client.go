@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/republicprotocol/swapperd/domain/token"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -15,9 +17,9 @@ import (
 )
 
 type Conn struct {
-	Network            string
-	Client             *ethclient.Client
-	RenExAtomicSwapper common.Address
+	Network          string
+	Client           *ethclient.Client
+	SwapperAddresses map[token.Token]common.Address
 }
 
 // NewConnWithConfig creates a new ethereum connection with the given config
@@ -33,9 +35,9 @@ func NewConn(url, network, swapperAddress string) (Conn, error) {
 		return Conn{}, err
 	}
 	return Conn{
-		Client:             ethclient,
-		Network:            network,
-		RenExAtomicSwapper: common.HexToAddress(swapperAddress),
+		Client:           ethclient,
+		Network:          network,
+		SwapperAddresses: common.HexToAddress(swapperAddress),
 	}, nil
 }
 

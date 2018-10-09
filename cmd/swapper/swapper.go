@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/republicprotocol/renex-swapper-go/driver/config"
-	"github.com/republicprotocol/renex-swapper-go/driver/keystore"
-	"github.com/republicprotocol/renex-swapper-go/driver/swapper"
-	"github.com/republicprotocol/renex-swapper-go/utils"
+	"github.com/republicprotocol/swapperd/driver/config"
+	"github.com/republicprotocol/swapperd/driver/keystore"
+	"github.com/republicprotocol/swapperd/driver/swapper"
+	"github.com/republicprotocol/swapperd/utils"
 	"github.com/urfave/cli"
 )
 

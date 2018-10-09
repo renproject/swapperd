@@ -4,12 +4,12 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/republicprotocol/renex-swapper-go/adapter/btc"
-	"github.com/republicprotocol/renex-swapper-go/adapter/config"
-	"github.com/republicprotocol/renex-swapper-go/adapter/eth"
-	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	"github.com/republicprotocol/renex-swapper-go/domain/token"
-	"github.com/republicprotocol/renex-swapper-go/service/renex"
+	"github.com/republicprotocol/swapperd/adapter/btc"
+	"github.com/republicprotocol/swapperd/adapter/config"
+	"github.com/republicprotocol/swapperd/adapter/eth"
+	"github.com/republicprotocol/swapperd/adapter/keystore"
+	"github.com/republicprotocol/swapperd/domain/token"
+	"github.com/republicprotocol/swapperd/service/renex"
 )
 
 var ErrInvalidSignatureLength = errors.New("invalid signature length")

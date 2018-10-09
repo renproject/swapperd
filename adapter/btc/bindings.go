@@ -7,9 +7,9 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/republicprotocol/renex-swapper-go/adapter/keystore"
-	swapDomain "github.com/republicprotocol/renex-swapper-go/domain/swap"
-	"github.com/republicprotocol/renex-swapper-go/domain/token"
+	"github.com/republicprotocol/swapperd/adapter/keystore"
+	swapDomain "github.com/republicprotocol/swapperd/domain/swap"
+	"github.com/republicprotocol/swapperd/domain/token"
 	"golang.org/x/crypto/ripemd160"
 )
 

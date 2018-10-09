@@ -1,16 +1,16 @@
 package config
 
-import "github.com/republicprotocol/renex-swapper-go/domain/token"
+import "github.com/republicprotocol/swapperd/foundation"
 
 // Config is the the global config object
 type Config struct {
-	Version             string          `json:"version"`
-	SupportedCurrencies []token.Token   `json:"supportedCurrencies"`
-	AuthorizedAddresses []string        `json:"authorizedAddresses"`
-	HomeDir             string          `json:"homeDir"`
-	Ethereum            EthereumNetwork `json:"ethereum"`
-	Bitcoin             BitcoinNetwork  `json:"bitcoin"`
-	RenEx               RenExNetwork    `json:"renex"`
+	Version             string             `json:"version"`
+	SupportedCurrencies []foundation.Token `json:"supportedCurrencies"`
+	AuthorizedAddresses []string           `json:"authorizedAddresses"`
+	HomeDir             string             `json:"homeDir"`
+	Ethereum            EthereumNetwork    `json:"ethereum"`
+	Bitcoin             BitcoinNetwork     `json:"bitcoin"`
+	RenEx               RenExNetwork       `json:"renex"`
 }
 
 // EthereumNetwork is the ethereum specific config object

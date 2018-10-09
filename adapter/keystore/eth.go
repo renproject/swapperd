@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/republicprotocol/renex-swapper-go/domain/token"
+	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type EthereumKey struct {
@@ -21,8 +21,8 @@ type EthereumKey struct {
 	*sync.RWMutex
 }
 
-func (ethKey EthereumKey) Token() token.Token {
-	return token.ETH
+func (ethKey EthereumKey) Token() foundation.Token {
+	return foundation.TokenWBTC
 }
 
 func NewEthereumKey(privKey *ecdsa.PrivateKey, network string) (EthereumKey, error) {
