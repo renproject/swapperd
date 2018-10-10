@@ -53,13 +53,15 @@ func (ethKey *EthereumKey) SubmitTx(submitTx func(*bind.TransactOpts) error, pos
 	defer ethKey.Unlock()
 	for {
 		if err := submitTx(ethKey.TransactOpts); err != nil {
-			return err
+			fmt.Println(err)
+			time.Sleep(1 * time.Second)
+			continue
 		}
 		for i := 0; i < 20; i++ {
 			if result := postCon(); result {
 				return nil
 			}
-			time.Sleep(15 * time.Second)
+			time.Sleep(1 * time.Second)
 		}
 	}
 }

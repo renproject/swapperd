@@ -8,8 +8,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/republicprotocol/swapperd/adapter/keystore"
-	swapDomain "github.com/republicprotocol/swapperd/domain/swap"
-	"github.com/republicprotocol/swapperd/domain/token"
+	"github.com/republicprotocol/swapperd/foundation"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -128,17 +127,17 @@ func addressToPubKeyHash(addr string, chainParams *chaincfg.Params) (*btcutil.Ad
 	return Addr, nil
 }
 
-func buildInitiateScript(personalAddress string, req swapDomain.Request, Net *chaincfg.Params) ([]byte, string, error) {
+func buildInitiateScript(personalAddress string, req foundation.Swap, Net *chaincfg.Params) ([]byte, string, error) {
 	var PayerAddress, SpenderAddress string
 	var locktime int64
 
-	if (req.GoesFirst && req.SendToken == token.BTC) || (!req.GoesFirst && req.ReceiveToken == token.BTC) {
+	if (req.IsFirst && req.SendToken == foundation.TokenBTC) || (!req.IsFirst && req.ReceiveToken == foundation.TokenBTC) {
 		locktime = req.TimeLock
 	} else {
 		locktime = req.TimeLock - 24*60*60
 	}
 
-	if req.SendToken == token.BTC {
+	if req.SendToken == foundation.TokenBTC {
 		PayerAddress = personalAddress
 		SpenderAddress = req.SendToAddress
 	} else {

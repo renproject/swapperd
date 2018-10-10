@@ -92,6 +92,7 @@ func (conn *conn) SignTransaction(tx *wire.MsgTx, key keystore.BitcoinKey, fee i
 			return nil, false, err
 		}
 		tx.AddTxIn(wire.NewTxIn(wire.NewOutPoint(hash, j.TransactionOutputNumber), ScriptPubKey, [][]byte{}))
+
 		value = value - j.Amount
 	}
 	if value < 0 {
@@ -101,13 +102,39 @@ func (conn *conn) SignTransaction(tx *wire.MsgTx, key keystore.BitcoinKey, fee i
 		}
 		tx.AddTxOut(wire.NewTxOut(int64(-value), P2PKHScript))
 	}
+
 	for i, txin := range tx.TxIn {
-		sigScript, err := txscript.SignatureScript(tx, i, txin.SignatureScript, txscript.SigHashAll, key.WIF.PrivKey, true)
+		sigScript, err := txscript.SignatureScript(tx, i, txin.SignatureScript, txscript.SigHashAll, key.WIF.PrivKey, key.Compressed)
 		if err != nil {
 			return nil, false, err
 		}
 		tx.TxIn[i].SignatureScript = sigScript
 	}
+
+	value = 0
+	for _, j := range tx.TxOut {
+		value = value + j.Value
+	}
+	value = value + fee
+
+	// Verify Transaction
+	for _, j := range utxos.Outputs {
+		if value <= 0 {
+			break
+		}
+
+		ScriptPubKey, err := hex.DecodeString(j.ScriptPubKey)
+		if err != nil {
+			return nil, false, err
+		}
+
+		if err := verifyTransaction(ScriptPubKey, tx, 0, j.Amount); err != nil {
+			return nil, false, err
+		}
+
+		value = value - j.Amount
+	}
+
 	return tx, true, nil
 }
 

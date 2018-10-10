@@ -50,7 +50,7 @@ var EthereumMainnet = config.EthereumNetwork{
 // EthereumKovan is the ethereum config object on the kovan testnet
 var EthereumKovan = config.EthereumNetwork{
 	Network: "kovan",
-	Swapper: "",
+	Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
 	URL:     "https://kovan.infura.io",
 }
 

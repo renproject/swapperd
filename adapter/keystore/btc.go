@@ -30,17 +30,6 @@ func NewBitcoinKey(wifString string, network string) (BitcoinKey, error) {
 		return BitcoinKey{}, err
 	}
 
-	pubKey, err := btcutil.NewAddressPubKey(wif.SerializePubKey(), net)
-	if err != nil {
-		return BitcoinKey{}, err
-	}
-
-	addrString := pubKey.EncodeAddress()
-	addr, err := btcutil.DecodeAddress(addrString, net)
-	if err != nil {
-		return BitcoinKey{}, err
-	}
-
 	var pubKeyBytes []byte
 	var compressed bool
 	if network == "mainnet" {
@@ -49,6 +38,16 @@ func NewBitcoinKey(wifString string, network string) (BitcoinKey, error) {
 	} else {
 		pubKeyBytes = wif.PrivKey.PubKey().SerializeUncompressed()
 		compressed = false
+	}
+
+	pubKey, err := btcutil.NewAddressPubKey(pubKeyBytes, net)
+	if err != nil {
+		return BitcoinKey{}, err
+	}
+	addrString := pubKey.EncodeAddress()
+	addr, err := btcutil.DecodeAddress(addrString, net)
+	if err != nil {
+		return BitcoinKey{}, err
 	}
 
 	return BitcoinKey{
@@ -61,6 +60,7 @@ func NewBitcoinKey(wifString string, network string) (BitcoinKey, error) {
 		PublicKey:     pubKeyBytes,
 		Compressed:    compressed,
 	}, nil
+
 }
 
 func RandomBitcoinKey(network string) (BitcoinKey, error) {

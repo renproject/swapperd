@@ -1,11 +1,9 @@
-package eth
+package erc20
 
 import (
 	"context"
 	"fmt"
 	"math/big"
-
-	"github.com/republicprotocol/swapperd/domain/token"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -14,12 +12,13 @@ import (
 
 	"github.com/republicprotocol/swapperd/adapter/config"
 	"github.com/republicprotocol/swapperd/adapter/keystore"
+	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type Conn struct {
 	Network          string
 	Client           *ethclient.Client
-	SwapperAddresses map[token.Token]common.Address
+	SwapperAddresses map[foundation.Token]common.Address
 }
 
 // NewConnWithConfig creates a new ethereum connection with the given config
@@ -29,21 +28,28 @@ func NewConnWithConfig(config config.EthereumNetwork) (Conn, error) {
 }
 
 // NewConn creates a new ethereum connection with the given config parameters.
-func NewConn(url, network, swapperAddress string) (Conn, error) {
+func NewConn(url, network, wbtcSwapperAddress string) (Conn, error) {
 	ethclient, err := ethclient.Dial(url)
 	if err != nil {
 		return Conn{}, err
 	}
+	swapperAddresses := map[foundation.Token]common.Address{}
+	swapperAddresses[foundation.TokenWBTC] = common.HexToAddress(wbtcSwapperAddress)
+
 	return Conn{
 		Client:           ethclient,
 		Network:          network,
-		SwapperAddresses: common.HexToAddress(swapperAddress),
+		SwapperAddresses: swapperAddresses,
 	}, nil
 }
 
 // Balance of the given address
 func (b *Conn) Balance(address common.Address) (*big.Int, error) {
-	return b.Client.PendingBalanceAt(context.Background(), address)
+	binding, err := NewCompatibleERC20(address, bind.ContractBackend(b.Client))
+	if err != nil {
+		return nil, err
+	}
+	return binding.BalanceOf(&bind.CallOpts{}, address)
 }
 
 // Transfer is a helper function for sending ETH to an address
@@ -70,6 +76,7 @@ func (b *Conn) Transfer(to common.Address, key keystore.EthereumKey, value *big.
 	if err != nil {
 		return err
 	}
+
 	key.SubmitTx(func(tops *bind.TransactOpts) error {
 		txOpts := &bind.TransactOpts{
 			From:     tops.From,

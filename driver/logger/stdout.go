@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/republicprotocol/swapperd/core/logger"
+	"github.com/republicprotocol/swapperd/core"
+	"github.com/republicprotocol/swapperd/foundation"
 )
 
 const white = "\033[m"
@@ -13,23 +14,23 @@ const white = "\033[m"
 type stdOut struct {
 }
 
-func NewStdOut() logger.Logger {
+func NewStdOut() core.Logger {
 	return &stdOut{}
 }
 
-func (logger *stdOut) LogInfo(orderID [32]byte, msg string) {
-	clr := pickColor(orderID)
-	log.Println(fmt.Sprintf("[INF] (%s%s%s) %s", clr, base64.StdEncoding.EncodeToString(orderID[:]), white, msg))
+func (logger *stdOut) LogInfo(swapID foundation.SwapID, msg string) {
+	clr := pickColor(swapID)
+	log.Println(fmt.Sprintf("[INF] (%s%s%s) %s", clr, base64.StdEncoding.EncodeToString(swapID[:]), white, msg))
 }
 
-func (logger *stdOut) LogDebug(orderID [32]byte, msg string) {
-	clr := pickColor(orderID)
-	log.Println(fmt.Sprintf("[DEB] (%s%s%s) %s", clr, base64.StdEncoding.EncodeToString(orderID[:]), white, msg))
+func (logger *stdOut) LogDebug(swapID foundation.SwapID, msg string) {
+	clr := pickColor(swapID)
+	log.Println(fmt.Sprintf("[DEB] (%s%s%s) %s", clr, base64.StdEncoding.EncodeToString(swapID[:]), white, msg))
 }
 
-func (logger *stdOut) LogError(orderID [32]byte, msg string) {
-	clr := pickColor(orderID)
-	log.Println(fmt.Sprintf("[ERR] (%s%s%s) %s", clr, base64.StdEncoding.EncodeToString(orderID[:]), white, msg))
+func (logger *stdOut) LogError(swapID foundation.SwapID, msg string) {
+	clr := pickColor(swapID)
+	log.Println(fmt.Sprintf("[ERR] (%s%s%s) %s", clr, base64.StdEncoding.EncodeToString(swapID[:]), white, msg))
 }
 
 func pickColor(orderID [32]byte) string {

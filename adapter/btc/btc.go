@@ -3,6 +3,7 @@ package btc
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"time"
@@ -11,12 +12,11 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	"github.com/republicprotocol/renex-swapper-go/service/swap"
 	"github.com/republicprotocol/swapperd/adapter/config"
 	"github.com/republicprotocol/swapperd/adapter/keystore"
-	"github.com/republicprotocol/swapperd/core/logger"
-	"github.com/republicprotocol/swapperd/core/swap"
-	"github.com/republicprotocol/swapperd/core/swapper"
-	swapDomain "github.com/republicprotocol/swapperd/domain/swap"
+	"github.com/republicprotocol/swapperd/core"
+	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type Conn interface {
@@ -54,22 +54,22 @@ type bitcoinAtom struct {
 	scriptAddr string
 	script     []byte
 	key        keystore.BitcoinKey
-	req        swapDomain.Request
+	req        foundation.Swap
 	txVersion  int32
 	fee        int64
 	verify     bool
-	logger.Logger
+	core.Logger
 	Conn
 }
 
 // NewBitcoinAtom returns a new Bitcoin Atom instance
-func NewBitcoinAtom(conf config.BitcoinNetwork, key keystore.BitcoinKey, logger logger.Logger, req swapDomain.Request) (swapper.SwapContractBinder, error) {
+func NewBitcoinAtom(conf config.BitcoinNetwork, key keystore.BitcoinKey, logger core.Logger, req foundation.Swap) (core.SwapContractBinder, error) {
 	conn := NewConnWithConfig(conf)
 	script, scriptAddr, err := buildInitiateScript(key.AddressString, req, conn.Net())
 	if err != nil {
 		return nil, err
 	}
-	logger.LogInfo(req.UID, fmt.Sprintf("Bitcoin Atomic Swap ID: %s", scriptAddr))
+	logger.LogInfo(req.ID, fmt.Sprintf("Bitcoin Atomic Swap ID: %s", scriptAddr))
 	return &bitcoinAtom{
 		scriptAddr: scriptAddr,
 		script:     script,
@@ -85,25 +85,25 @@ func NewBitcoinAtom(conf config.BitcoinNetwork, key keystore.BitcoinKey, logger 
 
 // initiate the atomic swap by funding a HTLC on the Bitcoin blockchain.
 func (atom *bitcoinAtom) Initiate() error {
-	atom.LogInfo(atom.req.UID, "Initiating on bitcoin blockchain")
+	atom.LogInfo(atom.req.ID, "Initiating on bitcoin blockchain")
 	scriptAddr, err := btcutil.DecodeAddress(atom.scriptAddr, atom.Net())
 	if err != nil {
-		return err
+		return NewErrInitiate(err)
 	}
 
-	sendValue, err := strconv.ParseInt(atom.req.SendValue, 10, 64)
+	sendValue, err := strconv.ParseInt(hex.EncodeToString(atom.req.SendValue[:]), 16, 64)
 	if err != nil {
-		return err
+		return NewErrInitiate(err)
 	}
 
 	if sendValue == 0 {
-		atom.LogError(atom.req.UID, "Trying to send 0 Bitcoins")
+		return NewErrInitiate(fmt.Errorf("Trying to send 0 Bitcoins"))
 	}
 
 	if funded, value := atom.ScriptFunded(atom.scriptAddr, sendValue); value > 0 || funded {
 		if funded {
-			atom.LogDebug(atom.req.UID, fmt.Sprintf("Bitcoin swap initiated with send value %d", sendValue))
-			return swap.ErrSwapAlreadyInitiated
+			atom.LogInfo(atom.req.ID, fmt.Sprintf("Bitcoin swap initiated with send value %d", sendValue))
+			return nil
 		}
 		sendValue = sendValue - value
 	}
@@ -119,11 +119,8 @@ func (atom *bitcoinAtom) Initiate() error {
 
 	// signing a transaction with the given private key
 	stx, complete, err := atom.Conn.SignTransaction(unsignedTx, atom.key, atom.fee)
-	if err != nil {
-		return NewErrInitiate(NewErrSignTransaction(err))
-	}
-	if !complete {
-		return NewErrInitiate(ErrCompleteSignTransaction)
+	if err != nil && !complete {
+		return err
 	}
 
 	if err := atom.Conn.PublishTransaction(stx,
@@ -135,12 +132,12 @@ func (atom *bitcoinAtom) Initiate() error {
 		return err
 	}
 
-	atom.LogInfo(atom.req.UID, "Initiated on bitcoin blockchain")
+	atom.LogInfo(atom.req.ID, "Initiated on bitcoin blockchain")
 	return nil
 }
 
 func (atom *bitcoinAtom) Audit() error {
-	receiveValue, err := strconv.ParseInt(atom.req.ReceiveValue, 10, 64)
+	receiveValue, err := strconv.ParseInt(hex.EncodeToString(atom.req.ReceiveValue[:]), 16, 64)
 	if err != nil {
 		return err
 	}
@@ -159,7 +156,7 @@ func (atom *bitcoinAtom) Audit() error {
 // redeem the Atomic Swap by revealing the secret and withdrawing funds from the
 // HTLC.
 func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
-	atom.LogInfo(atom.req.UID, "Redeeming on bitcoin blockchain")
+	atom.LogInfo(atom.req.ID, "Redeeming on bitcoin blockchain")
 	if spent := atom.ScriptSpent(atom.scriptAddr); spent {
 		return swap.ErrSwapAlreadyRedeemedOrRefunded
 	}
@@ -169,7 +166,7 @@ func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 		return NewErrRedeem(err)
 	}
 
-	receiveValue, err := strconv.ParseInt(atom.req.ReceiveValue, 10, 64)
+	receiveValue, err := strconv.ParseInt(hex.EncodeToString(atom.req.ReceiveValue[:]), 16, 64)
 	if err != nil {
 		return NewErrRedeem(err)
 	}
@@ -200,7 +197,7 @@ func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 		}
 	}
 
-	atom.LogInfo(atom.req.UID, fmt.Sprintf("publishing the redeem transaction, can be viewed at https://www.blockchain.com/btc/tx/%s\n", redeemTx.TxHash().String()))
+	atom.LogInfo(atom.req.ID, fmt.Sprintf("publishing the redeem transaction, can be viewed at https://www.blockchain.com/btc/tx/%s\n", redeemTx.TxHash().String()))
 
 	if err := atom.PublishTransaction(redeemTx,
 		func() bool {
@@ -210,7 +207,7 @@ func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 		return err
 	}
 
-	atom.LogInfo(atom.req.UID, "Redeemed on bitcoin blockchain")
+	atom.LogInfo(atom.req.ID, "Redeemed on bitcoin blockchain")
 	return nil
 }
 
@@ -238,7 +235,7 @@ func (atom *bitcoinAtom) AuditSecret() ([32]byte, error) {
 		if sha256.Sum256(push) == atom.req.SecretHash {
 			var secret [32]byte
 			copy(secret[:], push)
-			atom.LogInfo(atom.req.UID, fmt.Sprintf("Audit secret successful on Bitcoin blockchain %s", base64.StdEncoding.EncodeToString(secret[:])))
+			atom.LogInfo(atom.req.ID, fmt.Sprintf("Audit secret successful on Bitcoin blockchain %s", base64.StdEncoding.EncodeToString(secret[:])))
 			return secret, nil
 		}
 	}
@@ -247,7 +244,7 @@ func (atom *bitcoinAtom) AuditSecret() ([32]byte, error) {
 
 // refund the Atomic Swap after expiry and withdraw funds from the HTLC.
 func (atom *bitcoinAtom) Refund() error {
-	atom.LogInfo(atom.req.UID, "Refunding on bitcoin blockchain")
+	atom.LogInfo(atom.req.ID, "Refunding on bitcoin blockchain")
 	if spent := atom.ScriptSpent(atom.scriptAddr); spent {
 		return swap.ErrSwapAlreadyRedeemedOrRefunded
 	}
@@ -257,7 +254,7 @@ func (atom *bitcoinAtom) Refund() error {
 		return NewErrRefund(err)
 	}
 
-	receiveValue, err := strconv.ParseInt(atom.req.ReceiveValue, 10, 64)
+	receiveValue, err := strconv.ParseInt(hex.EncodeToString(atom.req.ReceiveValue[:]), 16, 64)
 	if err != nil {
 		return NewErrRefund(err)
 	}
@@ -290,7 +287,7 @@ func (atom *bitcoinAtom) Refund() error {
 		}
 	}
 
-	atom.LogInfo(atom.req.UID, fmt.Sprintf("publishing the refund transaction, can be viewed at https://www.blockchain.com/btc/tx/%s\n", refundTx.TxHash().String()))
+	atom.LogInfo(atom.req.ID, fmt.Sprintf("publishing the refund transaction, can be viewed at https://www.blockchain.com/btc/tx/%s\n", refundTx.TxHash().String()))
 	if err := atom.PublishTransaction(refundTx,
 		func() bool {
 			return atom.ScriptSpent(atom.scriptAddr)
@@ -299,6 +296,6 @@ func (atom *bitcoinAtom) Refund() error {
 		return err
 	}
 
-	atom.LogInfo(atom.req.UID, "Refunded on bitcoin blockchain")
+	atom.LogInfo(atom.req.ID, "Refunded on bitcoin blockchain")
 	return nil
 }
