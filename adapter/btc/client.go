@@ -227,3 +227,14 @@ func (conn *conn) GetScriptFromSpentP2SH(address string) ([]byte, error) {
 func (conn *conn) Net() *chaincfg.Params {
 	return conn.ChainParams
 }
+
+func (conn *conn) FormatTransactionView(msg, txhash string) string {
+	switch conn.ChainParams.Name {
+	case "mainnet":
+		return fmt.Sprintf("%s, https://www.blockchain.com/btc/tx/%s", msg, txhash)
+	case "testnet3":
+		return fmt.Sprintf("%s, transaction can be viewed at https://testnet.blockchain.info/tx/%s", msg, txhash)
+	default:
+		panic(fmt.Sprintf("Unsupported network: %s", conn.ChainParams.Name))
+	}
+}

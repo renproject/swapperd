@@ -21,8 +21,8 @@ type Logger interface {
 }
 
 type Result struct {
-	ID    foundation.SwapID
-	Retry bool
+	ID      foundation.SwapID
+	Success bool
 }
 
 func Swap(native, foreign SwapContractBinder, logger Logger, req foundation.Swap, done chan<- Result) {

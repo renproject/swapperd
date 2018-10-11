@@ -48,6 +48,8 @@ type Conn interface {
 
 	// ScriptSpent checks whether a script is spent.
 	ScriptSpent(address string) bool
+
+	FormatTransactionView(msg, txhash string) string
 }
 
 type bitcoinAtom struct {
@@ -132,7 +134,7 @@ func (atom *bitcoinAtom) Initiate() error {
 		return err
 	}
 
-	atom.LogInfo(atom.req.ID, "Initiated on bitcoin blockchain")
+	atom.LogInfo(atom.req.ID, atom.Conn.FormatTransactionView("Initiated the atomic swap on bitcoin blockchain", stx.TxHash().String()))
 	return nil
 }
 
@@ -197,8 +199,6 @@ func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 		}
 	}
 
-	atom.LogInfo(atom.req.ID, fmt.Sprintf("publishing the redeem transaction, can be viewed at https://www.blockchain.com/btc/tx/%s\n", redeemTx.TxHash().String()))
-
 	if err := atom.PublishTransaction(redeemTx,
 		func() bool {
 			return atom.ScriptSpent(atom.scriptAddr)
@@ -207,7 +207,7 @@ func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 		return err
 	}
 
-	atom.LogInfo(atom.req.ID, "Redeemed on bitcoin blockchain")
+	atom.LogInfo(atom.req.ID, atom.Conn.FormatTransactionView("Redeemed the atomic swap on Bitcoin blockchain", redeemTx.TxHash().String()))
 	return nil
 }
 
@@ -287,7 +287,6 @@ func (atom *bitcoinAtom) Refund() error {
 		}
 	}
 
-	atom.LogInfo(atom.req.ID, fmt.Sprintf("publishing the refund transaction, can be viewed at https://www.blockchain.com/btc/tx/%s\n", refundTx.TxHash().String()))
 	if err := atom.PublishTransaction(refundTx,
 		func() bool {
 			return atom.ScriptSpent(atom.scriptAddr)
@@ -296,6 +295,6 @@ func (atom *bitcoinAtom) Refund() error {
 		return err
 	}
 
-	atom.LogInfo(atom.req.ID, "Refunded on bitcoin blockchain")
+	atom.LogInfo(atom.req.ID, atom.Conn.FormatTransactionView("Refunded the atomic swap on Bitcoin blockchain", refundTx.TxHash().String()))
 	return nil
 }

@@ -93,7 +93,7 @@ func (b *Conn) Transfer(to common.Address, key keystore.EthereumKey, value *big.
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Transaction can be viewed at https://etherscan.io/tx/%s\n", tx.Hash().String())
+		fmt.Println(b.FormatTransactionView("Withdraw transaction successful", tx.Hash().String()))
 		return nil
 	}, func() bool {
 		nonceAfter, err := b.Client.PendingNonceAt(context.Background(), key.Address)
@@ -104,4 +104,17 @@ func (b *Conn) Transfer(to common.Address, key keystore.EthereumKey, value *big.
 	},
 	)
 	return nil
+}
+
+func (b *Conn) FormatTransactionView(msg, txHash string) string {
+	switch b.Network {
+	case "kovan":
+		return fmt.Sprintf("%s, the transaction can be viewed at https://kovan.etherscan.io/tx/%s", msg, txHash)
+	case "ropsten":
+		return fmt.Sprintf("%s, the transaction can be viewed at https://ropsten.etherscan.io/tx/%s", msg, txHash)
+	case "mainnet":
+		return fmt.Sprintf("%s, the transaction can be viewed at https://etherscan.io/tx/%s", msg, txHash)
+	default:
+		panic(fmt.Sprintf("Unknown network :%s", b.Network))
+	}
 }

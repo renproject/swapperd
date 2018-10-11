@@ -85,13 +85,15 @@ func (atom *erc20Atom) Initiate() error {
 		return fmt.Errorf("Invalid Send Value: %s", atom.req.SendValue)
 	}
 
-	atom.logger.LogDebug(atom.req.ID, "Approving transaction")
 	// Approve the contract to transfer tokens
 	if err := atom.key.SubmitTx(
 		func(tops *bind.TransactOpts) error {
 			tx, err := atom.tokenBinder.Approve(tops, atom.client.SwapperAddresses[atom.req.SendToken], sendValue)
-			atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Approve Transaction can be viewed at https://kovan.etherscan.io/tx/%s\n", tx.Hash().String()))
-			return err
+			if err != nil {
+				return err
+			}
+			atom.logger.LogInfo(atom.req.ID, atom.client.FormatTransactionView(fmt.Sprintf("Approved %f %s on ethereum blockchain", float64(sendValue.Int64())/100000000, atom.req.SendToken), tx.Hash().String()))
+			return nil
 		},
 		func() bool {
 			allowance, err := atom.tokenBinder.Allowance(&bind.CallOpts{}, atom.key.Address, atom.client.SwapperAddresses[atom.req.SendToken])
@@ -104,13 +106,15 @@ func (atom *erc20Atom) Initiate() error {
 		return err
 	}
 
-	atom.logger.LogDebug(atom.req.ID, "Initiating transaction")
 	// Initiate the swap
 	if err := atom.key.SubmitTx(
 		func(tops *bind.TransactOpts) error {
 			tx, err := atom.binder.Initiate(atom.key.TransactOpts, atom.id, common.HexToAddress(atom.req.SendToAddress), atom.req.SecretHash, big.NewInt(atom.req.TimeLock), sendValue)
-			atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Initiate Transaction can be viewed at https://kovan.etherscan.io/tx/%s\n", tx.Hash().String()))
-			return err
+			if err != nil {
+				return err
+			}
+			atom.logger.LogInfo(atom.req.ID, atom.client.FormatTransactionView("Initiated the atomic swap on Ethereum blockchain", tx.Hash().String()))
+			return nil
 		},
 		func() bool {
 			initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
@@ -122,8 +126,6 @@ func (atom *erc20Atom) Initiate() error {
 	); err != nil {
 		return err
 	}
-
-	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Initiated the atomic swap on ERC20 blockchain"))
 	return nil
 }
 
@@ -139,8 +141,12 @@ func (atom *erc20Atom) Refund() error {
 	}
 	if err := atom.key.SubmitTx(
 		func(tops *bind.TransactOpts) error {
-			_, err = atom.binder.Refund(atom.key.TransactOpts, atom.id)
-			return err
+			tx, err := atom.binder.Refund(atom.key.TransactOpts, atom.id)
+			if err != nil {
+				return err
+			}
+			atom.logger.LogInfo(atom.req.ID, atom.client.FormatTransactionView("Refunded the atomic swap on Ethereum blockchain", tx.Hash().String()))
+			return nil
 		},
 		func() bool {
 			refundable, _ := atom.binder.Refundable(&bind.CallOpts{}, atom.id)
@@ -149,7 +155,6 @@ func (atom *erc20Atom) Refund() error {
 	); err != nil {
 		return err
 	}
-	atom.logger.LogInfo(atom.req.ID, "Refunded the atomic swap on ERC20 blockchain")
 	return nil
 }
 
@@ -218,8 +223,12 @@ func (atom *erc20Atom) Redeem(secret [32]byte) error {
 
 	if err := atom.key.SubmitTx(
 		func(tops *bind.TransactOpts) error {
-			_, err = atom.binder.Redeem(atom.key.TransactOpts, atom.id, secret)
-			return err
+			tx, err := atom.binder.Redeem(atom.key.TransactOpts, atom.id, secret)
+			if err != nil {
+				return err
+			}
+			atom.logger.LogInfo(atom.req.ID, atom.client.FormatTransactionView("Redeemed the atomic swap on ERC20 blockchain", tx.Hash().String()))
+			return nil
 		},
 		func() bool {
 			refundable, _ := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
@@ -228,7 +237,6 @@ func (atom *erc20Atom) Redeem(secret [32]byte) error {
 	); err != nil {
 		return err
 	}
-	atom.logger.LogInfo(atom.req.ID, "Redeemed the atomic swap on ERC20 blockchain")
 	return nil
 }
 

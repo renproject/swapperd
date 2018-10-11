@@ -80,8 +80,6 @@ func buildRequests(ksA, ksB keystore.Keystore) (foundation.Swap, foundation.Swap
 		IsFirst:            true,
 	}
 
-	fmt.Println("Alice Request: ", aliceReq)
-
 	bobReq := foundation.Swap{
 		ID:                 bobSwapID,
 		TimeLock:           timelock,
@@ -95,7 +93,6 @@ func buildRequests(ksA, ksB keystore.Keystore) (foundation.Swap, foundation.Swap
 		ReceiveToken:       foundation.TokenWBTC,
 		IsFirst:            false,
 	}
-	fmt.Println("Bob Request: ", bobReq)
 
 	return aliceReq, bobReq
 }
@@ -137,7 +134,9 @@ func main() {
 			for i := 0; i < 2; i++ {
 				select {
 				case res := <-results:
-					fmt.Println(res)
+					if !res.Success {
+						fmt.Println("Atomic Swap Failed!!!")
+					}
 				}
 			}
 		},
