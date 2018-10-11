@@ -12,7 +12,6 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/republicprotocol/renex-swapper-go/service/swap"
 	"github.com/republicprotocol/swapperd/adapter/config"
 	"github.com/republicprotocol/swapperd/adapter/keystore"
 	"github.com/republicprotocol/swapperd/core"
@@ -160,7 +159,7 @@ func (atom *bitcoinAtom) Audit() error {
 func (atom *bitcoinAtom) Redeem(secret [32]byte) error {
 	atom.LogInfo(atom.req.ID, "Redeeming on bitcoin blockchain")
 	if spent := atom.ScriptSpent(atom.scriptAddr); spent {
-		return swap.ErrSwapAlreadyRedeemedOrRefunded
+		return nil
 	}
 
 	redeemTx, scriptPubKey, inputValues, err := atom.SpendBalance(atom.scriptAddr)
@@ -246,7 +245,7 @@ func (atom *bitcoinAtom) AuditSecret() ([32]byte, error) {
 func (atom *bitcoinAtom) Refund() error {
 	atom.LogInfo(atom.req.ID, "Refunding on bitcoin blockchain")
 	if spent := atom.ScriptSpent(atom.scriptAddr); spent {
-		return swap.ErrSwapAlreadyRedeemedOrRefunded
+		return nil
 	}
 
 	refundTx, scriptPubKey, inputValues, err := atom.SpendBalance(atom.scriptAddr)

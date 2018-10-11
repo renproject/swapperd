@@ -10,8 +10,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/republicprotocol/renex-swapper-go/service/guardian"
-	"github.com/republicprotocol/renex-swapper-go/service/swap"
 	"github.com/republicprotocol/swapperd/adapter/config"
 	"github.com/republicprotocol/swapperd/adapter/keystore"
 	"github.com/republicprotocol/swapperd/core"
@@ -131,13 +129,13 @@ func (atom *erc20Atom) Initiate() error {
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *erc20Atom) Refund() error {
-	atom.logger.LogInfo(atom.req.ID, "Refunding the atomic swap on ERC20 blockchain")
+	atom.logger.LogInfo(atom.req.ID, "Refunding the atomic swap on Ethereum blockchain")
 	refundable, err := atom.binder.Refundable(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return err
 	}
 	if !refundable {
-		return guardian.ErrNotRefundable
+		return nil
 	}
 	if err := atom.key.SubmitTx(
 		func(tops *bind.TransactOpts) error {
@@ -170,7 +168,7 @@ func (atom *erc20Atom) AuditSecret() ([32]byte, error) {
 			break
 		}
 		if time.Now().Unix() > atom.req.TimeLock {
-			return [32]byte{}, swap.ErrTimedOut
+			return [32]byte{}, fmt.Errorf("Timed Out")
 		}
 		time.Sleep(15 * time.Second)
 	}
@@ -206,19 +204,19 @@ func (atom *erc20Atom) Audit() error {
 	if auditReport.Value.Cmp(recvValue) != 0 {
 		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.req.ReceiveValue, auditReport.Value)
 	}
-	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Audit successful on ERC20 blockchain"))
+	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Audit successful on Ethereum blockchain"))
 	return nil
 }
 
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *erc20Atom) Redeem(secret [32]byte) error {
-	atom.logger.LogInfo(atom.req.ID, "Redeeming the atomic swap on ERC20 blockchain")
+	atom.logger.LogInfo(atom.req.ID, "Redeeming the atomic swap on Ethereum blockchain")
 	redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return err
 	}
 	if !redeemable {
-		return swap.ErrSwapAlreadyRedeemedOrRefunded
+		return nil
 	}
 
 	if err := atom.key.SubmitTx(
@@ -227,7 +225,7 @@ func (atom *erc20Atom) Redeem(secret [32]byte) error {
 			if err != nil {
 				return err
 			}
-			atom.logger.LogInfo(atom.req.ID, atom.client.FormatTransactionView("Redeemed the atomic swap on ERC20 blockchain", tx.Hash().String()))
+			atom.logger.LogInfo(atom.req.ID, atom.client.FormatTransactionView("Redeemed the atomic swap on Ethereum blockchain", tx.Hash().String()))
 			return nil
 		},
 		func() bool {

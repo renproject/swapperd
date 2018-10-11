@@ -64,7 +64,11 @@ func buildRequests(ksA, ksB keystore.Keystore) (foundation.Swap, foundation.Swap
 	aliceSecretHash := sha256.Sum256(aliceSecret[:])
 	timelock := time.Now().Unix() + 48*60*60
 
+	// 20000
 	value := [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 78, 32}
+
+	// 0.5 BTC
+	// value := [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 250, 240, 128}
 
 	aliceReq := foundation.Swap{
 		ID:                 aliceSwapID,
