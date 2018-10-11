@@ -5,7 +5,7 @@
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "ff33da284e760fcdb03c33d37a719e5ed30ba844"
+  revision = "33151c4543a79b013e8e6799ef45b2ba88c3cd1c"
 
 [[projects]]
   branch = "master"
@@ -53,8 +53,17 @@
     "common/hexutil",
     "common/math",
     "common/mclock",
+    "consensus",
+    "consensus/misc",
+    "core",
+    "core/rawdb",
+    "core/state",
     "core/types",
+    "core/vm",
     "crypto",
+    "crypto/bn256",
+    "crypto/bn256/cloudflare",
+    "crypto/bn256/google",
     "crypto/randentropy",
     "crypto/secp256k1",
     "crypto/sha3",
@@ -115,6 +124,15 @@
   revision = "d9f6b97f8db22dd1e090fd0bbbe98f09cc7dd0a8"
 
 [[projects]]
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru"
+  ]
+  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
+  version = "v0.5.0"
+
+[[projects]]
   name = "github.com/hpcloud/tail"
   packages = [
     ".",
@@ -163,13 +181,13 @@
   branch = "master"
   name = "github.com/minio/sha256-simd"
   packages = ["."]
-  revision = "ad98a36ba0da87206e3378c556abbfeaeaa98668"
+  revision = "51976451ce1942acbb55707a983ed232fa027110"
 
 [[projects]]
-  branch = "master"
   name = "github.com/mr-tron/base58"
   packages = ["base58"]
-  revision = "9ad991d48a423a0e52c77eac173b1b589665492a"
+  revision = "d724c80ecac7b49e4e562d58b2b4f4ee4ed8c312"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -241,21 +259,48 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/republicprotocol/beth-go"
+  packages = ["."]
+  revision = "ffc1f8f7e399c87534bd3d9655cfbb6863f41eb0"
+
+[[projects]]
+  branch = "master"
   name = "github.com/republicprotocol/co-go"
   packages = ["."]
   revision = "4e299fdb0e808f64667498735da03fdc2e0e84c9"
 
 [[projects]]
-  branch = "nightly"
+  branch = "master"
+  name = "github.com/republicprotocol/eth-go"
+  packages = ["utils"]
+  revision = "ffc1f8f7e399c87534bd3d9655cfbb6863f41eb0"
+
+[[projects]]
+  branch = "master"
   name = "github.com/republicprotocol/renex-ingress-go"
   packages = [
     "httpadapter",
     "ingress"
   ]
-  revision = "510e28c63ffe78a3cd2386971c447d4d776a49b2"
+  revision = "42422c0941914ae4eb3f0385f1128d3482ea3f1d"
 
 [[projects]]
   branch = "develop"
+  name = "github.com/republicprotocol/renex-swapper-go"
+  packages = [
+    "domain/match",
+    "domain/order",
+    "domain/swap",
+    "domain/token",
+    "service/logger",
+    "service/state",
+    "service/swap",
+    "utils"
+  ]
+  revision = "4599b48ba138ce5e14e20a91f9b6b03ed0e96414"
+
+[[projects]]
+  branch = "master"
   name = "github.com/republicprotocol/republic-go"
   packages = [
     "crypto",
@@ -270,7 +315,7 @@
     "stackint/asm",
     "swarm"
   ]
-  revision = "5bc7ef2c3505b2eeb66fadf384d17f80992360db"
+  revision = "4f87803a486f864970f35550954260d540d3cc6a"
 
 [[projects]]
   name = "github.com/rjeczalik/notify"
@@ -281,8 +326,8 @@
 [[projects]]
   name = "github.com/rs/cors"
   packages = ["."]
-  revision = "3fb1b69b103a84de38a19c3c6ec073dd6caa4d3f"
-  version = "v1.5.0"
+  revision = "9a47f48565a795472d43519dd49aac781f3034fb"
+  version = "v1.6.0"
 
 [[projects]]
   name = "github.com/spaolacci/murmur3"
@@ -325,7 +370,7 @@
     "scrypt",
     "sha3"
   ]
-  revision = "e3636079e1a4c1f337f212cc5cd2aca108f6c900"
+  revision = "7c1a557ab941a71c619514f229f0b27ccb0c27cf"
 
 [[projects]]
   branch = "master"
@@ -337,7 +382,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "4dfa2610cdf3b287375bbba5b8f2a14d3b01d8de"
+  revision = "146acd28ed5894421fb5aac80ca93bc1b1f46f87"
 
 [[projects]]
   branch = "master"
@@ -352,7 +397,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "e4b3c5e9061176387e7cea65e4dc5853801f3fb7"
+  revision = "4497e2df6f9e69048a54498c7affbbec3294ad47"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -392,7 +437,7 @@
     "imports",
     "internal/fastwalk"
   ]
-  revision = "b71db7f417f13fa74a2565bc57b2387fdbf2c611"
+  revision = "c75e7e6983e78066d98496e6a979a9d3f14f3023"
 
 [[projects]]
   name = "gopkg.in/fatih/set.v0"
@@ -434,6 +479,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6d59dfb65f2459676f52f347eb061bf4702d50ea3a69ee79099053902bfe5a31"
+  inputs-digest = "78538aff463515c352b7bc6eeba2872b63a088418b52ba31788a78979317566f"
   solver-name = "gps-cdcl"
   solver-version = 1

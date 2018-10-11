@@ -12,30 +12,26 @@ import (
 
 	"github.com/republicprotocol/swapperd/adapter/config"
 	"github.com/republicprotocol/swapperd/adapter/keystore"
-	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type Conn struct {
 	Network          string
 	Client           *ethclient.Client
-	SwapperAddresses map[foundation.Token]common.Address
+	SwapperAddresses map[string]string
 }
 
 // NewConnWithConfig creates a new ethereum connection with the given config
 // file.
 func NewConnWithConfig(config config.EthereumNetwork) (Conn, error) {
-	return NewConn(config.URL, config.Network, config.Swapper)
+	return NewConn(config.URL, config.Network, config.Swappers)
 }
 
 // NewConn creates a new ethereum connection with the given config parameters.
-func NewConn(url, network, wbtcSwapperAddress string) (Conn, error) {
+func NewConn(url, network, swapperAddresses map[string]string) (Conn, error) {
 	ethclient, err := ethclient.Dial(url)
 	if err != nil {
 		return Conn{}, err
 	}
-	swapperAddresses := map[foundation.Token]common.Address{}
-	swapperAddresses[foundation.TokenWBTC] = common.HexToAddress(wbtcSwapperAddress)
-
 	return Conn{
 		Client:           ethclient,
 		Network:          network,
