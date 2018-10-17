@@ -28,3 +28,7 @@ func (storage *storage) DeleteSwap(orderID foundation.SwapID) error {
 func (storage *storage) LoadSwaps() []foundation.Swap {
 	return []foundation.Swap{}
 }
+
+func (storage *storage) GetSwaps() []foundation.Swap {
+	return []foundation.Swap{}
+}

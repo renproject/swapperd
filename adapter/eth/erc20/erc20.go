@@ -9,16 +9,14 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/republicprotocol/renex-swapper-go/service/swap"
 	"github.com/republicprotocol/swapperd/core"
 	"github.com/republicprotocol/swapperd/foundation"
 )
-
-// 0xA1D3EEcb76285B4435550E4D963B8042A8bffbF0
 
 type erc20Atom struct {
 	id          [32]byte
@@ -36,7 +34,7 @@ type Client interface {
 	Transact(
 		ctx context.Context,
 		preConditionCheck func() bool,
-		f func(bind.TransactOpts) (*types.Transaction, error),
+		f func(*bind.TransactOpts) (*types.Transaction, error),
 		postConditionCheck func() bool,
 		waitForBlocks int64,
 	) error
@@ -91,28 +89,16 @@ func (atom *erc20Atom) Initiate() error {
 	// Approve the contract to transfer tokens
 	if err := atom.client.Transact(
 		context.Background(),
-		func() bool {
-			allowance, err := atom.tokenBinder.Allowance(&bind.CallOpts{}, atom.client.Address(), atom.client.GetSwapperAddress(atom.req.SendToken))
-			if err != nil {
-				atom.logger.LogError(atom.req.ID, fmt.Sprintf("Error: %v", err))
-			}
-			return sendValue.Cmp(allowance) != 0
-		},
-		func(tops bind.TransactOpts) (*types.Transaction, error) {
-			tx, err := atom.tokenBinder.Approve(&tops, atom.client.GetSwapperAddress(atom.req.SendToken), sendValue)
+		nil,
+		func(tops *bind.TransactOpts) (*types.Transaction, error) {
+			tx, err := atom.tokenBinder.Approve(tops, atom.client.GetSwapperAddress(atom.req.SendToken), sendValue)
 			if err != nil {
 				return tx, err
 			}
 			atom.logger.LogInfo(atom.req.ID, atom.client.FormatTransactionView(fmt.Sprintf("Approved %f %s on ethereum blockchain", float64(sendValue.Int64())/100000000, atom.req.SendToken), tx.Hash().String()))
 			return tx, nil
 		},
-		func() bool {
-			allowance, err := atom.tokenBinder.Allowance(&bind.CallOpts{}, atom.client.Address(), atom.client.GetSwapperAddress(atom.req.SendToken))
-			if err != nil {
-				atom.logger.LogError(atom.req.ID, fmt.Sprintf("Error: %v", err))
-			}
-			return sendValue.Cmp(allowance) == 0
-		},
+		nil,
 		1,
 	); err != nil {
 		return err
@@ -128,8 +114,8 @@ func (atom *erc20Atom) Initiate() error {
 			}
 			return initiatable
 		},
-		func(tops bind.TransactOpts) (*types.Transaction, error) {
-			tx, err := atom.binder.Initiate(&tops, atom.id, common.HexToAddress(atom.req.SendToAddress), atom.req.SecretHash, big.NewInt(atom.req.TimeLock), sendValue)
+		func(tops *bind.TransactOpts) (*types.Transaction, error) {
+			tx, err := atom.binder.Initiate(tops, atom.id, common.HexToAddress(atom.req.SendToAddress), atom.req.SecretHash, big.NewInt(atom.req.TimeLock), sendValue)
 			if err != nil {
 				return tx, err
 			}
@@ -159,8 +145,8 @@ func (atom *erc20Atom) Refund() error {
 			}
 			return refundable
 		},
-		func(tops bind.TransactOpts) (*types.Transaction, error) {
-			tx, err := atom.binder.Refund(&tops, atom.id)
+		func(tops *bind.TransactOpts) (*types.Transaction, error) {
+			tx, err := atom.binder.Refund(tops, atom.id)
 			if err != nil {
 				return nil, err
 			}
@@ -184,13 +170,14 @@ func (atom *erc20Atom) AuditSecret() ([32]byte, error) {
 		atom.logger.LogInfo(atom.req.ID, "Auditing secret on ethereum blockchain")
 		redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
 		if err != nil {
+			atom.logger.LogError(atom.req.ID, err)
 			return [32]byte{}, err
 		}
 		if !redeemable {
 			break
 		}
 		if time.Now().Unix() > atom.req.TimeLock {
-			return [32]byte{}, swap.ErrTimedOut
+			return [32]byte{}, fmt.Errorf("Timed Out")
 		}
 		time.Sleep(15 * time.Second)
 	}
@@ -226,7 +213,7 @@ func (atom *erc20Atom) Audit() error {
 	if auditReport.Value.Cmp(recvValue) != 0 {
 		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.req.ReceiveValue, auditReport.Value)
 	}
-	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Audit successful on ERC20 blockchain"))
+	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Audit successful on Ethereum blockchain"))
 	return nil
 }
 
@@ -242,8 +229,8 @@ func (atom *erc20Atom) Redeem(secret [32]byte) error {
 			}
 			return redeemable
 		},
-		func(tops bind.TransactOpts) (*types.Transaction, error) {
-			tx, err := atom.binder.Redeem(&tops, atom.id, secret)
+		func(tops *bind.TransactOpts) (*types.Transaction, error) {
+			tx, err := atom.binder.Redeem(tops, atom.id, secret)
 			if err != nil {
 				return nil, err
 			}

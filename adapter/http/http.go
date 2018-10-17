@@ -16,9 +16,9 @@ var ErrInvalidSignatureLength = errors.New("invalid signature length")
 var ErrInvalidOrderIDLength = errors.New("invalid order id length")
 
 type Adapter interface {
-	WhoAmI(challenge string) (WhoAmISigned, error)
-	PostOrder(order PostOrderRequest) (PostOrderResponse, error)
-	GetStatus(orderID string) (Status, error)
+	GetSwaps() (Swaps, error)
+	PostSwaps(Swaps) error
+	Ping() (Status, error)
 	GetBalances() (Balances, error)
 }
 

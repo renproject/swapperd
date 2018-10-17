@@ -45,13 +45,13 @@ type PostOrderRequest struct {
 }
 
 type Balance struct {
+	Name    string `json:"name"`
 	Address string `json:"address"`
 	Amount  string `json:"amount"`
 }
 
 type Balances struct {
-	Ethereum Balance `json:"ethereum"`
-	Bitcoin  Balance `json:"bitcoin"`
+	Balances []Balance `json:"balances"`
 }
 
 func MarshalSignature(signatureIn []byte) string {

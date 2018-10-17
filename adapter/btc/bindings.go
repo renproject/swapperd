@@ -1,13 +1,12 @@
 package btc
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/republicprotocol/swapperd/adapter/keystore"
 	"github.com/republicprotocol/swapperd/foundation"
 	"golang.org/x/crypto/ripemd160"
 )
@@ -23,6 +22,9 @@ const AtomicSwapRedeemScriptSize = 1 + 73 + 1 + 33 + 1 + 32 + 1
 // newInitiateScript creates a Bitcoin Atomic Swap initiate script.
 //
 //			OP_IF
+//				OP_SIZE
+// 				32
+//				OP_EQUALVERIFY
 //				OP_SHA256
 //				<secret_hash>
 //				OP_EQUALVERIFY
@@ -45,7 +47,7 @@ func newInitiateScript(pkhMe, pkhThem *[ripemd160.Size]byte, locktime int64, sec
 
 	b.AddOp(txscript.OP_IF)
 	{
-		b.AddOp(txscript.OP_SIZE) // TODO: Update comments
+		b.AddOp(txscript.OP_SIZE)
 		b.AddData([]byte{32})
 		b.AddOp(txscript.OP_EQUALVERIFY)
 		b.AddOp(txscript.OP_SHA256)
@@ -76,7 +78,7 @@ func newInitiateScript(pkhMe, pkhThem *[ripemd160.Size]byte, locktime int64, sec
 //			<Signature>
 //			<PublicKey>
 //			<Secret>
-//			<True>(Int 1)
+//			1 (True)
 //			<InitiateScript>
 //
 func newRedeemScript(initiateScript, sig, pubkey []byte, secret [32]byte) ([]byte, error) {
@@ -93,7 +95,7 @@ func newRedeemScript(initiateScript, sig, pubkey []byte, secret [32]byte) ([]byt
 //
 //			<Signature>
 //			<PublicKey>
-//			<False>(Int 0)
+//			0 (False)
 //			<InitiateScript>
 //
 func newRefundScript(initiateScript, sig, pubkey []byte) ([]byte, error) {
@@ -105,15 +107,6 @@ func newRefundScript(initiateScript, sig, pubkey []byte) ([]byte, error) {
 	return b.Script()
 }
 
-// helper functions
-func sign(tx *wire.MsgTx, idx int, pkScript []byte, key keystore.BitcoinKey) (sig, pubkey []byte, err error) {
-	sig, err = txscript.RawTxInSignature(tx, idx, pkScript, txscript.SigHashAll, key.PrivateKey)
-	if err != nil {
-		return nil, nil, err
-	}
-	return sig, key.PublicKey, nil
-}
-
 func addressToPubKeyHash(addr string, chainParams *chaincfg.Params) (*btcutil.AddressPubKeyHash, error) {
 	btcAddr, err := btcutil.DecodeAddress(addr, chainParams)
 	if err != nil {
@@ -122,7 +115,7 @@ func addressToPubKeyHash(addr string, chainParams *chaincfg.Params) (*btcutil.Ad
 	}
 	Addr, ok := btcAddr.(*btcutil.AddressPubKeyHash)
 	if !ok {
-		return nil, fmt.Errorf("address %s is not Pay to Public Key Hash")
+		return nil, errors.New("address %s is not Pay to Public Key Hash")
 	}
 	return Addr, nil
 }
@@ -173,17 +166,4 @@ func buildInitiateScript(personalAddress string, req foundation.Swap, Net *chain
 	}
 
 	return initiateScript, initiateScriptP2SH.EncodeAddress(), nil
-}
-
-func verifyTransaction(scriptPubKey []byte, tx *wire.MsgTx, idx int, receiveValue int64) error {
-	e, err := txscript.NewEngine(scriptPubKey, tx, idx,
-		txscript.StandardVerifyFlags, txscript.NewSigCache(10),
-		txscript.NewTxSigHashes(tx), receiveValue)
-	if err != nil {
-		return err
-	}
-	if err := e.Execute(); err != nil {
-		return NewErrScriptExec(err)
-	}
-	return nil
 }

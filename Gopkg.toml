@@ -26,7 +26,7 @@
 
 [[constraint]]
   name = "github.com/ethereum/go-ethereum"
-  version = "=1.8.12"
+  version = "1.8.12"
 
 [[override]]
   name = "gopkg.in/fsnotify.v1"
@@ -35,10 +35,6 @@
 [[override]]
   name = "gopkg.in/fatih/set.v0"
   version = "=0.1.0"
-
-[[constraint]]
-  name = "github.com/republicprotocol/renex-ingress-go"
-  branch = "nightly"
 
 [prune]
   go-tests = true

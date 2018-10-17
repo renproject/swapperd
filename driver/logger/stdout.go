@@ -27,9 +27,9 @@ func (logger *stdOut) LogDebug(swapID foundation.SwapID, msg string) {
 	fmt.Println(fmt.Sprintf("[DEB] (%s%s%s) %s", clr, base64.StdEncoding.EncodeToString(swapID[:]), white, msg))
 }
 
-func (logger *stdOut) LogError(swapID foundation.SwapID, msg string) {
+func (logger *stdOut) LogError(swapID foundation.SwapID, err error) {
 	clr := pickColor(swapID)
-	fmt.Println(fmt.Sprintf("[ERR] (%s%s%s) %s", clr, base64.StdEncoding.EncodeToString(swapID[:]), white, msg))
+	fmt.Println(fmt.Sprintf("[ERR] (%s%s%s) %s", clr, base64.StdEncoding.EncodeToString(swapID[:]), white, err))
 }
 
 func pickColor(orderID [32]byte) string {

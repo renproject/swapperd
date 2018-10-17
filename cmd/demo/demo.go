@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/republicprotocol/libbtc-go"
+
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/adapter/btc"
 	configAdapter "github.com/republicprotocol/swapperd/adapter/config"
-	"github.com/republicprotocol/swapperd/adapter/erc20"
+	"github.com/republicprotocol/swapperd/adapter/eth/client"
+	"github.com/republicprotocol/swapperd/adapter/eth/erc20"
 	"github.com/republicprotocol/swapperd/adapter/keystore"
 	"github.com/republicprotocol/swapperd/core"
 	"github.com/republicprotocol/swapperd/driver/config"
@@ -64,7 +67,11 @@ func buildRequests(ksA, ksB keystore.Keystore) (foundation.Swap, foundation.Swap
 	aliceSecretHash := sha256.Sum256(aliceSecret[:])
 	timelock := time.Now().Unix() + 48*60*60
 
+	// 20000
 	value := [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 78, 32}
+
+	// 0.5 BTC
+	// value := [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 250, 240, 128}
 
 	aliceReq := foundation.Swap{
 		ID:                 aliceSwapID,
@@ -98,12 +105,27 @@ func buildRequests(ksA, ksB keystore.Keystore) (foundation.Swap, foundation.Swap
 }
 
 func buildBinders(config configAdapter.Config, ks keystore.Keystore, logger core.Logger, req foundation.Swap) (core.SwapContractBinder, core.SwapContractBinder) {
-	wbtcBinder, err := erc20.NewERC20Atom(config.Ethereum, ks.GetKey(foundation.TokenWBTC).(keystore.EthereumKey), logger, req)
+	ethereumClient, err := client.New(client.NetworkConfig{
+		URL:     config.Ethereum.URL,
+		Network: config.Ethereum.Network,
+		Tokens: []client.EthereumToken{
+			client.EthereumToken{
+				Name:           "WBTC",
+				TokenAddress:   "0xA1D3EEcb76285B4435550E4D963B8042A8bffbF0",
+				SwapperAddress: "0x2218Fa20c33765e7e01671eE6AacA75FbAf3A974",
+			},
+		},
+	}, ks.GetKey(foundation.TokenWBTC).(keystore.EthereumKey).PrivateKey)
+	if err != nil {
+		panic(err)
+	}
+	wbtcBinder, err := erc20.NewERC20Atom(ethereumClient, logger, req)
 	if err != nil {
 		panic(err)
 	}
 
-	btcBinder, err := btc.NewBitcoinAtom(config.Bitcoin, ks.GetKey(foundation.TokenBTC).(keystore.BitcoinKey), logger, req)
+	btcAccount := libbtc.NewAccount(libbtc.NewBlockchainInfoClient("testnet"), ks.GetKey(foundation.TokenBTC).(keystore.BitcoinKey).PrivateKey.ToECDSA())
+	btcBinder, err := btc.NewBitcoinAtom(btcAccount, logger, req)
 	if err != nil {
 		panic(err)
 	}
@@ -136,7 +158,9 @@ func main() {
 				case res := <-results:
 					if !res.Success {
 						fmt.Println("Atomic Swap Failed!!!")
+						continue
 					}
+					logger.LogDebug(res.ID, "Atomic Swap Successful")
 				}
 			}
 		},
