@@ -12,7 +12,7 @@ import (
 
 // NewHandler creates a new http handler
 func NewHandler(swapCh chan<- foundation.Swap) http.Handler {
-	server := newServer(swapCh)
+	server := NewServer(swapCh)
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", server.postSwapsHandler()).Methods("POST")
 	r.HandleFunc("/swaps", server.getSwapsHandler()).Methods("GET")
@@ -59,7 +59,7 @@ func (server *server) getPingHandler() http.HandlerFunc {
 // the existing swaps on the swapper.
 func (server *server) getSwapsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		swapsJSON, err := server.getSwaps()
+		swapsJSON, err := server.GetSwaps()
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get the statuses of existing swaps: %v", err))
 			return
@@ -84,7 +84,7 @@ func (server *server) postSwapsHandler() http.HandlerFunc {
 			return
 		}
 
-		completedSwap, err := server.postSwaps(postSwap)
+		completedSwap, err := server.PostSwaps(postSwap)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot execute the swap: %v", err))
 			return
@@ -105,7 +105,7 @@ func (server *server) postSwapsHandler() http.HandlerFunc {
 // of the accounts held by the swapper.
 func (server *server) getBalancesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		balancesJSON, err := server.getBalances()
+		balancesJSON, err := server.GetBalances()
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get balances: %v", err))
 			return

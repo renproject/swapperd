@@ -11,7 +11,7 @@ type server struct {
 	swapCh chan<- foundation.Swap
 }
 
-func newServer(swapCh chan<- foundation.Swap) *server {
+func NewServer(swapCh chan<- foundation.Swap) *server {
 	return &server{
 		swapCh: swapCh,
 	}
@@ -28,12 +28,12 @@ func (server *server) GetPing() GetPingResponse {
 	}
 }
 
-func (server *server) getSwaps() (GetSwapResponse, error) {
+func (server *server) GetSwaps() (GetSwapResponse, error) {
 	// TODO: Implement the logic
 	return GetSwapResponse{}, nil
 }
 
-func (server *server) postSwaps(swapReq PostSwapMessage) (PostSwapMessage, error) {
+func (server *server) PostSwaps(swapReq PostSwapMessage) (PostSwapMessage, error) {
 	swap, err := decodePostSwap(swapReq)
 	if err != nil {
 		return PostSwapMessage{}, err
@@ -43,7 +43,7 @@ func (server *server) postSwaps(swapReq PostSwapMessage) (PostSwapMessage, error
 	return swapReq, nil
 }
 
-func (server *server) getBalances() (GetBalanceResponse, error) {
+func (server *server) GetBalances() (GetBalanceResponse, error) {
 	// TODO: Implement the logic
 	return GetBalanceResponse{}, nil
 }
