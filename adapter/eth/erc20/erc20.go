@@ -17,7 +17,7 @@ import (
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-type erc20Atom struct {
+type erc20SwapContractBinder struct {
 	id             [32]byte
 	account        beth.Account
 	req            foundation.Swap
@@ -28,8 +28,8 @@ type erc20Atom struct {
 	tokenBinder    *CompatibleERC20
 }
 
-// NewERC20Atom returns a new ERC20 Atom instance
-func NewERC20Atom(account beth.Account, logger core.Logger, req foundation.Swap) (core.SwapContractBinder, error) {
+// NewERC20SwapContractBinder returns a new ERC20 Atom instance
+func NewERC20SwapContractBinder(account beth.Account, req foundation.Swap, logger core.Logger) (core.SwapContractBinder, error) {
 	token, expiry, err := getSwapDetails(req)
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func NewERC20Atom(account beth.Account, logger core.Logger, req foundation.Swap)
 	logger.LogInfo(req.ID, fmt.Sprintf("ERC20 Atomic Swap ID: %s", base64.StdEncoding.EncodeToString(id[:])))
 	req.TimeLock = expiry
 
-	return &erc20Atom{
+	return &erc20SwapContractBinder{
 		account:        account,
 		swapperAddress: swapperAddress,
 		tokenAddress:   tokenAddress,
@@ -78,7 +78,7 @@ func NewERC20Atom(account beth.Account, logger core.Logger, req foundation.Swap)
 }
 
 // Initiate a new Atom swap by calling a function on ethereum
-func (atom *erc20Atom) Initiate() error {
+func (atom *erc20SwapContractBinder) Initiate() error {
 	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Initiating on Ethereum blockchain for ERC20 (%s)", atom.req.SendToken))
 
 	// Approve the contract to transfer tokens
@@ -129,7 +129,7 @@ func (atom *erc20Atom) Initiate() error {
 }
 
 // Refund an Atom swap by calling a function on ethereum
-func (atom *erc20Atom) Refund() error {
+func (atom *erc20SwapContractBinder) Refund() error {
 	atom.logger.LogInfo(atom.req.ID, "Refunding the atomic swap on ERC20 blockchain")
 	return atom.account.Transact(
 		context.Background(),
@@ -161,7 +161,7 @@ func (atom *erc20Atom) Refund() error {
 }
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
-func (atom *erc20Atom) AuditSecret() ([32]byte, error) {
+func (atom *erc20SwapContractBinder) AuditSecret() ([32]byte, error) {
 	for {
 		atom.logger.LogInfo(atom.req.ID, "Auditing secret on ethereum blockchain")
 		redeemable, err := atom.swapperBinder.Redeemable(&bind.CallOpts{}, atom.id)
@@ -186,7 +186,7 @@ func (atom *erc20Atom) AuditSecret() ([32]byte, error) {
 }
 
 // Audit an Atom swap by calling a function on ethereum
-func (atom *erc20Atom) Audit() error {
+func (atom *erc20SwapContractBinder) Audit() error {
 	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Waiting for initiation on ethereum blockchain"))
 	for {
 		initiatable, err := atom.swapperBinder.Initiatable(&bind.CallOpts{}, atom.id)
@@ -210,7 +210,7 @@ func (atom *erc20Atom) Audit() error {
 }
 
 // Redeem an Atom swap by calling a function on ethereum
-func (atom *erc20Atom) Redeem(secret [32]byte) error {
+func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 	atom.logger.LogInfo(atom.req.ID, "Redeeming the atomic swap on Ethereum blockchain")
 	return atom.account.Transact(
 		context.Background(),
