@@ -107,46 +107,46 @@ func newRefundScript(initiateScript, sig, pubkey []byte) ([]byte, error) {
 	return b.Script()
 }
 
-func addressToPubKeyHash(addr string, chainParams *chaincfg.Params) (*btcutil.AddressPubKeyHash, error) {
-	btcAddr, err := btcutil.DecodeAddress(addr, chainParams)
+func addressToPubKeyHash(addrString string, chainParams *chaincfg.Params) (*btcutil.AddressPubKeyHash, error) {
+	btcAddr, err := btcutil.DecodeAddress(addrString, chainParams)
 	if err != nil {
 		return nil, fmt.Errorf("address %s is not "+
-			"intended for use on %v", addr, chainParams.Name)
+			"intended for use on %v", addrString, chainParams.Name)
 	}
-	Addr, ok := btcAddr.(*btcutil.AddressPubKeyHash)
+	addr, ok := btcAddr.(*btcutil.AddressPubKeyHash)
 	if !ok {
-		return nil, errors.New("address %s is not Pay to Public Key Hash")
+		return nil, errors.New("%s is not p2pkh address")
 	}
-	return Addr, nil
+	return addr, nil
 }
 
-func buildInitiateScript(personalAddress string, req foundation.Swap, Net *chaincfg.Params) ([]byte, string, error) {
-	var PayerAddress, SpenderAddress string
+func buildInitiateScript(personalAddress string, personalReq foundation.Swap, Net *chaincfg.Params) ([]byte, string, error) {
+	var fundingAddress, redeemingAddress string
 	var locktime int64
 
-	if (req.IsFirst && req.SendToken == foundation.TokenBTC) || (!req.IsFirst && req.ReceiveToken == foundation.TokenBTC) {
-		locktime = req.TimeLock
+	if (personalReq.IsFirst && personalReq.SendToken == foundation.TokenBTC) || (!personalReq.IsFirst && personalReq.ReceiveToken == foundation.TokenBTC) {
+		locktime = personalReq.TimeLock
 	} else {
-		locktime = req.TimeLock - 24*60*60
+		locktime = personalReq.TimeLock - 24*60*60
 	}
 
-	if req.SendToken == foundation.TokenBTC {
-		PayerAddress = personalAddress
-		SpenderAddress = req.SendToAddress
+	if personalReq.SendToken == foundation.TokenBTC {
+		fundingAddress = personalAddress
+		redeemingAddress = personalReq.SendToAddress
 	} else {
-		PayerAddress = req.ReceiveFromAddress
-		SpenderAddress = personalAddress
+		fundingAddress = personalReq.ReceiveFromAddress
+		redeemingAddress = personalAddress
 	}
 
 	// decoding bitcoin addresses
-	PayerAddr, err := addressToPubKeyHash(PayerAddress, Net)
+	PayerAddr, err := addressToPubKeyHash(fundingAddress, Net)
 	if err != nil {
-		return nil, "", NewErrDecodeAddress(PayerAddress, err)
+		return nil, "", NewErrDecodeAddress(fundingAddress, err)
 	}
 
-	SpenderAddr, err := addressToPubKeyHash(SpenderAddress, Net)
+	SpenderAddr, err := addressToPubKeyHash(redeemingAddress, Net)
 	if err != nil {
-		return nil, "", NewErrDecodeAddress(SpenderAddress, err)
+		return nil, "", NewErrDecodeAddress(redeemingAddress, err)
 	}
 
 	// creating atomic swap initiate script, addressScriptHash and script to
@@ -155,7 +155,7 @@ func buildInitiateScript(personalAddress string, req foundation.Swap, Net *chain
 		PayerAddr.Hash160(),
 		SpenderAddr.Hash160(),
 		locktime,
-		req.SecretHash[:],
+		personalReq.SecretHash[:],
 	)
 	if err != nil {
 		return nil, "", NewErrBuildScript(err)
