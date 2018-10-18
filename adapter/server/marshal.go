@@ -1,13 +1,19 @@
 package server
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"math/big"
 	"strings"
 
 	"github.com/republicprotocol/swapperd/foundation"
 )
+
+var ErrInvalidAmount = errors.New("invalid amount")
+var ErrInvalidLength = errors.New("invalid length")
 
 // GetPingResponse data object contains the Swapper's internal information.
 type GetPingResponse struct {
@@ -15,7 +21,7 @@ type GetPingResponse struct {
 	SupportedTokens []foundation.Token `json:"supportedTokens"`
 }
 
-type PostSwapMessage struct {
+type PostSwapRequestResponse struct {
 	ID                  string `json:"id"`
 	SendToken           string `json:"sendToken"`
 	ReceiveToken        string `json:"receiveToken"`
@@ -28,12 +34,10 @@ type PostSwapMessage struct {
 	ShouldInitiateFirst bool   `json:"shouldInitiateFirst"`
 }
 
-// GetSwapResponse
 type GetSwapResponse struct {
 	Swaps []SwapStatus `json:"swaps"`
 }
 
-// SwapStatus
 type SwapStatus struct {
 }
 
@@ -56,12 +60,12 @@ func UnmarshalSwapID(swapID string) (foundation.SwapID, error) {
 	if err != nil {
 		return foundation.SwapID([32]byte{}), err
 	}
-	id, err := ToBytes32(swapIDBytes)
+	id, err := toBytes32(swapIDBytes)
 	return foundation.SwapID(id), err
 }
 
 func MarshalToken(token foundation.Token) string {
-	return token.Name
+	return token.String()
 }
 
 func UnmarshalToken(token string) (foundation.Token, error) {
@@ -99,10 +103,56 @@ func UnmarshalSecretHash(hash string) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return ToBytes32(hashBytes)
+	return toBytes32(hashBytes)
 }
 
-func ToBytes32(data []byte) ([32]byte, error) {
+func UnmarshalSwapRequestResponse(swapReqRes PostSwapRequestResponse) (foundation.Swap, error) {
+	secret := [32]byte{}
+	if swapReqRes.ShouldInitiateFirst {
+		rand.Read(secret[:])
+		hash := sha256.Sum256(secret[:])
+		swapReqRes.SecretHash = MarshalSecretHash(hash)
+	}
+	swapID, err := UnmarshalSwapID(swapReqRes.ID)
+	if err != nil {
+		return foundation.Swap{}, nil
+	}
+	sendToken, err := UnmarshalToken(swapReqRes.SendToken)
+	if err != nil {
+		return foundation.Swap{}, nil
+	}
+	receiveToken, err := UnmarshalToken(swapReqRes.ReceiveToken)
+	if err != nil {
+		return foundation.Swap{}, nil
+	}
+	sendValue, err := UnmarshalAmount(swapReqRes.SendAmount)
+	if err != nil {
+		return foundation.Swap{}, nil
+	}
+	receiveValue, err := UnmarshalAmount(swapReqRes.ReceiveAmount)
+	if err != nil {
+		return foundation.Swap{}, nil
+	}
+	secretHash, err := UnmarshalSecretHash(swapReqRes.SecretHash)
+	if err != nil {
+		return foundation.Swap{}, nil
+	}
+	return foundation.Swap{
+		ID:                 swapID,
+		Secret:             secret,
+		SecretHash:         secretHash,
+		TimeLock:           swapReqRes.TimeLock,
+		SendToAddress:      swapReqRes.SendTo,
+		ReceiveFromAddress: swapReqRes.ReceiveFrom,
+		SendValue:          sendValue,
+		ReceiveValue:       receiveValue,
+		SendToken:          sendToken,
+		ReceiveToken:       receiveToken,
+		IsFirst:            swapReqRes.ShouldInitiateFirst,
+	}, nil
+}
+
+func toBytes32(data []byte) ([32]byte, error) {
 	bytes32 := [32]byte{}
 	if len(data) != 32 {
 		return bytes32, ErrInvalidLength
