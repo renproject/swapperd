@@ -3,11 +3,15 @@ package server
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"math/big"
 	"strings"
 
 	"github.com/republicprotocol/swapperd/foundation"
 )
+
+var ErrInvalidAmount = errors.New("invalid amount")
+var ErrInvalidLength = errors.New("invalid length")
 
 // GetPingResponse data object contains the Swapper's internal information.
 type GetPingResponse struct {
@@ -15,7 +19,7 @@ type GetPingResponse struct {
 	SupportedTokens []foundation.Token `json:"supportedTokens"`
 }
 
-type PostSwapMessage struct {
+type PostSwapRequestResponse struct {
 	ID                  string `json:"id"`
 	SendToken           string `json:"sendToken"`
 	ReceiveToken        string `json:"receiveToken"`
@@ -28,12 +32,10 @@ type PostSwapMessage struct {
 	ShouldInitiateFirst bool   `json:"shouldInitiateFirst"`
 }
 
-// GetSwapResponse
 type GetSwapResponse struct {
 	Swaps []SwapStatus `json:"swaps"`
 }
 
-// SwapStatus
 type SwapStatus struct {
 }
 
