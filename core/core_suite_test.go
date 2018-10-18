@@ -1,4 +1,4 @@
-package network_test
+package core_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestNetwork(t *testing.T) {
+func TestCore(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Network Suite")
+	RunSpecs(t, "Core Suite")
 }

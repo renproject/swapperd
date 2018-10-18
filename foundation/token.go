@@ -1,8 +1,11 @@
 package foundation
 
-type Token string
+type Token struct {
+	Name       string
+	Blockchain string
+}
 
-const (
-	TokenBTC  = Token("BTC")
-	TokenWBTC = Token("WBTC")
+var (
+	TokenBTC  = Token{"BTC", "Bitcoin"}
+	TokenWBTC = Token{"WBTC", "Ethereum"}
 )

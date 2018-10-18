@@ -5,7 +5,7 @@
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "ff33da284e760fcdb03c33d37a719e5ed30ba844"
+  revision = "33151c4543a79b013e8e6799ef45b2ba88c3cd1c"
 
 [[projects]]
   branch = "master"
@@ -17,7 +17,7 @@
     "txscript",
     "wire"
   ]
-  revision = "2a560b2036bee5e3679ec2133eb6520b2f195213"
+  revision = "67e573d211ace594f1366b4ce9d39726c4b19bd0"
 
 [[projects]]
   branch = "master"
@@ -36,10 +36,10 @@
   revision = "ab6388e0c60ae4834a1f57511e20c17b5f78be4b"
 
 [[projects]]
-  name = "github.com/certifi/gocertifi"
+  name = "github.com/deckarep/golang-set"
   packages = ["."]
-  revision = "deb3ae2ef2610fde3330947281941c562861188b"
-  version = "2018.01.18"
+  revision = "cbaa98ba5575e67703b32b4b19f73c91f3c4159e"
+  version = "v1.7.1"
 
 [[projects]]
   name = "github.com/ethereum/go-ethereum"
@@ -53,9 +53,18 @@
     "common/hexutil",
     "common/math",
     "common/mclock",
+    "common/prque",
+    "consensus",
+    "consensus/misc",
+    "core",
+    "core/rawdb",
+    "core/state",
     "core/types",
+    "core/vm",
     "crypto",
-    "crypto/randentropy",
+    "crypto/bn256",
+    "crypto/bn256/cloudflare",
+    "crypto/bn256/google",
     "crypto/secp256k1",
     "crypto/sha3",
     "ethclient",
@@ -69,14 +78,8 @@
     "rpc",
     "trie"
   ]
-  revision = "37685930d953bcbe023f9bc65b135a8d8b8f1488"
-  version = "v1.8.12"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/getsentry/raven-go"
-  packages = ["."]
-  revision = "084a9de9eb0361fbd5ded14b55c84e5493a5d7f6"
+  revision = "8bbe72075e4e16442c4e28d999edee12e294329e"
+  version = "v1.8.17"
 
 [[projects]]
   name = "github.com/go-stack/stack"
@@ -109,10 +112,13 @@
   version = "v1.6.2"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/gxed/hashland"
-  packages = ["keccakpg"]
-  revision = "d9f6b97f8db22dd1e090fd0bbbe98f09cc7dd0a8"
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru"
+  ]
+  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
+  version = "v0.5.0"
 
 [[projects]]
   name = "github.com/hpcloud/tail"
@@ -127,12 +133,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  name = "github.com/jbenet/go-base58"
-  packages = ["."]
-  revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
-  version = "1.0.0"
-
-[[projects]]
   branch = "master"
   name = "github.com/kardianos/osext"
   packages = ["."]
@@ -143,45 +143,6 @@
   name = "github.com/kardianos/service"
   packages = ["."]
   revision = "b1866cf76903d81b491fb668ba14f4b1322b2ca7"
-
-[[projects]]
-  name = "github.com/lib/pq"
-  packages = [
-    ".",
-    "oid"
-  ]
-  revision = "4ded0e9383f75c197b3a2aaa6d590ac52df6fd79"
-  version = "v1.0.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/minio/blake2b-simd"
-  packages = ["."]
-  revision = "3f5f724cb5b182a5c278d6d3d55b40e7f8c2efb4"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/minio/sha256-simd"
-  packages = ["."]
-  revision = "ad98a36ba0da87206e3378c556abbfeaeaa98668"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/mr-tron/base58"
-  packages = ["base58"]
-  revision = "9ad991d48a423a0e52c77eac173b1b589665492a"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/multiformats/go-multiaddr"
-  packages = ["."]
-  revision = "fe1c46f8be5af4aff4db286e08839295bd922efb"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/multiformats/go-multihash"
-  packages = ["."]
-  revision = "66cd79b386e51ddf63270f2b71c57436a60035f3"
 
 [[projects]]
   name = "github.com/onsi/ginkgo"
@@ -234,10 +195,10 @@
   version = "v1.2"
 
 [[projects]]
-  name = "github.com/pkg/errors"
+  branch = "master"
+  name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
-  version = "v0.8.0"
+  revision = "4200adb3d8948c96936c5bc439c3db6d378d8029"
 
 [[projects]]
   branch = "master"
@@ -246,31 +207,10 @@
   revision = "4e299fdb0e808f64667498735da03fdc2e0e84c9"
 
 [[projects]]
-  branch = "nightly"
-  name = "github.com/republicprotocol/renex-ingress-go"
-  packages = [
-    "httpadapter",
-    "ingress"
-  ]
-  revision = "510e28c63ffe78a3cd2386971c447d4d776a49b2"
-
-[[projects]]
-  branch = "develop"
-  name = "github.com/republicprotocol/republic-go"
-  packages = [
-    "crypto",
-    "dispatch",
-    "identity",
-    "logger",
-    "order",
-    "orderbook",
-    "registry",
-    "shamir",
-    "stackint",
-    "stackint/asm",
-    "swarm"
-  ]
-  revision = "5bc7ef2c3505b2eeb66fadf384d17f80992360db"
+  branch = "master"
+  name = "github.com/republicprotocol/libbtc-go"
+  packages = ["."]
+  revision = "9c2b8df6dfdeca17c55bd86ef3a5c3f2b4902763"
 
 [[projects]]
   name = "github.com/rjeczalik/notify"
@@ -281,14 +221,8 @@
 [[projects]]
   name = "github.com/rs/cors"
   packages = ["."]
-  revision = "3fb1b69b103a84de38a19c3c6ec073dd6caa4d3f"
-  version = "v1.5.0"
-
-[[projects]]
-  name = "github.com/spaolacci/murmur3"
-  packages = ["."]
-  revision = "9f5d223c60793748f04a9d5b4b4eacddfc1f755d"
-  version = "v1.1"
+  revision = "9a47f48565a795472d43519dd49aac781f3034fb"
+  version = "v1.6.0"
 
 [[projects]]
   branch = "master"
@@ -307,7 +241,7 @@
     "leveldb/table",
     "leveldb/util"
   ]
-  revision = "ae2bd5eed72d46b28834ec3f60db3a3ebedd8dbd"
+  revision = "6b91fda63f2e36186f1c9d0e48578defb69c5d43"
 
 [[projects]]
   name = "github.com/urfave/cli"
@@ -319,25 +253,22 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
-    "blake2s",
     "pbkdf2",
     "ripemd160",
-    "scrypt",
-    "sha3"
+    "scrypt"
   ]
-  revision = "e3636079e1a4c1f337f212cc5cd2aca108f6c900"
+  revision = "0c41d7ab0a0ee717d4590a44bcb987dfd9e183eb"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = [
-    "context",
     "html",
     "html/atom",
     "html/charset",
     "websocket"
   ]
-  revision = "4dfa2610cdf3b287375bbba5b8f2a14d3b01d8de"
+  revision = "49bb7cea24b1df9410e1712aa6433dae904ff66a"
 
 [[projects]]
   branch = "master"
@@ -352,7 +283,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "e4b3c5e9061176387e7cea65e4dc5853801f3fb7"
+  revision = "fa43e7bc11baaae89f3f902b2b4d832b68234844"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -379,39 +310,11 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "master"
-  name = "golang.org/x/time"
-  packages = ["rate"]
-  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/tools"
-  packages = [
-    "go/ast/astutil",
-    "imports",
-    "internal/fastwalk"
-  ]
-  revision = "b71db7f417f13fa74a2565bc57b2387fdbf2c611"
-
-[[projects]]
-  name = "gopkg.in/fatih/set.v0"
-  packages = ["."]
-  revision = "57907de300222151a123d29255ed17f5ed43fad3"
-  version = "v0.1.0"
-
-[[projects]]
   name = "gopkg.in/fsnotify.v1"
   packages = ["."]
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
   source = "https://github.com/fsnotify/fsnotify.git"
   version = "v1.4.7"
-
-[[projects]]
-  branch = "v2"
-  name = "gopkg.in/karalabe/cookiejar.v2"
-  packages = ["collections/prque"]
-  revision = "8dcd6a7f4951f6ff3ee9cbb919a06d8925822e57"
 
 [[projects]]
   branch = "v2"
@@ -434,6 +337,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6d59dfb65f2459676f52f347eb061bf4702d50ea3a69ee79099053902bfe5a31"
+  inputs-digest = "e9c5ab06b17aeb41806b745c4713f987870763f7cec0cd602d8f76060c7eb2fe"
   solver-name = "gps-cdcl"
   solver-version = 1

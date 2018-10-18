@@ -1,4 +1,4 @@
-package main
+package core_test
 
 import (
 	"crypto/rand"
@@ -6,58 +6,46 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/republicprotocol/libbtc-go"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	. "github.com/republicprotocol/swapperd/core"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/adapter/btc"
 	configAdapter "github.com/republicprotocol/swapperd/adapter/config"
-	"github.com/republicprotocol/swapperd/adapter/eth/client"
-	"github.com/republicprotocol/swapperd/adapter/eth/erc20"
+	"github.com/republicprotocol/swapperd/adapter/erc20"
 	"github.com/republicprotocol/swapperd/adapter/keystore"
 	"github.com/republicprotocol/swapperd/core"
 	"github.com/republicprotocol/swapperd/driver/config"
 	"github.com/republicprotocol/swapperd/driver/logger"
 	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/republicprotocol/swapperd/utils"
+
 )
 
-func buildConfigs() (configAdapter.Config, keystore.Keystore, keystore.Keystore) {
+buildConfigs := func() (configAdapter.Config, keystore.Keystore, keystore.Keystore) {
 	config, err := config.New("", "nightly")
-	if err != nil {
-		panic(err)
-	}
+	Expect(err).Should(BeNil())
 	keys := utils.LoadTestKeys("../../secrets/test.json")
 	btcKeyA, err := keystore.NewBitcoinKey(keys.Alice.Bitcoin, "testnet")
-	if err != nil {
-		panic(err)
-	}
+	Expect(err).Should(BeNil())
 	ethPrivKeyA, err := crypto.HexToECDSA(keys.Alice.Ethereum)
-	if err != nil {
-		panic(err)
-	}
+	Expect(err).Should(BeNil())
 	ethKeyA, err := keystore.NewEthereumKey(ethPrivKeyA, "kovan")
-	if err != nil {
-		panic(err)
-	}
+	Expect(err).Should(BeNil())
 	btcKeyB, err := keystore.NewBitcoinKey(keys.Bob.Bitcoin, "testnet")
-	if err != nil {
-		panic(err)
-	}
+	Expect(err).Should(BeNil())
 	ethPrivKeyB, err := crypto.HexToECDSA(keys.Bob.Ethereum)
-	if err != nil {
-		panic(err)
-	}
+	Expect(err).Should(BeNil())
 	ethKeyB, err := keystore.NewEthereumKey(ethPrivKeyB, "kovan")
-	if err != nil {
-		panic(err)
-	}
+	Expect(err).Should(BeNil())
 	ksA := keystore.New(btcKeyA, ethKeyA)
 	ksB := keystore.New(btcKeyB, ethKeyB)
 	return config, ksB, ksA
 }
 
-func buildRequests(ksA, ksB keystore.Keystore) (foundation.Swap, foundation.Swap) {
+buildRequests:= func(ksA, ksB keystore.Keystore) (foundation.Swap, foundation.Swap) {
 
 	var aliceSwapID, bobSwapID foundation.SwapID
 	var aliceSecret [32]byte
@@ -67,11 +55,7 @@ func buildRequests(ksA, ksB keystore.Keystore) (foundation.Swap, foundation.Swap
 	aliceSecretHash := sha256.Sum256(aliceSecret[:])
 	timelock := time.Now().Unix() + 48*60*60
 
-	// 20000
 	value := [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 78, 32}
-
-	// 0.5 BTC
-	// value := [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 250, 240, 128}
 
 	aliceReq := foundation.Swap{
 		ID:                 aliceSwapID,
@@ -104,31 +88,12 @@ func buildRequests(ksA, ksB keystore.Keystore) (foundation.Swap, foundation.Swap
 	return aliceReq, bobReq
 }
 
-func buildBinders(config configAdapter.Config, ks keystore.Keystore, logger core.Logger, req foundation.Swap) (core.SwapContractBinder, core.SwapContractBinder) {
-	ethereumClient, err := client.New(client.NetworkConfig{
-		URL:     config.Ethereum.URL,
-		Network: config.Ethereum.Network,
-		Tokens: []client.EthereumToken{
-			client.EthereumToken{
-				Name:           "WBTC",
-				TokenAddress:   "0xA1D3EEcb76285B4435550E4D963B8042A8bffbF0",
-				SwapperAddress: "0x2218Fa20c33765e7e01671eE6AacA75FbAf3A974",
-			},
-		},
-	}, ks.GetKey(foundation.TokenWBTC).(keystore.EthereumKey).PrivateKey)
-	if err != nil {
-		panic(err)
-	}
-	wbtcBinder, err := erc20.NewERC20Atom(ethereumClient, logger, req)
-	if err != nil {
-		panic(err)
-	}
+buildBinders:= func(config configAdapter.Config, ks keystore.Keystore, logger Logger, req foundation.Swap) (SwapContractBinder, core.SwapContractBinder) {
+	wbtcBinder, err := erc20.NewERC20Atom(config.Ethereum, ks.GetKey(foundation.TokenWBTC).(keystore.EthereumKey), logger, req)
+	Expect(err).Should(BeNil())
 
-	btcAccount := libbtc.NewAccount(libbtc.NewBlockchainInfoClient("testnet"), ks.GetKey(foundation.TokenBTC).(keystore.BitcoinKey).PrivateKey.ToECDSA())
-	btcBinder, err := btc.NewBitcoinAtom(btcAccount, logger, req)
-	if err != nil {
-		panic(err)
-	}
+	btcBinder, err := btc.NewBitcoinAtom(config.Bitcoin, ks.GetKey(foundation.TokenBTC).(keystore.BitcoinKey), logger, req)
+	Expect(err).Should(BeNil())
 
 	if req.SendToken == foundation.TokenBTC {
 		return btcBinder, wbtcBinder
@@ -136,33 +101,29 @@ func buildBinders(config configAdapter.Config, ks keystore.Keystore, logger core
 	return wbtcBinder, btcBinder
 }
 
-func main() {
-	conf, aliceKS, bobKS := buildConfigs()
-	aliceReq, bobReq := buildRequests(aliceKS, bobKS)
-	logger := logger.NewStdOut()
-	aliceNativeBinder, aliceForeignBinder := buildBinders(conf, aliceKS, logger, aliceReq)
-	bobNativeBinder, bobForeignBinder := buildBinders(conf, bobKS, logger, bobReq)
-
-	results := make(chan core.Result, 2)
-
-	co.ParBegin(
-		func() {
-			core.Swap(aliceNativeBinder, aliceForeignBinder, logger, aliceReq, results)
-		},
-		func() {
-			core.Swap(bobNativeBinder, bobForeignBinder, logger, bobReq, results)
-		},
-		func() {
-			for i := 0; i < 2; i++ {
-				select {
-				case res := <-results:
-					if !res.Success {
-						fmt.Println("Atomic Swap Failed!!!")
-						continue
+Context("when swapping between BTC and WBTC", func() {
+	It("should successfully swap when both parties are honest", func() {
+		conf, aliceKS, bobKS := buildConfigs()
+		aliceReq, bobReq := buildRequests(aliceKS, bobKS)
+		logger := logger.NewStdOut()
+		aliceNativeBinder, aliceForeignBinder := buildBinders(conf, aliceKS, logger, aliceReq)
+		bobNativeBinder, bobForeignBinder := buildBinders(conf, bobKS, logger, bobReq)
+		results := make(chan Result, 2)
+		co.ParBegin(
+			func() {
+				Swap(aliceNativeBinder, aliceForeignBinder, logger, aliceReq, results)
+			},
+			func() {
+				Swap(bobNativeBinder, bobForeignBinder, logger, bobReq, results)
+			},
+			func() {
+				for i := 0; i < 2; i++ {
+					select {
+					case res := <-results:
+						Expect(res.Success).Should(BeTrue())
 					}
-					logger.LogDebug(res.ID, "Atomic Swap Successful")
 				}
-			}
-		},
-	)
-}
+			},
+		)
+	})
+})

@@ -1,6 +1,7 @@
 package erc20
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -8,44 +9,52 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/republicprotocol/renex-swapper-go/service/guardian"
-	"github.com/republicprotocol/renex-swapper-go/service/swap"
-	"github.com/republicprotocol/swapperd/adapter/config"
-	"github.com/republicprotocol/swapperd/adapter/keystore"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/republicprotocol/swapperd/core"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type erc20Atom struct {
 	id          [32]byte
-	client      Conn
-	key         keystore.EthereumKey
+	client      Client
 	req         foundation.Swap
 	logger      core.Logger
 	tokenBinder *CompatibleERC20
 	binder      *RenExAtomicSwapper
 }
 
+type Client interface {
+	GetSwapperAddress(foundation.Token) common.Address
+	GetTokenAddress(foundation.Token) common.Address
+	Conn() *ethclient.Client
+	Transact(
+		ctx context.Context,
+		preConditionCheck func() bool,
+		f func(*bind.TransactOpts) (*types.Transaction, error),
+		postConditionCheck func() bool,
+		waitForBlocks int64,
+	) error
+	Address() common.Address
+	FormatTransactionView(string, string) string
+}
+
 // NewERC20Atom returns a new ERC20 Atom instance
-func NewERC20Atom(conf config.EthereumNetwork, key keystore.EthereumKey, logger core.Logger, req foundation.Swap) (core.SwapContractBinder, error) {
-	conn, err := NewConnWithConfig(conf)
+func NewERC20Atom(client Client, logger core.Logger, req foundation.Swap) (core.SwapContractBinder, error) {
+	token, expiry, err := getSwapDetails(req)
 	if err != nil {
 		return nil, err
 	}
 
-	tokenContract, err := NewCompatibleERC20(common.HexToAddress("0xA1D3EEcb76285B4435550E4D963B8042A8bffbF0"), bind.ContractBackend(conn.Client))
+	tokenContract, err := NewCompatibleERC20(client.GetTokenAddress(token), bind.ContractBackend(client.Conn()))
 	if err != nil {
 		return nil, err
 	}
 
-	contract, err := NewRenExAtomicSwapper(conn.SwapperAddresses[foundation.TokenWBTC], bind.ContractBackend(conn.Client))
-	if err != nil {
-		return nil, err
-	}
-
-	expiry, err := getExpiry(req)
+	contract, err := NewRenExAtomicSwapper(client.GetSwapperAddress(token), bind.ContractBackend(client.Conn()))
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +68,7 @@ func NewERC20Atom(conf config.EthereumNetwork, key keystore.EthereumKey, logger 
 	req.TimeLock = expiry
 
 	return &erc20Atom{
-		client:      conn,
-		key:         key,
+		client:      client,
 		tokenBinder: tokenContract,
 		binder:      contract,
 		logger:      logger,
@@ -71,14 +79,7 @@ func NewERC20Atom(conf config.EthereumNetwork, key keystore.EthereumKey, logger 
 
 // Initiate a new Atom swap by calling a function on ethereum
 func (atom *erc20Atom) Initiate() error {
-	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Initiating on Ethereum blockchain for ERC20(%s)", atom.req.SendToken))
-	initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
-	if err != nil {
-		return err
-	}
-	if !initiatable {
-		return nil
-	}
+	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Initiating on Ethereum blockchain for ERC20 (%s)", atom.req.SendToken))
 
 	sendValue, ok := big.NewInt(0).SetString(hex.EncodeToString(atom.req.SendValue[:]), 16)
 	if !ok {
@@ -86,76 +87,81 @@ func (atom *erc20Atom) Initiate() error {
 	}
 
 	// Approve the contract to transfer tokens
-	if err := atom.key.SubmitTx(
-		func(tops *bind.TransactOpts) error {
-			tx, err := atom.tokenBinder.Approve(tops, atom.client.SwapperAddresses[atom.req.SendToken], sendValue)
+	if err := atom.client.Transact(
+		context.Background(),
+		nil,
+		func(tops *bind.TransactOpts) (*types.Transaction, error) {
+			tx, err := atom.tokenBinder.Approve(tops, atom.client.GetSwapperAddress(atom.req.SendToken), sendValue)
 			if err != nil {
-				return err
+				return tx, err
 			}
 			atom.logger.LogInfo(atom.req.ID, atom.client.FormatTransactionView(fmt.Sprintf("Approved %f %s on ethereum blockchain", float64(sendValue.Int64())/100000000, atom.req.SendToken), tx.Hash().String()))
-			return nil
+			return tx, nil
 		},
-		func() bool {
-			allowance, err := atom.tokenBinder.Allowance(&bind.CallOpts{}, atom.key.Address, atom.client.SwapperAddresses[atom.req.SendToken])
-			if err != nil {
-				atom.logger.LogError(atom.req.ID, fmt.Sprintf("Error: %v", err))
-			}
-			return sendValue.Cmp(allowance) == 0
-		},
+		nil,
+		1,
 	); err != nil {
 		return err
 	}
 
-	// Initiate the swap
-	if err := atom.key.SubmitTx(
-		func(tops *bind.TransactOpts) error {
-			tx, err := atom.binder.Initiate(atom.key.TransactOpts, atom.id, common.HexToAddress(atom.req.SendToAddress), atom.req.SecretHash, big.NewInt(atom.req.TimeLock), sendValue)
+	// Initiate the Atomic Swap
+	return atom.client.Transact(
+		context.Background(),
+		func() bool {
+			initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
 			if err != nil {
-				return err
+				return false
+			}
+			return initiatable
+		},
+		func(tops *bind.TransactOpts) (*types.Transaction, error) {
+			tx, err := atom.binder.Initiate(tops, atom.id, common.HexToAddress(atom.req.SendToAddress), atom.req.SecretHash, big.NewInt(atom.req.TimeLock), sendValue)
+			if err != nil {
+				return tx, err
 			}
 			atom.logger.LogInfo(atom.req.ID, atom.client.FormatTransactionView("Initiated the atomic swap on Ethereum blockchain", tx.Hash().String()))
-			return nil
+			return tx, nil
 		},
 		func() bool {
 			initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
 			if err != nil {
-				atom.logger.LogError(atom.req.ID, fmt.Sprintf("Error: %v", err))
+				return false
 			}
 			return !initiatable
 		},
-	); err != nil {
-		return err
-	}
-	return nil
+		1,
+	)
 }
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *erc20Atom) Refund() error {
 	atom.logger.LogInfo(atom.req.ID, "Refunding the atomic swap on ERC20 blockchain")
-	refundable, err := atom.binder.Refundable(&bind.CallOpts{}, atom.id)
-	if err != nil {
-		return err
-	}
-	if !refundable {
-		return guardian.ErrNotRefundable
-	}
-	if err := atom.key.SubmitTx(
-		func(tops *bind.TransactOpts) error {
-			tx, err := atom.binder.Refund(atom.key.TransactOpts, atom.id)
+	return atom.client.Transact(
+		context.Background(),
+		func() bool {
+			refundable, err := atom.binder.Refundable(&bind.CallOpts{}, atom.id)
 			if err != nil {
-				return err
+				return false
+			}
+			return refundable
+		},
+		func(tops *bind.TransactOpts) (*types.Transaction, error) {
+			tx, err := atom.binder.Refund(tops, atom.id)
+			if err != nil {
+				return nil, err
 			}
 			atom.logger.LogInfo(atom.req.ID, atom.client.FormatTransactionView("Refunded the atomic swap on Ethereum blockchain", tx.Hash().String()))
-			return nil
+			return tx, nil
 		},
 		func() bool {
-			refundable, _ := atom.binder.Refundable(&bind.CallOpts{}, atom.id)
+			refundable, err := atom.binder.Refundable(&bind.CallOpts{}, atom.id)
+			if err != nil {
+				return false
+			}
 			return !refundable
 		},
-	); err != nil {
-		return err
-	}
-	return nil
+		1,
+	)
 }
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
@@ -164,13 +170,14 @@ func (atom *erc20Atom) AuditSecret() ([32]byte, error) {
 		atom.logger.LogInfo(atom.req.ID, "Auditing secret on ethereum blockchain")
 		redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
 		if err != nil {
+			atom.logger.LogError(atom.req.ID, err)
 			return [32]byte{}, err
 		}
 		if !redeemable {
 			break
 		}
 		if time.Now().Unix() > atom.req.TimeLock {
-			return [32]byte{}, swap.ErrTimedOut
+			return [32]byte{}, fmt.Errorf("Timed Out")
 		}
 		time.Sleep(15 * time.Second)
 	}
@@ -206,46 +213,54 @@ func (atom *erc20Atom) Audit() error {
 	if auditReport.Value.Cmp(recvValue) != 0 {
 		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.req.ReceiveValue, auditReport.Value)
 	}
-	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Audit successful on ERC20 blockchain"))
+	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Audit successful on Ethereum blockchain"))
 	return nil
 }
 
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *erc20Atom) Redeem(secret [32]byte) error {
-	atom.logger.LogInfo(atom.req.ID, "Redeeming the atomic swap on ERC20 blockchain")
-	redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
-	if err != nil {
-		return err
-	}
-	if !redeemable {
-		return swap.ErrSwapAlreadyRedeemedOrRefunded
-	}
-
-	if err := atom.key.SubmitTx(
-		func(tops *bind.TransactOpts) error {
-			tx, err := atom.binder.Redeem(atom.key.TransactOpts, atom.id, secret)
+	atom.logger.LogInfo(atom.req.ID, "Redeeming the atomic swap on Ethereum blockchain")
+	return atom.client.Transact(
+		context.Background(),
+		func() bool {
+			redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
 			if err != nil {
-				return err
+				return false
+			}
+			return redeemable
+		},
+		func(tops *bind.TransactOpts) (*types.Transaction, error) {
+			tx, err := atom.binder.Redeem(tops, atom.id, secret)
+			if err != nil {
+				return nil, err
 			}
 			atom.logger.LogInfo(atom.req.ID, atom.client.FormatTransactionView("Redeemed the atomic swap on ERC20 blockchain", tx.Hash().String()))
-			return nil
+			return tx, nil
 		},
 		func() bool {
-			refundable, _ := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
+			refundable, err := atom.binder.Refundable(&bind.CallOpts{}, atom.id)
+			if err != nil {
+				return false
+			}
 			return !refundable
 		},
-	); err != nil {
-		return err
-	}
-	return nil
+		1,
+	)
 }
 
-func getExpiry(req foundation.Swap) (int64, error) {
-	if req.SendToken != foundation.TokenWBTC && req.ReceiveToken != foundation.TokenWBTC {
-		return 0, errors.New("Expected one of the tokens to be ethereum")
+func getSwapDetails(req foundation.Swap) (foundation.Token, int64, error) {
+	if req.SendToken.Blockchain != "Ethereum" && req.ReceiveToken.Blockchain != "Ethereum" {
+		return foundation.Token{}, 0, errors.New("Expected one of the tokens to be ethereum")
 	}
-	if (req.IsFirst && req.SendToken == foundation.TokenWBTC) || (!req.IsFirst && req.ReceiveToken == foundation.TokenWBTC) {
-		return req.TimeLock, nil
+	if (req.IsFirst && req.SendToken.Blockchain == "Ethereum") || (!req.IsFirst && req.ReceiveToken.Blockchain == "Ethereum") {
+		if req.SendToken.Blockchain == "Ethereum" {
+			return req.SendToken, req.TimeLock, nil
+		}
+		return req.ReceiveToken, req.TimeLock, nil
 	}
-	return req.TimeLock - 24*60*60, nil
+
+	if req.SendToken.Blockchain == "Ethereum" {
+		return req.SendToken, req.TimeLock - 24*60*60, nil
+	}
+	return req.ReceiveToken, req.TimeLock - 24*60*60, nil
 }

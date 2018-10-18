@@ -14,10 +14,10 @@ import (
 func NewServer(adapter http.Adapter) netHttp.Handler {
 
 	r := mux.NewRouter()
-	r.HandleFunc("/orders", PostOrdersHandler(adapter)).Methods("POST")
-	r.HandleFunc("/status/{orderID}", GetStatusHandler(adapter)).Methods("GET")
-	r.HandleFunc("/whoami/{challenge}", WhoAmIHandler(adapter)).Methods("GET")
+	r.HandleFunc("/swaps", PostSwapsHandler(adapter)).Methods("POST")
+	r.HandleFunc("/swaps", GetSwapsHandler(adapter)).Methods("GET")
 	r.HandleFunc("/balances", GetBalancesHandler(adapter)).Methods("GET")
+	r.HandleFunc("/ping", GetPingHandler(adapter)).Methods("GET")
 	r.Use(RecoveryHandler)
 
 	handler := cors.New(cors.Options{
