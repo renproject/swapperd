@@ -4,9 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/btcsuite/btcd/txscript"
@@ -30,7 +28,7 @@ type btcSwapContractBinder struct {
 }
 
 // NewBTCSwapContractBinder returns a new Bitcoin Atom instance
-func NewBTCSwapContractBinder(account libbtc.Account, logger core.Logger, req foundation.Swap) (core.SwapContractBinder, error) {
+func NewBTCSwapContractBinder(account libbtc.Account, req foundation.Swap, logger core.Logger) (core.SwapContractBinder, error) {
 	address, err := account.Address()
 	if err != nil {
 		return nil, err
@@ -60,13 +58,6 @@ func (atom *btcSwapContractBinder) Initiate() error {
 	if err != nil {
 		return NewErrInitiate(err)
 	}
-	sendValue, err := strconv.ParseInt(hex.EncodeToString(atom.req.SendValue[:]), 16, 64)
-	if err != nil {
-		return NewErrInitiate(err)
-	}
-	if sendValue == 0 {
-		return NewErrInitiate(fmt.Errorf("trying to send 0 Bitcoins"))
-	}
 	initiateScriptP2SHPKScript, err := txscript.PayToAddrScript(scriptAddr)
 	if err != nil {
 		return NewErrInitiate(NewErrBuildScript(err))
@@ -79,21 +70,21 @@ func (atom *btcSwapContractBinder) Initiate() error {
 		atom.fee,
 		func(tx *wire.MsgTx) bool {
 			// checks whether the contract is funded, with given value
-			funded, value, err := atom.ScriptFunded(atom.ctx, atom.scriptAddr, sendValue)
+			funded, value, err := atom.ScriptFunded(atom.ctx, atom.scriptAddr, atom.req.SendValue.Int64())
 			if err != nil {
 				return false
 			}
 			if funded {
-				atom.LogInfo(atom.req.ID, fmt.Sprintf("Bitcoin swap initiated with send value %d", sendValue))
+				atom.LogInfo(atom.req.ID, fmt.Sprintf("Bitcoin swap initiated with send value %d", atom.req.SendValue.Int64()))
 				return false
 			}
 			// creating unsigned transaction and adding transaction outputs
-			tx.AddTxOut(wire.NewTxOut(sendValue-value, initiateScriptP2SHPKScript))
+			tx.AddTxOut(wire.NewTxOut(atom.req.SendValue.Int64()-value, initiateScriptP2SHPKScript))
 			return !funded
 		},
 		nil,
 		func(tx *wire.MsgTx) bool {
-			funded, _, err := atom.ScriptFunded(atom.ctx, atom.scriptAddr, sendValue)
+			funded, _, err := atom.ScriptFunded(atom.ctx, atom.scriptAddr, atom.req.SendValue.Int64())
 			if err != nil {
 				return false
 			}
@@ -106,13 +97,8 @@ func (atom *btcSwapContractBinder) Initiate() error {
 }
 
 func (atom *btcSwapContractBinder) Audit() error {
-	receiveValue, err := strconv.ParseInt(hex.EncodeToString(atom.req.ReceiveValue[:]), 16, 64)
-	if err != nil {
-		return err
-	}
-
 	for {
-		if funded, _, err := atom.ScriptFunded(atom.ctx, atom.scriptAddr, receiveValue); funded && err == nil {
+		if funded, _, err := atom.ScriptFunded(atom.ctx, atom.scriptAddr, atom.req.ReceiveValue.Int64()); funded && err == nil {
 			return nil
 		}
 		if time.Now().Unix() > atom.req.TimeLock {
