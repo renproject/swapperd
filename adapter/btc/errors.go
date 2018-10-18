@@ -10,8 +10,8 @@ var ErrContractOutput = fmt.Errorf("transaction does not contain a contract outp
 var ErrInitiated = fmt.Errorf("atomic swap already initiated")
 var ErrMalformedRedeemTx = fmt.Errorf("redeem transaction returned by the Bitcoin blockchain is malformed")
 var ErrMalformedInitiateTx = fmt.Errorf("initiate transaction returned by the Bitcoin blockchain is malformed")
-var ErrUnknownMessageType = fmt.Errorf("Unknown Message Type")
-var ErrTimedOut = fmt.Errorf("Timed out")
+var ErrUnknownMessageType = fmt.Errorf("unknown message type")
+var ErrTimedOut = fmt.Errorf("timed out")
 
 func NewErrDecodeAddress(addr string, err error) error {
 	return fmt.Errorf("failed to decode address (%s): %v", addr, err)
@@ -22,11 +22,11 @@ func NewErrDecodeScript(script []byte, err error) error {
 }
 
 func NewErrSignTransaction(err error) error {
-	return fmt.Errorf("failed to sign Transaction: %v", err)
+	return fmt.Errorf("failed to sign transaction: %v", err)
 }
 
 func NewErrPublishTransaction(err error) error {
-	return fmt.Errorf("failed to publish signed Transaction: %v", err)
+	return fmt.Errorf("failed to publish signed transaction: %v", err)
 }
 
 func NewErrBuildScript(err error) error {
