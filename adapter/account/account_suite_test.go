@@ -1,4 +1,4 @@
-package http_test
+package account_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestHttp(t *testing.T) {
+func TestAccount(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Http Suite")
+	RunSpecs(t, "Account Suite")
 }

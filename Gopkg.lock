@@ -198,7 +198,7 @@
   branch = "master"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "4200adb3d8948c96936c5bc439c3db6d378d8029"
+  revision = "09984ef3ca57af1e1802c0a7dca2432681d83a63"
 
 [[projects]]
   branch = "master"
@@ -268,7 +268,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "49bb7cea24b1df9410e1712aa6433dae904ff66a"
+  revision = "04a2e542c03f1d053ab3e4d6e5abcd4b66e2be8e"
 
 [[projects]]
   branch = "master"

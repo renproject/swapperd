@@ -1,17 +1,17 @@
-package keystore_test
+package account_test
 
 import (
 	"github.com/btcsuite/btcd/btcec"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	. "github.com/republicprotocol/swapperd/adapter/keystore"
+	. "github.com/republicprotocol/swapperd/adapter/account"
 	"github.com/republicprotocol/swapperd/domains/tokens"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Keystore Adapter", func() {
+var _ = Describe("Account Adapter", func() {
 
 	randomBitcoinKey := func() (BitcoinKey, error) {
 		priv, err := btcec.NewPrivateKey(btcec.S256())
@@ -45,7 +45,7 @@ var _ = Describe("Keystore Adapter", func() {
 		return keyMap, nil
 	}
 
-	buildKeystore := func() (Keystore, error) {
+	buildAccount := func() (Account, error) {
 		keyMap, err := buildKeyMap()
 		if err != nil {
 			return nil, err
@@ -65,16 +65,16 @@ var _ = Describe("Keystore Adapter", func() {
 		})
 	})
 
-	Context("when retrieving keys from the keystore", func() {
+	Context("when retrieving keys from the account", func() {
 		It("should not panic when type casted properly", func() {
-			ks, err := buildKeystore()
+			ks, err := buildAccount()
 			Expect(err).To(BeNil())
 			Expect(func() { _ = ks.GetKey(tokens.TokenBTC).(BitcoinKey) }).ShouldNot(Panic())
 			Expect(func() { _ = ks.GetKey(tokens.TokenETH).(EthereumKey) }).ShouldNot(Panic())
 		})
 
 		It("should panic when type casted improperly", func() {
-			ks, err := buildKeystore()
+			ks, err := buildAccount()
 			Expect(err).To(BeNil())
 			Expect(func() { _ = ks.GetKey(tokens.TokenBTC).(EthereumKey) }).Should(Panic())
 			Expect(func() { _ = ks.GetKey(tokens.TokenETH).(BitcoinKey) }).Should(Panic())

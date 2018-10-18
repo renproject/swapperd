@@ -1,24 +1,20 @@
-package keystore
+package account
 
 import (
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-type Key interface {
-	Token() foundation.Token
-}
-
 type Keystore interface {
-	GetKey(token foundation.Token) Key
+	GetKey(token foundation.Token) interface{}
 }
 
-type KeyMap map[foundation.Token]Key
+type KeyMap map[foundation.Token]interface{}
 
 type keystore struct {
 	keyMap KeyMap
 }
 
-func New(keys ...Key) Keystore {
+func New(accounts ...interface{}) Keystore {
 	keyMap := KeyMap{}
 
 	for _, key := range keys {
