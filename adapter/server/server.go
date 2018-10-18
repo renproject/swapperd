@@ -1,9 +1,6 @@
 package server
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
-
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
@@ -32,7 +29,7 @@ func (server *server) GetSwaps() (GetSwapResponse, error) {
 }
 
 func (server *server) PostSwaps(swapReqRes PostSwapRequestResponse) (PostSwapRequestResponse, error) {
-	swap, err := decodePostSwap(swapReqRes)
+	swap, err := UnmarshalSwapRequestResponse(swapReqRes)
 	if err != nil {
 		return PostSwapRequestResponse{}, err
 	}
@@ -44,50 +41,4 @@ func (server *server) PostSwaps(swapReqRes PostSwapRequestResponse) (PostSwapReq
 func (server *server) GetBalances() (GetBalanceResponse, error) {
 	// TODO: Implement the logic
 	return GetBalanceResponse{}, nil
-}
-
-func decodePostSwap(swapReqRes PostSwapRequestResponse) (foundation.Swap, error) {
-	secret := [32]byte{}
-	if swapReqRes.ShouldInitiateFirst {
-		rand.Read(secret[:])
-		hash := sha256.Sum256(secret[:])
-		swapReqRes.SecretHash = MarshalSecretHash(hash)
-	}
-	swapID, err := UnmarshalSwapID(swapReqRes.ID)
-	if err != nil {
-		return foundation.Swap{}, nil
-	}
-	sendToken, err := UnmarshalToken(swapReqRes.SendToken)
-	if err != nil {
-		return foundation.Swap{}, nil
-	}
-	receiveToken, err := UnmarshalToken(swapReqRes.ReceiveToken)
-	if err != nil {
-		return foundation.Swap{}, nil
-	}
-	sendValue, err := UnmarshalAmount(swapReqRes.SendAmount)
-	if err != nil {
-		return foundation.Swap{}, nil
-	}
-	receiveValue, err := UnmarshalAmount(swapReqRes.ReceiveAmount)
-	if err != nil {
-		return foundation.Swap{}, nil
-	}
-	secretHash, err := UnmarshalSecretHash(swapReqRes.SecretHash)
-	if err != nil {
-		return foundation.Swap{}, nil
-	}
-	return foundation.Swap{
-		ID:                 swapID,
-		Secret:             secret,
-		SecretHash:         secretHash,
-		TimeLock:           swapReqRes.TimeLock,
-		SendToAddress:      swapReqRes.SendTo,
-		ReceiveFromAddress: swapReqRes.ReceiveFrom,
-		SendValue:          sendValue,
-		ReceiveValue:       receiveValue,
-		SendToken:          sendToken,
-		ReceiveToken:       receiveToken,
-		IsFirst:            swapReqRes.ShouldInitiateFirst,
-	}, nil
 }
