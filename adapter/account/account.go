@@ -1,32 +1,33 @@
 package account
 
 import (
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/beth-go"
+	"github.com/republicprotocol/libbtc-go"
 )
 
-type Keystore interface {
-	GetKey(token foundation.Token) interface{}
+type Accounts interface {
+	GetBitcoinAccount() libbtc.Account
+	GetEthereumAccount() beth.Account
 }
 
-type KeyMap map[foundation.Token]interface{}
-
-type keystore struct {
-	keyMap KeyMap
+type accounts struct {
+	bitcoinAccount  libbtc.Account
+	ethereumAccount beth.Account
 }
 
-func New(accounts ...interface{}) Keystore {
-	keyMap := KeyMap{}
-
-	for _, key := range keys {
-		keyMap[key.Token()] = key
+func New(btc libbtc.Account, eth beth.Account) Accounts {
+	return &accounts{
+		bitcoinAccount:  btc,
+		ethereumAccount: eth,
 	}
+}
 
-	return &keystore{
-		keyMap,
-	}
+// GetBitcoinAccount returns the bitcoin account
+func (accounts *accounts) GetBitcoinAccount() libbtc.Account {
+	return accounts.bitcoinAccount
 }
 
 // GetKey returns the key object of the given token
-func (keystore *keystore) GetKey(token foundation.Token) Key {
-	return keystore.keyMap[token]
+func (accounts *accounts) GetEthereumAccount() beth.Account {
+	return accounts.ethereumAccount
 }
