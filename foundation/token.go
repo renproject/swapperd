@@ -11,8 +11,12 @@ type Token struct {
 	Blockchain string
 }
 
+func (token Token) String() string {
+	return token.Name
+}
+
 var (
-	TokenBTC  = Token{"BTC", "Bitcoin"}
-	TokenETH  = Token{"ETH", "Ethereum"}
-	TokenWBTC = Token{"WBTC", "Ethereum"}
+	TokenBTC  = Token{"BTC", "bitcoin"}
+	TokenETH  = Token{"ETH", "ethereum"}
+	TokenWBTC = Token{"WBTC", "ethereum"}
 )
