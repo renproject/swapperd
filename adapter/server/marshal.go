@@ -1,4 +1,4 @@
-package http
+package server
 
 import (
 	"encoding/base64"
@@ -74,7 +74,7 @@ func UnmarshalToken(token string) (foundation.Token, error) {
 	case "wbtc", "wrappedbtc", "wrappedbitcoin":
 		return foundation.TokenWBTC, nil
 	default:
-		return foundation.Token{}, NewErrUnsupportedToken(token)
+		return foundation.Token{}, foundation.NewErrUnsupportedToken(token)
 	}
 }
 

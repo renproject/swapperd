@@ -1,4 +1,4 @@
-package http_test
+package server_test
 
 import (
 	"crypto/rand"

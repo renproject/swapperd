@@ -1,4 +1,4 @@
-package http
+package server
 
 import (
 	"crypto/rand"
@@ -7,16 +7,11 @@ import (
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-type Server interface {
-	GetPing() GetPingResponse
-	PostSwaps(PostSwapMessage) (PostSwapMessage, error)
-}
-
 type server struct {
 	swapCh chan<- foundation.Swap
 }
 
-func NewServer(swapCh chan<- foundation.Swap) Server {
+func newServer(swapCh chan<- foundation.Swap) *server {
 	return &server{
 		swapCh: swapCh,
 	}
@@ -33,7 +28,12 @@ func (server *server) GetPing() GetPingResponse {
 	}
 }
 
-func (server *server) PostSwaps(swapReq PostSwapMessage) (PostSwapMessage, error) {
+func (server *server) getSwaps() (GetSwapResponse, error) {
+	// TODO: Implement the logic
+	return GetSwapResponse{}, nil
+}
+
+func (server *server) postSwaps(swapReq PostSwapMessage) (PostSwapMessage, error) {
 	swap, err := decodePostSwap(swapReq)
 	if err != nil {
 		return PostSwapMessage{}, err
@@ -41,6 +41,11 @@ func (server *server) PostSwaps(swapReq PostSwapMessage) (PostSwapMessage, error
 	server.swapCh <- swap
 	swapReq.SecretHash = MarshalSecretHash(swap.SecretHash)
 	return swapReq, nil
+}
+
+func (server *server) getBalances() (GetBalanceResponse, error) {
+	// TODO: Implement the logic
+	return GetBalanceResponse{}, nil
 }
 
 func decodePostSwap(swap PostSwapMessage) (foundation.Swap, error) {
@@ -88,48 +93,3 @@ func decodePostSwap(swap PostSwapMessage) (foundation.Swap, error) {
 		IsFirst:            swap.ShouldInitiateFirst,
 	}, nil
 }
-
-// func (server *server) PostSwaps(swap PostSwap) (PostSwap, error) {
-// }
-
-// func (server *server) GetBalances() (Balances, error) {
-// 	ethBal, err := ethereumBalance(
-// 		server.config,
-// 		server.keystr.GetKey(token.ETH).(keystore.EthereumKey),
-// 	)
-// 	if err != nil {
-// 		return Balances{}, err
-// 	}
-// 	btcBal := bitcoinBalance(
-// 		server.config,
-// 		server.keystr.GetKey(token.BTC).(keystore.BitcoinKey),
-// 	)
-// 	return Balances{
-// 		Ethereum: ethBal,
-// 		Bitcoin:  btcBal,
-// 	}, nil
-// }
-
-// func bitcoinBalance(conf config.Config, key keystore.BitcoinKey) Balance {
-// 	conn := btc.NewConnWithConfig(conf.Bitcoin)
-// 	balance := conn.Balance(key.AddressString, 0)
-// 	return Balance{
-// 		Address: key.AddressString,
-// 		Amount:  strconv.FormatInt(balance, 10),
-// 	}
-// }
-
-// func ethereumBalance(conf config.Config, key keystore.EthereumKey) (Balance, error) {
-// 	conn, err := eth.NewConnWithConfig(conf.Ethereum)
-// 	if err != nil {
-// 		return Balance{}, err
-// 	}
-// 	bal, err := conn.Balance(key.Address)
-// 	if err != nil {
-// 		return Balance{}, err
-// 	}
-// 	return Balance{
-// 		Address: key.Address.String(),
-// 		Amount:  bal.String(),
-// 	}, nil
-// }

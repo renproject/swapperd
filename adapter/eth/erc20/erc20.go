@@ -226,7 +226,8 @@ func (atom *erc20Atom) Redeem(secret [32]byte) error {
 			if err != nil {
 				return nil, err
 			}
-			atom.logger.LogInfo(atom.req.ID, atom.account.FormatTransactionView("Redeemed the atomic swap on Ethereum blockchain", tx.Hash().String()))
+			msg, _ := atom.account.FormatTransactionView("Redeemed the atomic swap on Ethereum blockchain", tx.Hash().String())
+			atom.logger.LogInfo(atom.req.ID, msg)
 			return tx, nil
 		},
 		func() bool {
