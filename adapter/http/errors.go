@@ -1,0 +1,8 @@
+package http
+
+import (
+	"errors"
+)
+
+var ErrInvalidAmount = errors.New("invalid amount")
+var ErrInvalidLength = errors.New("invalid length")

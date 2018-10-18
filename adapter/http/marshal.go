@@ -1,94 +1,112 @@
 package http
 
 import (
+	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
-	"fmt"
+	"math/big"
+	"strings"
 
-	"github.com/republicprotocol/swapperd/adapter/config"
-	"github.com/republicprotocol/swapperd/domain/token"
+	"github.com/republicprotocol/swapperd/foundation"
 )
 
-// WhoAmI data object contains the swapper's internal information.
-type WhoAmI struct {
-	Challenge           string        `json:"challenge"`
-	Version             string        `json:"version"`
-	Network             string        `json:"network"`
-	AuthorizedAddresses []string      `json:"authorizedAddresses"`
-	SupportedCurrencies []token.Token `json:"supportedCurrencies"`
+// GetPingResponse data object contains the Swapper's internal information.
+type GetPingResponse struct {
+	Version         string             `json:"version"`
+	SupportedTokens []foundation.Token `json:"supportedTokens"`
 }
 
-// WhoAmISigned data object contains the WhoAmI object, and the validating
-// signature of the atomic swapper.
-type WhoAmISigned struct {
-	WhoAmI    WhoAmI `json:"whoAmI"`
-	Signature string `json:"signature"`
+type PostSwapMessage struct {
+	ID                  string `json:"id"`
+	SendToken           string `json:"sendToken"`
+	ReceiveToken        string `json:"receiveToken"`
+	SendAmount          string `json:"sendAmount"`    // hex
+	ReceiveAmount       string `json:"receiveAmount"` //hex
+	SendTo              string `json:"sendTo"`
+	ReceiveFrom         string `json:"receiveFrom"`
+	TimeLock            int64  `json:"timeLock"`
+	SecretHash          string `json:"secretHash"`
+	ShouldInitiateFirst bool   `json:"shouldInitiateFirst"`
 }
 
-// Status data object contains an order ID's atomic swap status.
-type Status struct {
-	OrderID string `json:"orderID"`
-	Status  string `json:"status"`
+// GetSwapResponse
+type GetSwapResponse struct {
+	Swaps []SwapStatus `json:"swaps"`
 }
 
-// PostOrderResponse data object is the json interface of the post /order
-// response
-type PostOrderResponse struct {
-	OrderID   string `json:"orderID"`
-	Signature string `json:"signature"`
+// SwapStatus
+type SwapStatus struct {
 }
 
-// PostOrderRequest data object is the json interface of the post /order
-// request
-type PostOrderRequest struct {
-	OrderID string `json:"orderID"`
-}
-
-type Balance struct {
-	Name    string `json:"name"`
-	Address string `json:"address"`
-	Amount  string `json:"amount"`
-}
-
-type Balances struct {
+type GetBalanceResponse struct {
 	Balances []Balance `json:"balances"`
 }
 
-func MarshalSignature(signatureIn []byte) string {
-	return hex.EncodeToString(signatureIn)
+type Balance struct {
+	TokenName string `json:"name"`
+	Address   string `json:"address"`
+	Amount    string `json:"amount"`
 }
 
-func UnmarshalSignature(signatureIn string) ([]byte, error) {
-	return hex.DecodeString(signatureIn)
+func MarshalSwapID(swapID foundation.SwapID) string {
+	return base64.StdEncoding.EncodeToString(swapID[:])
 }
 
-func NewWhoAmI(challenge string, conf config.Config) WhoAmI {
-	return WhoAmI{
-		Challenge:           challenge,
-		Version:             conf.Version,
-		Network:             conf.RenEx.Network,
-		AuthorizedAddresses: conf.AuthorizedAddresses,
-		SupportedCurrencies: conf.SupportedCurrencies,
-	}
-}
-
-func MarshalWhoAmI(whoAmI WhoAmI) ([]byte, error) {
-	return json.Marshal(whoAmI)
-}
-
-func MarshalOrderID(orderIDIn [32]byte) string {
-	return hex.EncodeToString(orderIDIn[:])
-}
-
-func UnmarshalOrderID(orderIDIn string) ([32]byte, error) {
-	orderID := [32]byte{}
-	orderIDBytes, err := hex.DecodeString(orderIDIn)
+func UnmarshalSwapID(swapID string) (foundation.SwapID, error) {
+	swapIDBytes, err := base64.StdEncoding.DecodeString(swapID)
 	if err != nil {
-		return orderID, fmt.Errorf("cannot decode order id %v: %v", orderIDIn, err)
+		return foundation.SwapID([32]byte{}), err
 	}
-	if len(orderIDBytes) != 32 {
-		return orderID, ErrInvalidOrderIDLength
+	id, err := ToBytes32(swapIDBytes)
+	return foundation.SwapID(id), err
+}
+
+func MarshalToken(token foundation.Token) string {
+	return token.Name
+}
+
+func UnmarshalToken(token string) (foundation.Token, error) {
+	token = strings.ToLower(token)
+	switch token {
+	case "btc", "bitcoin", "xbt":
+		return foundation.TokenBTC, nil
+	case "eth", "ethereum", "ether":
+		return foundation.TokenETH, nil
+	case "wbtc", "wrappedbtc", "wrappedbitcoin":
+		return foundation.TokenWBTC, nil
+	default:
+		return foundation.Token{}, NewErrUnsupportedToken(token)
 	}
-	copy(orderID[:], orderIDBytes)
-	return orderID, nil
+}
+
+func MarshalAmount(amount *big.Int) string {
+	return hex.EncodeToString(amount.Bytes())
+}
+
+func UnmarshalAmount(amount string) (*big.Int, error) {
+	val, success := big.NewInt(0).SetString(amount, 16)
+	if !success {
+		return nil, ErrInvalidAmount
+	}
+	return val, nil
+}
+
+func MarshalSecretHash(hash [32]byte) string {
+	return base64.StdEncoding.EncodeToString(hash[:])
+}
+
+func UnmarshalSecretHash(hash string) ([32]byte, error) {
+	hashBytes, err := base64.StdEncoding.DecodeString(hash)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return ToBytes32(hashBytes)
+}
+
+func ToBytes32(data []byte) ([32]byte, error) {
+	bytes32 := [32]byte{}
+	if len(data) != 32 {
+		return bytes32, ErrInvalidLength
+	}
+	copy(bytes32[:], data)
+	return bytes32, nil
 }

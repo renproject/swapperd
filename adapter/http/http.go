@@ -1,123 +1,135 @@
 package http
 
 import (
-	"errors"
-	"strconv"
+	"crypto/rand"
+	"crypto/sha256"
 
-	"github.com/republicprotocol/swapperd/adapter/btc"
-	"github.com/republicprotocol/swapperd/adapter/config"
-	"github.com/republicprotocol/swapperd/adapter/eth"
-	"github.com/republicprotocol/swapperd/adapter/keystore"
-	"github.com/republicprotocol/swapperd/domain/token"
-	"github.com/republicprotocol/swapperd/service/renex"
+	"github.com/republicprotocol/swapperd/foundation"
 )
 
-var ErrInvalidSignatureLength = errors.New("invalid signature length")
-var ErrInvalidOrderIDLength = errors.New("invalid order id length")
-
-type Adapter interface {
-	GetSwaps() (Swaps, error)
-	PostSwaps(Swaps) error
-	Ping() (Status, error)
-	GetBalances() (Balances, error)
+type Server interface {
+	GetPing() GetPingResponse
+	PostSwaps(PostSwapMessage) (PostSwapMessage, error)
 }
 
-type adapter struct {
-	config config.Config
-	keystr keystore.Keystore
-	renex  renex.RenEx
+type server struct {
+	swapCh chan<- foundation.Swap
 }
 
-func NewAdapter(config config.Config, keystr keystore.Keystore, renExSwapper renex.RenEx) Adapter {
-	return &adapter{
-		config: config,
-		keystr: keystr,
-		renex:  renExSwapper,
+func NewServer(swapCh chan<- foundation.Swap) Server {
+	return &server{
+		swapCh: swapCh,
 	}
 }
 
-func (adapter *adapter) WhoAmI(challenge string) (WhoAmISigned, error) {
-	whoAmI := NewWhoAmI(challenge, adapter.config)
-	infoBytes, err := MarshalWhoAmI(whoAmI)
+func (server *server) GetPing() GetPingResponse {
+	return GetPingResponse{
+		Version: "0.1.0",
+		SupportedTokens: []foundation.Token{
+			foundation.TokenBTC,
+			foundation.TokenETH,
+			foundation.TokenWBTC,
+		},
+	}
+}
+
+func (server *server) PostSwaps(swapReq PostSwapMessage) (PostSwapMessage, error) {
+	swap, err := decodePostSwap(swapReq)
 	if err != nil {
-		return WhoAmISigned{}, err
+		return PostSwapMessage{}, err
 	}
-	ethKey := adapter.keystr.GetKey(token.ETH).(keystore.EthereumKey)
-	sig, err := ethKey.Sign(infoBytes)
-	return WhoAmISigned{
-		Signature: MarshalSignature(sig),
-		WhoAmI:    whoAmI,
+	server.swapCh <- swap
+	swapReq.SecretHash = MarshalSecretHash(swap.SecretHash)
+	return swapReq, nil
+}
+
+func decodePostSwap(swap PostSwapMessage) (foundation.Swap, error) {
+	secret := [32]byte{}
+	if swap.ShouldInitiateFirst {
+		rand.Read(secret[:])
+		hash := sha256.Sum256(secret[:])
+		swap.SecretHash = MarshalSecretHash(hash)
+	}
+	swapID, err := UnmarshalSwapID(swap.ID)
+	if err != nil {
+		return foundation.Swap{}, nil
+	}
+	sendToken, err := UnmarshalToken(swap.SendToken)
+	if err != nil {
+		return foundation.Swap{}, nil
+	}
+	receiveToken, err := UnmarshalToken(swap.ReceiveToken)
+	if err != nil {
+		return foundation.Swap{}, nil
+	}
+	sendValue, err := UnmarshalAmount(swap.SendAmount)
+	if err != nil {
+		return foundation.Swap{}, nil
+	}
+	receiveValue, err := UnmarshalAmount(swap.ReceiveAmount)
+	if err != nil {
+		return foundation.Swap{}, nil
+	}
+	secretHash, err := UnmarshalSecretHash(swap.SecretHash)
+	if err != nil {
+		return foundation.Swap{}, nil
+	}
+	return foundation.Swap{
+		ID:                 swapID,
+		Secret:             secret,
+		SecretHash:         secretHash,
+		TimeLock:           swap.TimeLock,
+		SendToAddress:      swap.SendTo,
+		ReceiveFromAddress: swap.ReceiveFrom,
+		SendValue:          sendValue,
+		ReceiveValue:       receiveValue,
+		SendToken:          sendToken,
+		ReceiveToken:       receiveToken,
+		IsFirst:            swap.ShouldInitiateFirst,
 	}, nil
 }
 
-func (adapter *adapter) PostOrder(order PostOrderRequest) (PostOrderResponse, error) {
-	orderID, err := UnmarshalOrderID(order.OrderID)
-	if err != nil {
-		return PostOrderResponse{}, err
-	}
+// func (server *server) PostSwaps(swap PostSwap) (PostSwap, error) {
+// }
 
-	if err := adapter.renex.Add(orderID); err != nil {
-		return PostOrderResponse{}, err
-	}
+// func (server *server) GetBalances() (Balances, error) {
+// 	ethBal, err := ethereumBalance(
+// 		server.config,
+// 		server.keystr.GetKey(token.ETH).(keystore.EthereumKey),
+// 	)
+// 	if err != nil {
+// 		return Balances{}, err
+// 	}
+// 	btcBal := bitcoinBalance(
+// 		server.config,
+// 		server.keystr.GetKey(token.BTC).(keystore.BitcoinKey),
+// 	)
+// 	return Balances{
+// 		Ethereum: ethBal,
+// 		Bitcoin:  btcBal,
+// 	}, nil
+// }
 
-	key := adapter.keystr.GetKey(token.ETH).(keystore.EthereumKey)
-	sig, err := key.Sign(orderID[:])
-	return PostOrderResponse{
-		order.OrderID,
-		MarshalSignature(sig),
-	}, nil
-}
+// func bitcoinBalance(conf config.Config, key keystore.BitcoinKey) Balance {
+// 	conn := btc.NewConnWithConfig(conf.Bitcoin)
+// 	balance := conn.Balance(key.AddressString, 0)
+// 	return Balance{
+// 		Address: key.AddressString,
+// 		Amount:  strconv.FormatInt(balance, 10),
+// 	}
+// }
 
-func (adapter *adapter) GetStatus(orderID string) (Status, error) {
-	id, err := UnmarshalOrderID(orderID)
-	if err != nil {
-		return Status{}, err
-	}
-	status := adapter.renex.Status(id)
-	return Status{
-		OrderID: orderID,
-		Status:  string(status),
-	}, nil
-}
-
-func (adapter *adapter) GetBalances() (Balances, error) {
-	ethBal, err := ethereumBalance(
-		adapter.config,
-		adapter.keystr.GetKey(token.ETH).(keystore.EthereumKey),
-	)
-	if err != nil {
-		return Balances{}, err
-	}
-	btcBal := bitcoinBalance(
-		adapter.config,
-		adapter.keystr.GetKey(token.BTC).(keystore.BitcoinKey),
-	)
-	return Balances{
-		Ethereum: ethBal,
-		Bitcoin:  btcBal,
-	}, nil
-}
-
-func bitcoinBalance(conf config.Config, key keystore.BitcoinKey) Balance {
-	conn := btc.NewConnWithConfig(conf.Bitcoin)
-	balance := conn.Balance(key.AddressString, 0)
-	return Balance{
-		Address: key.AddressString,
-		Amount:  strconv.FormatInt(balance, 10),
-	}
-}
-
-func ethereumBalance(conf config.Config, key keystore.EthereumKey) (Balance, error) {
-	conn, err := eth.NewConnWithConfig(conf.Ethereum)
-	if err != nil {
-		return Balance{}, err
-	}
-	bal, err := conn.Balance(key.Address)
-	if err != nil {
-		return Balance{}, err
-	}
-	return Balance{
-		Address: key.Address.String(),
-		Amount:  bal.String(),
-	}, nil
-}
+// func ethereumBalance(conf config.Config, key keystore.EthereumKey) (Balance, error) {
+// 	conn, err := eth.NewConnWithConfig(conf.Ethereum)
+// 	if err != nil {
+// 		return Balance{}, err
+// 	}
+// 	bal, err := conn.Balance(key.Address)
+// 	if err != nil {
+// 		return Balance{}, err
+// 	}
+// 	return Balance{
+// 		Address: key.Address.String(),
+// 		Amount:  bal.String(),
+// 	}, nil
+// }

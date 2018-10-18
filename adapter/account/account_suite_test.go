@@ -1,4 +1,4 @@
-package keystore_test
+package account_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestKeystore(t *testing.T) {
+func TestAccount(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Keystore Suite")
+	RunSpecs(t, "Account Suite")
 }
