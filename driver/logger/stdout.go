@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/republicprotocol/swapperd/core"
+	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
@@ -13,7 +13,7 @@ const white = "\033[m"
 type stdOut struct {
 }
 
-func NewStdOut() core.Logger {
+func NewStdOut() swapper.Logger {
 	return &stdOut{}
 }
 
