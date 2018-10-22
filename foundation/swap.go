@@ -6,6 +6,11 @@ import (
 
 type SwapID [32]byte
 
+type SwapStatus struct {
+	ID     SwapID `json:"id"`
+	Status Status `json:"status"`
+}
+
 type Swap struct {
 	ID                 SwapID   `json:"id"`
 	Secret             [32]byte `json:"secret"`
@@ -18,4 +23,14 @@ type Swap struct {
 	SendToken          Token    `json:"sendToken"`
 	ReceiveToken       Token    `json:"receiveToken"`
 	IsFirst            bool     `json:"isFirst"`
+}
+
+type SwapTry struct {
+	ID              SwapID
+	Token           Token
+	Value           *big.Int
+	SecretHash      [32]byte
+	TimeLock        int64
+	SpendingAddress string
+	FundingAddress  string
 }
