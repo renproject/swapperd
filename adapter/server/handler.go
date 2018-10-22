@@ -1,8 +1,6 @@
 package server
 
 import (
-	"crypto/subtle"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,14 +9,13 @@ import (
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/rs/cors"
-	"golang.org/x/crypto/sha3"
 )
 
 // NewHandler creates a new http handler
 func NewHandler(username, passwordHash string, swaps chan<- swapper.Query, statusQueries chan<- status.Query) http.Handler {
 	s := NewServer(swaps, statusQueries)
 	r := mux.NewRouter()
-	r.HandleFunc("/swaps", postSwapsHandler(s, username, passwordHash)).Methods("POST")
+	r.HandleFunc("/swaps", postSwapsHandler(s)).Methods("POST")
 	r.HandleFunc("/swaps", getSwapsHandler(s)).Methods("GET")
 	r.HandleFunc("/balances", getBalancesHandler(s)).Methods("GET")
 	r.HandleFunc("/ping", getPingHandler(s)).Methods("GET")
@@ -75,19 +72,11 @@ func getSwapsHandler(server *server) http.HandlerFunc {
 
 // postSwapsHandler handles the post orders request, it fills incomplete
 // information and starts the Atomic Swap.
-func postSwapsHandler(server *server, username, passwordHash string) http.HandlerFunc {
+func postSwapsHandler(server *server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		user, pass, ok := r.BasicAuth()
-		passHash := sha3.Sum256([]byte(pass))
-		passwordHashBytes, err := base64.StdEncoding.DecodeString(passwordHash)
-
-		if err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode password hash: %v", err))
-			return
-		}
-
-		if !ok || subtle.ConstantTimeCompare([]byte(user), []byte(username)) != 1 || subtle.ConstantTimeCompare(passHash[:], passwordHashBytes) != 1 {
-			writeError(w, http.StatusUnauthorized, fmt.Sprintf("incorrect username or password"))
+		username, password, ok := r.BasicAuth()
+		if !ok || !server.authenticator.VerifyUsernameAndPassword(username, password) {
+			writeError(w, http.StatusUnauthorized, "invalid username or password")
 			return
 		}
 

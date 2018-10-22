@@ -1,18 +1,20 @@
 package server
 
 import (
+	"github.com/republicprotocol/swapperd/core/auth"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type server struct {
+	authenticator  auth.Authenticator
 	swapperQueries chan<- swapper.Query
 	statusQueries  chan<- status.Query
 }
 
-func NewServer(swaps chan<- swapper.Query, statusQueries chan<- status.Query) *server {
-	return &server{swaps, statusQueries}
+func NewServer(authenticator auth.Authenticator, swaps chan<- swapper.Query, statusQueries chan<- status.Query) *server {
+	return &server{authenticator, swaps, statusQueries}
 }
 
 func (server *server) GetPing() GetPingResponse {
