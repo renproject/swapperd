@@ -3,26 +3,37 @@ package swapper
 import (
 	"time"
 
-	co "github.com/republicprotocol/co-go"
+	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-type swapper struct {
-	Storage
-	BinderBuilder
-	Semaphore
-	Logger
-}
+type Swap struct {
+	foundation.SwapBlob
 
-type result struct {
-	ID      foundation.SwapID
-	Success bool
-}
-
-type Query struct {
-	Swap     foundation.SwapRequest
-	Password string
 	Secret   [32]byte
+	Password string
+}
+
+func NewSwap(swapBlob foundation.SwapBlob, secret [32]byte, password string) Swap {
+	return Swap{swapBlob, secret, password}
+}
+
+type Contract interface {
+	Initiate() error
+	Audit() error
+	Redeem([32]byte) error
+	AuditSecret() ([32]byte, error)
+	Refund() error
+}
+
+type ContractBuilder interface {
+	BuildSwapContracts(swap Swap) (Contract, Contract, error)
+}
+
+type Storage interface {
+	InsertSwap(swap Swap) error
+	DeleteSwap(foundation.SwapID) error
+	PendingSwaps() []Swap
 }
 
 type Logger interface {
@@ -31,148 +42,151 @@ type Logger interface {
 	LogError(foundation.SwapID, error)
 }
 
-type Storage interface {
-	LoadPendingQueries() []Query
-	DeleteQuery(foundation.SwapID) error
-	AddQuery(query Query) error
-}
-
-type SwapContractBinder interface {
-	Initiate() error
-	Audit() error
-	Redeem([32]byte) error
-	AuditSecret() ([32]byte, error)
-	Refund() error
-}
-
-type BinderBuilder interface {
-	BuildBinders(query Query) (SwapContractBinder, SwapContractBinder, error)
-}
-
 type Swapper interface {
-	Run(swaps <-chan Query, swapStatuses chan<- foundation.SwapStatus, done <-chan struct{})
+	Run(done <-chan struct{}, swaps <-chan Swap, statuses chan<- foundation.SwapStatus)
 }
 
-func New(storage Storage, builder BinderBuilder, logger Logger) Swapper {
+type swapper struct {
+	builder ContractBuilder
+	storage Storage
+	logger  Logger
+
+	sem *binarySemaphore
+}
+
+type result struct {
+	id      foundation.SwapID
+	success bool
+}
+
+func newResult(id foundation.SwapID, success bool) result {
+	return result{id, success}
+}
+
+func New(builder ContractBuilder, storage Storage, logger Logger) Swapper {
 	return &swapper{
-		Storage:       storage,
-		BinderBuilder: builder,
-		Semaphore:     NewSemaphore(),
-		Logger:        logger,
+		builder: builder,
+		storage: storage,
+		logger:  logger,
+
+		sem: newBinarySemaphore(),
 	}
 }
 
-func NewQuery(swap foundation.SwapRequest, secret [32]byte, password string) Query {
-	return Query{swap, password, secret}
-}
-
-func (swapper *swapper) Run(queries <-chan Query, swapStatuses chan<- foundation.SwapStatus, done <-chan struct{}) {
+func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan Swap, statuses chan<- foundation.SwapStatus) {
 	results := make(chan result)
+
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
 	for {
 		select {
+
 		case <-done:
 			return
-		case query := <-queries:
-			swapper.AddQuery(query)
-			native, foreign, err := swapper.BuildBinders(query)
+
+		case swap := <-swaps:
+			swapper.storage.InsertSwap(swap)
+			native, foreign, err := swapper.builder.BuildSwapContracts(swap)
 			if err != nil {
-				swapper.LogError(query.Swap.ID, err)
+				swapper.logger.LogError(swap.ID, err)
 				continue
 			}
-			if swapper.TryWait(query.Swap.ID) {
+			if !swapper.sem.TryWait(swap.ID) {
 				continue
 			}
 			go func() {
-				defer swapper.Signal(query.Swap.ID)
-				execute(native, foreign, swapper.Logger, query, swapStatuses, results)
+				defer swapper.sem.Signal(swap.ID)
+				execute(results, statuses, native, foreign, swap, swapper.logger)
 			}()
-		case swapResult := <-results:
-			if swapResult.Success {
-				swapper.DeleteQuery(swapResult.ID)
+
+		case result := <-results:
+			if result.success {
+				swapper.storage.DeleteSwap(result.id)
 			}
-		default:
-			swapsToRetry := swapper.LoadPendingQueries()
+
+		case <-ticker.C:
+			swapsToRetry := swapper.storage.PendingSwaps()
 			go co.ForAll(swapsToRetry, func(i int) {
-				query := swapsToRetry[i]
-				if swapper.TryWait(query.Swap.ID) {
+				swap := swapsToRetry[i]
+				if swapper.sem.TryWait(swap.ID) {
 					return
 				}
-				defer swapper.Signal(query.Swap.ID)
-				native, foreign, err := swapper.BuildBinders(query)
+				defer swapper.sem.Signal(swap.ID)
+				native, foreign, err := swapper.builder.BuildSwapContracts(swap)
 				if err != nil {
 					return
 				}
-				execute(native, foreign, swapper.Logger, query, swapStatuses, results)
+				execute(results, statuses, native, foreign, swap, swapper.logger)
 			})
-			time.Sleep(1 * time.Minute)
 		}
 	}
 }
 
-func execute(native, foreign SwapContractBinder, logger Logger, query Query, statuses chan<- foundation.SwapStatus, done chan<- result) {
-	if query.Swap.ShouldInitiateFirst {
-		initiate(native, foreign, logger, query, statuses, done)
+func execute(results chan<- result, statuses chan<- foundation.SwapStatus, native, foreign Contract, swap Swap, logger Logger) {
+	if swap.ShouldInitiateFirst {
+		initiate(results, statuses, native, foreign, swap, logger)
 	}
-	respond(native, foreign, logger, query, statuses, done)
+	respond(results, statuses, native, foreign, swap, logger)
 }
 
-func initiate(native, foreign SwapContractBinder, logger Logger, query Query, statuses chan<- foundation.SwapStatus, done chan<- result) {
+func initiate(results chan<- result, statuses chan<- foundation.SwapStatus, native, foreign Contract, swap Swap, logger Logger) {
 	if err := native.Initiate(); err != nil {
-		logger.LogError(query.Swap.ID, err)
-		done <- result{query.Swap.ID, false}
+		logger.LogError(swap.ID, err)
+		results <- newResult(swap.ID, false)
 		return
 	}
-	statuses <- foundation.SwapStatus{query.Swap.ID, foundation.INITIATED}
+	statuses <- foundation.NewSwapStatus(swap.ID, foundation.Initiated)
 	if err := foreign.Audit(); err != nil {
-		statuses <- foundation.SwapStatus{query.Swap.ID, foundation.AUDIT_FAILED}
+		statuses <- foundation.NewSwapStatus(swap.ID, foundation.AuditFailed)
 		if err := native.Refund(); err != nil {
-			logger.LogError(query.Swap.ID, err)
-			done <- result{query.Swap.ID, false}
+			logger.LogError(swap.ID, err)
+			results <- newResult(swap.ID, false)
 			return
 		}
-		done <- result{query.Swap.ID, true}
-		statuses <- foundation.SwapStatus{query.Swap.ID, foundation.REFUNDED}
+		results <- newResult(swap.ID, true)
+		statuses <- foundation.NewSwapStatus(swap.ID, foundation.Refunded)
 		return
 	}
-	statuses <- foundation.SwapStatus{query.Swap.ID, foundation.AUDITED}
-	if err := foreign.Redeem(query.Secret); err != nil {
-		logger.LogError(query.Swap.ID, err)
-		done <- result{query.Swap.ID, false}
+	statuses <- foundation.NewSwapStatus(swap.ID, foundation.Audited)
+	if err := foreign.Redeem(swap.Secret); err != nil {
+		logger.LogError(swap.ID, err)
+		results <- newResult(swap.ID, false)
 		return
 	}
-	statuses <- foundation.SwapStatus{query.Swap.ID, foundation.REDEEMED}
-	done <- result{query.Swap.ID, true}
+	statuses <- foundation.NewSwapStatus(swap.ID, foundation.Redeemed)
+	results <- newResult(swap.ID, true)
 	return
 }
 
-func respond(native, foreign SwapContractBinder, logger Logger, query Query, statuses chan<- foundation.SwapStatus, done chan<- result) {
+func respond(results chan<- result, statuses chan<- foundation.SwapStatus, native, foreign Contract, swap Swap, logger Logger) {
 	if err := foreign.Audit(); err != nil {
-		statuses <- foundation.SwapStatus{query.Swap.ID, foundation.AUDIT_FAILED}
-		done <- result{query.Swap.ID, true}
+		statuses <- foundation.NewSwapStatus(swap.ID, foundation.AuditFailed)
+		results <- newResult(swap.ID, true)
 		return
 	}
-	statuses <- foundation.SwapStatus{query.Swap.ID, foundation.AUDITED}
+	statuses <- foundation.NewSwapStatus(swap.ID, foundation.Audited)
 	if err := native.Initiate(); err != nil {
-		logger.LogError(query.Swap.ID, err)
-		done <- result{query.Swap.ID, false}
+		logger.LogError(swap.ID, err)
+		results <- newResult(swap.ID, false)
 		return
 	}
-	statuses <- foundation.SwapStatus{query.Swap.ID, foundation.INITIATED}
+	statuses <- foundation.NewSwapStatus(swap.ID, foundation.Initiated)
 	secret, err := native.AuditSecret()
 	if err != nil {
 		if err := native.Refund(); err != nil {
-			logger.LogError(query.Swap.ID, err)
-			done <- result{query.Swap.ID, false}
+			logger.LogError(swap.ID, err)
+			results <- newResult(swap.ID, false)
 			return
 		}
-		statuses <- foundation.SwapStatus{query.Swap.ID, foundation.REFUNDED}
-		done <- result{query.Swap.ID, true}
+		statuses <- foundation.NewSwapStatus(swap.ID, foundation.Refunded)
+		results <- newResult(swap.ID, true)
 	}
 	if err := foreign.Redeem(secret); err != nil {
-		logger.LogError(query.Swap.ID, err)
-		done <- result{query.Swap.ID, false}
+		logger.LogError(swap.ID, err)
+		results <- newResult(swap.ID, false)
 		return
 	}
-	statuses <- foundation.SwapStatus{query.Swap.ID, foundation.REDEEMED}
-	done <- result{query.Swap.ID, true}
+	statuses <- foundation.NewSwapStatus(swap.ID, foundation.Redeemed)
+	results <- newResult(swap.ID, true)
 }

@@ -6,30 +6,32 @@ import (
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-type Semaphore struct {
-	statuses map[foundation.SwapID]bool
-	mu       *sync.RWMutex
+type binarySemaphore struct {
+	swaps map[foundation.SwapID]bool
+	mu    *sync.RWMutex
 }
 
-func NewSemaphore() Semaphore {
-	return Semaphore{
-		statuses: map[foundation.SwapID]bool{},
-		mu:       new(sync.RWMutex),
+func newBinarySemaphore() *binarySemaphore {
+	return &binarySemaphore{
+		swaps: map[foundation.SwapID]bool{},
+		mu:    new(sync.RWMutex),
 	}
 }
 
-func (sem *Semaphore) TryWait(id foundation.SwapID) bool {
+func (sem *binarySemaphore) TryWait(id foundation.SwapID) bool {
 	sem.mu.Lock()
 	defer sem.mu.Unlock()
-	if sem.statuses[id] {
+
+	if sem.swaps[id] {
 		return false
 	}
-	sem.statuses[id] = true
+	sem.swaps[id] = true
 	return true
 }
 
-func (sem *Semaphore) Signal(id foundation.SwapID) {
+func (sem *binarySemaphore) Signal(id foundation.SwapID) {
 	sem.mu.Lock()
 	defer sem.mu.Unlock()
-	sem.statuses[id] = false
+
+	sem.swaps[id] = false
 }
