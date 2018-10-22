@@ -11,41 +11,36 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/republicprotocol/libbtc-go"
-	"github.com/republicprotocol/swapperd/core"
+	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type btcSwapContractBinder struct {
 	scriptAddr string
 	script     []byte
-	req        foundation.Swap
+	swap       foundation.SwapTry
 	txVersion  int32
 	fee        int64
 	verify     bool
-	ctx        context.Context
-	core.Logger
+	swapper.Logger
 	libbtc.Account
 }
 
 // NewBTCSwapContractBinder returns a new Bitcoin Atom instance
-func NewBTCSwapContractBinder(account libbtc.Account, req foundation.Swap, logger core.Logger) (core.SwapContractBinder, error) {
-	address, err := account.Address()
+func NewBTCSwapContractBinder(account libbtc.Account, swap foundation.SwapTry, logger swapper.Logger) (swapper.SwapContractBinder, error) {
+	script, scriptAddr, err := buildInitiateScript(swap, account.NetworkParams())
 	if err != nil {
 		return nil, err
 	}
-	script, scriptAddr, err := buildInitiateScript(address.EncodeAddress(), req, account.NetworkParams())
-	if err != nil {
-		return nil, err
-	}
-	logger.LogInfo(req.ID, fmt.Sprintf("Bitcoin atomic swap id: %s", scriptAddr))
+
+	logger.LogInfo(swap.ID, fmt.Sprintf("Bitcoin atomic swap id: %s", scriptAddr))
 	return &btcSwapContractBinder{
 		scriptAddr: scriptAddr,
 		script:     script,
-		req:        req,
+		swap:       swap,
 		txVersion:  2,
 		fee:        10000,
 		verify:     true,
-		ctx:        context.Background(),
 		Logger:     logger,
 		Account:    account,
 	}, nil
@@ -53,7 +48,7 @@ func NewBTCSwapContractBinder(account libbtc.Account, req foundation.Swap, logge
 
 // Initiate the atomic swap by funding a HTLC on the Bitcoin blockchain.
 func (atom *btcSwapContractBinder) Initiate() error {
-	atom.LogInfo(atom.req.ID, "initiating on Bitcoin blockchain")
+	atom.LogInfo(atom.swap.ID, "initiating on Bitcoin blockchain")
 	scriptAddr, err := btcutil.DecodeAddress(atom.scriptAddr, atom.NetworkParams())
 	if err != nil {
 		return NewErrInitiate(err)
@@ -63,45 +58,53 @@ func (atom *btcSwapContractBinder) Initiate() error {
 		return NewErrInitiate(NewErrBuildScript(err))
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
 	// signing a transaction with the given private key
-	return atom.SendTransaction(
-		atom.ctx,
+	if err := atom.SendTransaction(
+		ctx,
 		nil,
 		atom.fee,
 		func(tx *wire.MsgTx) bool {
 			// checks whether the contract is funded, with given value
-			funded, value, err := atom.ScriptFunded(atom.ctx, atom.scriptAddr, atom.req.SendValue.Int64())
+			funded, value, err := atom.ScriptFunded(ctx, atom.scriptAddr, atom.swap.Value.Int64())
 			if err != nil {
 				return false
 			}
 			if funded {
-				atom.LogInfo(atom.req.ID, fmt.Sprintf("Bitcoin swap initiated with send value %d", atom.req.SendValue.Int64()))
+				atom.LogInfo(atom.swap.ID, fmt.Sprintf("Bitcoin swap initiated with send value %d", atom.swap.Value.Int64()))
 				return false
 			}
 			// creating unsigned transaction and adding transaction outputs
-			tx.AddTxOut(wire.NewTxOut(atom.req.SendValue.Int64()-value, initiateScriptP2SHPKScript))
+			tx.AddTxOut(wire.NewTxOut(atom.swap.Value.Int64()-value, initiateScriptP2SHPKScript))
 			return !funded
 		},
 		nil,
 		func(tx *wire.MsgTx) bool {
-			funded, _, err := atom.ScriptFunded(atom.ctx, atom.scriptAddr, atom.req.SendValue.Int64())
+			funded, _, err := atom.ScriptFunded(ctx, atom.scriptAddr, atom.swap.Value.Int64())
 			if err != nil {
 				return false
 			}
 			if funded {
-				atom.LogInfo(atom.req.ID, atom.FormatTransactionView("initiated the atomic swap on Bitcoin blockchain", tx.TxHash().String()))
+				atom.LogInfo(atom.swap.ID, atom.FormatTransactionView("initiated the atomic swap on Bitcoin blockchain", tx.TxHash().String()))
 			}
 			return funded
 		},
-	)
+	); err != nil && err != libbtc.ErrPreConditionCheckFailed {
+		return err
+	}
+	return nil
 }
 
 func (atom *btcSwapContractBinder) Audit() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Minute)
+	defer cancel()
 	for {
-		if funded, _, err := atom.ScriptFunded(atom.ctx, atom.scriptAddr, atom.req.ReceiveValue.Int64()); funded && err == nil {
+		if funded, _, err := atom.ScriptFunded(ctx, atom.scriptAddr, atom.swap.Value.Int64()); funded && err == nil {
 			return nil
 		}
-		if time.Now().Unix() > atom.req.TimeLock {
+		if time.Now().Unix() > atom.swap.TimeLock {
 			return NewErrAudit(ErrTimedOut)
 		}
 		time.Sleep(15 * time.Second)
@@ -111,7 +114,9 @@ func (atom *btcSwapContractBinder) Audit() error {
 // Redeem the Atomic Swap by revealing the secret and withdrawing funds from the
 // HTLC.
 func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
-	atom.LogInfo(atom.req.ID, "redeeming on Bitcoin blockchain")
+	atom.LogInfo(atom.swap.ID, "redeeming on Bitcoin blockchain")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
 	address, err := atom.Address()
 	if err != nil {
 		return NewErrRedeem(err)
@@ -120,12 +125,12 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 	if err != nil {
 		return NewErrRedeem(err)
 	}
-	return atom.SendTransaction(
-		atom.ctx,
+	if err := atom.SendTransaction(
+		ctx,
 		atom.script,
 		atom.fee,
 		func(tx *wire.MsgTx) bool {
-			funded, val, err := atom.ScriptFunded(atom.ctx, atom.scriptAddr, 0)
+			funded, val, err := atom.ScriptFunded(ctx, atom.scriptAddr, 0)
 			if err != nil {
 				return false
 			}
@@ -139,30 +144,35 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 			builder.AddInt64(1)
 		},
 		func(tx *wire.MsgTx) bool {
-			spent, err := atom.ScriptSpent(atom.ctx, atom.scriptAddr)
+			spent, err := atom.ScriptSpent(ctx, atom.scriptAddr)
 			if spent {
-				atom.LogInfo(atom.req.ID, atom.FormatTransactionView("redeemed the atomic swap on Bitcoin blockchain", tx.TxHash().String()))
+				atom.LogInfo(atom.swap.ID, atom.FormatTransactionView("redeemed the atomic swap on Bitcoin blockchain", tx.TxHash().String()))
 			}
 			if err != nil {
 				return false
 			}
 			return spent
 		},
-	)
+	); err != nil && err != libbtc.ErrPreConditionCheckFailed {
+		return err
+	}
+	return nil
 }
 
 func (atom *btcSwapContractBinder) AuditSecret() ([32]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Minute)
+	defer cancel()
 	for {
-		if spent, err := atom.ScriptSpent(atom.ctx, atom.scriptAddr); spent && err == nil {
+		if spent, err := atom.ScriptSpent(ctx, atom.scriptAddr); spent && err == nil {
 			break
 		}
-		if time.Now().Unix() > atom.req.TimeLock {
+		if time.Now().Unix() > atom.swap.TimeLock {
 			return [32]byte{}, NewErrAuditSecret(ErrTimedOut)
 		}
 		time.Sleep(15 * time.Second)
 	}
 
-	sigScript, err := atom.GetScriptFromSpentP2SH(atom.ctx, atom.scriptAddr)
+	sigScript, err := atom.GetScriptFromSpentP2SH(ctx, atom.scriptAddr)
 	if err != nil {
 		return [32]byte{}, NewErrAuditSecret(err)
 	}
@@ -172,10 +182,10 @@ func (atom *btcSwapContractBinder) AuditSecret() ([32]byte, error) {
 		return [32]byte{}, NewErrAuditSecret(err)
 	}
 	for _, push := range pushes {
-		if sha256.Sum256(push) == atom.req.SecretHash {
+		if sha256.Sum256(push) == atom.swap.SecretHash {
 			var secret [32]byte
 			copy(secret[:], push)
-			atom.LogInfo(atom.req.ID, fmt.Sprintf("audit secret successful on Bitcoin blockchain %s", base64.StdEncoding.EncodeToString(secret[:])))
+			atom.LogInfo(atom.swap.ID, fmt.Sprintf("audit secret successful on Bitcoin blockchain %s", base64.StdEncoding.EncodeToString(secret[:])))
 			return secret, nil
 		}
 	}
@@ -184,7 +194,7 @@ func (atom *btcSwapContractBinder) AuditSecret() ([32]byte, error) {
 
 // Refund the Atomic Swap after expiry and withdraw funds from the HTLC.
 func (atom *btcSwapContractBinder) Refund() error {
-	atom.LogInfo(atom.req.ID, "refunding on Bitcoin blockchain")
+	atom.LogInfo(atom.swap.ID, "refunding on Bitcoin blockchain")
 	address, err := atom.Address()
 	if err != nil {
 		return NewErrRedeem(err)
@@ -193,12 +203,14 @@ func (atom *btcSwapContractBinder) Refund() error {
 	if err != nil {
 		return NewErrRedeem(err)
 	}
-	return atom.SendTransaction(
-		atom.ctx,
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	if err := atom.SendTransaction(
+		ctx,
 		atom.script,
 		atom.fee,
 		func(tx *wire.MsgTx) bool {
-			funded, val, err := atom.ScriptFunded(atom.ctx, atom.scriptAddr, 0)
+			funded, val, err := atom.ScriptFunded(ctx, atom.scriptAddr, 0)
 			if err != nil {
 				return false
 			}
@@ -211,14 +223,17 @@ func (atom *btcSwapContractBinder) Refund() error {
 			builder.AddInt64(0)
 		},
 		func(tx *wire.MsgTx) bool {
-			spent, err := atom.ScriptSpent(atom.ctx, atom.scriptAddr)
+			spent, err := atom.ScriptSpent(ctx, atom.scriptAddr)
 			if err != nil {
 				return false
 			}
 			if spent {
-				atom.LogInfo(atom.req.ID, atom.FormatTransactionView("refunded the atomic swap on Bitcoin blockchain", tx.TxHash().String()))
+				atom.LogInfo(atom.swap.ID, atom.FormatTransactionView("refunded the atomic swap on Bitcoin blockchain", tx.TxHash().String()))
 			}
 			return spent
 		},
-	)
+	); err != nil && err != libbtc.ErrPreConditionCheckFailed {
+		return err
+	}
+	return nil
 }

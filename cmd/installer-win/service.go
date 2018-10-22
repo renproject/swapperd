@@ -37,8 +37,6 @@ func (p *program) Start(s service.Service) error {
 		keyphrase = fmt.Sprintf("--keyphrase %s", p.Keyphrase)
 	}
 
-	fmt.Println("Path: ", os.Getenv("PATH"))
-
 	p.cmd = exec.Command("C:\\Users\\Administrator\\Desktop\\Swapper\\swapper.exe", "http", keyphrase)
 	p.cmd.Dir = p.HomeDir
 	p.cmd.Env = os.Environ()

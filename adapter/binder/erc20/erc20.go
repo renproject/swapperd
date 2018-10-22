@@ -3,7 +3,6 @@ package erc20
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -13,15 +12,15 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/republicprotocol/swapperd/core"
+	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type erc20SwapContractBinder struct {
 	id             [32]byte
 	account        beth.Account
-	req            foundation.Swap
-	logger         core.Logger
+	swap           foundation.SwapTry
+	logger         swapper.Logger
 	swapperAddress common.Address
 	tokenAddress   common.Address
 	swapperBinder  *RenExAtomicSwapper
@@ -29,18 +28,13 @@ type erc20SwapContractBinder struct {
 }
 
 // NewERC20SwapContractBinder returns a new ERC20 Atom instance
-func NewERC20SwapContractBinder(account beth.Account, req foundation.Swap, logger core.Logger) (core.SwapContractBinder, error) {
-	token, expiry, err := getSwapDetails(req)
+func NewERC20SwapContractBinder(account beth.Account, swap foundation.SwapTry, logger swapper.Logger) (swapper.SwapContractBinder, error) {
+	tokenAddress, err := account.ReadAddress(fmt.Sprintf("ERC20:%s", swap.Token.Name))
 	if err != nil {
 		return nil, err
 	}
 
-	tokenAddress, err := account.ReadAddress(fmt.Sprintf("ERC20:%s", token.Name))
-	if err != nil {
-		return nil, err
-	}
-
-	swapperAddress, err := account.ReadAddress(fmt.Sprintf("SWAPPER:%s", token.Name))
+	swapperAddress, err := account.ReadAddress(fmt.Sprintf("SWAPPER:%s", swap.Token.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -57,13 +51,12 @@ func NewERC20SwapContractBinder(account beth.Account, req foundation.Swap, logge
 		return nil, err
 	}
 
-	id, err := swapperBinder.SwapID(&bind.CallOpts{}, req.SecretHash, big.NewInt(expiry))
+	id, err := swapperBinder.SwapID(&bind.CallOpts{}, swap.SecretHash, big.NewInt(swap.TimeLock))
 	if err != nil {
 		return nil, err
 	}
 
-	logger.LogInfo(req.ID, fmt.Sprintf("ERC20 Atomic Swap ID: %s", base64.StdEncoding.EncodeToString(id[:])))
-	req.TimeLock = expiry
+	logger.LogInfo(swap.ID, fmt.Sprintf("ERC20 Atomic Swap ID: %s", base64.StdEncoding.EncodeToString(swap.ID[:])))
 
 	return &erc20SwapContractBinder{
 		account:        account,
@@ -72,24 +65,26 @@ func NewERC20SwapContractBinder(account beth.Account, req foundation.Swap, logge
 		swapperBinder:  swapperBinder,
 		tokenBinder:    tokenBinder,
 		logger:         logger,
-		req:            req,
+		swap:           swap,
 		id:             id,
 	}, nil
 }
 
 // Initiate a new Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) Initiate() error {
-	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Initiating on Ethereum blockchain for ERC20 (%s)", atom.req.SendToken))
+	atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Initiating on Ethereum blockchain for ERC20 (%s)", atom.swap.Token.Name))
 
 	// Approve the contract to transfer tokens
 	if err := atom.account.Transact(
 		context.Background(),
 		nil,
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
-			tx, err := atom.tokenBinder.Approve(tops, atom.swapperAddress, atom.req.SendValue)
+			tx, err := atom.tokenBinder.Approve(tops, atom.swapperAddress, atom.swap.Value)
 			if err != nil {
 				return tx, err
 			}
+			msg, _ := atom.account.FormatTransactionView("Approved the atomic swap on Ethereum blockchain", tx.Hash().String())
+			atom.logger.LogInfo(atom.swap.ID, msg)
 			return tx, nil
 		},
 		nil,
@@ -99,7 +94,7 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 	}
 
 	// Initiate the Atomic Swap
-	return atom.account.Transact(
+	if err := atom.account.Transact(
 		context.Background(),
 		func() bool {
 			initiatable, err := atom.swapperBinder.Initiatable(&bind.CallOpts{}, atom.id)
@@ -109,12 +104,12 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 			return initiatable
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
-			tx, err := atom.swapperBinder.Initiate(tops, atom.id, common.HexToAddress(atom.req.SendToAddress), atom.req.SecretHash, big.NewInt(atom.req.TimeLock), atom.req.SendValue)
+			tx, err := atom.swapperBinder.Initiate(tops, atom.id, common.HexToAddress(atom.swap.SpendingAddress), atom.swap.SecretHash, big.NewInt(atom.swap.TimeLock), atom.swap.Value)
 			if err != nil {
 				return tx, err
 			}
 			msg, _ := atom.account.FormatTransactionView("Initiated the atomic swap on Ethereum blockchain", tx.Hash().String())
-			atom.logger.LogInfo(atom.req.ID, msg)
+			atom.logger.LogInfo(atom.swap.ID, msg)
 			return tx, nil
 		},
 		func() bool {
@@ -125,13 +120,16 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 			return !initiatable
 		},
 		1,
-	)
+	); err != nil && err != beth.ErrPreConditionCheckFailed {
+		return err
+	}
+	return nil
 }
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) Refund() error {
-	atom.logger.LogInfo(atom.req.ID, "Refunding the atomic swap on ERC20 blockchain")
-	return atom.account.Transact(
+	atom.logger.LogInfo(atom.swap.ID, "Refunding the atomic swap on ERC20 blockchain")
+	if err := atom.account.Transact(
 		context.Background(),
 		func() bool {
 			refundable, err := atom.swapperBinder.Refundable(&bind.CallOpts{}, atom.id)
@@ -146,7 +144,7 @@ func (atom *erc20SwapContractBinder) Refund() error {
 				return nil, err
 			}
 			msg, _ := atom.account.FormatTransactionView("Refunded the atomic swap on Ethereum blockchain", tx.Hash().String())
-			atom.logger.LogInfo(atom.req.ID, msg)
+			atom.logger.LogInfo(atom.swap.ID, msg)
 			return tx, nil
 		},
 		func() bool {
@@ -157,22 +155,25 @@ func (atom *erc20SwapContractBinder) Refund() error {
 			return !refundable
 		},
 		1,
-	)
+	); err != nil && err != beth.ErrPreConditionCheckFailed {
+		return err
+	}
+	return nil
 }
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) AuditSecret() ([32]byte, error) {
 	for {
-		atom.logger.LogInfo(atom.req.ID, "Auditing secret on ethereum blockchain")
+		atom.logger.LogInfo(atom.swap.ID, "Auditing secret on ethereum blockchain")
 		redeemable, err := atom.swapperBinder.Redeemable(&bind.CallOpts{}, atom.id)
 		if err != nil {
-			atom.logger.LogError(atom.req.ID, err)
+			atom.logger.LogError(atom.swap.ID, err)
 			return [32]byte{}, err
 		}
 		if !redeemable {
 			break
 		}
-		if time.Now().Unix() > atom.req.TimeLock {
+		if time.Now().Unix() > atom.swap.TimeLock {
 			return [32]byte{}, fmt.Errorf("Timed Out")
 		}
 		time.Sleep(15 * time.Second)
@@ -181,13 +182,13 @@ func (atom *erc20SwapContractBinder) AuditSecret() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Audit success on ethereum blockchain secret=%s", base64.StdEncoding.EncodeToString(secret[:])))
+	atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Audit success on ethereum blockchain secret=%s", base64.StdEncoding.EncodeToString(secret[:])))
 	return secret, nil
 }
 
 // Audit an Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) Audit() error {
-	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Waiting for initiation on ethereum blockchain"))
+	atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Waiting for initiation on ethereum blockchain"))
 	for {
 		initiatable, err := atom.swapperBinder.Initiatable(&bind.CallOpts{}, atom.id)
 		if err != nil {
@@ -202,17 +203,17 @@ func (atom *erc20SwapContractBinder) Audit() error {
 	if err != nil {
 		return err
 	}
-	if auditReport.Value.Cmp(atom.req.ReceiveValue) != 0 {
-		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.req.ReceiveValue, auditReport.Value)
+	if auditReport.Value.Cmp(atom.swap.Value) != 0 {
+		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.swap.Value, auditReport.Value)
 	}
-	atom.logger.LogInfo(atom.req.ID, fmt.Sprintf("Audit successful on Ethereum blockchain"))
+	atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Audit successful on Ethereum blockchain"))
 	return nil
 }
 
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
-	atom.logger.LogInfo(atom.req.ID, "Redeeming the atomic swap on Ethereum blockchain")
-	return atom.account.Transact(
+	atom.logger.LogInfo(atom.swap.ID, "Redeeming the atomic swap on Ethereum blockchain")
+	if err := atom.account.Transact(
 		context.Background(),
 		func() bool {
 			redeemable, err := atom.swapperBinder.Redeemable(&bind.CallOpts{}, atom.id)
@@ -227,7 +228,7 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 				return nil, err
 			}
 			msg, _ := atom.account.FormatTransactionView("Redeemed the atomic swap on Ethereum blockchain", tx.Hash().String())
-			atom.logger.LogInfo(atom.req.ID, msg)
+			atom.logger.LogInfo(atom.swap.ID, msg)
 			return tx, nil
 		},
 		func() bool {
@@ -238,22 +239,8 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 			return !refundable
 		},
 		1,
-	)
-}
-
-func getSwapDetails(req foundation.Swap) (foundation.Token, int64, error) {
-	if req.SendToken.Blockchain != "Ethereum" && req.ReceiveToken.Blockchain != "Ethereum" {
-		return foundation.Token{}, 0, errors.New("Expected one of the tokens to be ethereum")
+	); err != nil && err != beth.ErrPreConditionCheckFailed {
+		return err
 	}
-	if (req.IsFirst && req.SendToken.Blockchain == "Ethereum") || (!req.IsFirst && req.ReceiveToken.Blockchain == "Ethereum") {
-		if req.SendToken.Blockchain == "Ethereum" {
-			return req.SendToken, req.TimeLock, nil
-		}
-		return req.ReceiveToken, req.TimeLock, nil
-	}
-
-	if req.SendToken.Blockchain == "Ethereum" {
-		return req.SendToken, req.TimeLock - 24*60*60, nil
-	}
-	return req.ReceiveToken, req.TimeLock - 24*60*60, nil
+	return nil
 }

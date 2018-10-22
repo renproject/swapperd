@@ -1,144 +1,22 @@
 package config
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"os"
-
-	"github.com/republicprotocol/swapperd/adapter/config"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/adapter/account"
 )
 
-// Global is the default global config
-var Global = config.Config{
-	Version:             "0.1.0",
-	SupportedCurrencies: []foundation.Token{foundation.TokenBTC, foundation.TokenWBTC},
-}
-
-// RenExMainnet is the RenEx config object on the mainnet
-var RenExMainnet = config.RenExNetwork{
-	Network:    "mainnet",
-	Ingress:    "renex-ingress-mainnet.herokuapp.com",
-	Settlement: "0x908262dE0366E42d029B0518D5276762c92B21e1",
-	Orderbook:  "0x6b8bB175c092DE7d81860B18DB360B734A2598e0",
-}
-
-// RenExTestnet is the RenEx config object on the testnet
-var RenExTestnet = config.RenExNetwork{
-	Network:    "testnet",
-	Ingress:    "renex-ingress-testnet.herokuapp.com",
-	Settlement: "",
-	Orderbook:  "",
-}
-
-// RenExNightly is the RenEx config object on the nightly testnet
-var RenExNightly = config.RenExNetwork{
-	Network:    "nightly",
-	Ingress:    "renex-ingress-nightly.herokuapp.com",
-	Settlement: "",
-	Orderbook:  "",
-}
-
-// EthereumMainnet is the ethereum config object on the kovan testnet
-var EthereumMainnet = config.EthereumNetwork{
-	Network: "mainnet",
-	Swapper: "0xd5fAEF6b5eE44391FFaa42d732c88b86C73ed287",
-	URL:     "https://mainnet.infura.io",
-}
-
-// EthereumKovan is the ethereum config object on the kovan testnet
-var EthereumKovan = config.EthereumNetwork{
-	Network: "kovan",
-	Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
-	URL:     "https://kovan.infura.io",
-}
-
-// BitcoinTestnet is the bitcoin config object on the bitcoin testnet
-var BitcoinTestnet = config.BitcoinNetwork{
-	Network: "testnet",
-	URL:     "https://testnet.blockchain.info",
-}
-
-// BitcoinMainnet is the bitcoin config object on the bitcoin mainnet
-var BitcoinMainnet = config.BitcoinNetwork{
-	Network: "mainnet",
-	URL:     "https://blockchain.info",
-}
-
-// NewRenExNetwork creates a RenEx config object for the given RenEx network
-func NewRenExNetwork(net string) config.RenExNetwork {
-	return config.RenExNetwork{
-		Network: net,
-		Ingress: fmt.Sprintf(""),
-	}
-}
-
-// New creates a new config object from the config data object
-func New(loc, net string) (config.Config, error) {
-	conf := config.Config{}
-	configFilename := fmt.Sprintf("%s/config-%s.json", loc, net)
-	data, err := ioutil.ReadFile(configFilename)
-	if err == nil {
-		if err := json.Unmarshal(data, &conf); err != nil {
-			return conf, err
-		}
-	} else {
-		switch net {
-		case "nightly", "Nightly":
-			conf = NewNightly(loc)
-		case "testnet", "Testnet":
-			conf = NewTestnet(loc)
-		case "", "mainnet", "Mainnet":
-			conf = NewMainnet(loc)
-		default:
-			return conf, fmt.Errorf("Unknown network: %s", net)
-		}
-	}
-	SaveToFile(configFilename, conf)
-	return conf, nil
-}
-
-func SaveToFile(filename string, conf config.Config) {
-	data, err := json.Marshal(conf)
-	if err != nil {
-		panic(err)
-	}
-	ioutil.WriteFile(filename, data, os.FileMode(0644))
-}
-
-// NewMainnet creates a new mainnet config
-func NewMainnet(loc string) config.Config {
-	return config.Config{
-		Version:             Global.Version,
-		SupportedCurrencies: Global.SupportedCurrencies,
-		HomeDir:             loc,
-		Ethereum:            EthereumMainnet,
-		Bitcoin:             BitcoinMainnet,
-		RenEx:               RenExMainnet,
-	}
-}
-
-// NewTestnet creates a new testnet config
-func NewTestnet(loc string) config.Config {
-	return config.Config{
-		Version:             Global.Version,
-		SupportedCurrencies: Global.SupportedCurrencies,
-		HomeDir:             loc,
-		Ethereum:            EthereumKovan,
-		Bitcoin:             BitcoinTestnet,
-		RenEx:               RenExTestnet,
-	}
-}
-
-// NewNightly creates a new nightly config
-func NewNightly(loc string) config.Config {
-	return config.Config{
-		Version:             Global.Version,
-		SupportedCurrencies: Global.SupportedCurrencies,
-		HomeDir:             loc,
-		Ethereum:            EthereumKovan,
-		Bitcoin:             BitcoinTestnet,
-		RenEx:               RenExNightly,
-	}
+// Testnet is the testnet config object
+var Testnet = account.Config{
+	Bitcoin: "testnet",
+	Ethereum: account.EthereumConfig{
+		URL:     "https://kovan.infura.io",
+		Network: "kovan",
+		Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
+		Tokens: []account.EthereumToken{
+			account.EthereumToken{
+				Name:    "WBTC",
+				ERC20:   "0xA1D3EEcb76285B4435550E4D963B8042A8bffbF0",
+				Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
+			},
+		},
+	},
 }

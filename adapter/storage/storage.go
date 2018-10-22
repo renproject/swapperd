@@ -1,34 +1,107 @@
 package storage
 
 import (
+	"encoding/json"
+	"sync"
+
+	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-type Storage interface {
-	AddSwap(swap foundation.Swap) error
-	DeleteSwap(swapID foundation.SwapID) error
-	LoadSwaps() []foundation.Swap
-}
-
-func NewStorage() Storage {
-	return &storage{}
+type Store interface {
+	Read([]byte) ([]byte, error)
+	Write([]byte, []byte) error
+	Delete([]byte) error
 }
 
 type storage struct {
+	mu    *sync.RWMutex
+	store Store
 }
 
-func (storage *storage) AddSwap(swap foundation.Swap) error {
-	return nil
+type SwapStorage struct {
+	Swaps          []foundation.Swap `json:"swaps"`
+	PendingQueries []swapper.Query   `json:"pendingQueries"`
 }
 
-func (storage *storage) DeleteSwap(orderID foundation.SwapID) error {
-	return nil
+func New(store Store) swapper.Storage {
+	return &storage{
+		mu:    new(sync.RWMutex),
+		store: store,
+	}
+}
+
+func (storage *storage) AddQuery(query swapper.Query) error {
+	swapStorageBytes, err := storage.store.Read([]byte("SwapStorage"))
+	if err != nil {
+		return err
+	}
+
+	swapStorage := SwapStorage{}
+	if err := json.Unmarshal(swapStorageBytes, &swapStorage); err != nil {
+		return err
+	}
+
+	swapStorage.Swaps = append(swapStorage.Swaps, query.Swap)
+	swapStorage.PendingQueries = append(swapStorage.PendingQueries, query)
+
+	swapStorageBytes, err = json.Marshal(swapStorage)
+	if err != nil {
+		return err
+	}
+
+	return storage.store.Write([]byte("SwapStorage"), swapStorageBytes)
+}
+
+func (storage *storage) DeleteQuery(swapID foundation.SwapID) error {
+	swapStorageBytes, err := storage.store.Read([]byte("SwapStorage"))
+	if err != nil {
+		return err
+	}
+
+	swapStorage := SwapStorage{}
+	if err := json.Unmarshal(swapStorageBytes, &swapStorage); err != nil {
+		return err
+	}
+
+	for i, query := range swapStorage.PendingQueries {
+		if query.Swap.ID == swapID {
+			swapStorage.PendingQueries = append(swapStorage.PendingQueries[:i], swapStorage.PendingQueries[:i+1]...)
+		}
+	}
+
+	swapStorageBytes, err = json.Marshal(swapStorage)
+	if err != nil {
+		return err
+	}
+
+	return storage.store.Write([]byte("SwapStorage"), swapStorageBytes)
+}
+
+func (storage *storage) LoadPendingQueries() []swapper.Query {
+	swapStorageBytes, err := storage.store.Read([]byte("SwapStorage"))
+	if err != nil {
+		return []swapper.Query{}
+	}
+
+	swapStorage := SwapStorage{}
+	if err := json.Unmarshal(swapStorageBytes, &swapStorage); err != nil {
+		return []swapper.Query{}
+	}
+
+	return swapStorage.PendingQueries
 }
 
 func (storage *storage) LoadSwaps() []foundation.Swap {
-	return []foundation.Swap{}
-}
+	swapStorageBytes, err := storage.store.Read([]byte("SwapStorage"))
+	if err != nil {
+		return []foundation.Swap{}
+	}
 
-func (storage *storage) GetSwaps() []foundation.Swap {
-	return []foundation.Swap{}
+	swapStorage := SwapStorage{}
+	if err := json.Unmarshal(swapStorageBytes, &swapStorage); err != nil {
+		return []foundation.Swap{}
+	}
+
+	return swapStorage.Swaps
 }
