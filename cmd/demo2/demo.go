@@ -33,12 +33,12 @@ func main() {
 	swapStatuses := make(chan foundation.SwapStatus)
 	swapQueries := make(chan status.Query)
 
-	accounts, err := utils.LoadAccounts("../../secrets/bob.json")
+	accounts, err := utils.LoadAccounts("../../secrets/alice.json")
 	if err != nil {
 		panic(err)
 	}
 
-	ldb, err := leveldb.NewStore("../../secrets/bob")
+	ldb, err := leveldb.NewStore("../../secrets/alice")
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +47,7 @@ func main() {
 	go co.ParBegin(
 		func() {
 			handler := server.NewHandler(swaps, swapQueries)
-			listener, err := net.Listen("tcp", ":18517")
+			listener, err := net.Listen("tcp", ":18516")
 			if err != nil {
 				log.Fatal(err)
 			}

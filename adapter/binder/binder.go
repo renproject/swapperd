@@ -85,7 +85,7 @@ func (builder *builder) buildForeignSwap(swap foundation.Swap, timelock int64, s
 	}
 }
 
-func (builder *builder) calculateTimeLocks(swap foundation.Swap) (native, foreign int64) {
+func (builder *builder) calculateTimeLocks(swap foundation.SwapRequest) (native, foreign int64) {
 	if swap.IsFirst {
 		native = swap.TimeLock
 		foreign = swap.TimeLock - 24*60*60

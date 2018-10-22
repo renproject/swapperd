@@ -94,7 +94,7 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 	}
 
 	// Initiate the Atomic Swap
-	return atom.account.Transact(
+	if err := atom.account.Transact(
 		context.Background(),
 		func() bool {
 			initiatable, err := atom.swapperBinder.Initiatable(&bind.CallOpts{}, atom.id)
@@ -120,13 +120,16 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 			return !initiatable
 		},
 		1,
-	)
+	); err != nil && err != beth.ErrPreConditionCheckFailed {
+		return err
+	}
+	return nil
 }
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) Refund() error {
 	atom.logger.LogInfo(atom.swap.ID, "Refunding the atomic swap on ERC20 blockchain")
-	return atom.account.Transact(
+	if err := atom.account.Transact(
 		context.Background(),
 		func() bool {
 			refundable, err := atom.swapperBinder.Refundable(&bind.CallOpts{}, atom.id)
@@ -152,7 +155,10 @@ func (atom *erc20SwapContractBinder) Refund() error {
 			return !refundable
 		},
 		1,
-	)
+	); err != nil && err != beth.ErrPreConditionCheckFailed {
+		return err
+	}
+	return nil
 }
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
@@ -207,7 +213,7 @@ func (atom *erc20SwapContractBinder) Audit() error {
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 	atom.logger.LogInfo(atom.swap.ID, "Redeeming the atomic swap on Ethereum blockchain")
-	return atom.account.Transact(
+	if err := atom.account.Transact(
 		context.Background(),
 		func() bool {
 			redeemable, err := atom.swapperBinder.Redeemable(&bind.CallOpts{}, atom.id)
@@ -233,5 +239,8 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 			return !refundable
 		},
 		1,
-	)
+	); err != nil && err != beth.ErrPreConditionCheckFailed {
+		return err
+	}
+	return nil
 }

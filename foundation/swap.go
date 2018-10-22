@@ -4,28 +4,27 @@ import (
 	"math/big"
 )
 
-type SwapID [32]byte
+type SwapID string
 
 type SwapStatus struct {
 	ID     SwapID `json:"id"`
 	Status Status `json:"status"`
 }
 
-type Swap struct {
-	ID                 SwapID   `json:"id"`
-	Secret             [32]byte `json:"secret"`
-	SecretHash         [32]byte `json:"secretHash"`
-	TimeLock           int64    `json:"timeLock"`
-	SendToAddress      string   `json:"sendToAddress"`
-	ReceiveFromAddress string   `json:"receiveFromAddress"`
-	SendValue          *big.Int `json:"sendValue"`
-	ReceiveValue       *big.Int `json:"receiveValue"`
-	SendToken          Token    `json:"sendToken"`
-	ReceiveToken       Token    `json:"receiveToken"`
-	IsFirst            bool     `json:"isFirst"`
+type SwapRequest struct {
+	ID                  SwapID `json:"id"`
+	SendToken           string `json:"sendToken"`
+	ReceiveToken        string `json:"receiveToken"`
+	SendAmount          string `json:"sendAmount"`    // hex
+	ReceiveAmount       string `json:"receiveAmount"` //hex
+	SendTo              string `json:"sendTo"`
+	ReceiveFrom         string `json:"receiveFrom"`
+	TimeLock            int64  `json:"timeLock"`
+	SecretHash          string `json:"secretHash"`
+	ShouldInitiateFirst bool   `json:"shouldInitiateFirst"`
 }
 
-type SwapTry struct {
+type Swap struct {
 	ID              SwapID
 	Token           Token
 	Value           *big.Int

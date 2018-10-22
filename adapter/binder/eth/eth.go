@@ -57,9 +57,12 @@ func NewETHSwapContractBinder(account beth.Account, swap foundation.SwapTry, log
 func (atom *ethSwapContractBinder) Initiate() error {
 	atom.logger.LogInfo(atom.swap.ID, "Initiating on Ethereum blockchain")
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
 	// Initiate the Atomic Swap
-	return atom.account.Transact(
-		context.Background(),
+	if err := atom.account.Transact(
+		ctx,
 		func() bool {
 			initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
 			if err != nil {
@@ -86,14 +89,21 @@ func (atom *ethSwapContractBinder) Initiate() error {
 			return !initiatable
 		},
 		1,
-	)
+	); err != nil && err != beth.ErrPreConditionCheckFailed {
+		return err
+	}
+	return nil
 }
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *ethSwapContractBinder) Refund() error {
 	atom.logger.LogInfo(atom.swap.ID, "Refunding the atomic swap on Ethereum blockchain")
-	return atom.account.Transact(
-		context.Background(),
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	if err := atom.account.Transact(
+		ctx,
 		func() bool {
 			refundable, err := atom.binder.Refundable(&bind.CallOpts{}, atom.id)
 			if err != nil {
@@ -118,7 +128,10 @@ func (atom *ethSwapContractBinder) Refund() error {
 			return !refundable
 		},
 		1,
-	)
+	); err != nil && err != beth.ErrPreConditionCheckFailed {
+		return err
+	}
+	return nil
 }
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
@@ -173,8 +186,12 @@ func (atom *ethSwapContractBinder) Audit() error {
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 	atom.logger.LogInfo(atom.swap.ID, "Redeeming the atomic swap on Ethereum blockchain")
-	return atom.account.Transact(
-		context.Background(),
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	if err := atom.account.Transact(
+		ctx,
 		func() bool {
 			redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
 			if err != nil {
@@ -199,5 +216,8 @@ func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 			return !refundable
 		},
 		1,
-	)
+	); err != nil && err != beth.ErrPreConditionCheckFailed {
+		return err
+	}
+	return nil
 }
