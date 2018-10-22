@@ -6,13 +6,14 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/core/status"
+	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/rs/cors"
 )
 
 // NewHandler creates a new http handler
-func NewHandler(swaps chan<- foundation.Swap) http.Handler {
-	s := NewServer(swaps)
+func NewHandler(swapQueries chan<- swapper.Query, statusQueries chan<- status.Query) http.Handler {
+	s := NewServer(swapQueries, statusQueries)
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", postSwapsHandler(s)).Methods("POST")
 	r.HandleFunc("/swaps", getSwapsHandler(s)).Methods("GET")
@@ -62,13 +63,7 @@ func getPingHandler(server *server) http.HandlerFunc {
 // the existing swaps on the swapper.
 func getSwapsHandler(server *server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		swapsRes, err := server.GetSwaps()
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get status of swaps: %v", err))
-			return
-		}
-
-		if err := json.NewEncoder(w).Encode(swapsRes); err != nil {
+		if err := json.NewEncoder(w).Encode(server.GetSwaps()); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
 			return
 		}

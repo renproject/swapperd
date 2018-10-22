@@ -1,7 +1,6 @@
 package server
 
 import (
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -34,11 +33,13 @@ type PostSwapRequestResponse struct {
 	ShouldInitiateFirst bool   `json:"shouldInitiateFirst"`
 }
 
-type GetSwapResponse struct {
+type GetSwapsResponse struct {
 	Swaps []SwapStatus `json:"swaps"`
 }
 
 type SwapStatus struct {
+	ID     string `json:"id"`
+	Status int64  `json:"status"`
 }
 
 type GetBalanceResponse struct {
@@ -109,33 +110,38 @@ func UnmarshalSecretHash(hash string) ([32]byte, error) {
 func UnmarshalSwapRequestResponse(swapReqRes PostSwapRequestResponse) (foundation.Swap, error) {
 	secret := [32]byte{}
 	if swapReqRes.ShouldInitiateFirst {
-		rand.Read(secret[:])
-		hash := sha256.Sum256(secret[:])
+		// rand.Read(secret[:])
+		secretEnc, err := base64.StdEncoding.DecodeString("T1uILWHeG26mF81wKUNrEykEI5Ow1P/c2SuAwpKW5qM=")
+		if err != nil {
+			return foundation.Swap{}, err
+		}
+		hash := sha256.Sum256(secretEnc[:])
 		swapReqRes.SecretHash = MarshalSecretHash(hash)
+		secret, err = toBytes32(secretEnc)
 	}
 	swapID, err := UnmarshalSwapID(swapReqRes.ID)
 	if err != nil {
-		return foundation.Swap{}, nil
+		return foundation.Swap{}, err
 	}
 	sendToken, err := UnmarshalToken(swapReqRes.SendToken)
 	if err != nil {
-		return foundation.Swap{}, nil
+		return foundation.Swap{}, err
 	}
 	receiveToken, err := UnmarshalToken(swapReqRes.ReceiveToken)
 	if err != nil {
-		return foundation.Swap{}, nil
+		return foundation.Swap{}, err
 	}
 	sendValue, err := UnmarshalAmount(swapReqRes.SendAmount)
 	if err != nil {
-		return foundation.Swap{}, nil
+		return foundation.Swap{}, err
 	}
 	receiveValue, err := UnmarshalAmount(swapReqRes.ReceiveAmount)
 	if err != nil {
-		return foundation.Swap{}, nil
+		return foundation.Swap{}, err
 	}
 	secretHash, err := UnmarshalSecretHash(swapReqRes.SecretHash)
 	if err != nil {
-		return foundation.Swap{}, nil
+		return foundation.Swap{}, err
 	}
 	return foundation.Swap{
 		ID:                 swapID,

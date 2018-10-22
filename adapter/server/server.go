@@ -1,15 +1,18 @@
 package server
 
 import (
+	"github.com/republicprotocol/swapperd/core/status"
+	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type server struct {
-	swaps chan<- foundation.Swap
+	swapperQueries chan<- swapper.Query
+	statusQueries  chan<- status.Query
 }
 
-func NewServer(swaps chan<- foundation.Swap) *server {
-	return &server{swaps}
+func NewServer(swaps chan<- swapper.Query, statusQueries chan<- status.Query) *server {
+	return &server{swaps, statusQueries}
 }
 
 func (server *server) GetPing() GetPingResponse {
@@ -23,9 +26,18 @@ func (server *server) GetPing() GetPingResponse {
 	}
 }
 
-func (server *server) GetSwaps() (GetSwapResponse, error) {
-	// TODO: Implement the logic
-	return GetSwapResponse{}, nil
+func (server *server) GetSwaps() GetSwapsResponse {
+	resp := GetSwapsResponse{}
+	responder := make(chan map[foundation.SwapID]foundation.Status)
+	server.statusQueries <- status.Query{Responder: responder}
+	swapMap := <-responder
+	for id, status := range swapMap {
+		resp.Swaps = append(resp.Swaps, SwapStatus{
+			ID:     MarshalSwapID(id),
+			Status: int64(status),
+		})
+	}
+	return resp
 }
 
 func (server *server) PostSwaps(swapReqRes PostSwapRequestResponse) (PostSwapRequestResponse, error) {
@@ -33,8 +45,7 @@ func (server *server) PostSwaps(swapReqRes PostSwapRequestResponse) (PostSwapReq
 	if err != nil {
 		return PostSwapRequestResponse{}, err
 	}
-	server.swaps <- swap
-	swapReqRes.SecretHash = MarshalSecretHash(swap.SecretHash)
+	server.swapperQueries <- swapper.NewQuery(swap, "")
 	return swapReqRes, nil
 }
 
