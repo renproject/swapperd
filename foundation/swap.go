@@ -19,7 +19,11 @@ const (
 // The SwapStatus indicates which phase of execution a Swap is in.
 type SwapStatus struct {
 	ID     SwapID `json:"id"`
-	Status int64  `json:"status"`
+	Status int    `json:"status"`
+}
+
+func NewSwapStatus(id SwapID, status int) SwapStatus {
+	return SwapStatus{id, status}
 }
 
 // A Swap stores all of the information required to execute an atomic swap.
