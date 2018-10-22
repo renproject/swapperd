@@ -2,13 +2,19 @@ package foundation
 
 import "fmt"
 
+type ErrUnsupportedToken string
+
 func NewErrUnsupportedToken(token string) error {
-	return fmt.Errorf("unsupported token: %s", token)
+	return ErrUnsupportedToken(fmt.Sprintf("unsupported token: %s", token))
+}
+
+func (err ErrUnsupportedToken) Error() string {
+	return string(err)
 }
 
 type Token struct {
-	Name       string
-	Blockchain string
+	Name       string `json:"name"`
+	Blockchain string `json:"blockchain"`
 }
 
 func (token Token) String() string {
