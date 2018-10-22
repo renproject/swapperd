@@ -1,8 +1,9 @@
-package store
+package leveldb
 
 import (
-	"github.com/republicprotocol/swapperd/service/state"
-	"github.com/republicprotocol/swapperd/utils"
+	"os"
+
+	"github.com/republicprotocol/swapperd/adapter/storage"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -10,9 +11,8 @@ type LevelDB struct {
 	db *leveldb.DB
 }
 
-func NewLevelDB(path string) (state.Store, error) {
-	path = utils.BuildDBPath(path)
-	db, err := leveldb.OpenFile(path, nil)
+func NewStore(homeDir string) (storage.Store, error) {
+	db, err := leveldb.OpenFile(buildDBPath(homeDir), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -35,4 +35,16 @@ func (ldb *LevelDB) Delete(key []byte) error {
 
 func (ldb *LevelDB) Close() error {
 	return ldb.db.Close()
+}
+
+func buildDBPath(homeDir string) string {
+	unix := os.Getenv("HOME")
+	if unix != "" {
+		return homeDir + "/db"
+	}
+	windows := os.Getenv("userprofile")
+	if windows != "" {
+		return homeDir + "\\db"
+	}
+	panic("unknown Operating System")
 }
