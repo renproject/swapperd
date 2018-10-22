@@ -1,32 +1,26 @@
 package status
 
 import (
-	"sync"
-
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type Query struct {
-	Responder chan<- map[foundation.SwapID]foundation.Status
+	Responder chan<- map[foundation.SwapID]foundation.SwapStatus
 }
 
-type monitor struct {
-	mu       *sync.RWMutex
-	statuses map[foundation.SwapID]foundation.Status
+type Book interface {
+	Run(done <-chan struct{}, statuses <-chan foundation.SwapStatus, queries <-chan Query)
 }
 
-type StatusBook interface {
-	Run(statuses <-chan foundation.SwapStatus, queries <-chan Query, done <-chan struct{})
+type book struct {
+	monitor *monitor
 }
 
-func New() StatusBook {
-	return &monitor{
-		new(sync.RWMutex),
-		make(map[foundation.SwapID]foundation.Status),
-	}
+func New() Book {
+	return &book{newMonitor()}
 }
 
-func (monitor *monitor) Run(statuses <-chan foundation.SwapStatus, queries <-chan Query, done <-chan struct{}) {
+func (book *book) Run(done <-chan struct{}, statuses <-chan foundation.SwapStatus, queries <-chan Query) {
 	for {
 		select {
 		case <-done:
@@ -35,28 +29,12 @@ func (monitor *monitor) Run(statuses <-chan foundation.SwapStatus, queries <-cha
 			if !ok {
 				return
 			}
-			monitor.write(status.ID, status.Status)
+			book.monitor.set(status.ID, status)
 		case query, ok := <-queries:
 			if !ok {
 				return
 			}
-			query.Responder <- monitor.read()
+			query.Responder <- book.monitor.get()
 		}
 	}
-}
-
-func (monitor *monitor) read() map[foundation.SwapID]foundation.Status {
-	monitor.mu.RLock()
-	defer monitor.mu.RUnlock()
-	statuses := make(map[foundation.SwapID]foundation.Status, len(monitor.statuses))
-	for swapID, status := range monitor.statuses {
-		statuses[swapID] = status
-	}
-	return statuses
-}
-
-func (monitor *monitor) write(id foundation.SwapID, status foundation.Status) {
-	monitor.mu.Lock()
-	defer monitor.mu.Unlock()
-	monitor.statuses[id] = status
 }
