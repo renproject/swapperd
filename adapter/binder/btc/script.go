@@ -120,42 +120,25 @@ func addressToPubKeyHash(addrString string, chainParams *chaincfg.Params) (*btcu
 	return addr, nil
 }
 
-func buildInitiateScript(personalAddress string, personalReq foundation.Swap, Net *chaincfg.Params) ([]byte, string, error) {
-	var fundingAddress, redeemingAddress string
-	var locktime int64
-
-	if (personalReq.IsFirst && personalReq.SendToken == foundation.TokenBTC) || (!personalReq.IsFirst && personalReq.ReceiveToken == foundation.TokenBTC) {
-		locktime = personalReq.TimeLock
-	} else {
-		locktime = personalReq.TimeLock - 24*60*60
-	}
-
-	if personalReq.SendToken == foundation.TokenBTC {
-		fundingAddress = personalAddress
-		redeemingAddress = personalReq.SendToAddress
-	} else {
-		fundingAddress = personalReq.ReceiveFromAddress
-		redeemingAddress = personalAddress
-	}
-
+func buildInitiateScript(swap foundation.SwapTry, Net *chaincfg.Params) ([]byte, string, error) {
 	// decoding bitcoin addresses
-	PayerAddr, err := addressToPubKeyHash(fundingAddress, Net)
+	FundingAddr, err := addressToPubKeyHash(swap.FundingAddress, Net)
 	if err != nil {
-		return nil, "", NewErrDecodeAddress(fundingAddress, err)
+		return nil, "", NewErrDecodeAddress(swap.FundingAddress, err)
 	}
 
-	SpenderAddr, err := addressToPubKeyHash(redeemingAddress, Net)
+	SpendingAddr, err := addressToPubKeyHash(swap.SpendingAddress, Net)
 	if err != nil {
-		return nil, "", NewErrDecodeAddress(redeemingAddress, err)
+		return nil, "", NewErrDecodeAddress(swap.SpendingAddress, err)
 	}
 
 	// creating atomic swap initiate script, addressScriptHash and script to
 	// deposit bitcoin tokens.
 	initiateScript, err := newInitiateScript(
-		PayerAddr.Hash160(),
-		SpenderAddr.Hash160(),
-		locktime,
-		personalReq.SecretHash[:],
+		FundingAddr.Hash160(),
+		SpendingAddr.Hash160(),
+		swap.TimeLock,
+		swap.SecretHash[:],
 	)
 	if err != nil {
 		return nil, "", NewErrBuildScript(err)
