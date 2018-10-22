@@ -35,7 +35,6 @@ func GetDefaultSwapperHome() string {
 
 func CreateDir(loc string) error {
 	unix := os.Getenv("HOME")
-	fmt.Print(unix)
 	if unix != "" {
 		cmd := exec.Command("mkdir", "-p", loc)
 		if err := cmd.Run(); err != nil {
