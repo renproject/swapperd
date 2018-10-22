@@ -16,30 +16,30 @@ type builder struct {
 	swapper.Logger
 }
 
-func NewBuilder(accounts account.Accounts, logger swapper.Logger) swapper.BinderBuilder {
+func NewBuilder(accounts account.Accounts, logger swapper.Logger) swapper.ContractBuilder {
 	return &builder{
 		accounts,
 		logger,
 	}
 }
 
-func (builder *builder) BuildBinders(query swapper.Query) (swapper.SwapContractBinder, swapper.SwapContractBinder, error) {
-	native, foreign, err := builder.buildComplementarySwaps(query.Swap)
+func (builder *builder) BuildSwapContracts(swap swapper.Swap) (swapper.Contract, swapper.Contract, error) {
+	native, foreign, err := builder.buildComplementarySwaps(swap)
 	if err != nil {
 		return nil, nil, err
 	}
-	nativeSCB, err := builder.buildBinder(native, query.Password)
+	nativeBinder, err := builder.buildBinder(native, swap.Password)
 	if err != nil {
 		return nil, nil, err
 	}
-	foreignSCB, err := builder.buildBinder(foreign, query.Password)
+	foreignBinder, err := builder.buildBinder(foreign, swap.Password)
 	if err != nil {
 		return nil, nil, err
 	}
-	return nativeSCB, foreignSCB, nil
+	return nativeBinder, foreignBinder, nil
 }
 
-func (builder *builder) buildBinder(swap foundation.SwapTry, password string) (swapper.SwapContractBinder, error) {
+func (builder *builder) buildBinder(swap foundation.SwapBlob, password string) (swapper.SwapContractBinder, error) {
 	switch swap.Token {
 	case foundation.TokenBTC:
 		return btc.NewBTCSwapContractBinder(builder.GetBitcoinAccount(), swap, builder.Logger)
@@ -52,17 +52,17 @@ func (builder *builder) buildBinder(swap foundation.SwapTry, password string) (s
 	}
 }
 
-func (builder *builder) buildComplementarySwaps(swap foundation.Swap) (foundation.SwapTry, foundation.SwapTry, error) {
+func (builder *builder) buildComplementarySwaps(swap foundation.SwapBlob) (foundation.Swap, foundation.Swap, error) {
 	spendingAddr, fundingAddr, err := builder.calculateAddresses(swap)
 	if err != nil {
-		return foundation.SwapTry{}, foundation.SwapTry{}, err
+		return foundation.Swap{}, foundation.Swap{}, err
 	}
 	nativeExpiry, foreignExpiry := builder.calculateTimeLocks(swap)
 	return builder.buildNativeSwap(swap, nativeExpiry, spendingAddr), builder.buildForeignSwap(swap, foreignExpiry, fundingAddr), nil
 }
 
-func (builder *builder) buildNativeSwap(swap foundation.Swap, timelock int64, fundingAddress string) foundation.SwapTry {
-	return foundation.SwapTry{
+func (builder *builder) buildNativeSwap(swap foundation.SwapBlob, timelock int64, fundingAddress string) foundation.Swap {
+	return foundation.SwapBlob{
 		ID:              swap.ID,
 		Token:           swap.SendToken,
 		Value:           swap.SendValue,
@@ -73,8 +73,8 @@ func (builder *builder) buildNativeSwap(swap foundation.Swap, timelock int64, fu
 	}
 }
 
-func (builder *builder) buildForeignSwap(swap foundation.Swap, timelock int64, spendingAddress string) foundation.SwapTry {
-	return foundation.SwapTry{
+func (builder *builder) buildForeignSwap(swap foundation.SwapBlob, timelock int64, spendingAddress string) foundation.Swap {
+	return foundation.SwapBlob{
 		ID:              swap.ID,
 		Token:           swap.ReceiveToken,
 		Value:           swap.ReceiveValue,
@@ -106,17 +106,17 @@ func (builder *builder) calculateAddresses(swap foundation.Swap) (string, string
 		return "", "", err
 	}
 
-	if swap.SendToken.Blockchain == "ethereum" && swap.ReceiveToken.Blockchain == "bitcoin" {
+	if swap.SendToken.Blockchain == foundation.Ethereum && swap.ReceiveToken.Blockchain == foundation.Bitcoin {
 		return ethAddress.String(), btcAddress.EncodeAddress(), nil
 	}
 
-	if swap.SendToken.Blockchain == "bitcoin" && swap.ReceiveToken.Blockchain == "ethereum" {
+	if swap.SendToken.Blockchain == foundation.Bitcoin && swap.ReceiveToken.Blockchain == foundation.Ethereum {
 		return btcAddress.EncodeAddress(), ethAddress.String(), nil
 	}
 
-	if swap.SendToken.Blockchain == "ethereum" && swap.ReceiveToken.Blockchain == "ethereum" {
+	if swap.SendToken.Blockchain == foundation.Ethereum && swap.ReceiveToken.Blockchain == foundation.Ethereum {
 		return ethAddress.String(), ethAddress.String(), nil
 	}
 
-	return "", "", fmt.Errorf("unsupported blockchain pair : %s <--> %s", swap.SendToken.Blockchain, swap.ReceiveToken.Blockchain)
+	return "", "", fmt.Errorf("unsupported blockchain pairing: %s <=> %s", swap.SendToken.Blockchain, swap.ReceiveToken.Blockchain)
 }

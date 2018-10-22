@@ -12,6 +12,11 @@ func (err ErrUnsupportedToken) Error() string {
 	return string(err)
 }
 
+var (
+	Bitcoin  = "bitcoin"
+	Ethereum = "ethereum"
+)
+
 type Token struct {
 	Name       string `json:"name"`
 	Blockchain string `json:"blockchain"`
@@ -22,7 +27,7 @@ func (token Token) String() string {
 }
 
 var (
-	TokenBTC  = Token{"BTC", "bitcoin"}
-	TokenETH  = Token{"ETH", "ethereum"}
-	TokenWBTC = Token{"WBTC", "ethereum"}
+	TokenBTC  = Token{"BTC", Bitcoin}
+	TokenETH  = Token{"ETH", Ethereum}
+	TokenWBTC = Token{"WBTC", Ethereum}
 )
