@@ -1,8 +1,6 @@
 package swapper
 
 import (
-	"time"
-
 	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/foundation"
 )
@@ -10,8 +8,8 @@ import (
 type Swap struct {
 	foundation.SwapBlob
 
-	Secret   [32]byte
-	Password string
+	Secret   [32]byte `json:"secret"`
+	Password string   `json:"password"`
 }
 
 func NewSwap(swapBlob foundation.SwapBlob, secret [32]byte, password string) Swap {
@@ -32,8 +30,9 @@ type ContractBuilder interface {
 
 type Storage interface {
 	InsertSwap(swap Swap) error
-	DeleteSwap(foundation.SwapID) error
-	PendingSwaps() []Swap
+	PendingSwap(foundation.SwapID) (Swap, error)
+	DeletePendingSwap(foundation.SwapID) error
+	PendingSwaps() ([]Swap, error)
 }
 
 type Logger interface {
@@ -50,8 +49,6 @@ type swapper struct {
 	builder ContractBuilder
 	storage Storage
 	logger  Logger
-
-	sem *binarySemaphore
 }
 
 type result struct {
@@ -68,20 +65,27 @@ func New(builder ContractBuilder, storage Storage, logger Logger) Swapper {
 		builder: builder,
 		storage: storage,
 		logger:  logger,
-
-		sem: newBinarySemaphore(),
 	}
 }
 
 func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan Swap, statuses chan<- foundation.SwapStatus) {
 	results := make(chan result)
 
-	ticker := time.NewTicker(time.Minute)
-	defer ticker.Stop()
+	swapsToRetry, err := swapper.storage.PendingSwaps()
+	if err != nil {
+		return
+	}
+	co.ForAll(swapsToRetry, func(i int) {
+		swap := swapsToRetry[i]
+		native, foreign, err := swapper.builder.BuildSwapContracts(swap)
+		if err != nil {
+			return
+		}
+		go execute(results, statuses, native, foreign, swap, swapper.logger)
+	})
 
 	for {
 		select {
-
 		case <-done:
 			return
 
@@ -92,33 +96,28 @@ func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan Swap, statuses ch
 				swapper.logger.LogError(swap.ID, err)
 				continue
 			}
-			if !swapper.sem.TryWait(swap.ID) {
-				continue
-			}
-			go func() {
-				defer swapper.sem.Signal(swap.ID)
-				execute(results, statuses, native, foreign, swap, swapper.logger)
-			}()
+			go execute(results, statuses, native, foreign, swap, swapper.logger)
 
 		case result := <-results:
 			if result.success {
-				swapper.storage.DeleteSwap(result.id)
+				if err := swapper.storage.DeletePendingSwap(result.id); err != nil {
+					swapper.logger.LogError(result.id, err)
+					continue
+				}
+				swapper.logger.LogInfo(result.id, "removed from pending swaps")
+				continue
 			}
-
-		case <-ticker.C:
-			swapsToRetry := swapper.storage.PendingSwaps()
-			go co.ForAll(swapsToRetry, func(i int) {
-				swap := swapsToRetry[i]
-				if swapper.sem.TryWait(swap.ID) {
-					return
-				}
-				defer swapper.sem.Signal(swap.ID)
-				native, foreign, err := swapper.builder.BuildSwapContracts(swap)
-				if err != nil {
-					return
-				}
-				execute(results, statuses, native, foreign, swap, swapper.logger)
-			})
+			swap, err := swapper.storage.PendingSwap(result.id)
+			if err != nil {
+				swapper.logger.LogError(result.id, err)
+				continue
+			}
+			native, foreign, err := swapper.builder.BuildSwapContracts(swap)
+			if err != nil {
+				swapper.logger.LogError(result.id, err)
+				continue
+			}
+			go execute(results, statuses, native, foreign, swap, swapper.logger)
 		}
 	}
 }
@@ -156,7 +155,6 @@ func initiate(results chan<- result, statuses chan<- foundation.SwapStatus, nati
 	}
 	statuses <- foundation.NewSwapStatus(swap.ID, foundation.Redeemed)
 	results <- newResult(swap.ID, true)
-	return
 }
 
 func respond(results chan<- result, statuses chan<- foundation.SwapStatus, native, foreign Contract, swap Swap, logger Logger) {
