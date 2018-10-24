@@ -1,25 +1,19 @@
 # Swapperd
 
-The Swapperd is built and officially supported by the Republic Protocol team. It can be used to execute atomic swaps between Ethereum, ERC20 and Bitcoin.
+[Documentation](https://republicprotocol.github.io/swapperd)
+
+Swapperd is built and officially supported by the Republic Protocol team. It is a daemon that can be used to execute cross-chain atomic swaps between Bitcoin, Ethereum, and ERC20 tokens.
 
 ## Installation
 
-### Mac/Ubuntu
-
-#### Prerequisites
-
-1. Curl
-2. Unzip
-
-#### Steps
-
-1. Run the following command to install swapperd.
+### macOS and Ubuntu
 
 `curl https://releases.republicprotocol.com/swapperd/install.sh -sSf | sh`
 
-
 ### Windows
 
-> Coming soon!
+Windows support will be coming soon!
 
-## Usage
+## Documentation
+
+
