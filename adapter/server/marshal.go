@@ -33,9 +33,15 @@ type GetBalanceResponse struct {
 }
 
 type Balance struct {
-	TokenName string `json:"name"`
-	Address   string `json:"address"`
-	Amount    string `json:"amount"`
+	Token   string `json:"token"`
+	Address string `json:"address"`
+	Amount  string `json:"amount"`
+}
+
+type PostWithdrawRequest struct {
+	To     string `json:"to"`
+	Token  string `json:"token"`
+	Amount string `json:"amount"`
 }
 
 func MarshalToken(token foundation.Token) string {

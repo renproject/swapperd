@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/republicprotocol/swapperd/adapter/balance"
+	"github.com/republicprotocol/swapperd/adapter/funds"
 	"github.com/republicprotocol/swapperd/core/auth"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
@@ -15,11 +15,12 @@ import (
 )
 
 // NewHandler creates a new http handler
-func NewHandler(authenticator auth.Authenticator, swaps chan<- swapper.Swap, statusQueries chan<- status.Query, balanceQueries chan<- balance.Query) http.Handler {
-	s := NewServer(authenticator, swaps, statusQueries, balanceQueries)
+func NewHandler(authenticator auth.Authenticator, manager funds.Manager, swaps chan<- swapper.Swap, statusQueries chan<- status.Query) http.Handler {
+	s := NewServer(authenticator, manager, swaps, statusQueries)
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", postSwapsHandler(s)).Methods("POST")
 	r.HandleFunc("/swaps", getSwapsHandler(s)).Methods("GET")
+	r.HandleFunc("/withdraw", postWithdrawHandler(s)).Methods("POST")
 	r.HandleFunc("/balances", getBalancesHandler(s)).Methods("GET")
 	r.HandleFunc("/ping", getPingHandler(s)).Methods("GET")
 	r.Use(recoveryHandler)
@@ -73,7 +74,7 @@ func getSwapsHandler(server *server) http.HandlerFunc {
 	}
 }
 
-// postSwapsHandler handles the post orders request, it fills incomplete
+// postSwapsHandler handles the post swaps request, it fills incomplete
 // information and starts the Atomic Swap.
 func postSwapsHandler(server *server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +95,30 @@ func postSwapsHandler(server *server) http.HandlerFunc {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swap response: %v", err))
 			return
 		}
+	}
+}
+
+// postWithdrawHandler handles the post withdrawal request.
+func postWithdrawHandler(server *server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		username, password, ok := r.BasicAuth()
+		if !ok || !server.authenticator.VerifyUsernameAndPassword(username, password) {
+			writeError(w, http.StatusUnauthorized, "invalid username or password")
+			return
+		}
+
+		withdrawReq := PostWithdrawRequest{}
+		if err := json.NewDecoder(r.Body).Decode(&withdrawReq); err != nil {
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode withdraw request: %v", err))
+			return
+		}
+
+		if err := server.PostWithdraw(password, withdrawReq); err != nil {
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode withdraw request: %v", err))
+			return
+		}
+
+		w.WriteHeader(http.StatusAccepted)
 	}
 }
 

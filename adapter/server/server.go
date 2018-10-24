@@ -3,8 +3,10 @@ package server
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"fmt"
+	"math/big"
 
-	"github.com/republicprotocol/swapperd/adapter/balance"
+	"github.com/republicprotocol/swapperd/adapter/funds"
 	"github.com/republicprotocol/swapperd/core/auth"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
@@ -13,13 +15,13 @@ import (
 
 type server struct {
 	authenticator  auth.Authenticator
+	fundManager    funds.Manager
 	swapperQueries chan<- swapper.Swap
 	statusQueries  chan<- status.Query
-	balanceQueries chan<- balance.Query
 }
 
-func NewServer(authenticator auth.Authenticator, swaps chan<- swapper.Swap, statusQueries chan<- status.Query, balanceQueries chan<- balance.Query) *server {
-	return &server{authenticator, swaps, statusQueries, balanceQueries}
+func NewServer(authenticator auth.Authenticator, fundManager funds.Manager, swaps chan<- swapper.Swap, statusQueries chan<- status.Query) *server {
+	return &server{authenticator, fundManager, swaps, statusQueries}
 }
 
 func (server *server) GetPing() GetPingResponse {
@@ -60,18 +62,31 @@ func (server *server) PostSwaps(swap foundation.SwapBlob, password string) found
 
 func (server *server) GetBalances(password string) (GetBalanceResponse, error) {
 	resp := GetBalanceResponse{}
-	query, responder, errs := balance.NewQuery(password)
-	server.balanceQueries <- query
-	if err := <-errs; err != nil {
+	balanceMap, err := server.fundManager.Balances(password)
+	if err != nil {
 		return resp, err
 	}
-	balanceMap := <-responder
 	for token, balance := range balanceMap {
 		resp.Balances = append(resp.Balances, Balance{
-			TokenName: token.Name,
-			Address:   balance.Address,
-			Amount:    balance.Amount.String(),
+			Token:   token.Name,
+			Address: balance.Address,
+			Amount:  balance.Amount.String(),
 		})
 	}
 	return resp, nil
+}
+
+func (server *server) PostWithdraw(password string, postWithdrawRequest PostWithdrawRequest) error {
+	token, err := UnmarshalToken(postWithdrawRequest.Token)
+	if err != nil {
+		return err
+	}
+	if postWithdrawRequest.Amount == "" {
+		return server.fundManager.Withdraw(password, token, postWithdrawRequest.To, nil)
+	}
+	value, ok := big.NewInt(0).SetString(postWithdrawRequest.Amount, 10)
+	if !ok {
+		return fmt.Errorf("invalid amount")
+	}
+	return server.fundManager.Withdraw(password, token, postWithdrawRequest.To, value)
 }
