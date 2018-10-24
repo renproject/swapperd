@@ -1,6 +1,10 @@
 package server
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+
+	"github.com/republicprotocol/swapperd/adapter/balance"
 	"github.com/republicprotocol/swapperd/core/auth"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
@@ -9,12 +13,13 @@ import (
 
 type server struct {
 	authenticator  auth.Authenticator
-	swapperQueries chan<- swapper.Query
+	swapperQueries chan<- swapper.Swap
 	statusQueries  chan<- status.Query
+	balanceQueries chan<- balance.Query
 }
 
-func NewServer(authenticator auth.Authenticator, swaps chan<- swapper.Query, statusQueries chan<- status.Query) *server {
-	return &server{authenticator, swaps, statusQueries}
+func NewServer(authenticator auth.Authenticator, swaps chan<- swapper.Swap, statusQueries chan<- status.Query, balanceQueries chan<- balance.Query) *server {
+	return &server{authenticator, swaps, statusQueries, balanceQueries}
 }
 
 func (server *server) GetPing() GetPingResponse {
@@ -30,28 +35,43 @@ func (server *server) GetPing() GetPingResponse {
 
 func (server *server) GetSwaps() GetSwapsResponse {
 	resp := GetSwapsResponse{}
-	responder := make(chan map[foundation.SwapID]foundation.Status)
+	responder := make(chan map[foundation.SwapID]foundation.SwapStatus)
 	server.statusQueries <- status.Query{Responder: responder}
 	swapMap := <-responder
-	for id, status := range swapMap {
+	for _, status := range swapMap {
 		resp.Swaps = append(resp.Swaps, SwapStatus{
-			ID:     MarshalSwapID(id),
-			Status: int64(status),
+			ID:     string(status.ID),
+			Status: status.Status,
 		})
 	}
 	return resp
 }
 
-func (server *server) PostSwaps(swapReqRes PostSwapRequestResponse) (PostSwapRequestResponse, error) {
-	swap, err := UnmarshalSwapRequestResponse(swapReqRes)
-	if err != nil {
-		return PostSwapRequestResponse{}, err
+func (server *server) PostSwaps(swap foundation.SwapBlob, password string) foundation.SwapBlob {
+	secret := [32]byte{}
+	if swap.ShouldInitiateFirst {
+		rand.Read(secret[:])
+		hash := sha256.Sum256(secret[:])
+		swap.SecretHash = MarshalSecretHash(hash)
 	}
-	server.swapperQueries <- swapper.NewQuery(swap, "")
-	return swapReqRes, nil
+	server.swapperQueries <- swapper.NewSwap(swap, secret, password)
+	return swap
 }
 
-func (server *server) GetBalances() (GetBalanceResponse, error) {
-	// TODO: Implement the logic
-	return GetBalanceResponse{}, nil
+func (server *server) GetBalances(password string) (GetBalanceResponse, error) {
+	resp := GetBalanceResponse{}
+	query, responder, errs := balance.NewQuery(password)
+	server.balanceQueries <- query
+	if err := <-errs; err != nil {
+		return resp, err
+	}
+	balanceMap := <-responder
+	for token, balance := range balanceMap {
+		resp.Balances = append(resp.Balances, Balance{
+			TokenName: token.Name,
+			Address:   balance.Address,
+			Amount:    balance.Amount.String(),
+		})
+	}
+	return resp, nil
 }

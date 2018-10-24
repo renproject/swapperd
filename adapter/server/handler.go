@@ -6,14 +6,17 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/republicprotocol/swapperd/adapter/balance"
+	"github.com/republicprotocol/swapperd/core/auth"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/rs/cors"
 )
 
 // NewHandler creates a new http handler
-func NewHandler(username, passwordHash string, swaps chan<- swapper.Query, statusQueries chan<- status.Query) http.Handler {
-	s := NewServer(swaps, statusQueries)
+func NewHandler(authenticator auth.Authenticator, swaps chan<- swapper.Swap, statusQueries chan<- status.Query, balanceQueries chan<- balance.Query) http.Handler {
+	s := NewServer(authenticator, swaps, statusQueries, balanceQueries)
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", postSwapsHandler(s)).Methods("POST")
 	r.HandleFunc("/swaps", getSwapsHandler(s)).Methods("GET")
@@ -80,20 +83,14 @@ func postSwapsHandler(server *server) http.HandlerFunc {
 			return
 		}
 
-		swapReq := PostSwapRequestResponse{}
-		if err := json.NewDecoder(r.Body).Decode(&swapReq); err != nil {
+		swap := foundation.SwapBlob{}
+		if err := json.NewDecoder(r.Body).Decode(&swap); err != nil {
 			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode swap request: %v", err))
 			return
 		}
 
-		swapRes, err := server.PostSwaps(swapReq, pass)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot execute swap: %v", err))
-			return
-		}
-
 		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(swapRes); err != nil {
+		if err := json.NewEncoder(w).Encode(server.PostSwaps(swap, password)); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swap response: %v", err))
 			return
 		}
@@ -104,7 +101,13 @@ func postSwapsHandler(server *server) http.HandlerFunc {
 // of the accounts held by the swapper.
 func getBalancesHandler(server *server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		balancesRes, err := server.GetBalances()
+		username, password, ok := r.BasicAuth()
+		if !ok || !server.authenticator.VerifyUsernameAndPassword(username, password) {
+			writeError(w, http.StatusUnauthorized, "invalid username or password")
+			return
+		}
+
+		balancesRes, err := server.GetBalances(password)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get balances: %v", err))
 			return

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -20,26 +19,13 @@ type GetPingResponse struct {
 	SupportedTokens []foundation.Token `json:"supportedTokens"`
 }
 
-type PostSwapRequestResponse struct {
-	ID                  string `json:"id"`
-	SendToken           string `json:"sendToken"`
-	ReceiveToken        string `json:"receiveToken"`
-	SendAmount          string `json:"sendAmount"`    // hex
-	ReceiveAmount       string `json:"receiveAmount"` //hex
-	SendTo              string `json:"sendTo"`
-	ReceiveFrom         string `json:"receiveFrom"`
-	TimeLock            int64  `json:"timeLock"`
-	SecretHash          string `json:"secretHash"`
-	ShouldInitiateFirst bool   `json:"shouldInitiateFirst"`
-}
-
 type GetSwapsResponse struct {
 	Swaps []SwapStatus `json:"swaps"`
 }
 
 type SwapStatus struct {
 	ID     string `json:"id"`
-	Status int64  `json:"status"`
+	Status int    `json:"status"`
 }
 
 type GetBalanceResponse struct {
@@ -50,19 +36,6 @@ type Balance struct {
 	TokenName string `json:"name"`
 	Address   string `json:"address"`
 	Amount    string `json:"amount"`
-}
-
-func MarshalSwapID(swapID foundation.SwapID) string {
-	return base64.StdEncoding.EncodeToString(swapID[:])
-}
-
-func UnmarshalSwapID(swapID string) (foundation.SwapID, error) {
-	swapIDBytes, err := base64.StdEncoding.DecodeString(swapID)
-	if err != nil {
-		return foundation.SwapID([32]byte{}), err
-	}
-	id, err := toBytes32(swapIDBytes)
-	return foundation.SwapID(id), err
 }
 
 func MarshalToken(token foundation.Token) string {
@@ -105,57 +78,6 @@ func UnmarshalSecretHash(hash string) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 	return toBytes32(hashBytes)
-}
-
-func UnmarshalSwapRequestResponse(swapReqRes PostSwapRequestResponse) (foundation.Swap, error) {
-	secret := [32]byte{}
-	if swapReqRes.ShouldInitiateFirst {
-		// rand.Read(secret[:])
-		secretEnc, err := base64.StdEncoding.DecodeString("T1uILWHeG26mF81wKUNrEykEI5Ow1P/c2SuAwpKW5qM=")
-		if err != nil {
-			return foundation.Swap{}, err
-		}
-		hash := sha256.Sum256(secretEnc[:])
-		swapReqRes.SecretHash = MarshalSecretHash(hash)
-		secret, err = toBytes32(secretEnc)
-	}
-	swapID, err := UnmarshalSwapID(swapReqRes.ID)
-	if err != nil {
-		return foundation.Swap{}, err
-	}
-	sendToken, err := UnmarshalToken(swapReqRes.SendToken)
-	if err != nil {
-		return foundation.Swap{}, err
-	}
-	receiveToken, err := UnmarshalToken(swapReqRes.ReceiveToken)
-	if err != nil {
-		return foundation.Swap{}, err
-	}
-	sendValue, err := UnmarshalAmount(swapReqRes.SendAmount)
-	if err != nil {
-		return foundation.Swap{}, err
-	}
-	receiveValue, err := UnmarshalAmount(swapReqRes.ReceiveAmount)
-	if err != nil {
-		return foundation.Swap{}, err
-	}
-	secretHash, err := UnmarshalSecretHash(swapReqRes.SecretHash)
-	if err != nil {
-		return foundation.Swap{}, err
-	}
-	return foundation.Swap{
-		ID:                 swapID,
-		Secret:             secret,
-		SecretHash:         secretHash,
-		TimeLock:           swapReqRes.TimeLock,
-		SendToAddress:      swapReqRes.SendTo,
-		ReceiveFromAddress: swapReqRes.ReceiveFrom,
-		SendValue:          sendValue,
-		ReceiveValue:       receiveValue,
-		SendToken:          sendToken,
-		ReceiveToken:       receiveToken,
-		IsFirst:            swapReqRes.ShouldInitiateFirst,
-	}, nil
 }
 
 func toBytes32(data []byte) ([32]byte, error) {
