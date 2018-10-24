@@ -134,18 +134,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/kardianos/osext"
-  packages = ["."]
-  revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/kardianos/service"
-  packages = ["."]
-  revision = "b1866cf76903d81b491fb668ba14f4b1322b2ca7"
-
-[[projects]]
   name = "github.com/onsi/ginkgo"
   packages = [
     ".",
@@ -211,7 +199,7 @@
   branch = "master"
   name = "github.com/republicprotocol/libbtc-go"
   packages = ["."]
-  revision = "40c19064bd4ab85b228e905ed7f8cb7e3e8358e5"
+  revision = "dc267506aefd8f9b392f26789b4a938170ce07cf"
 
 [[projects]]
   name = "github.com/rjeczalik/notify"
@@ -254,12 +242,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  name = "github.com/urfave/cli"
-  packages = ["."]
-  revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
-  version = "v1.20.0"
-
-[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
@@ -288,12 +270,7 @@
   packages = [
     "cpu",
     "unix",
-    "windows",
-    "windows/registry",
-    "windows/svc",
-    "windows/svc/debug",
-    "windows/svc/eventlog",
-    "windows/svc/mgr"
+    "windows"
   ]
   revision = "44b849a8bc13eb42e95e6c6c5e360481b73ec710"
 
@@ -349,6 +326,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5bfe7f23300849e596ecf0d3642bfc8b9bf5d6ee3bac1bf1a6ad08a317e2f13a"
+  inputs-digest = "de1a4fb91a8acfb0ac73a31caae6051af1193d08c542fab333edb487a709f573"
   solver-name = "gps-cdcl"
   solver-version = 1
