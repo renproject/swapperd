@@ -20,6 +20,7 @@ type Balance struct {
 }
 
 type Manager interface {
+	SupportedTokens() []foundation.Token
 	Withdraw(password string, token foundation.Token, to string, amount *big.Int) error
 	Balances(password string) (map[foundation.Token]Balance, error)
 }
@@ -38,6 +39,10 @@ func New(accounts account.Accounts) Manager {
 			foundation.TokenWBTC,
 		},
 	}
+}
+
+func (manager *manager) SupportedTokens() []foundation.Token {
+	return manager.supportedTokens
 }
 
 func (manager *manager) Withdraw(password string, token foundation.Token, to string, amount *big.Int) error {

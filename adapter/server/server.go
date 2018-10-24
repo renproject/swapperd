@@ -26,12 +26,8 @@ func NewServer(authenticator auth.Authenticator, fundManager funds.Manager, swap
 
 func (server *server) GetPing() GetPingResponse {
 	return GetPingResponse{
-		Version: "0.1.0",
-		SupportedTokens: []foundation.Token{
-			foundation.TokenBTC,
-			foundation.TokenETH,
-			foundation.TokenWBTC,
-		},
+		Version:         "0.1.0",
+		SupportedTokens: server.fundManager.SupportedTokens(),
 	}
 }
 
