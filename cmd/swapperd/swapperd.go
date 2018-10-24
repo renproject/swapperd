@@ -9,8 +9,8 @@ import (
 	"os/signal"
 
 	"github.com/republicprotocol/co-go"
-	"github.com/republicprotocol/swapperd/adapter/balance"
 	"github.com/republicprotocol/swapperd/adapter/binder"
+	"github.com/republicprotocol/swapperd/adapter/funds"
 	"github.com/republicprotocol/swapperd/adapter/server"
 	"github.com/republicprotocol/swapperd/adapter/storage"
 	"github.com/republicprotocol/swapperd/core/status"
@@ -29,14 +29,8 @@ func main() {
 	swaps := make(chan swapper.Swap)
 	statuses := make(chan foundation.SwapStatus)
 	statusQueries := make(chan status.Query)
-	balanceQueries := make(chan balance.Query)
 
 	accounts, err := keystore.LoadAccounts(*network)
-	if err != nil {
-		panic(err)
-	}
-
-	authenticator, err := keystore.LoadAuthenticator(*network)
 	if err != nil {
 		panic(err)
 	}
@@ -49,7 +43,11 @@ func main() {
 	done := make(chan struct{})
 	go co.ParBegin(
 		func() {
-			handler := server.NewHandler(authenticator, swaps, statusQueries, balanceQueries)
+			authenticator, err := keystore.LoadAuthenticator(*network)
+			if err != nil {
+				panic(err)
+			}
+			handler := server.NewHandler(authenticator, funds.New(accounts), swaps, statusQueries)
 			listener, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 			if err != nil {
 				panic(err)
@@ -72,10 +70,6 @@ func main() {
 		func() {
 			monitor := status.New()
 			monitor.Run(done, statuses, statusQueries)
-		},
-		func() {
-			balanceBook := balance.New(accounts)
-			balanceBook.Run(done, balanceQueries)
 		},
 	)
 	c := make(chan os.Signal, 1)
