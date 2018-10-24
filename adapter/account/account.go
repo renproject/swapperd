@@ -8,7 +8,7 @@ import (
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/republicprotocol/beth-go"
-	libbtc "github.com/republicprotocol/libbtc-go"
+	"github.com/republicprotocol/libbtc-go"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -40,11 +40,6 @@ type accounts struct {
 	config   Config
 }
 
-type accounts2 struct {
-	btcAccount libbtc.Account
-	ethAccount beth.Account
-}
-
 func New(mnemonic string, config Config) Accounts {
 	return &accounts{
 		mnemonic: mnemonic,
@@ -56,9 +51,9 @@ func (accounts *accounts) GetEthereumAccount(password string) (beth.Account, err
 	derivationPath := []uint32{}
 	switch accounts.config.Ethereum.Network {
 	case "kovan", "ropsten":
-		derivationPath = []uint32{44, 1, 0, 0}
+		derivationPath = []uint32{44, 1, 0, 0, 0}
 	case "mainnet":
-		derivationPath = []uint32{44, 60, 0, 0}
+		derivationPath = []uint32{44, 60, 0, 0, 0}
 	}
 	privKey, err := accounts.loadKey(password, derivationPath)
 	if err != nil {
