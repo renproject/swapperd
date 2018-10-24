@@ -24,14 +24,17 @@ echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 
 generate_service()
 {
+mkdir -p $HOME/.config/systemd/user
 echo "[Unit]
 Description=Swapper Daemon
-After=network.target
+AssertPathExists=$HOME/.swapperd
 
 [Service]
+WorkingDirectory=$HOME/.swapperd
 ExecStart=$HOME/.swapperd/bin/swapperd
 Restart=on-failure
-StartLimitBurst=0
+PrivateTmp=true
+NoNewPrivileges=true
 
 # Specifies which signal to use when killing a service. Defaults to SIGTERM.
 # SIGHUP gives parity time to exit cleanly before SIGKILL (default 90s)
@@ -39,7 +42,7 @@ KillSignal=SIGHUP
 
 [Install]
 WantedBy=default.target" > swapperd.service
-sudo mv swapperd.service /etc/systemd/system/swapperd.service
+mv swapperd.service $HOME/.config/systemd/user/swapperd.service
 }
 
 # install unzip if command not found
@@ -91,7 +94,7 @@ chmod +x bin/installer
 if ls "$HOME"/.swapperd/*.json 1> /dev/null 2>&1; then
   echo "Swapperd has already been installed, updating..."
   if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
-    sudo systemctl restart swapperd.service
+    systemctl --user restart swapperd.service
   elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
     if [ "$(launchctl list | grep ren.swapperd | wc -l)" -ge 1 ]; then
       launchctl unload -w "$HOME/Library/LaunchAgents/ren.swapperd.plist"
@@ -105,14 +108,13 @@ if ls "$HOME"/.swapperd/*.json 1> /dev/null 2>&1; then
   exit 0
 fi
 
-./bin/installer --network $NETWORK< /dev/tty
+./bin/installer --network $NETWORK < /dev/tty
 
 # make sure the swapper service is started when booted
 if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
   generate_service
-  sudo systemctl daemon-reload
-  sudo systemctl enable swapperd.service
-  sudo systemctl start swapperd.service
+  systemctl --user enable swapperd.service
+  systemctl --user start swapperd.service
 elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
   generate_plist
   chmod +x "$HOME/Library/LaunchAgents/ren.swapperd.plist"
@@ -127,51 +129,8 @@ else
   exit 1
 fi
 
-# make sure the binary is installed in the path
-if ! [ -x "$(command -v swapperd)" ]; then
-  path=$SHELL
-  shell=${path##*/}
-  if [ "$shell" = 'zsh' ] ; then
-    if [ -f "$HOME/.zprofile" ] ; then
-      echo '\nexport PATH=$PATH:$HOME/.swapperd/bin' >> $HOME/.zprofile
-      swapper_home=$HOME/.zprofile
-    elif [ -f "$HOME/.zshrc" ] ; then
-      echo '\nexport PATH=$PATH:$HOME/.swapperd/bin' >> $HOME/.zshrc
-      swapper_home=$HOME/.zshrc
-    elif [ -f "$HOME/.profile" ] ; then
-      echo '\nexport PATH=$PATH:$HOME/.swapperd/bin' >> $HOME/.profile
-      swapper_home=$HOME/.profile
-    fi
-  elif  [ "$shell" = 'bash' ] ; then
-    if [ -f "$HOME/.bash_profile" ] ; then
-      echo '\nexport PATH=$PATH:$HOME/.swapperd/bin' >> $HOME/.bash_profile
-      swapper_home=$HOME/.bash_profile
-    elif [ -f "$HOME/.bashrc" ] ; then
-      echo '\nexport PATH=$PATH:$HOME/.swapperd/bin' >> $HOME/.bashrc
-      swapper_home=$HOME/.bashrc
-    elif [ -f "$HOME/.profile" ] ; then
-      echo '\nexport PATH=$PATH:$HOME/.swapperd/bin' >> $HOME/.profile
-      swapper_home=$HOME/.profile
-    fi
-  elif [ -f "$HOME/.profile" ] ; then
-    echo '\nexport PATH=$PATH:$HOME/.swapperd/bin' >> $HOME/.profile
-  else
-    echo ''
-    echo 'Could not add swapperd to the path, please update your PATH manually.'
-    echo "${GREEN}export PATH=\$PATH:\$HOME/.swapperd/bin ${NC}"
-  fi
-fi
-
 # clean up
 rm swapper.zip
 rm bin/installer
 
 echo "Swapperd is installed now. Great!"
-
-if [ "$swapper_home" != '' ] ; then
-echo ''
-echo "To get started you need Swapperd's bin directory ($HOME/.swapperd/bin) in your PATH"
-echo "environment variable. Next time you log in this will be done automatically."
-echo ''
-echo "To get the Swapperd working with your current shell please run 'source ${swapper_home}'"
-fi
