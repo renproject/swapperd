@@ -31,7 +31,8 @@
   packages = [
     ".",
     "base58",
-    "bech32"
+    "bech32",
+    "hdkeychain"
   ]
   revision = "ab6388e0c60ae4834a1f57511e20c17b5f78be4b"
 
@@ -198,7 +199,7 @@
   branch = "master"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "cc6dabd2eb456df2fd1039c8817d5a1c1a6130c2"
+  revision = "657ee998b1bc0a2c5a6befacfe2b26951da0b6ab"
 
 [[projects]]
   branch = "master"
@@ -210,7 +211,7 @@
   branch = "master"
   name = "github.com/republicprotocol/libbtc-go"
   packages = ["."]
-  revision = "9c2b8df6dfdeca17c55bd86ef3a5c3f2b4902763"
+  revision = "40c19064bd4ab85b228e905ed7f8cb7e3e8358e5"
 
 [[projects]]
   name = "github.com/rjeczalik/notify"
@@ -244,6 +245,15 @@
   revision = "6b91fda63f2e36186f1c9d0e48578defb69c5d43"
 
 [[projects]]
+  name = "github.com/tyler-smith/go-bip39"
+  packages = [
+    ".",
+    "wordlists"
+  ]
+  revision = "2af0a847066a4f2669040ccd44a79c8eca10806a"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/urfave/cli"
   packages = ["."]
   revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
@@ -255,7 +265,9 @@
   packages = [
     "pbkdf2",
     "ripemd160",
-    "scrypt"
+    "scrypt",
+    "sha3",
+    "ssh/terminal"
   ]
   revision = "0c41d7ab0a0ee717d4590a44bcb987dfd9e183eb"
 
@@ -268,7 +280,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "04a2e542c03f1d053ab3e4d6e5abcd4b66e2be8e"
+  revision = "9b4f9f5ad5197c79fd623a3638e70d8b26cef344"
 
 [[projects]]
   branch = "master"
@@ -283,7 +295,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "fa43e7bc11baaae89f3f902b2b4d832b68234844"
+  revision = "44b849a8bc13eb42e95e6c6c5e360481b73ec710"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -337,6 +349,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e9c5ab06b17aeb41806b745c4713f987870763f7cec0cd602d8f76060c7eb2fe"
+  inputs-digest = "5bfe7f23300849e596ecf0d3642bfc8b9bf5d6ee3bac1bf1a6ad08a317e2f13a"
   solver-name = "gps-cdcl"
   solver-version = 1
