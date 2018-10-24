@@ -18,7 +18,7 @@ import (
 type btcSwapContractBinder struct {
 	scriptAddr string
 	script     []byte
-	swap       foundation.SwapTry
+	swap       foundation.Swap
 	txVersion  int32
 	fee        int64
 	verify     bool
@@ -27,7 +27,7 @@ type btcSwapContractBinder struct {
 }
 
 // NewBTCSwapContractBinder returns a new Bitcoin Atom instance
-func NewBTCSwapContractBinder(account libbtc.Account, swap foundation.SwapTry, logger swapper.Logger) (swapper.SwapContractBinder, error) {
+func NewBTCSwapContractBinder(account libbtc.Account, swap foundation.Swap, logger swapper.Logger) (swapper.Contract, error) {
 	script, scriptAddr, err := buildInitiateScript(swap, account.NetworkParams())
 	if err != nil {
 		return nil, err

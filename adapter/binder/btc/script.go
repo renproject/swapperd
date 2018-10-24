@@ -120,7 +120,7 @@ func addressToPubKeyHash(addrString string, chainParams *chaincfg.Params) (*btcu
 	return addr, nil
 }
 
-func buildInitiateScript(swap foundation.SwapTry, Net *chaincfg.Params) ([]byte, string, error) {
+func buildInitiateScript(swap foundation.Swap, Net *chaincfg.Params) ([]byte, string, error) {
 	// decoding bitcoin addresses
 	FundingAddr, err := addressToPubKeyHash(swap.FundingAddress, Net)
 	if err != nil {
