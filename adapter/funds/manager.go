@@ -207,8 +207,7 @@ func (manager *manager) withdrawERC20(password string, token foundation.Token, t
 		ctx,
 		nil,
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
-			tokenContract.Transfer(tops, common.HexToAddress(to), amount)
-			return nil, nil
+			return tokenContract.Transfer(tops, common.HexToAddress(to), amount)
 		},
 		nil,
 		1,
