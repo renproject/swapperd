@@ -37,13 +37,12 @@ func NewETHSwapContractBinder(account beth.Account, swap foundation.Swap, logger
 		return nil, err
 	}
 
-	id, err := contract.SwapID(&bind.CallOpts{}, swapperAddr, swap.SecretHash, big.NewInt(swap.TimeLock))
+	id, err := contract.SwapID(&bind.CallOpts{}, swap.SecretHash, big.NewInt(swap.TimeLock))
 	if err != nil {
 		return nil, err
 	}
 
 	logger.LogInfo(swap.ID, fmt.Sprintf("Ethereum Atomic Swap ID: %s", base64.StdEncoding.EncodeToString(id[:])))
-
 	return &ethSwapContractBinder{
 		account: account,
 		binder:  contract,
