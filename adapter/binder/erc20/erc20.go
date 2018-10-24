@@ -19,7 +19,7 @@ import (
 type erc20SwapContractBinder struct {
 	id             [32]byte
 	account        beth.Account
-	swap           foundation.SwapTry
+	swap           foundation.Swap
 	logger         swapper.Logger
 	swapperAddress common.Address
 	tokenAddress   common.Address
@@ -28,7 +28,7 @@ type erc20SwapContractBinder struct {
 }
 
 // NewERC20SwapContractBinder returns a new ERC20 Atom instance
-func NewERC20SwapContractBinder(account beth.Account, swap foundation.SwapTry, logger swapper.Logger) (swapper.SwapContractBinder, error) {
+func NewERC20SwapContractBinder(account beth.Account, swap foundation.Swap, logger swapper.Logger) (swapper.Contract, error) {
 	tokenAddress, err := account.ReadAddress(fmt.Sprintf("ERC20:%s", swap.Token.Name))
 	if err != nil {
 		return nil, err
@@ -56,8 +56,7 @@ func NewERC20SwapContractBinder(account beth.Account, swap foundation.SwapTry, l
 		return nil, err
 	}
 
-	logger.LogInfo(swap.ID, fmt.Sprintf("ERC20 Atomic Swap ID: %s", base64.StdEncoding.EncodeToString(swap.ID[:])))
-
+	logger.LogInfo(swap.ID, fmt.Sprintf("ERC20 Atomic Swap ID: %s", base64.StdEncoding.EncodeToString(id[:])))
 	return &erc20SwapContractBinder{
 		account:        account,
 		swapperAddress: swapperAddress,
@@ -72,11 +71,23 @@ func NewERC20SwapContractBinder(account beth.Account, swap foundation.SwapTry, l
 
 // Initiate a new Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) Initiate() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	initiatable, err := atom.swapperBinder.Initiatable(&bind.CallOpts{}, atom.id)
+	if err != nil {
+		return err
+	}
+
+	if !initiatable {
+		atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Skipping initiate on Ethereum blockchain for ERC20 (%s)", atom.swap.Token.Name))
+		return nil
+	}
 	atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Initiating on Ethereum blockchain for ERC20 (%s)", atom.swap.Token.Name))
 
 	// Approve the contract to transfer tokens
 	if err := atom.account.Transact(
-		context.Background(),
+		ctx,
 		nil,
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
 			tx, err := atom.tokenBinder.Approve(tops, atom.swapperAddress, atom.swap.Value)
@@ -94,15 +105,9 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 	}
 
 	// Initiate the Atomic Swap
-	if err := atom.account.Transact(
-		context.Background(),
-		func() bool {
-			initiatable, err := atom.swapperBinder.Initiatable(&bind.CallOpts{}, atom.id)
-			if err != nil {
-				return false
-			}
-			return initiatable
-		},
+	return atom.account.Transact(
+		ctx,
+		nil,
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
 			tx, err := atom.swapperBinder.Initiate(tops, atom.id, common.HexToAddress(atom.swap.SpendingAddress), atom.swap.SecretHash, big.NewInt(atom.swap.TimeLock), atom.swap.Value)
 			if err != nil {
@@ -120,17 +125,16 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 			return !initiatable
 		},
 		1,
-	); err != nil && err != beth.ErrPreConditionCheckFailed {
-		return err
-	}
-	return nil
+	)
 }
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) Refund() error {
 	atom.logger.LogInfo(atom.swap.ID, "Refunding the atomic swap on ERC20 blockchain")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 	if err := atom.account.Transact(
-		context.Background(),
+		ctx,
 		func() bool {
 			refundable, err := atom.swapperBinder.Refundable(&bind.CallOpts{}, atom.id)
 			if err != nil {
@@ -212,9 +216,10 @@ func (atom *erc20SwapContractBinder) Audit() error {
 
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
-	atom.logger.LogInfo(atom.swap.ID, "Redeeming the atomic swap on Ethereum blockchain")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 	if err := atom.account.Transact(
-		context.Background(),
+		ctx,
 		func() bool {
 			redeemable, err := atom.swapperBinder.Redeemable(&bind.CallOpts{}, atom.id)
 			if err != nil {
@@ -239,7 +244,10 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 			return !refundable
 		},
 		1,
-	); err != nil && err != beth.ErrPreConditionCheckFailed {
+	); err != nil {
+		if err == beth.ErrPreConditionCheckFailed {
+			atom.logger.LogInfo(atom.swap.ID, "Skipping redeem on Ethereum Blockchain")
+		}
 		return err
 	}
 	return nil

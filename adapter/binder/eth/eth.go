@@ -19,13 +19,13 @@ import (
 type ethSwapContractBinder struct {
 	id      [32]byte
 	account beth.Account
-	swap    foundation.SwapTry
+	swap    foundation.Swap
 	logger  swapper.Logger
 	binder  *RenExAtomicSwapper
 }
 
 // NewETHSwapContractBinder returns a new Ethereum RequestAtom instance
-func NewETHSwapContractBinder(account beth.Account, swap foundation.SwapTry, logger swapper.Logger) (swapper.SwapContractBinder, error) {
+func NewETHSwapContractBinder(account beth.Account, swap foundation.Swap, logger swapper.Logger) (swapper.Contract, error) {
 	client := account.EthClient()
 	swapperAddr, err := account.ReadAddress(fmt.Sprintf("SWAPPER:%s", swap.Token.Name))
 	if err != nil {
