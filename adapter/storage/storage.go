@@ -1,107 +1,115 @@
 package storage
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"sync"
+
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
 
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-type Store interface {
-	Read([]byte) ([]byte, error)
-	Write([]byte, []byte) error
-	Delete([]byte) error
-}
+var (
+	TableSwaps      = [8]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	TableSwapsStart = [40]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	TableSwapsLimit = [40]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+
+	TablePendingSwaps      = [8]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	TablePendingSwapsStart = [40]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	TablePendingSwapsLimit = [40]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+)
 
 type storage struct {
-	mu    *sync.RWMutex
-	store Store
+	mu *sync.RWMutex
+	db *leveldb.DB
 }
 
-type SwapStorage struct {
-	Swaps          []foundation.Swap `json:"swaps"`
-	PendingQueries []swapper.Query   `json:"pendingQueries"`
-}
-
-func New(store Store) swapper.Storage {
+func New(db *leveldb.DB) swapper.Storage {
 	return &storage{
-		mu:    new(sync.RWMutex),
-		store: store,
+		mu: new(sync.RWMutex),
+		db: db,
 	}
 }
 
-func (storage *storage) AddQuery(query swapper.Query) error {
-	swapStorageBytes, err := storage.store.Read([]byte("SwapStorage"))
+func (storage *storage) InsertSwap(swap swapper.Swap) error {
+	pendingSwapData, err := json.Marshal(swap)
+	if err != nil {
+		return err
+	}
+	swapData, err := json.Marshal(swap.SwapBlob)
 	if err != nil {
 		return err
 	}
 
-	swapStorage := SwapStorage{}
-	if err := json.Unmarshal(swapStorageBytes, &swapStorage); err != nil {
-		return err
-	}
-
-	swapStorage.Swaps = append(swapStorage.Swaps, query.Swap)
-	swapStorage.PendingQueries = append(swapStorage.PendingQueries, query)
-
-	swapStorageBytes, err = json.Marshal(swapStorage)
+	id, err := base64.StdEncoding.DecodeString(string(swap.ID))
 	if err != nil {
 		return err
 	}
 
-	return storage.store.Write([]byte("SwapStorage"), swapStorageBytes)
+	if err := storage.db.Put(append(TablePendingSwaps[:], id...), pendingSwapData, nil); err != nil {
+		return err
+	}
+
+	return storage.db.Put(append(TableSwaps[:], id...), swapData, nil)
 }
 
-func (storage *storage) DeleteQuery(swapID foundation.SwapID) error {
-	swapStorageBytes, err := storage.store.Read([]byte("SwapStorage"))
+func (storage *storage) DeletePendingSwap(swapID foundation.SwapID) error {
+	id, err := base64.StdEncoding.DecodeString(string(swapID))
 	if err != nil {
 		return err
 	}
+	return storage.db.Delete(append(TablePendingSwaps[:], id...), nil)
+}
 
-	swapStorage := SwapStorage{}
-	if err := json.Unmarshal(swapStorageBytes, &swapStorage); err != nil {
-		return err
+func (storage *storage) PendingSwap(swapID foundation.SwapID) (swapper.Swap, error) {
+	id, err := base64.StdEncoding.DecodeString(string(swapID))
+	if err != nil {
+		return swapper.Swap{}, err
 	}
+	swapBlobBytes, err := storage.db.Get(append(TablePendingSwaps[:], id...), nil)
+	if err != nil {
+		return swapper.Swap{}, err
+	}
+	swap := swapper.Swap{}
+	if err := json.Unmarshal(swapBlobBytes, &swap); err != nil {
+		return swapper.Swap{}, err
+	}
+	return swap, nil
+}
 
-	for i, query := range swapStorage.PendingQueries {
-		if query.Swap.ID == swapID {
-			swapStorage.PendingQueries = append(swapStorage.PendingQueries[:i], swapStorage.PendingQueries[:i+1]...)
+func (storage *storage) Swaps() ([]foundation.SwapBlob, error) {
+	iterator := storage.db.NewIterator(&util.Range{Start: TableSwapsStart[:], Limit: TableSwapsLimit[:]}, nil)
+	defer iterator.Release()
+
+	swaps := []foundation.SwapBlob{}
+	for iterator.Next() {
+		value := iterator.Value()
+		swap := foundation.SwapBlob{}
+		if err := json.Unmarshal(value, &swap); err != nil {
+			return swaps, err
 		}
+		swaps = append(swaps, swap)
 	}
 
-	swapStorageBytes, err = json.Marshal(swapStorage)
-	if err != nil {
-		return err
-	}
-
-	return storage.store.Write([]byte("SwapStorage"), swapStorageBytes)
+	return swaps, iterator.Error()
 }
 
-func (storage *storage) LoadPendingQueries() []swapper.Query {
-	swapStorageBytes, err := storage.store.Read([]byte("SwapStorage"))
-	if err != nil {
-		return []swapper.Query{}
+func (storage *storage) PendingSwaps() ([]swapper.Swap, error) {
+	iterator := storage.db.NewIterator(&util.Range{Start: TablePendingSwapsStart[:], Limit: TablePendingSwapsLimit[:]}, nil)
+	defer iterator.Release()
+
+	pendingSwaps := []swapper.Swap{}
+	for iterator.Next() {
+		value := iterator.Value()
+		swap := swapper.Swap{}
+		if err := json.Unmarshal(value, &swap); err != nil {
+			return pendingSwaps, err
+		}
+		pendingSwaps = append(pendingSwaps, swap)
 	}
 
-	swapStorage := SwapStorage{}
-	if err := json.Unmarshal(swapStorageBytes, &swapStorage); err != nil {
-		return []swapper.Query{}
-	}
-
-	return swapStorage.PendingQueries
-}
-
-func (storage *storage) LoadSwaps() []foundation.Swap {
-	swapStorageBytes, err := storage.store.Read([]byte("SwapStorage"))
-	if err != nil {
-		return []foundation.Swap{}
-	}
-
-	swapStorage := SwapStorage{}
-	if err := json.Unmarshal(swapStorageBytes, &swapStorage); err != nil {
-		return []foundation.Swap{}
-	}
-
-	return swapStorage.Swaps
+	return pendingSwaps, iterator.Error()
 }
