@@ -14,6 +14,3 @@ Swapperd is built and officially supported by the Republic Protocol team. It is 
 
 Windows support will be coming soon!
 
-## Documentation
-
-
