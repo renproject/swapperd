@@ -180,6 +180,7 @@ func respond(results chan<- result, statuses chan<- foundation.SwapStatus, nativ
 		}
 		statuses <- foundation.NewSwapStatus(swap.ID, foundation.Refunded)
 		results <- newResult(swap.ID, true)
+		return
 	}
 	if err := foreign.Redeem(secret); err != nil {
 		logger.LogError(swap.ID, err)
