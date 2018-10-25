@@ -13,7 +13,7 @@ search: true
 
 # Introduction
 
-Welcome to Swapperd! You can use Swapperd execute cross-chain atomic swaps between Bitcoin, Ethereum, and ERC20 tokens.
+Welcome to Swapperd! You can use Swapperd to execute cross-chain atomic swaps between Bitcoin, Ethereum, and ERC20 tokens.
 
 # Installation
 
@@ -27,7 +27,7 @@ Swapperd installs itself as a system service. In the event of an unexpected shut
 
 During installing, you will need to choose a `username` and `password`. These will be required when interacting with the authenticated HTTP endpoints exposed by Swapperd.
 
-A `mnemonic` will be generated and printed to the terminal. Swapperd uses this `mnemonic`, with your `username` and `password`, to generate its Bitcoin and Ethereum private keys on-demand.
+A `mnemonic` will be generated and printed to the terminal. Swapperd uses this `mnemonic`, with your `password`, to generate its Bitcoin and Ethereum private keys on-demand.
 
 <aside class="success">
 Swapperd nevers stores private keys to persistent storage. The `password` will be temporarily stored to persistent storage until the associated atomic swap has completed.
@@ -55,7 +55,7 @@ Use the <code>username</code> and <code>password</code> that you entered during 
 
 # Swaps
 
-Executing an atomic swap requires two parties to participate an interactive swapping process. This interactive swapping process will either result in both parties exchanging their tokens, or both parties keeping their tokens.
+Executing an atomic swap requires two parties to participate in an interactive swapping process. This interactive swapping process will either result in both parties exchanging their tokens, or both parties keeping their tokens.
 
 Before beginning an atomic swap, it is assumed that the two parties:
 
