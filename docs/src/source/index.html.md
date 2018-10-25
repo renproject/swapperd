@@ -58,7 +58,9 @@ Use the <code>username</code> and <code>password</code> that you entered during 
 
 # Swaps
 
-## Execute an atomic swap
+## Executing an atomic swap
+
+> Executing an atomic swap by initating first:
 
 ```shell
 curl -i      \
@@ -71,30 +73,6 @@ curl -i      \
            "receiveFrom": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E", 
            "shouldInitiateFirst": true }' \
      http://username:password@localhost:7777/swaps
-```
-
-### HTTP Request
-
-`POST http://localhost:7777/swaps`
-
-<aside class="success">
-This is a protected HTTP endpoint.
-</aside>
-
-### Initiating first
-
-> The request body is structured like this:
-
-```json
-{
-  "sendToken":"BTC",
-  "receiveToken":"WBTC",
-  "sendAmount": "100000000",
-  "receiveAmount": "100000000",
-  "sendTo": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
-  "receiveFrom": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E",
-  "shouldInitiateFirst": true
-}
 ```
 
 > The response body is structured like this:
@@ -114,22 +92,31 @@ This is a protected HTTP endpoint.
 }
 ```
 
-### Initiating second
+### HTTP Request
 
-> The request body is structured like this:
+`POST http://localhost:7777/swaps`
 
-```json
-{
-  "sendToken": "WBTC",
-  "receiveToken": "BTC",
-  "sendAmount": "100000000",
-  "receiveAmount": "100000000",
-  "sendTo": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E",
-  "receiveFrom": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
-  "timeLock": 1639947328,
-  "secretHash": "4HOqdX0HpFtRz9bmPrYC2IYtAIOgsxCiN8L9+mp00zY=",
-  "shouldInitiateFirst": false
-}
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
+
+## Responding to an atomic swap
+
+> Respond to an atomic swap by initating second:
+
+```shell
+curl -i      \
+     -X POST \
+     -d '{ "sendToken": "WBTC",
+           "receiveToken": "BTC",
+           "sendAmount": "100000000",
+           "receiveAmount": "100000000",
+           "sendTo": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E",
+           "receiveFrom": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
+           "timeLock": 1639947328,
+           "secretHash": "4HOqdX0HpFtRz9bmPrYC2IYtAIOgsxCiN8L9+mp00zY=",
+           "shouldInitiateFirst": false }' \
+     http://username:password@localhost:7777/swaps
 ```
 
 > The response body is structured like this:
@@ -148,6 +135,14 @@ This is a protected HTTP endpoint.
   "shouldInitiateFirst": false
 }
 ```
+
+### HTTP Request
+
+`POST http://localhost:7777/swaps`
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
 
 ## Get pending atomic swaps
 
@@ -160,12 +155,85 @@ curl -i     \
 > The response body is structured like this:
 
 ```json
-[{
-  "id": "S1Jn5MTLBqD8M2lm6vYjt1n2qy7XlW7sjHyIY3eInNA=",
-  "status": 1
-}]
+{
+  "swaps": [
+    {
+      "id": "S1Jn5MTLBqD8M2lm6vYjt1n2qy7XlW7sjHyIY3eInNA=",
+      "status": 1
+    }
+  ]
+}
 ```
 
 ### HTTP Request
 
 `GET http://localhost:7777/swaps`
+
+<aside class="notice">
+This is not a protected HTTP endpoint.
+</aside>
+
+## Get balances
+
+```shell
+curl -i     \
+     -X GET \
+     http://username:password@localhost:7777/balances
+```
+
+> The response body is structured like this:
+
+```json
+{
+  "balances": [
+    {
+      "token": "BTC",
+      "address": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
+      "amount": "13565"
+    },
+    {
+      "token": "ETH",
+      "address": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E",
+      "amount": "990038930600000000"
+    },
+    {
+      "token": "WBTC",
+      "address": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E",
+      "amount": "999846435"
+    }
+  ]
+}
+```
+
+### HTTP Request
+
+`GET http://localhost:7777/balances`
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
+
+## Withdraw
+
+```shell
+curl -i      \
+     -X POST \
+     -d '{ "to": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
+           "token": "BTC",
+           "amount": "100000000" }' \
+     http://username:password@localhost:7777/withdrawals
+```
+
+> The response body is structured like this:
+
+```json
+{}
+```
+
+### HTTP Request
+
+`GET http://localhost:7777/withdrawals`
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
