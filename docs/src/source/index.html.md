@@ -213,7 +213,7 @@ curl -i     \
 This is a protected HTTP endpoint.
 </aside>
 
-## Withdraw
+## Withdrawing funds
 
 ```shell
 curl -i      \
@@ -232,8 +232,47 @@ curl -i      \
 
 ### HTTP Request
 
-`GET http://localhost:7777/withdrawals`
+`POST http://localhost:7777/withdrawals`
 
 <aside class="success">
 This is a protected HTTP endpoint.
+</aside>
+
+
+## Getting information about Swapperd
+
+```shell
+curl -i     \
+     -X GET \
+     http://localhost:7777/whoami
+```
+
+> The response body is structured like this:
+
+```json
+{
+  "version": "0.1.0",
+  "supportedTokens": [
+    {
+      "name": "BTC",
+      "blockchain": "bitcoin"
+    },
+    {
+      "name": "ETH",
+      "blockchain": "ethereum"
+    },
+    {
+      "name": "WBTC",
+      "blockchain": "ethereum"
+    }
+  ]
+}
+```
+
+### HTTP Request
+
+`GET http://localhost:7777/whoami`
+
+<aside class="notice">
+This is not a protected HTTP endpoint.
 </aside>
