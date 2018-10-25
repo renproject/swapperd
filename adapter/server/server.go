@@ -3,8 +3,10 @@ package server
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/republicprotocol/swapperd/adapter/funds"
 	"github.com/republicprotocol/swapperd/core/auth"
@@ -24,8 +26,8 @@ func NewServer(authenticator auth.Authenticator, fundManager funds.Manager, swap
 	return &server{authenticator, fundManager, swaps, statusQueries}
 }
 
-func (server *server) GetPing() GetPingResponse {
-	return GetPingResponse{
+func (server *server) GetWhoAmI() GetWhoAmIResponse {
+	return GetWhoAmIResponse{
 		Version:         "0.1.0",
 		SupportedTokens: server.fundManager.SupportedTokens(),
 	}
@@ -45,15 +47,13 @@ func (server *server) GetSwaps() GetSwapsResponse {
 	return resp
 }
 
-func (server *server) PostSwaps(swap foundation.SwapBlob, password string) foundation.SwapBlob {
-	secret := [32]byte{}
-	if swap.ShouldInitiateFirst {
-		rand.Read(secret[:])
-		hash := sha256.Sum256(secret[:])
-		swap.SecretHash = MarshalSecretHash(hash)
+func (server *server) PostSwaps(swap foundation.SwapBlob, password string) (foundation.SwapBlob, error) {
+	swap, secret, err := server.patchSwap(swap, password)
+	if err != nil {
+		return swap, err
 	}
 	server.swapperQueries <- swapper.NewSwap(swap, secret, password)
-	return swap
+	return swap, nil
 }
 
 func (server *server) GetBalances(password string) (GetBalanceResponse, error) {
@@ -72,17 +72,93 @@ func (server *server) GetBalances(password string) (GetBalanceResponse, error) {
 	return resp, nil
 }
 
-func (server *server) PostWithdraw(password string, postWithdrawRequest PostWithdrawRequest) error {
+func (server *server) PostWithdraw(password string, postWithdrawRequest PostWithdrawalsRequest) (PostWithdrawalsResponse, error) {
+	response := PostWithdrawalsResponse{}
 	token, err := UnmarshalToken(postWithdrawRequest.Token)
 	if err != nil {
-		return err
+		return response, err
 	}
 	if postWithdrawRequest.Amount == "" {
-		return server.fundManager.Withdraw(password, token, postWithdrawRequest.To, nil)
+		txHash, err := server.fundManager.Withdraw(password, token, postWithdrawRequest.To, nil)
+		if err != nil {
+			return response, err
+		}
+		response.TxHash = txHash
 	}
 	value, ok := big.NewInt(0).SetString(postWithdrawRequest.Amount, 10)
 	if !ok {
-		return fmt.Errorf("invalid amount")
+		return response, fmt.Errorf("invalid amount")
 	}
-	return server.fundManager.Withdraw(password, token, postWithdrawRequest.To, value)
+	txHash, err := server.fundManager.Withdraw(password, token, postWithdrawRequest.To, value)
+	if err != nil {
+		return response, err
+	}
+	response.TxHash = txHash
+	return response, nil
+}
+
+func (server *server) patchSwap(swapBlob foundation.SwapBlob, password string) (foundation.SwapBlob, [32]byte, error) {
+	if err := server.validateTokenDetails(swapBlob, password); err != nil {
+		return foundation.SwapBlob{}, [32]byte{}, err
+	}
+	return patchSwapDetails(swapBlob)
+}
+
+func (server *server) validateTokenDetails(swapBlob foundation.SwapBlob, password string) error {
+	balanceBook, err := server.fundManager.Balances(password)
+	if err != nil {
+		return err
+	}
+
+	sendToken, err := UnmarshalToken(swapBlob.SendToken)
+	if err != nil {
+		return err
+	}
+	amount, err := UnmarshalAmount(swapBlob.SendAmount)
+	if err != nil {
+		return err
+	}
+	if balanceBook[sendToken].Amount.Cmp(amount) < 0 {
+		return fmt.Errorf("insufficient balance required: %v current: %v", amount, balanceBook[sendToken].Amount)
+	}
+
+	switch sendToken.Blockchain {
+	case foundation.Ethereum:
+		minVal, ok := big.NewInt(0).SetString("5000000000000000", 10) // 0.005 eth
+		if !ok {
+			return fmt.Errorf("invalid minimum value")
+		}
+		if balanceBook[foundation.TokenETH].Amount.Cmp(minVal) < 0 {
+			return fmt.Errorf("minimum balance required to start an atomic swap on ethereum blockchain is 0.005 eth (to cover the transaction fees)")
+		}
+	case foundation.Bitcoin:
+		if amount.Cmp(big.NewInt(10000)) < 0 {
+			return fmt.Errorf("minimum send amount for bitcoin is 10000 sat")
+		}
+	}
+	return nil
+}
+
+func patchSwapDetails(swapBlob foundation.SwapBlob) (foundation.SwapBlob, [32]byte, error) {
+	swapID := [32]byte{}
+	rand.Read(swapID[:])
+	swapBlob.ID = foundation.SwapID(base64.StdEncoding.EncodeToString(swapID[:]))
+
+	secret := [32]byte{}
+	if swapBlob.ShouldInitiateFirst {
+		swapBlob.TimeLock = time.Now().Unix() + 3*foundation.ExpiryUnit
+		rand.Read(secret[:])
+		hash := sha256.Sum256(secret[:])
+		swapBlob.SecretHash = MarshalSecretHash(hash)
+		return swapBlob, secret, nil
+	}
+
+	secretHash, err := base64.StdEncoding.DecodeString(swapBlob.SecretHash)
+	if len(secretHash) != 32 || err != nil {
+		return swapBlob, secret, fmt.Errorf("invalid secret hash")
+	}
+	if time.Now().Unix()+2*foundation.ExpiryUnit > swapBlob.TimeLock {
+		return swapBlob, secret, fmt.Errorf("not enough time to do the atomic swap")
+	}
+	return swapBlob, secret, nil
 }

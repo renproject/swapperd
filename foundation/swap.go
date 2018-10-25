@@ -16,6 +16,8 @@ const (
 	Refunded
 )
 
+const ExpiryUnit = int64(2 * 60 * 60)
+
 // The SwapStatus indicates which phase of execution a Swap is in.
 type SwapStatus struct {
 	ID     SwapID `json:"id"`
