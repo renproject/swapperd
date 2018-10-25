@@ -20,7 +20,7 @@ func NewHandler(authenticator auth.Authenticator, manager funds.Manager, swaps c
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", postSwapsHandler(s)).Methods("POST")
 	r.HandleFunc("/swaps", getSwapsHandler(s)).Methods("GET")
-	r.HandleFunc("/withdraw", postWithdrawHandler(s)).Methods("POST")
+	r.HandleFunc("/withdrawals", postWithdrawHandler(s)).Methods("POST")
 	r.HandleFunc("/balances", getBalancesHandler(s)).Methods("GET")
 	r.HandleFunc("/ping", getPingHandler(s)).Methods("GET")
 	r.Use(recoveryHandler)
@@ -90,8 +90,14 @@ func postSwapsHandler(server *server) http.HandlerFunc {
 			return
 		}
 
+		patchedSwap, err := server.PostSwaps(swap, password)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(server.PostSwaps(swap, password)); err != nil {
+		if err := json.NewEncoder(w).Encode(patchedSwap); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swap response: %v", err))
 			return
 		}
@@ -107,18 +113,23 @@ func postWithdrawHandler(server *server) http.HandlerFunc {
 			return
 		}
 
-		withdrawReq := PostWithdrawRequest{}
+		withdrawReq := PostWithdrawalsRequest{}
 		if err := json.NewDecoder(r.Body).Decode(&withdrawReq); err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode withdraw request: %v", err))
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode withdrawals request: %v", err))
 			return
 		}
 
-		if err := server.PostWithdraw(password, withdrawReq); err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode withdraw request: %v", err))
+		withdrawResp, err := server.PostWithdraw(password, withdrawReq)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode withdrawals request: %v", err))
 			return
 		}
 
-		w.WriteHeader(http.StatusAccepted)
+		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(withdrawResp); err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode withdrawals response: %v", err))
+			return
+		}
 	}
 }
 

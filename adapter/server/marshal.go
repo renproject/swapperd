@@ -38,10 +38,14 @@ type Balance struct {
 	Amount  string `json:"amount"`
 }
 
-type PostWithdrawRequest struct {
+type PostWithdrawalsRequest struct {
 	To     string `json:"to"`
 	Token  string `json:"token"`
 	Amount string `json:"amount"`
+}
+
+type PostWithdrawalsResponse struct {
+	TxHash string `txHash`
 }
 
 func MarshalToken(token foundation.Token) string {
