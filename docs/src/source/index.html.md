@@ -30,11 +30,11 @@ During installing, you will need to choose a `username` and `password`. These wi
 A `mnemonic` will be generated and printed to the terminal. Swapperd uses this `mnemonic`, with your `username` and `password`, to generate its Bitcoin and Ethereum private keys on-demand.
 
 <aside class="success">
-Swapperd nevers stores private keys to persistent storage. The `password` will be temporarily stored to persistent storage until the associated atomic swap has completed.
+Swapperd never stores private keys to persistent storage. The `password` will be temporarily stored to persistent storage until the associated atomic swap has completed.
 </aside>
 
 <aside class="notice">
-Backup the `username`, `paassowrd`, and `mnemonic` generated during installation. Forgetting these could result in the loss of funds!
+Backup the `username`, `paassword`, and `mnemonic` generated during installation. Forgetting these could result in the loss of funds!
 </aside>
 
 # Authentication
@@ -74,7 +74,7 @@ Swapperd cannot execute the interactive swapping process when the host machine i
 
 ## Beginning an atomic swap
 
-> Beginning an atomic swap by initating first:
+> Beginning an atomic swap by initiating first:
 
 ```shell
 curl -i      \
@@ -120,7 +120,7 @@ This is a protected HTTP endpoint.
 
 ## Responding to an atomic swap
 
-> Respond to an atomic swap by initating second:
+> Respond to an atomic swap by initiating second:
 
 ```shell
 curl -i      \
