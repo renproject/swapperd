@@ -21,7 +21,7 @@ type Balance struct {
 
 type Manager interface {
 	SupportedTokens() []foundation.Token
-	Withdraw(password string, token foundation.Token, to string, amount *big.Int) error
+	Withdraw(password string, token foundation.Token, to string, amount *big.Int) (string, error)
 	Balances(password string) (map[foundation.Token]Balance, error)
 }
 
@@ -45,7 +45,7 @@ func (manager *manager) SupportedTokens() []foundation.Token {
 	return manager.supportedTokens
 }
 
-func (manager *manager) Withdraw(password string, token foundation.Token, to string, amount *big.Int) error {
+func (manager *manager) Withdraw(password string, token foundation.Token, to string, amount *big.Int) (string, error) {
 	switch token {
 	case foundation.TokenBTC:
 		return manager.withdrawBTC(password, to, amount)
@@ -54,7 +54,7 @@ func (manager *manager) Withdraw(password string, token foundation.Token, to str
 	case foundation.TokenWBTC:
 		return manager.withdrawERC20(password, token, to, amount)
 	}
-	return foundation.NewErrUnsupportedToken(token.Name)
+	return "", foundation.NewErrUnsupportedToken(token.Name)
 }
 
 func (manager *manager) Balances(password string) (map[foundation.Token]Balance, error) {
@@ -102,21 +102,21 @@ func (manager *manager) balanceBTC(password string) (Balance, error) {
 	}, nil
 }
 
-func (manager *manager) withdrawBTC(password, to string, amount *big.Int) error {
+func (manager *manager) withdrawBTC(password, to string, amount *big.Int) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 	if amount == nil {
 		balance, err := manager.balanceBTC(password)
 		if err != nil {
-			return err
+			return "", err
 		}
 		amount = balance.Amount
 	}
 	account, err := manager.accounts.GetBitcoinAccount(password)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return account.Transfer(ctx, to, amount.Int64())
+	return "", account.Transfer(ctx, to, amount.Int64())
 }
 
 func (manager *manager) balanceETH(password string) (Balance, error) {
@@ -135,21 +135,21 @@ func (manager *manager) balanceETH(password string) (Balance, error) {
 	}, nil
 }
 
-func (manager *manager) withdrawETH(password, to string, amount *big.Int) error {
+func (manager *manager) withdrawETH(password, to string, amount *big.Int) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 	if amount == nil {
 		balance, err := manager.balanceETH(password)
 		if err != nil {
-			return err
+			return "", err
 		}
 		amount = balance.Amount
 	}
 	account, err := manager.accounts.GetEthereumAccount(password)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return account.Transfer(ctx, common.HexToAddress(to), amount, 1)
+	return "", account.Transfer(ctx, common.HexToAddress(to), amount, 1)
 }
 
 func (manager *manager) balanceERC20(password string, token foundation.Token) (Balance, error) {
@@ -183,38 +183,48 @@ func (manager *manager) balanceERC20(password string, token foundation.Token) (B
 	}, nil
 }
 
-func (manager *manager) withdrawERC20(password string, token foundation.Token, to string, amount *big.Int) error {
+func (manager *manager) withdrawERC20(password string, token foundation.Token, to string, amount *big.Int) (string, error) {
+	var txHash string
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 	if amount == nil {
 		balance, err := manager.balanceERC20(password, token)
 		if err != nil {
-			return err
+			return txHash, err
 		}
 		amount = balance.Amount
 	}
 	account, err := manager.accounts.GetEthereumAccount(password)
 	if err != nil {
-		return err
+		return txHash, err
 	}
 	tokenAddress, err := account.ReadAddress(fmt.Sprintf("ERC20:%s", token.Name))
 	if err != nil {
-		return err
+		return txHash, err
 	}
 
 	ethClient := account.EthClient()
 	tokenContract, err := erc20.NewCompatibleERC20(tokenAddress, bind.ContractBackend(ethClient.EthClient()))
 	if err != nil {
-		return err
+		return txHash, err
 	}
 
-	return account.Transact(
+	if err := account.Transact(
 		ctx,
 		nil,
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
-			return tokenContract.Transfer(tops, common.HexToAddress(to), amount)
+			tx, err := tokenContract.Transfer(tops, common.HexToAddress(to), amount)
+			if err != nil {
+				return tx, err
+			}
+			txHash = tx.Hash().String()
+			return tx, nil
 		},
 		nil,
 		1,
-	)
+	); err != nil {
+		return txHash, err
+	}
+
+	return txHash, nil
 }
