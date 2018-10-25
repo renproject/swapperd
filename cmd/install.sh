@@ -74,13 +74,16 @@ fi
 # choose which network to use
 while :
 do
-  echo "Please enter the network you want to use (TESTNET/mainnet)" # testnet by default
-  read NETWORK </dev/tty
-  NETWORK=$(echo "$NETWORK" | tr '[:upper:]' '[:lower:]')
-  if [ "$NETWORK" = "" ]; then 
+  echo "Please enter the network you want to use (1/2)"
+  echo ""
+  echo "1. Testnet (default)" # testnet by default
+  echo "2. Mainnet"
+  read choice </dev/tty
+  if [ "$choice" = "" ] || [ "$choice" = "1" ]; then 
     NETWORK="testnet"
     break
-  elif [ "$NETWORK" = "mainnet" ] || [ "$NETWORK" = "testnet" ]; then
+  elif [ "$choice" = "2" ]; then
+   NETWORK="mainnet"
     break
   fi
   echo "The network entered is invalid. Please try again."
