@@ -27,7 +27,7 @@ Swapperd installs itself as a system service. In the event of an unexpected shut
 
 During installing, you will need to choose a `username` and `password`. These will be required when interacting with the authenticated HTTP endpoints exposed by Swapperd.
 
-A `mneumonic` will be generated and printed to the terminal. Swapperd uses this `mneumonic`, with your `username` and `password`, to generate its Bitcoin and Ethereum private keys on-demand.
+A `mnemonic` will be generated and printed to the terminal. Swapperd uses this `mnemonic`, with your `username` and `password`, to generate its Bitcoin and Ethereum private keys on-demand.
 
 <aside class="success">
 Swapperd nevers stores private keys to persistent storage. The `password` will be temporarily stored to persistent storage until the associated atomic swap has completed.
