@@ -22,7 +22,7 @@ func NewHandler(authenticator auth.Authenticator, manager funds.Manager, swaps c
 	r.HandleFunc("/swaps", getSwapsHandler(s)).Methods("GET")
 	r.HandleFunc("/withdrawals", postWithdrawHandler(s)).Methods("POST")
 	r.HandleFunc("/balances", getBalancesHandler(s)).Methods("GET")
-	r.HandleFunc("/ping", getPingHandler(s)).Methods("GET")
+	r.HandleFunc("/whoami", getWhoAmIHandler(s)).Methods("GET")
 	r.Use(recoveryHandler)
 	handler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
@@ -52,12 +52,12 @@ func recoveryHandler(h http.Handler) http.Handler {
 	})
 }
 
-// getPingHandler handles the get ping request, it returns the basic information
-// of the swapper such as the version and supported tokens.
-func getPingHandler(server *server) http.HandlerFunc {
+// getWhoAmIHandler handles the get whoami request, it returns the basic information
+// of the swapper such as the version, supported tokens ad addresses.
+func getWhoAmIHandler(server *server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := json.NewEncoder(w).Encode(server.GetPing()); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode ping response: %v", err))
+		if err := json.NewEncoder(w).Encode(server.GetWhoAmI()); err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode whoami response: %v", err))
 			return
 		}
 	}

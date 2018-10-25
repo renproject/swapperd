@@ -26,8 +26,8 @@ func NewServer(authenticator auth.Authenticator, fundManager funds.Manager, swap
 	return &server{authenticator, fundManager, swaps, statusQueries}
 }
 
-func (server *server) GetPing() GetPingResponse {
-	return GetPingResponse{
+func (server *server) GetWhoAmI() GetWhoAmIResponse {
+	return GetWhoAmIResponse{
 		Version:         "0.1.0",
 		SupportedTokens: server.fundManager.SupportedTokens(),
 	}

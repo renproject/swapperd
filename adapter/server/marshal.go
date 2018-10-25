@@ -13,8 +13,8 @@ import (
 var ErrInvalidAmount = errors.New("invalid amount")
 var ErrInvalidLength = errors.New("invalid length")
 
-// GetPingResponse data object contains the Swapper's internal information.
-type GetPingResponse struct {
+// GetWhoAmIResponse data object contains the Swapper's internal information.
+type GetWhoAmIResponse struct {
 	Version         string             `json:"version"`
 	SupportedTokens []foundation.Token `json:"supportedTokens"`
 }
