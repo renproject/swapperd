@@ -1,0 +1,523 @@
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Swapperd</title>
+
+    <style>
+      .highlight table td { padding: 5px; }
+.highlight table pre { margin: 0; }
+.highlight .gh {
+  color: #999999;
+}
+.highlight .sr {
+  color: #f6aa11;
+}
+.highlight .go {
+  color: #888888;
+}
+.highlight .gp {
+  color: #555555;
+}
+.highlight .gs {
+}
+.highlight .gu {
+  color: #aaaaaa;
+}
+.highlight .nb {
+  color: #f6aa11;
+}
+.highlight .cm {
+  color: #75715e;
+}
+.highlight .cp {
+  color: #75715e;
+}
+.highlight .c1 {
+  color: #75715e;
+}
+.highlight .cs {
+  color: #75715e;
+}
+.highlight .c, .highlight .cd {
+  color: #75715e;
+}
+.highlight .err {
+  color: #960050;
+}
+.highlight .gr {
+  color: #960050;
+}
+.highlight .gt {
+  color: #960050;
+}
+.highlight .gd {
+  color: #49483e;
+}
+.highlight .gi {
+  color: #49483e;
+}
+.highlight .ge {
+  color: #49483e;
+}
+.highlight .kc {
+  color: #66d9ef;
+}
+.highlight .kd {
+  color: #66d9ef;
+}
+.highlight .kr {
+  color: #66d9ef;
+}
+.highlight .no {
+  color: #66d9ef;
+}
+.highlight .kt {
+  color: #66d9ef;
+}
+.highlight .mf {
+  color: #ae81ff;
+}
+.highlight .mh {
+  color: #ae81ff;
+}
+.highlight .il {
+  color: #ae81ff;
+}
+.highlight .mi {
+  color: #ae81ff;
+}
+.highlight .mo {
+  color: #ae81ff;
+}
+.highlight .m, .highlight .mb, .highlight .mx {
+  color: #ae81ff;
+}
+.highlight .sc {
+  color: #ae81ff;
+}
+.highlight .se {
+  color: #ae81ff;
+}
+.highlight .ss {
+  color: #ae81ff;
+}
+.highlight .sd {
+  color: #e6db74;
+}
+.highlight .s2 {
+  color: #e6db74;
+}
+.highlight .sb {
+  color: #e6db74;
+}
+.highlight .sh {
+  color: #e6db74;
+}
+.highlight .si {
+  color: #e6db74;
+}
+.highlight .sx {
+  color: #e6db74;
+}
+.highlight .s1 {
+  color: #e6db74;
+}
+.highlight .s {
+  color: #e6db74;
+}
+.highlight .na {
+  color: #a6e22e;
+}
+.highlight .nc {
+  color: #a6e22e;
+}
+.highlight .nd {
+  color: #a6e22e;
+}
+.highlight .ne {
+  color: #a6e22e;
+}
+.highlight .nf {
+  color: #a6e22e;
+}
+.highlight .vc {
+  color: #ffffff;
+}
+.highlight .nn {
+  color: #ffffff;
+}
+.highlight .nl {
+  color: #ffffff;
+}
+.highlight .ni {
+  color: #ffffff;
+}
+.highlight .bp {
+  color: #ffffff;
+}
+.highlight .vg {
+  color: #ffffff;
+}
+.highlight .vi {
+  color: #ffffff;
+}
+.highlight .nv {
+  color: #ffffff;
+}
+.highlight .w {
+  color: #ffffff;
+}
+.highlight {
+  color: #ffffff;
+}
+.highlight .n, .highlight .py, .highlight .nx {
+  color: #ffffff;
+}
+.highlight .ow {
+  color: #f92672;
+}
+.highlight .nt {
+  color: #f92672;
+}
+.highlight .k, .highlight .kv {
+  color: #f92672;
+}
+.highlight .kn {
+  color: #f92672;
+}
+.highlight .kp {
+  color: #f92672;
+}
+.highlight .o {
+  color: #f92672;
+}
+    </style>
+    <link href="stylesheets/screen.css" rel="stylesheet" media="screen" />
+    <link href="stylesheets/print.css" rel="stylesheet" media="print" />
+      <script src="javascripts/all.js"></script>
+  </head>
+
+  <body class="index" data-languages="[&quot;shell&quot;]">
+    <a href="#" id="nav-button">
+      <span>
+        NAV
+        <img src="images/navbar.png" alt="Navbar" />
+      </span>
+    </a>
+    <div class="toc-wrapper">
+      <img src="images/logo.png" class="logo" alt="Logo" />
+        <div class="lang-selector">
+              <a href="#" data-language-name="shell">shell</a>
+        </div>
+        <div class="search">
+          <input type="text" class="search" id="input-search" placeholder="Search">
+        </div>
+        <ul class="search-results"></ul>
+      <ul id="toc" class="toc-list-h1">
+          <li>
+            <a href="#introduction" class="toc-h1 toc-link" data-title="Introduction">Introduction</a>
+          </li>
+          <li>
+            <a href="#installation" class="toc-h1 toc-link" data-title="Installation">Installation</a>
+          </li>
+          <li>
+            <a href="#authentication" class="toc-h1 toc-link" data-title="Authentication">Authentication</a>
+          </li>
+          <li>
+            <a href="#swaps" class="toc-h1 toc-link" data-title="Swaps">Swaps</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#executing-an-atomic-swap" class="toc-h2 toc-link" data-title="Executing an atomic swap">Executing an atomic swap</a>
+                  </li>
+                  <li>
+                    <a href="#responding-to-an-atomic-swap" class="toc-h2 toc-link" data-title="Responding to an atomic swap">Responding to an atomic swap</a>
+                  </li>
+                  <li>
+                    <a href="#get-pending-atomic-swaps" class="toc-h2 toc-link" data-title="Get pending atomic swaps">Get pending atomic swaps</a>
+                  </li>
+              </ul>
+          </li>
+          <li>
+            <a href="#balances" class="toc-h1 toc-link" data-title="Balances">Balances</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#get-balances" class="toc-h2 toc-link" data-title="Get balances">Get balances</a>
+                  </li>
+              </ul>
+          </li>
+          <li>
+            <a href="#withdrawals" class="toc-h1 toc-link" data-title="Withdrawals">Withdrawals</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#withdrawing-funds" class="toc-h2 toc-link" data-title="Withdrawing funds">Withdrawing funds</a>
+                  </li>
+              </ul>
+          </li>
+          <li>
+            <a href="#whoami" class="toc-h1 toc-link" data-title="Whoami">Whoami</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#getting-information-about-swapperd" class="toc-h2 toc-link" data-title="Getting information about Swapperd">Getting information about Swapperd</a>
+                  </li>
+              </ul>
+          </li>
+          <li>
+            <a href="#errors" class="toc-h1 toc-link" data-title="Errors">Errors</a>
+          </li>
+      </ul>
+        <ul class="toc-footer">
+            <li><a href='https://github.com/republicprotocol/swapperd'>Checkout our GitHub</a></li>
+            <li><a href='https://republicprotocol.com'>Support by Republic Protocol</a></li>
+        </ul>
+    </div>
+    <div class="page-wrapper">
+      <div class="dark-box"></div>
+      <div class="content">
+        <h1 id='introduction'>Introduction</h1>
+<p>Welcome to Swapperd! You can use Swapperd execute cross-chain atomic swaps between Bitcoin, Ethereum, and ERC20 tokens.</p>
+<h1 id='installation'>Installation</h1>
+<blockquote>
+<p>Swapperd currently supports macOS, and Ubuntu. Run the following command in a terminal:</p>
+</blockquote>
+<pre class="highlight shell tab-shell"><code>curl https://releases.republicprotocol.com/swapperd/install.sh -sSf | sh
+</code></pre>
+<p>Swapperd installs itself as a system service. In the event of an unexpected shutdown, Swapperd will automatically restart and resume all pending atomic swaps.</p>
+
+<p>During installing, you will need to choose a <code>username</code> and <code>password</code>. These will be required when interacting with the authenticated HTTP endpoints exposed by Swapperd.</p>
+
+<p>A <code>mneumonic</code> will be generated and printed to the terminal. Swapperd uses this <code>mneumonic</code>, with your <code>username</code> and <code>password</code>, to generate its Bitcoin and Ethereum private keys on-demand.</p>
+
+<aside class="success">
+Swapperd nevers stores private keys to persistent storage. The `password` will be temporarily stored to persistent storage until the associated atomic swap has completed.
+</aside>
+
+<aside class="notice">
+Backup the `username`, `paassowrd`, and `mnuemonic` generated during installation. Forgetting these could result in the loss of funds!
+</aside>
+<h1 id='authentication'>Authentication</h1>
+<blockquote>
+<p>An example using HTTP Authentication:</p>
+</blockquote>
+<pre class="highlight shell tab-shell"><code>curl -i     <span class="se">\</span>
+     -X GET <span class="se">\</span>
+     http://username:password@localhost:7777/balances
+</code></pre>
+<p>Swapperd protects itself using HTTP Basic Authentication. Swapperd protects all HTTP endpoints that require a Bitcoin or Ethereum private key.</p>
+
+<aside class="success">
+Use the <code>username</code> and <code>password</code> that you entered during installation.
+</aside>
+<h1 id='swaps'>Swaps</h1><h2 id='executing-an-atomic-swap'>Executing an atomic swap</h2>
+<blockquote>
+<p>Executing an atomic swap by initating first:</p>
+</blockquote>
+<pre class="highlight shell tab-shell"><code>curl -i      <span class="se">\</span>
+     -X POST <span class="se">\</span>
+     -d <span class="s1">'{ "sendToken": "BTC",                                          
+           "receiveToken": "WBTC",                                      
+           "sendAmount": "100000000",                                   
+           "receiveAmount": "100000000",                                
+           "sendTo": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",              
+           "receiveFrom": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E", 
+           "shouldInitiateFirst": true }'</span> <span class="se">\</span>
+     http://username:password@localhost:7777/swaps
+</code></pre>
+<blockquote>
+<p>The response body is structured like this:</p>
+</blockquote>
+<pre class="highlight json tab-json"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"U1nWa7ggpDEFSh3ChZMxni6YZwy6SbcYpAy/Wc7CRRQ="</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"sendToken"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BTC"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"receiveToken"</span><span class="p">:</span><span class="w"> </span><span class="s2">"WBTC"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"sendAmount"</span><span class="p">:</span><span class="w"> </span><span class="s2">"100000000"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"receiveAmount"</span><span class="p">:</span><span class="w"> </span><span class="s2">"100000000"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"sendTo"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mzcJVzZgVcgmErPp2bu4DzXcdHpHA7wy1b"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"receiveFrom"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0x43256f96601178Fd8594E02eed2e0d41f68DBb27"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timeLock"</span><span class="p">:</span><span class="w"> </span><span class="mi">1639947328</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"secretHash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4HOqdX0HpFtRz9bmPrYC2IYtAIOgsxCiN8L9+mp00zY="</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"shouldInitiateFirst"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre><h3 id='http-request'>HTTP Request</h3>
+<p><code>POST http://localhost:7777/swaps</code></p>
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
+<h2 id='responding-to-an-atomic-swap'>Responding to an atomic swap</h2>
+<blockquote>
+<p>Respond to an atomic swap by initating second:</p>
+</blockquote>
+<pre class="highlight shell tab-shell"><code>curl -i      <span class="se">\</span>
+     -X POST <span class="se">\</span>
+     -d <span class="s1">'{ "sendToken": "WBTC",
+           "receiveToken": "BTC",
+           "sendAmount": "100000000",
+           "receiveAmount": "100000000",
+           "sendTo": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E",
+           "receiveFrom": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
+           "timeLock": 1639947328,
+           "secretHash": "4HOqdX0HpFtRz9bmPrYC2IYtAIOgsxCiN8L9+mp00zY=",
+           "shouldInitiateFirst": false }'</span> <span class="se">\</span>
+     http://username:password@localhost:7777/swaps
+</code></pre>
+<blockquote>
+<p>The response body is structured like this:</p>
+</blockquote>
+<pre class="highlight json tab-json"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"S1Jn5MTLBqD8M2lm6vYjt1n2qy7XlW7sjHyIY3eInNA="</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"sendToken"</span><span class="p">:</span><span class="w"> </span><span class="s2">"WBTC"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"receiveToken"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BTC"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"sendAmount"</span><span class="p">:</span><span class="w"> </span><span class="s2">"100000000"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"receiveAmount"</span><span class="p">:</span><span class="w"> </span><span class="s2">"100000000"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"sendTo"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0x5E6B16d705D81ec0822e6926E7841267Fa490b3E"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"receiveFrom"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timeLock"</span><span class="p">:</span><span class="w"> </span><span class="mi">1639947328</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"secretHash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4HOqdX0HpFtRz9bmPrYC2IYtAIOgsxCiN8L9+mp00zY="</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"shouldInitiateFirst"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre><h3 id='http-request-2'>HTTP Request</h3>
+<p><code>POST http://localhost:7777/swaps</code></p>
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
+<h2 id='get-pending-atomic-swaps'>Get pending atomic swaps</h2><pre class="highlight shell tab-shell"><code>curl -i     <span class="se">\</span>
+     -X GET <span class="se">\</span>
+     http://localhost:7777/swaps
+</code></pre>
+<blockquote>
+<p>The response body is structured like this:</p>
+</blockquote>
+<pre class="highlight json tab-json"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"swaps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"S1Jn5MTLBqD8M2lm6vYjt1n2qy7XlW7sjHyIY3eInNA="</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"status"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre><h3 id='http-request-3'>HTTP Request</h3>
+<p><code>GET http://localhost:7777/swaps</code></p>
+
+<aside class="notice">
+This is not a protected HTTP endpoint.
+</aside>
+<h1 id='balances'>Balances</h1><h2 id='get-balances'>Get balances</h2><pre class="highlight shell tab-shell"><code>curl -i     <span class="se">\</span>
+     -X GET <span class="se">\</span>
+     http://username:password@localhost:7777/balances
+</code></pre>
+<blockquote>
+<p>The response body is structured like this:</p>
+</blockquote>
+<pre class="highlight json tab-json"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"balances"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"token"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BTC"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"address"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"amount"</span><span class="p">:</span><span class="w"> </span><span class="s2">"13565"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"token"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ETH"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"address"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0x5E6B16d705D81ec0822e6926E7841267Fa490b3E"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"amount"</span><span class="p">:</span><span class="w"> </span><span class="s2">"990038930600000000"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"token"</span><span class="p">:</span><span class="w"> </span><span class="s2">"WBTC"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"address"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0x5E6B16d705D81ec0822e6926E7841267Fa490b3E"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"amount"</span><span class="p">:</span><span class="w"> </span><span class="s2">"999846435"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre><h3 id='http-request-4'>HTTP Request</h3>
+<p><code>GET http://localhost:7777/balances</code></p>
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
+<h1 id='withdrawals'>Withdrawals</h1><h2 id='withdrawing-funds'>Withdrawing funds</h2><pre class="highlight shell tab-shell"><code>curl -i      <span class="se">\</span>
+     -X POST <span class="se">\</span>
+     -d <span class="s1">'{ "to": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
+           "token": "BTC",
+           "amount": "100000000" }'</span> <span class="se">\</span>
+     http://username:password@localhost:7777/withdrawals
+</code></pre>
+<blockquote>
+<p>The response body is structured like this:</p>
+</blockquote>
+<pre class="highlight json tab-json"><code><span class="p">{}</span><span class="w">
+</span></code></pre><h3 id='http-request-5'>HTTP Request</h3>
+<p><code>POST http://localhost:7777/withdrawals</code></p>
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
+<h1 id='whoami'>Whoami</h1><h2 id='getting-information-about-swapperd'>Getting information about Swapperd</h2><pre class="highlight shell tab-shell"><code>curl -i     <span class="se">\</span>
+     -X GET <span class="se">\</span>
+     http://localhost:7777/whoami
+</code></pre>
+<blockquote>
+<p>The response body is structured like this:</p>
+</blockquote>
+<pre class="highlight json tab-json"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.1.0"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"supportedTokens"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BTC"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"blockchain"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bitcoin"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ETH"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"blockchain"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ethereum"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"WBTC"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"blockchain"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ethereum"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre><h3 id='http-request-6'>HTTP Request</h3>
+<p><code>GET http://localhost:7777/whoami</code></p>
+
+<aside class="notice">
+This is not a protected HTTP endpoint.
+</aside>
+<h1 id='errors'>Errors</h1>
+<p>Swapperd uses the following error codes:</p>
+
+<table><thead>
+<tr>
+<th>Error Code</th>
+<th>Meaning</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>400</td>
+<td>Bad Request -- The request is invalid.</td>
+</tr>
+<tr>
+<td>401</td>
+<td>Unauthorized -- The username or password is invalid.</td>
+</tr>
+<tr>
+<td>404</td>
+<td>Not Found -- The HTTP endpoint or method is invalid.</td>
+</tr>
+<tr>
+<td>500</td>
+<td>Internal Server Error -- Swapperd has encountered an unexpected error. Please submit a bug report!</td>
+</tr>
+</tbody></table>
+
+      </div>
+      <div class="dark-box">
+          <div class="lang-selector">
+                <a href="#" data-language-name="shell">shell</a>
+          </div>
+      </div>
+    </div>
+  </body>
+</html>
