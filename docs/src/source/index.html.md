@@ -26,199 +26,146 @@ Welcome to Swapperd! You can use Swapperd execute cross-chain atomic swaps betwe
 curl https://releases.republicprotocol.com/swapperd/install.sh -sSf | sh
 ```
 
-Installing Swapperd will download and install the Swapperd binary and run it as a user service. In the event of an unexpected crash, or an expected shutdown, Swapperd will automatically restart and resume any pending swaps.
+Swapperd installs itself as a system service. In the event of an unexpected shutdown, Swapperd will automatically restart and resume all pending atomic swaps.
 
-During installing, you will be asked to choose a `username` and `password`. These will be required when interacting with the authenticated HTTP endpoints exposed by Swapperd.
+During installing, you will need to choose a `username` and `password`. These will be required when interacting with the authenticated HTTP endpoints exposed by Swapperd.
 
-<aside class="notice">
-Make sure to record and backup the mnuemonic generated during installation. Swapperd will use this mneumonic to generate its Bitcoin and Ethereum private keys. Forgetting this mneumonic could result in the loss of funds!
+A `mneumonic` will be generated and printed to the terminal. Swapperd uses this `mneumonic`, with your `username` and `password`, to generate its Bitcoin and Ethereum private keys on-demand.
+
+<aside class="success">
+Swapperd nevers stores private keys to persistent storage. The `password` will be temporarily stored to persistent storage until the associated atomic swap has completed.
 </aside>
 
+<aside class="notice">
+Backup the `username`, `paassowrd`, and `mnuemonic` generated during installation. Forgetting these could result in the loss of funds!
+</aside>
 
 # Authentication
 
 > An example using HTTP Authentication:
 
 ```shell
-curl -i -XGET http://username:password@localhost:7777/balances
+curl -i     \
+     -X GET \
+     http://username:password@localhost:7777/balances
 ```
 
-Swapperd protects itself using HTTP Basic Authentication.
-
+Swapperd protects itself using HTTP Basic Authentication. Swapperd protects all HTTP endpoints that require a Bitcoin or Ethereum private key.
 
 <aside class="success">
 Use the <code>username</code> and <code>password</code> that you entered during installation.
 </aside>
 
-# Kittens
+# Swaps
 
-## Get All Kittens
-
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.get
-```
-
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-api.kittens.get()
-```
+## Execute an atomic swap
 
 ```shell
-curl "http://example.com/api/kittens"
-  -H "Authorization: meowmeowmeow"
+curl -i      \
+     -X POST \
+     -d '{ "sendToken": "BTC",                                          
+           "receiveToken": "WBTC",                                      
+           "sendAmount": "100000000",                                   
+           "receiveAmount": "100000000",                                
+           "sendTo": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",              
+           "receiveFrom": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E", 
+           "shouldInitiateFirst": true }' \
+     http://username:password@localhost:7777/swaps
 ```
-
-```javascript
-const kittn = require('kittn');
-
-let api = kittn.authorize('meowmeowmeow');
-let kittens = api.kittens.get();
-```
-
-> The above command returns JSON structured like this:
-
-```json
-[
-  {
-    "id": 1,
-    "name": "Fluffums",
-    "breed": "calico",
-    "fluffiness": 6,
-    "cuteness": 7
-  },
-  {
-    "id": 2,
-    "name": "Max",
-    "breed": "unknown",
-    "fluffiness": 5,
-    "cuteness": 10
-  }
-]
-```
-
-This endpoint retrieves all kittens.
 
 ### HTTP Request
 
-`GET http://example.com/api/kittens`
-
-### Query Parameters
-
-Parameter | Default | Description
---------- | ------- | -----------
-include_cats | false | If set to true, the result will also include cats.
-available | true | If set to false, the result will include kittens that have already been adopted.
+`POST http://localhost:7777/swaps`
 
 <aside class="success">
-Remember — a happy kitten is an authenticated kitten!
+This is a protected HTTP endpoint.
 </aside>
 
-## Get a Specific Kitten
+### Initiating first
 
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.get(2)
-```
-
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-api.kittens.get(2)
-```
-
-```shell
-curl "http://example.com/api/kittens/2"
-  -H "Authorization: meowmeowmeow"
-```
-
-```javascript
-const kittn = require('kittn');
-
-let api = kittn.authorize('meowmeowmeow');
-let max = api.kittens.get(2);
-```
-
-> The above command returns JSON structured like this:
+> The request body is structured like this:
 
 ```json
 {
-  "id": 2,
-  "name": "Max",
-  "breed": "unknown",
-  "fluffiness": 5,
-  "cuteness": 10
+  "sendToken":"BTC",
+  "receiveToken":"WBTC",
+  "sendAmount": "100000000",
+  "receiveAmount": "100000000",
+  "sendTo": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
+  "receiveFrom": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E",
+  "shouldInitiateFirst": true
 }
 ```
 
-This endpoint retrieves a specific kitten.
-
-<aside class="warning">Inside HTML code blocks like this one, you can't use Markdown, so use <code>&lt;code&gt;</code> blocks to denote code.</aside>
-
-### HTTP Request
-
-`GET http://example.com/kittens/<ID>`
-
-### URL Parameters
-
-Parameter | Description
---------- | -----------
-ID | The ID of the kitten to retrieve
-
-## Delete a Specific Kitten
-
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.delete(2)
-```
-
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-api.kittens.delete(2)
-```
-
-```shell
-curl "http://example.com/api/kittens/2"
-  -X DELETE
-  -H "Authorization: meowmeowmeow"
-```
-
-```javascript
-const kittn = require('kittn');
-
-let api = kittn.authorize('meowmeowmeow');
-let max = api.kittens.delete(2);
-```
-
-> The above command returns JSON structured like this:
+> The response body is structured like this:
 
 ```json
 {
-  "id": 2,
-  "deleted" : ":("
+  "id": "U1nWa7ggpDEFSh3ChZMxni6YZwy6SbcYpAy/Wc7CRRQ=",
+  "sendToken": "BTC",
+  "receiveToken": "WBTC",
+  "sendAmount": "100000000",
+  "receiveAmount": "100000000",
+  "sendTo": "mzcJVzZgVcgmErPp2bu4DzXcdHpHA7wy1b",
+  "receiveFrom": "0x43256f96601178Fd8594E02eed2e0d41f68DBb27",
+  "timeLock": 1639947328,
+  "secretHash": "4HOqdX0HpFtRz9bmPrYC2IYtAIOgsxCiN8L9+mp00zY=",
+  "shouldInitiateFirst": true
 }
 ```
 
-This endpoint deletes a specific kitten.
+### Initiating second
+
+> The request body is structured like this:
+
+```json
+{
+  "sendToken": "WBTC",
+  "receiveToken": "BTC",
+  "sendAmount": "100000000",
+  "receiveAmount": "100000000",
+  "sendTo": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E",
+  "receiveFrom": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
+  "timeLock": 1639947328,
+  "secretHash": "4HOqdX0HpFtRz9bmPrYC2IYtAIOgsxCiN8L9+mp00zY=",
+  "shouldInitiateFirst": false
+}
+```
+
+> The response body is structured like this:
+
+```json
+{
+  "id": "S1Jn5MTLBqD8M2lm6vYjt1n2qy7XlW7sjHyIY3eInNA=",
+  "sendToken": "WBTC",
+  "receiveToken": "BTC",
+  "sendAmount": "100000000",
+  "receiveAmount": "100000000",
+  "sendTo": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E",
+  "receiveFrom": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
+  "timeLock": 1639947328,
+  "secretHash": "4HOqdX0HpFtRz9bmPrYC2IYtAIOgsxCiN8L9+mp00zY=",
+  "shouldInitiateFirst": false
+}
+```
+
+## Get pending atomic swaps
+
+```shell
+curl -i     \
+     -X GET \
+     http://localhost:7777/swaps
+```
+
+> The response body is structured like this:
+
+```json
+[{
+  "id": "S1Jn5MTLBqD8M2lm6vYjt1n2qy7XlW7sjHyIY3eInNA=",
+  "status": 1
+}]
+```
 
 ### HTTP Request
 
-`DELETE http://example.com/kittens/<ID>`
-
-### URL Parameters
-
-Parameter | Description
---------- | -----------
-ID | The ID of the kitten to delete
-
+`GET http://localhost:7777/swaps`
