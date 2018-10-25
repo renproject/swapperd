@@ -125,6 +125,7 @@ func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan Swap, statuses ch
 func execute(results chan<- result, statuses chan<- foundation.SwapStatus, native, foreign Contract, swap Swap, logger Logger) {
 	if swap.ShouldInitiateFirst {
 		initiate(results, statuses, native, foreign, swap, logger)
+		return
 	}
 	respond(results, statuses, native, foreign, swap, logger)
 }
