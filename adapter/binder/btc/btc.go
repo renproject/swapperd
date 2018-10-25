@@ -10,6 +10,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	"github.com/republicprotocol/libbtc-go"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
 )
@@ -162,7 +163,7 @@ func (atom *btcSwapContractBinder) AuditSecret() ([32]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
 	defer cancel()
 	for {
-		atom.logger.LogInfo(atom.swap.ID, "Auditing secret on Bitcoin blockchain")
+		atom.LogInfo(atom.swap.ID, "Auditing secret on Bitcoin blockchain")
 		if spent, err := atom.ScriptSpent(ctx, atom.scriptAddr); spent && err == nil {
 			break
 		}
