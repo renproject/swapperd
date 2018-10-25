@@ -99,7 +99,7 @@ func (server *server) PostWithdraw(password string, postWithdrawRequest PostWith
 
 func (server *server) patchSwap(swapBlob foundation.SwapBlob, password string) (foundation.SwapBlob, [32]byte, error) {
 	if err := server.validateTokenDetails(swapBlob, password); err != nil {
-		return foundation.SwapBlob{}, [32]byte{}, nil
+		return foundation.SwapBlob{}, [32]byte{}, err
 	}
 	return patchSwapDetails(swapBlob)
 }
@@ -140,27 +140,25 @@ func (server *server) validateTokenDetails(swapBlob foundation.SwapBlob, passwor
 }
 
 func patchSwapDetails(swapBlob foundation.SwapBlob) (foundation.SwapBlob, [32]byte, error) {
-	patchedBlob := foundation.SwapBlob{}
-
 	swapID := [32]byte{}
 	rand.Read(swapID[:])
-	patchedBlob.ID = foundation.SwapID(base64.StdEncoding.EncodeToString(swapID[:]))
+	swapBlob.ID = foundation.SwapID(base64.StdEncoding.EncodeToString(swapID[:]))
 
 	secret := [32]byte{}
 	if swapBlob.ShouldInitiateFirst {
-		patchedBlob.TimeLock = time.Now().Unix() + 3*foundation.ExpiryUnit
+		swapBlob.TimeLock = time.Now().Unix() + 3*foundation.ExpiryUnit
 		rand.Read(secret[:])
 		hash := sha256.Sum256(secret[:])
-		patchedBlob.SecretHash = MarshalSecretHash(hash)
-		return patchedBlob, secret, nil
+		swapBlob.SecretHash = MarshalSecretHash(hash)
+		return swapBlob, secret, nil
 	}
 
 	secretHash, err := base64.StdEncoding.DecodeString(swapBlob.SecretHash)
 	if len(secretHash) != 32 || err != nil {
-		return patchedBlob, secret, fmt.Errorf("invalid secret hash")
+		return swapBlob, secret, fmt.Errorf("invalid secret hash")
 	}
 	if time.Now().Unix()+2*foundation.ExpiryUnit > swapBlob.TimeLock {
-		return patchedBlob, secret, fmt.Errorf("not enough time to do the atomic swap")
+		return swapBlob, secret, fmt.Errorf("not enough time to do the atomic swap")
 	}
-	return patchedBlob, secret, nil
+	return swapBlob, secret, nil
 }
