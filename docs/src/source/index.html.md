@@ -5,8 +5,8 @@ language_tabs:
   - shell
 
 toc_footers:
-  - <a href='https://github.com/republicprotocol/swapperd'>Checkout our GitHub</a>
-  - <a href='https://republicprotocol.com'>Support by Republic Protocol</a>
+  - <a href='https://github.com/republicprotocol/swapperd'>GitHub</a>
+  - <a href='https://republicprotocol.com'>Built by Republic Protocol</a>
 
 search: true
 ---
