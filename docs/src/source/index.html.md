@@ -8,9 +8,6 @@ toc_footers:
   - <a href='https://github.com/republicprotocol/swapperd'>Checkout our GitHub</a>
   - <a href='https://republicprotocol.com'>Support by Republic Protocol</a>
 
-includes:
-  - errors
-
 search: true
 ---
 
@@ -173,6 +170,8 @@ curl -i     \
 This is not a protected HTTP endpoint.
 </aside>
 
+# Balances
+
 ## Get balances
 
 ```shell
@@ -213,6 +212,8 @@ curl -i     \
 This is a protected HTTP endpoint.
 </aside>
 
+# Withdrawals
+
 ## Withdrawing funds
 
 ```shell
@@ -238,6 +239,7 @@ curl -i      \
 This is a protected HTTP endpoint.
 </aside>
 
+# Whoami
 
 ## Getting information about Swapperd
 
@@ -276,3 +278,14 @@ curl -i     \
 <aside class="notice">
 This is not a protected HTTP endpoint.
 </aside>
+
+# Errors
+
+Swapperd uses the following error codes:
+
+Error Code | Meaning
+---------- | -------
+400 | Bad Request -- The request is invalid.
+401 | Unauthorized -- The username or password is invalid.
+404 | Not Found -- The HTTP endpoint or method is invalid.
+500 | Internal Server Error -- Swapperd has encountered an unexpected error. Please submit a bug report!
