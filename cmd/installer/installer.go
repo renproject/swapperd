@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"encoding/base64"
 	"errors"
 	"flag"
 	"fmt"
@@ -13,7 +12,6 @@ import (
 	"syscall"
 
 	"github.com/republicprotocol/swapperd/driver/keystore"
-	"golang.org/x/crypto/sha3"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -24,7 +22,7 @@ const bold = "\033[1m"
 func main() {
 	network := flag.String("network", "testnet", "Which republic protocol network to use")
 	usernameFlag := flag.String("username", "", "Username for HTTP basic authentication")
-	passwordHashFlag := flag.String("passwordHash", "", "Password Hash for HTTP basic authentication")
+	passwordFlag := flag.String("password", "", "Password for HTTP basic authentication")
 	flag.Parse()
 
 	if _, err := keystore.LoadAccounts(*network); err == nil {
@@ -36,16 +34,16 @@ func main() {
 		panic(err)
 	}
 
-	var username, passwordHash string
+	var username, password string
 
-	if *usernameFlag != "" && *passwordHashFlag != "" {
+	if *usernameFlag != "" && *passwordFlag != "" {
 		username = *usernameFlag
-		passwordHash = *passwordHashFlag
+		password = *passwordFlag
 	} else {
-		username, passwordHash = getCredentials()
+		username, password = getCredentials()
 	}
 
-	mnemonic, err := keystore.Generate(*network, username, passwordHash)
+	mnemonic, err := keystore.Generate(*network, username, password)
 	if err != nil {
 		panic(err)
 	}
@@ -57,18 +55,18 @@ func main() {
 func getCredentials() (string, string) {
 	var password []byte
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter Username: ")
+	fmt.Print("Choose a Username: ")
 	user, _ := reader.ReadString('\n')
 	user = strings.Trim(user, "\r\n")
 
 	for {
-		fmt.Print("Enter Password: ")
+		fmt.Print("Choose a Password: ")
 		passwordEnter, err := terminal.ReadPassword(int(syscall.Stdin))
 		if err != nil {
 			panic(err)
 		}
 
-		fmt.Print("\nReenter Password: ")
+		fmt.Print("\nReenter the Password: ")
 		passwordReenter, err := terminal.ReadPassword(int(syscall.Stdin))
 		if err != nil {
 			panic(err)
@@ -81,8 +79,7 @@ func getCredentials() (string, string) {
 
 		fmt.Println("password mismatch, please try again")
 	}
-	passwordHash := sha3.Sum256(password)
-	return user, base64.StdEncoding.EncodeToString(passwordHash[:])
+	return user, string(password)
 }
 
 func createHomeDir() error {
