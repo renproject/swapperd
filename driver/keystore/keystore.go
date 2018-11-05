@@ -10,7 +10,9 @@ import (
 
 	"github.com/republicprotocol/swapperd/adapter/account"
 	"github.com/republicprotocol/swapperd/core/auth"
+	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/crypto/sha3"
 )
 
 // Testnet is the Swapperd's testnet config object
@@ -50,8 +52,14 @@ var Mainnet = account.Config{
 type Keystore struct {
 	Username     string         `json:"username"`
 	PasswordHash string         `json:"passwordHash"`
+	Addresses    []Address      `json:"addresses"`
 	Mnemonic     string         `json:"mnemonic"`
 	Config       account.Config `json:"config"`
+}
+
+type Address struct {
+	Blockchain string `json:"token"`
+	Address    string `json:"address"`
 }
 
 func LoadAccounts(network string) (account.Accounts, error) {
@@ -81,7 +89,7 @@ func LoadAuthenticator(network string) (auth.Authenticator, error) {
 	return auth.NewAuthenticator(keystore.Username, passwordHash), nil
 }
 
-func Generate(network, username, passwordHash string) (string, error) {
+func Generate(network, username, password string) (string, error) {
 	network = strings.ToLower(network)
 	path := keystorePath(network)
 
@@ -95,8 +103,14 @@ func Generate(network, username, passwordHash string) (string, error) {
 		return "", fmt.Errorf("Invalid Network %s", network)
 	}
 	keystore.Username = username
-	keystore.PasswordHash = passwordHash
+	passwordHashBytes := sha3.Sum256([]byte(password))
+	keystore.PasswordHash = base64.StdEncoding.EncodeToString(passwordHashBytes[:])
+	addresses, err := getAddresses(password, account.New(keystore.Mnemonic, keystore.Config))
+	if err != nil {
+		return "", err
+	}
 
+	keystore.Addresses = addresses
 	entropy, err := bip39.NewEntropy(128)
 	if err != nil {
 		return "", err
@@ -112,6 +126,31 @@ func Generate(network, username, passwordHash string) (string, error) {
 		return "", err
 	}
 	return mnemonic, ioutil.WriteFile(path, data, 0644)
+}
+
+func getAddresses(password string, accounts account.Accounts) ([]Address, error) {
+	addresses := []Address{}
+	ethAccount, err := accounts.GetEthereumAccount(password)
+	if err != nil {
+		return nil, err
+	}
+	addresses = append(addresses, Address{
+		Blockchain: foundation.Ethereum,
+		Address:    ethAccount.Address().String(),
+	})
+	btcAccount, err := accounts.GetBitcoinAccount(password)
+	if err != nil {
+		return nil, err
+	}
+	btcAddress, err := btcAccount.Address()
+	if err != nil {
+		return nil, err
+	}
+	addresses = append(addresses, Address{
+		Blockchain: foundation.Bitcoin,
+		Address:    btcAddress.EncodeAddress(),
+	})
+	return addresses, nil
 }
 
 func keystorePath(network string) string {
