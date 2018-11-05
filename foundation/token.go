@@ -1,6 +1,9 @@
 package foundation
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type ErrUnsupportedToken string
 
@@ -12,14 +15,16 @@ func (err ErrUnsupportedToken) Error() string {
 	return string(err)
 }
 
+type Blockchain string
+
 var (
-	Bitcoin  = "bitcoin"
-	Ethereum = "ethereum"
+	Bitcoin  = Blockchain("bitcoin")
+	Ethereum = Blockchain("ethereum")
 )
 
 type Token struct {
-	Name       string `json:"name"`
-	Blockchain string `json:"blockchain"`
+	Name       string     `json:"name"`
+	Blockchain Blockchain `json:"blockchain"`
 }
 
 func (token Token) String() string {
@@ -31,3 +36,17 @@ var (
 	TokenETH  = Token{"ETH", Ethereum}
 	TokenWBTC = Token{"WBTC", Ethereum}
 )
+
+func PatchToken(token string) (Token, error) {
+	token = strings.ToLower(token)
+	switch token {
+	case "bitcoin", "btc", "xbt":
+		return TokenBTC, nil
+	case "wrappedbtc", "wbtc", "wrappedbitcoin":
+		return TokenWBTC, nil
+	case "ethereum", "eth", "ether":
+		return TokenETH, nil
+	default:
+		return Token{}, fmt.Errorf("unsupported token: %s", token)
+	}
+}
