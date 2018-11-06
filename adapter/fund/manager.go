@@ -3,8 +3,8 @@ package fund
 import (
 	"math/big"
 
-	beth "github.com/republicprotocol/beth-go"
-	libbtc "github.com/republicprotocol/libbtc-go"
+	"github.com/republicprotocol/beth-go"
+	"github.com/republicprotocol/libbtc-go"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
@@ -14,7 +14,8 @@ type Balance struct {
 }
 
 type Manager interface {
-	SupportedTokens() ([]foundation.Token, error)
+	SupportedTokens() []foundation.Token
+	SupportedBlockchains() []Blockchain
 	Balances() (map[foundation.Token]Balance, error)
 	Withdraw(password string, token foundation.Token, to string, amount *big.Int) (string, error)
 	GetBitcoinAccount(password string) (libbtc.Account, error)
@@ -22,35 +23,11 @@ type Manager interface {
 }
 
 type manager struct {
-	supportedTokens []foundation.Token
-	addresses       map[foundation.Blockchain]string
-	ethAccount      beth.Account
-	btcAccount      libbtc.Account
+	config Config
 }
 
-func New(config Config) (Manager, error) {
-	supportedTokens, err := decodeSupportedTokens(config)
-	if err != nil {
-		return nil, err
-	}
-	addresses, err := decodeAddresses(config)
-	if err != nil {
-		return nil, err
-	}
-	ethAccount, btcAccount, err := generateRandomAccounts(config)
-	if err != nil {
-		return nil, err
-	}
+func New(config Config) Manager {
 	return &manager{
-		supportedTokens: supportedTokens,
-		addresses:       addresses,
-		ethAccount:      ethAccount,
-		btcAccount:      btcAccount,
-	}, nil
+		config: config,
+	}
 }
-
-func generateRandomAccounts(config Config) (beth.Account, libbtc.Account, error) {
-	return beth.NewAccount()
-}
-
-func decodeAddresses(config)
