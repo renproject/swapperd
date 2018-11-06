@@ -8,24 +8,32 @@ import (
 	"os"
 	"strings"
 
-	"github.com/republicprotocol/swapperd/adapter/account"
+	"github.com/republicprotocol/swapperd/adapter/fund"
 	"github.com/republicprotocol/swapperd/core/auth"
-	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/sha3"
 )
 
 // Testnet is the Swapperd's testnet config object
-var Testnet = account.Config{
-	Bitcoin: "testnet",
-	Ethereum: account.EthereumConfig{
-		URL:     "https://kovan.infura.io",
-		Network: "kovan",
-		Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
-		Tokens: []account.EthereumToken{
-			account.EthereumToken{
+var Testnet = fund.Config{
+	Bitcoin: fund.BlockchainConfig{
+		Network: fund.Network{
+			Name: "testnet",
+		},
+	},
+	Ethereum: fund.BlockchainConfig{
+		Network: fund.Network{
+			Name: "kovan",
+			URL:  "https://kovan.infura.io",
+		},
+		Tokens: []fund.Token{
+			fund.Token{
+				Name:    "ETH",
+				Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
+			},
+			fund.Token{
 				Name:    "WBTC",
-				ERC20:   "0xA1D3EEcb76285B4435550E4D963B8042A8bffbF0",
+				Token:   "0xA1D3EEcb76285B4435550E4D963B8042A8bffbF0",
 				Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
 			},
 		},
@@ -33,16 +41,25 @@ var Testnet = account.Config{
 }
 
 // Mainnet is the Swapperd's mainnet config object
-var Mainnet = account.Config{
-	Bitcoin: "mainnet",
-	Ethereum: account.EthereumConfig{
-		URL:     "https://kovan.infura.io",
-		Network: "kovan",
-		Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
-		Tokens: []account.EthereumToken{
-			account.EthereumToken{
+var Mainnet = fund.Config{
+	Bitcoin: fund.BlockchainConfig{
+		Network: fund.Network{
+			Name: "mainnet",
+		},
+	},
+	Ethereum: fund.BlockchainConfig{
+		Network: fund.Network{
+			Name: "kovan",
+			URL:  "https://kovan.infura.io",
+		},
+		Tokens: []fund.Token{
+			fund.Token{
+				Name:    "ETH",
+				Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
+			},
+			fund.Token{
 				Name:    "WBTC",
-				ERC20:   "0xA1D3EEcb76285B4435550E4D963B8042A8bffbF0",
+				Token:   "0xA1D3EEcb76285B4435550E4D963B8042A8bffbF0",
 				Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
 			},
 		},
@@ -50,11 +67,9 @@ var Mainnet = account.Config{
 }
 
 type Keystore struct {
-	Username     string         `json:"username"`
-	PasswordHash string         `json:"passwordHash"`
-	Addresses    []Address      `json:"addresses"`
-	Mnemonic     string         `json:"mnemonic"`
-	Config       account.Config `json:"config"`
+	Username     string      `json:"username"`
+	PasswordHash string      `json:"passwordHash"`
+	Config       fund.Config `json:"config"`
 }
 
 type Address struct {
@@ -62,7 +77,7 @@ type Address struct {
 	Address    string `json:"address"`
 }
 
-func LoadAccounts(network string) (account.Accounts, error) {
+func LoadAccounts(network string) (fund.Manager, error) {
 	path := keystorePath(network)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -72,7 +87,7 @@ func LoadAccounts(network string) (account.Accounts, error) {
 	if err := json.Unmarshal(data, &keystore); err != nil {
 		return nil, err
 	}
-	return account.New(keystore.Mnemonic, keystore.Config), nil
+	return fund.New(keystore.Config), nil
 }
 
 func LoadAuthenticator(network string) (auth.Authenticator, error) {
@@ -92,65 +107,54 @@ func LoadAuthenticator(network string) (auth.Authenticator, error) {
 func Generate(network, username, password string) (string, error) {
 	network = strings.ToLower(network)
 	path := keystorePath(network)
-
 	keystore := Keystore{}
-	switch network {
-	case "testnet":
-		keystore.Config = Testnet
-	case "mainnet":
-		keystore.Config = Mainnet
-	default:
-		return "", fmt.Errorf("Invalid Network %s", network)
-	}
 	keystore.Username = username
 	passwordHashBytes := sha3.Sum256([]byte(password))
 	keystore.PasswordHash = base64.StdEncoding.EncodeToString(passwordHashBytes[:])
-	addresses, err := getAddresses(password, account.New(keystore.Mnemonic, keystore.Config))
-	if err != nil {
-		return "", err
-	}
-
-	keystore.Addresses = addresses
-	entropy, err := bip39.NewEntropy(128)
-	if err != nil {
-		return "", err
-	}
-	mnemonic, err := bip39.NewMnemonic(entropy)
-	if err != nil {
-		return "", err
-	}
-	keystore.Mnemonic = mnemonic
-
+	config, err := generateConfig(network, password)
+	keystore.Config = config
 	data, err := json.Marshal(keystore)
 	if err != nil {
 		return "", err
 	}
-	return mnemonic, ioutil.WriteFile(path, data, 0644)
+	return config.Mnemonic, ioutil.WriteFile(path, data, 0644)
 }
 
-func getAddresses(password string, accounts account.Accounts) ([]Address, error) {
-	addresses := []Address{}
-	ethAccount, err := accounts.GetEthereumAccount(password)
-	if err != nil {
-		return nil, err
+func generateConfig(network string, password string) (fund.Config, error) {
+	var config fund.Config
+	switch network {
+	case "testnet":
+		config = Testnet
+	case "mainnet":
+		config = Mainnet
+	default:
+		return fund.Config{}, fmt.Errorf("Invalid Network %s", network)
 	}
-	addresses = append(addresses, Address{
-		Blockchain: foundation.Ethereum,
-		Address:    ethAccount.Address().String(),
-	})
-	btcAccount, err := accounts.GetBitcoinAccount(password)
+	entropy, err := bip39.NewEntropy(128)
 	if err != nil {
-		return nil, err
+		return fund.Config{}, err
+	}
+	mnemonic, err := bip39.NewMnemonic(entropy)
+	if err != nil {
+		return fund.Config{}, err
+	}
+	config.Mnemonic = mnemonic
+	manager := fund.New(config)
+	ethAccount, err := manager.GetEthereumAccount(password)
+	if err != nil {
+		return fund.Config{}, err
+	}
+	config.Ethereum.Address = ethAccount.Address().String()
+	btcAccount, err := manager.GetBitcoinAccount(password)
+	if err != nil {
+		return fund.Config{}, err
 	}
 	btcAddress, err := btcAccount.Address()
 	if err != nil {
-		return nil, err
+		return fund.Config{}, err
 	}
-	addresses = append(addresses, Address{
-		Blockchain: foundation.Bitcoin,
-		Address:    btcAddress.EncodeAddress(),
-	})
-	return addresses, nil
+	config.Bitcoin.Address = btcAddress.String()
+	return config, nil
 }
 
 func keystorePath(network string) string {
@@ -163,7 +167,7 @@ func keystorePath(network string) string {
 	if windows != "" {
 		return fmt.Sprintf("%s\\%s.json", strings.Join(strings.Split(windows, "\\"), "\\\\")+"\\swapperd", network)
 	}
-	panic(fmt.Sprintf("unknown Operating System: unix: %s windows: %s", os.Getenv("HOME"), os.Getenv("userprofile")))
+	panic(fmt.Sprintf("unknown operating system"))
 }
 
 func toBytes32(data string) ([32]byte, error) {
