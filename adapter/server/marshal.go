@@ -71,7 +71,7 @@ func MarshalAmount(amount *big.Int) string {
 }
 
 func UnmarshalAmount(amount string) (*big.Int, error) {
-	val, success := big.NewInt(0).SetString(amount, 16)
+	val, success := big.NewInt(0).SetString(amount, 10)
 	if !success {
 		return nil, ErrInvalidAmount
 	}
