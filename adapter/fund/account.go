@@ -7,26 +7,27 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/tyler-smith/go-bip39"
+
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/libbtc-go"
-	"github.com/tyler-smith/go-bip39"
 )
 
 type Config struct {
-	Mnemonic    string             `json:"mnemonic"`
-	Blockchains []BlockchainConfig `json:"blockchain"`
+	Mnemonic string           `json:"mnemonic"`
+	Ethereum BlockchainConfig `json:"ethereum"`
+	Bitcoin  BlockchainConfig `json:"bitcoin"`
 }
 
 type BlockchainConfig struct {
-	Name        string      `json:"name"`
-	NetworkConn NetworkConn `json:"networkConn"`
-	Address     string      `json:"address"`
-	Tokens      []Token     `json:"tokens"`
+	Network Network `json:"network"`
+	Address string  `json:"address"`
+	Tokens  []Token `json:"tokens"`
 }
 
-type NetworkConn struct {
-	URL     string `json:"url"`
-	Network string `json:"network"`
+type Network struct {
+	Name string `json:"string"`
+	URL  string `json:"url"`
 }
 
 type Token struct {
@@ -36,8 +37,8 @@ type Token struct {
 }
 
 func (manager *manager) GetEthereumAccount(password string) (beth.Account, error) {
-	derivationPath := []uint32{}
-	switch manager.config.Ethereum.Network {
+	var derivationPath []uint32
+	switch manager.config.Ethereum.Network.Name {
 	case "kovan", "ropsten":
 		derivationPath = []uint32{44, 1, 0, 0, 0}
 	case "mainnet":
@@ -47,7 +48,7 @@ func (manager *manager) GetEthereumAccount(password string) (beth.Account, error
 	if err != nil {
 		return nil, err
 	}
-	ethAccount, err := beth.NewAccount(manager.config.Ethereum.URL, privKey)
+	ethAccount, err := beth.NewAccount(manager.config.Ethereum.Network.URL, privKey)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +65,8 @@ func (manager *manager) GetEthereumAccount(password string) (beth.Account, error
 
 // GetBitcoinAccount returns the bitcoin account
 func (manager *manager) GetBitcoinAccount(password string) (libbtc.Account, error) {
-	derivationPath := []uint32{}
-	switch manager.config.Bitcoin.Network {
+	var derivationPath []uint32
+	switch manager.config.Bitcoin.Network.Name {
 	case "testnet", "testnet3":
 		derivationPath = []uint32{44, 1, 0, 0, 0}
 	case "mainnet":
@@ -75,7 +76,7 @@ func (manager *manager) GetBitcoinAccount(password string) (libbtc.Account, erro
 	if err != nil {
 		return nil, err
 	}
-	return libbtc.NewAccount(libbtc.NewBlockchainInfoClient(manager.config.Bitcoin.Network), privKey), nil
+	return libbtc.NewAccount(libbtc.NewBlockchainInfoClient(manager.config.Bitcoin.Network.Name), privKey), nil
 }
 
 func (manager *manager) loadKey(password string, path []uint32) (*ecdsa.PrivateKey, error) {
