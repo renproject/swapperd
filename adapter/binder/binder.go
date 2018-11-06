@@ -4,23 +4,23 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/republicprotocol/swapperd/adapter/account"
 	"github.com/republicprotocol/swapperd/adapter/binder/btc"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
 	"github.com/republicprotocol/swapperd/adapter/binder/eth"
+	"github.com/republicprotocol/swapperd/adapter/fund"
 	"github.com/republicprotocol/swapperd/adapter/server"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type builder struct {
-	account.Accounts
+	fund.Manager
 	swapper.Logger
 }
 
-func NewBuilder(accounts account.Accounts, logger swapper.Logger) swapper.ContractBuilder {
+func NewBuilder(manager fund.Manager, logger swapper.Logger) swapper.ContractBuilder {
 	return &builder{
-		accounts,
+		manager,
 		logger,
 	}
 }
