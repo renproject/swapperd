@@ -2,9 +2,14 @@ package fund
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"time"
+
+	"github.com/republicprotocol/beth-go"
+
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/republicprotocol/libbtc-go"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -14,7 +19,7 @@ import (
 
 func (manager *manager) Balances() (map[foundation.Token]Balance, error) {
 	balanceMap := map[foundation.Token]Balance{}
-	for _, token := range manager.supportedTokens {
+	for _, token := range manager.SupportedTokens() {
 		balance, err := manager.balance(token)
 		if err != nil {
 			return balanceMap, err
@@ -37,10 +42,15 @@ func (manager *manager) balance(token foundation.Token) (Balance, error) {
 }
 
 func (manager *manager) balanceBTC() (Balance, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	randomKey, err := crypto.GenerateKey()
+	if err != nil {
+		return Balance{}, err
+	}
+	btcAccount := libbtc.NewAccount(libbtc.NewBlockchainInfoClient(manager.config.Bitcoin.Network.Name), randomKey)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
-	address := manager.addresses[foundation.Bitcoin]
-	balance, err := manager.btcAccount.Balance(ctx, address, 0)
+	address := manager.config.Bitcoin.Address
+	balance, err := btcAccount.Balance(ctx, address, 0)
 	if err != nil {
 		return Balance{}, err
 	}
@@ -51,8 +61,16 @@ func (manager *manager) balanceBTC() (Balance, error) {
 }
 
 func (manager *manager) balanceETH() (Balance, error) {
-	client := manager.ethAccount.EthClient()
-	address := manager.addresses[foundation.Ethereum]
+	randomKey, err := crypto.GenerateKey()
+	if err != nil {
+		return Balance{}, err
+	}
+	ethAccount, err := beth.NewAccount(manager.config.Ethereum.Network.URL, randomKey)
+	if err != nil {
+		return Balance{}, err
+	}
+	client := ethAccount.EthClient()
+	address := manager.config.Ethereum.Address
 	balance, err := client.BalanceOf(context.Background(), common.HexToAddress(address))
 	if err != nil {
 		return Balance{}, err
@@ -64,14 +82,27 @@ func (manager *manager) balanceETH() (Balance, error) {
 }
 
 func (manager *manager) balanceERC20(token foundation.Token) (Balance, error) {
-	client := manager.ethAccount.EthClient()
-	address := manager.addresses[foundation.Ethereum]
-
-	tokenAddr, err := manager.ethAccount.ReadAddress(fmt.Sprintf("ERC20:%s", token.Name))
+	erc20TokenConfig := Token{}
+	for _, tokenConfig := range manager.config.Ethereum.Tokens {
+		erc20Token, err := foundation.PatchToken(tokenConfig.Name)
+		if err != nil {
+			return Balance{}, err
+		}
+		if erc20Token == token {
+			erc20TokenConfig = tokenConfig
+		}
+	}
+	randomKey, err := crypto.GenerateKey()
 	if err != nil {
 		return Balance{}, err
 	}
-	erc20Contract, err := erc20.NewCompatibleERC20(tokenAddr, bind.ContractBackend(client.EthClient()))
+	ethAccount, err := beth.NewAccount(manager.config.Ethereum.Network.URL, randomKey)
+	if err != nil {
+		return Balance{}, err
+	}
+	client := ethAccount.EthClient()
+	address := manager.config.Ethereum.Address
+	erc20Contract, err := erc20.NewCompatibleERC20(common.HexToAddress(erc20TokenConfig.Token), bind.ContractBackend(client.EthClient()))
 	if err != nil {
 		return Balance{}, err
 	}
