@@ -77,7 +77,7 @@ type Address struct {
 	Address    string `json:"address"`
 }
 
-func LoadAccounts(network string) (fund.Manager, error) {
+func FundManager(network string) (fund.Manager, error) {
 	path := keystorePath(network)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {

@@ -25,7 +25,7 @@ func main() {
 	passwordFlag := flag.String("password", "", "Password for HTTP basic authentication")
 	flag.Parse()
 
-	if _, err := keystore.LoadAccounts(*networkFlag); err == nil {
+	if _, err := keystore.FundManager(*networkFlag); err == nil {
 		fmt.Printf("Swapper already exists at the default location (%s)\n", getDefaultSwapperHome())
 		return
 	}

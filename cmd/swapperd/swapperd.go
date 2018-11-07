@@ -29,7 +29,7 @@ func main() {
 	statuses := make(chan foundation.SwapStatus)
 	statusQueries := make(chan status.Query)
 
-	manager, err := keystore.LoadAccounts(*network)
+	manager, err := keystore.FundManager(*network)
 	if err != nil {
 		panic(err)
 	}
