@@ -20,12 +20,12 @@ const cyan = "\033[36m"
 const bold = "\033[1m"
 
 func main() {
-	network := flag.String("network", "testnet", "Which republic protocol network to use")
+	networkFlag := flag.String("network", "testnet", "Defines mainnet or testnet for blockchain interactions")
 	usernameFlag := flag.String("username", "", "Username for HTTP basic authentication")
 	passwordFlag := flag.String("password", "", "Password for HTTP basic authentication")
 	flag.Parse()
 
-	if _, err := keystore.LoadAccounts(*network); err == nil {
+	if _, err := keystore.LoadAccounts(*networkFlag); err == nil {
 		fmt.Printf("Swapper already exists at the default location (%s)\n", getDefaultSwapperHome())
 		return
 	}
@@ -43,7 +43,7 @@ func main() {
 		username, password = getCredentials()
 	}
 
-	mnemonic, err := keystore.Generate(*network, username, password)
+	mnemonic, err := keystore.Generate(*networkFlag, username, password)
 	if err != nil {
 		panic(err)
 	}
