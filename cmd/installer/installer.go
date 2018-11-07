@@ -40,7 +40,7 @@ func main() {
 		username = *usernameFlag
 		password = *passwordFlag
 	} else {
-		username, password = getCredentials()
+		username, password = credentials()
 	}
 
 	mnemonic, err := keystore.Generate(*networkFlag, username, password)
@@ -52,7 +52,7 @@ func main() {
 	fmt.Printf("%s%s%s\n", cyan, mnemonic, reset)
 }
 
-func getCredentials() (string, string) {
+func credentials() (string, string) {
 	var password []byte
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Choose a Username: ")
