@@ -79,7 +79,13 @@ do
   echo "1. Testnet (default)" # testnet by default
   echo "2. Mainnet"
   read choice </dev/tty
-  1
+  if [ "$choice" = "" ] || [ "$choice" = "1" ]; then 
+    NETWORK="testnet"
+    break
+  elif [ "$choice" = "2" ]; then
+   NETWORK="mainnet"
+    break
+  fi
   echo "The network entered is invalid. Please try again."
 done
 
