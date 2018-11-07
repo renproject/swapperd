@@ -26,7 +26,7 @@ type BlockchainConfig struct {
 }
 
 type Network struct {
-	Name string `json:"string"`
+	Name string `json:"name"`
 	URL  string `json:"url"`
 }
 
