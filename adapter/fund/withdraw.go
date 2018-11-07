@@ -35,7 +35,7 @@ func (manager *manager) withdrawBTC(password, to string, amount *big.Int) (strin
 		}
 		amount = balance.Amount
 	}
-	account, err := manager.GetBitcoinAccount(password)
+	account, err := manager.BitcoinAccount(password)
 	if err != nil {
 		return "", err
 	}
@@ -52,7 +52,7 @@ func (manager *manager) withdrawETH(password, to string, amount *big.Int) (strin
 		}
 		amount = balance.Amount
 	}
-	account, err := manager.GetEthereumAccount(password)
+	account, err := manager.EthereumAccount(password)
 	if err != nil {
 		return "", err
 	}
@@ -70,7 +70,7 @@ func (manager *manager) withdrawERC20(password string, token foundation.Token, t
 		}
 		amount = balance.Amount
 	}
-	account, err := manager.GetEthereumAccount(password)
+	account, err := manager.EthereumAccount(password)
 	if err != nil {
 		return txHash, err
 	}

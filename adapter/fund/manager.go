@@ -18,8 +18,8 @@ type Manager interface {
 	SupportedBlockchains() []Blockchain
 	Balances() (map[foundation.Token]Balance, error)
 	Withdraw(password string, token foundation.Token, to string, amount *big.Int) (string, error)
-	GetBitcoinAccount(password string) (libbtc.Account, error)
-	GetEthereumAccount(password string) (beth.Account, error)
+	BitcoinAccount(password string) (libbtc.Account, error)
+	EthereumAccount(password string) (beth.Account, error)
 }
 
 type manager struct {

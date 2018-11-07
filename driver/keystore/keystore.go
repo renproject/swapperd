@@ -140,12 +140,12 @@ func generateConfig(network string, password string) (fund.Config, error) {
 	}
 	config.Mnemonic = mnemonic
 	manager := fund.New(config)
-	ethAccount, err := manager.GetEthereumAccount(password)
+	ethAccount, err := manager.EthereumAccount(password)
 	if err != nil {
 		return fund.Config{}, err
 	}
 	config.Ethereum.Address = ethAccount.Address().String()
-	btcAccount, err := manager.GetBitcoinAccount(password)
+	btcAccount, err := manager.BitcoinAccount(password)
 	if err != nil {
 		return fund.Config{}, err
 	}

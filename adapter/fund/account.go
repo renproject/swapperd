@@ -36,7 +36,7 @@ type Token struct {
 	Swapper string `json:"swapper"`
 }
 
-func (manager *manager) GetEthereumAccount(password string) (beth.Account, error) {
+func (manager *manager) EthereumAccount(password string) (beth.Account, error) {
 	var derivationPath []uint32
 	switch manager.config.Ethereum.Network.Name {
 	case "kovan", "ropsten":
@@ -63,8 +63,8 @@ func (manager *manager) GetEthereumAccount(password string) (beth.Account, error
 	return ethAccount, nil
 }
 
-// GetBitcoinAccount returns the bitcoin account
-func (manager *manager) GetBitcoinAccount(password string) (libbtc.Account, error) {
+// BitcoinAccount returns the bitcoin account
+func (manager *manager) BitcoinAccount(password string) (libbtc.Account, error) {
 	var derivationPath []uint32
 	switch manager.config.Bitcoin.Network.Name {
 	case "testnet", "testnet3":
