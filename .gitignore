@@ -1,7 +1,6 @@
 vendor
 secrets
 temp
-install
 db*/*
 *.json
 .DS_Store

@@ -2,13 +2,15 @@ package fund
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
+
+	"github.com/republicprotocol/beth-go"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/libbtc-go"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
 	"github.com/republicprotocol/swapperd/foundation"
@@ -58,15 +60,10 @@ func (manager *manager) balanceBTC() (Balance, error) {
 }
 
 func (manager *manager) balanceETH() (Balance, error) {
-	randomKey, err := crypto.GenerateKey()
+	client, err := beth.Connect(manager.config.Ethereum.Network.URL)
 	if err != nil {
 		return Balance{}, err
 	}
-	ethAccount, err := beth.NewAccount(manager.config.Ethereum.Network.URL, randomKey)
-	if err != nil {
-		return Balance{}, err
-	}
-	client := ethAccount.EthClient()
 	address := manager.config.Ethereum.Address
 	balance, err := client.BalanceOf(context.Background(), common.HexToAddress(address))
 	if err != nil {
@@ -79,30 +76,20 @@ func (manager *manager) balanceETH() (Balance, error) {
 }
 
 func (manager *manager) balanceERC20(token foundation.Token) (Balance, error) {
-	erc20TokenConfig := Token{}
-	for _, tokenConfig := range manager.config.Ethereum.Tokens {
-		erc20Token, err := foundation.PatchToken(tokenConfig.Name)
-		if err != nil {
-			return Balance{}, err
-		}
-		if erc20Token == token {
-			erc20TokenConfig = tokenConfig
-		}
-	}
-	randomKey, err := crypto.GenerateKey()
+	client, err := beth.Connect(manager.config.Ethereum.Network.URL)
 	if err != nil {
 		return Balance{}, err
 	}
-	ethAccount, err := beth.NewAccount(manager.config.Ethereum.Network.URL, randomKey)
-	if err != nil {
-		return Balance{}, err
-	}
-	client := ethAccount.EthClient()
 	address := manager.config.Ethereum.Address
-	erc20Contract, err := erc20.NewCompatibleERC20(common.HexToAddress(erc20TokenConfig.Token), bind.ContractBackend(client.EthClient()))
+	tokenAddr, err := client.ReadAddress(token.Name)
 	if err != nil {
 		return Balance{}, err
 	}
+	erc20Contract, err := erc20.NewCompatibleERC20(tokenAddr, bind.ContractBackend(client.EthClient()))
+	if err != nil {
+		return Balance{}, err
+	}
+	fmt.Println(tokenAddr.String())
 	var balance *big.Int
 	if err := client.Get(
 		context.Background(),

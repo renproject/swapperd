@@ -29,24 +29,22 @@ type erc20SwapContractBinder struct {
 
 // NewERC20SwapContractBinder returns a new ERC20 Atom instance
 func NewERC20SwapContractBinder(account beth.Account, swap foundation.Swap, logger swapper.Logger) (swapper.Contract, error) {
-	tokenAddress, err := account.ReadAddress(fmt.Sprintf("ERC20:%s", swap.Token.Name))
+	tokenAddress, err := account.ReadAddress(fmt.Sprintf("%s", swap.Token.Name))
 	if err != nil {
 		return nil, err
 	}
 
-	swapperAddress, err := account.ReadAddress(fmt.Sprintf("SWAPPER:%s", swap.Token.Name))
+	swapperAddress, err := account.ReadAddress(fmt.Sprintf("Swapperd%s", swap.Token.Name))
 	if err != nil {
 		return nil, err
 	}
 
-	client := account.EthClient()
-
-	tokenBinder, err := NewCompatibleERC20(tokenAddress, bind.ContractBackend(client.EthClient()))
+	tokenBinder, err := NewCompatibleERC20(tokenAddress, bind.ContractBackend(account.EthClient()))
 	if err != nil {
 		return nil, err
 	}
 
-	swapperBinder, err := NewRenExAtomicSwapper(swapperAddress, bind.ContractBackend(client.EthClient()))
+	swapperBinder, err := NewRenExAtomicSwapper(swapperAddress, bind.ContractBackend(account.EthClient()))
 	if err != nil {
 		return nil, err
 	}

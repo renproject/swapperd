@@ -6,7 +6,6 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/tyler-smith/go-bip39"
 
 	"github.com/republicprotocol/beth-go"
@@ -20,20 +19,14 @@ type Config struct {
 }
 
 type BlockchainConfig struct {
-	Network Network `json:"network"`
-	Address string  `json:"address"`
-	Tokens  []Token `json:"tokens"`
+	Network Network  `json:"network"`
+	Address string   `json:"address"`
+	Tokens  []string `json:"tokens"`
 }
 
 type Network struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
-}
-
-type Token struct {
-	Name    string `json:"name"`
-	Token   string `json:"erc20"`
-	Swapper string `json:"swapper"`
 }
 
 func (manager *manager) EthereumAccount(password string) (beth.Account, error) {
@@ -51,14 +44,6 @@ func (manager *manager) EthereumAccount(password string) (beth.Account, error) {
 	ethAccount, err := beth.NewAccount(manager.config.Ethereum.Network.URL, privKey)
 	if err != nil {
 		return nil, err
-	}
-	for _, token := range manager.config.Ethereum.Tokens {
-		if err := ethAccount.WriteAddress(SwapperKey(token.Name), common.HexToAddress(token.Swapper)); err != nil {
-			return nil, err
-		}
-		if err := ethAccount.WriteAddress(ERC20Key(token.Name), common.HexToAddress(token.Token)); err != nil {
-			return nil, err
-		}
 	}
 	return ethAccount, nil
 }

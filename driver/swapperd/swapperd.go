@@ -1,12 +1,9 @@
-package main
+package swapperd
 
 import (
-	"flag"
 	"fmt"
 	"net"
 	"net/http"
-	"os"
-	"os/signal"
 
 	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/adapter/binder"
@@ -20,16 +17,12 @@ import (
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-func main() {
-	network := flag.String("network", "testnet", "Which network to use")
-	port := flag.Int64("port", 7777, "Which network to use")
-	flag.Parse()
-
+func Run(doneCh <-chan struct{}, network, port string) {
 	swaps := make(chan swapper.Swap)
 	statuses := make(chan foundation.SwapStatus)
 	statusQueries := make(chan status.Query)
 
-	manager, err := keystore.FundManager(*network)
+	manager, err := keystore.FundManager(network)
 	if err != nil {
 		panic(err)
 	}
@@ -39,15 +32,14 @@ func main() {
 		panic(err)
 	}
 
-	done := make(chan struct{})
 	go co.ParBegin(
 		func() {
-			authenticator, err := keystore.LoadAuthenticator(*network)
+			authenticator, err := keystore.LoadAuthenticator(network)
 			if err != nil {
 				panic(err)
 			}
 			handler := server.NewHandler(authenticator, manager, swaps, statusQueries)
-			listener, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+			listener, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 			if err != nil {
 				panic(err)
 			}
@@ -56,7 +48,7 @@ func main() {
 					panic(err)
 				}
 			}()
-			<-done
+			<-doneCh
 			listener.Close()
 		},
 		func() {
@@ -64,15 +56,11 @@ func main() {
 			builder := binder.NewBuilder(manager, stdLogger)
 			storage := storage.New(ldb)
 			swapper := swapper.New(builder, storage, stdLogger)
-			swapper.Run(done, swaps, statuses)
+			swapper.Run(doneCh, swaps, statuses)
 		},
 		func() {
 			monitor := status.New()
-			monitor.Run(done, statuses, statusQueries)
+			monitor.Run(doneCh, statuses, statusQueries)
 		},
 	)
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	<-c
-	close(done)
 }

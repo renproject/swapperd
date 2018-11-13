@@ -20,23 +20,14 @@ var Testnet = fund.Config{
 		Network: fund.Network{
 			Name: "testnet",
 		},
+		Tokens: []string{"BTC"},
 	},
 	Ethereum: fund.BlockchainConfig{
 		Network: fund.Network{
 			Name: "kovan",
 			URL:  "https://kovan.infura.io",
 		},
-		Tokens: []fund.Token{
-			fund.Token{
-				Name:    "ETH",
-				Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
-			},
-			fund.Token{
-				Name:    "WBTC",
-				Token:   "0xA1D3EEcb76285B4435550E4D963B8042A8bffbF0",
-				Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
-			},
-		},
+		Tokens: []string{"ETH", "WBTC"},
 	},
 }
 
@@ -46,23 +37,14 @@ var Mainnet = fund.Config{
 		Network: fund.Network{
 			Name: "mainnet",
 		},
+		Tokens: []string{"BTC"},
 	},
 	Ethereum: fund.BlockchainConfig{
 		Network: fund.Network{
 			Name: "kovan",
 			URL:  "https://kovan.infura.io",
 		},
-		Tokens: []fund.Token{
-			fund.Token{
-				Name:    "ETH",
-				Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
-			},
-			fund.Token{
-				Name:    "WBTC",
-				Token:   "0xA1D3EEcb76285B4435550E4D963B8042A8bffbF0",
-				Swapper: "0x2218fa20c33765e7e01671ee6aaca75fbaf3a974",
-			},
-		},
+		Tokens: []string{"ETH", "WBTC"},
 	},
 }
 
@@ -112,6 +94,9 @@ func Generate(network, username, password string) (string, error) {
 	passwordHashBytes := sha3.Sum256([]byte(password))
 	keystore.PasswordHash = base64.StdEncoding.EncodeToString(passwordHashBytes[:])
 	config, err := generateConfig(network, password)
+	if err != nil {
+		return "", err
+	}
 	keystore.Config = config
 	data, err := json.Marshal(keystore)
 	if err != nil {
