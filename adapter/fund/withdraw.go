@@ -79,8 +79,7 @@ func (manager *manager) withdrawERC20(password string, token foundation.Token, t
 		return txHash, err
 	}
 
-	ethClient := account.EthClient()
-	tokenContract, err := erc20.NewCompatibleERC20(tokenAddress, bind.ContractBackend(ethClient.EthClient()))
+	tokenContract, err := erc20.NewCompatibleERC20(tokenAddress, bind.ContractBackend(account.EthClient()))
 	if err != nil {
 		return txHash, err
 	}
