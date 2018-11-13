@@ -22,6 +22,6 @@ rm -rf bin
 
 mkdir -p bin
 mv installer/installer-windows-4.0-amd64.exe bin/installer.exe
-mv swapperd-win/swapperd-win-windows-4.0-amd64.exe bin/swapper.exe 
+mv swapperd-win/swapperd-win-windows-4.0-amd64.exe bin/swapperd.exe 
 zip -r swapper_windows_amd64.zip bin
 rm -rf bin
