@@ -5,7 +5,7 @@
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "33151c4543a79b013e8e6799ef45b2ba88c3cd1c"
+  revision = "5faa74ffbed7096292069fdcd0eae96146a3158a"
 
 [[projects]]
   branch = "master"
@@ -187,7 +187,7 @@
   branch = "master"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "657ee998b1bc0a2c5a6befacfe2b26951da0b6ab"
+  revision = "345dd8026350762fb222ceeb7e3b72e2868d5b41"
 
 [[projects]]
   branch = "master"
@@ -230,7 +230,7 @@
     "leveldb/table",
     "leveldb/util"
   ]
-  revision = "6b91fda63f2e36186f1c9d0e48578defb69c5d43"
+  revision = "f9080354173f192dfc8821931eacf9cfd6819253"
 
 [[projects]]
   name = "github.com/tyler-smith/go-bip39"
@@ -251,7 +251,7 @@
     "sha3",
     "ssh/terminal"
   ]
-  revision = "74cb1d3d52f4c01cbfb44c1b50d204462f3124c7"
+  revision = "3d3f9f413869b949e48070b5bc593aa22cc2b8f2"
 
 [[projects]]
   branch = "master"
@@ -262,7 +262,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "9b4f9f5ad5197c79fd623a3638e70d8b26cef344"
+  revision = "03003ca0c849e57b6ea29a4bab8d3cb6e4d568fe"
 
 [[projects]]
   branch = "master"
@@ -270,9 +270,14 @@
   packages = [
     "cpu",
     "unix",
-    "windows"
+    "windows",
+    "windows/registry",
+    "windows/svc",
+    "windows/svc/debug",
+    "windows/svc/eventlog",
+    "windows/svc/mgr"
   ]
-  revision = "5cd93ef61a7c8f0f858690154eb6de2e69415fa1"
+  revision = "66b7b1311ac80bbafcd2daeef9a5e6e2cd1e2399"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -326,6 +331,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "de1a4fb91a8acfb0ac73a31caae6051af1193d08c542fab333edb487a709f573"
+  inputs-digest = "32b0129ea1dc2aea00d16b728b52d0e67062570b4f8132384f0f9a0befdc978d"
   solver-name = "gps-cdcl"
   solver-version = 1
