@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/republicprotocol/swapperd/adapter/fund"
+
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
@@ -15,8 +17,9 @@ var ErrInvalidLength = errors.New("invalid length")
 
 // GetWhoAmIResponse data object contains the Swapper's internal information.
 type GetWhoAmIResponse struct {
-	Version         string             `json:"version"`
-	SupportedTokens []foundation.Token `json:"supportedTokens"`
+	Version              string             `json:"version"`
+	SupportedBlockchains []fund.Blockchain  `json:"supportedBlockchains"`
+	SupportedTokens      []foundation.Token `json:"supportedTokens"`
 }
 
 type GetSwapsResponse struct {
