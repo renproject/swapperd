@@ -251,7 +251,7 @@
     "sha3",
     "ssh/terminal"
   ]
-  revision = "0c41d7ab0a0ee717d4590a44bcb987dfd9e183eb"
+  revision = "74cb1d3d52f4c01cbfb44c1b50d204462f3124c7"
 
 [[projects]]
   branch = "master"
@@ -272,7 +272,7 @@
     "unix",
     "windows"
   ]
-  revision = "44b849a8bc13eb42e95e6c6c5e360481b73ec710"
+  revision = "5cd93ef61a7c8f0f858690154eb6de2e69415fa1"
 
 [[projects]]
   name = "golang.org/x/text"

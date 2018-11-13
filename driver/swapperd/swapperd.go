@@ -7,7 +7,6 @@ import (
 
 	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/adapter/binder"
-	"github.com/republicprotocol/swapperd/adapter/funds"
 	"github.com/republicprotocol/swapperd/adapter/server"
 	"github.com/republicprotocol/swapperd/adapter/storage"
 	"github.com/republicprotocol/swapperd/core/status"
@@ -23,7 +22,7 @@ func Run(doneCh <-chan struct{}, network, port string) {
 	statuses := make(chan foundation.SwapStatus)
 	statusQueries := make(chan status.Query)
 
-	accounts, err := keystore.LoadAccounts(network)
+	manager, err := keystore.FundManager(network)
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +38,7 @@ func Run(doneCh <-chan struct{}, network, port string) {
 			if err != nil {
 				panic(err)
 			}
-			handler := server.NewHandler(authenticator, funds.New(accounts), swaps, statusQueries)
+			handler := server.NewHandler(authenticator, manager, swaps, statusQueries)
 			listener, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 			if err != nil {
 				panic(err)
@@ -54,7 +53,7 @@ func Run(doneCh <-chan struct{}, network, port string) {
 		},
 		func() {
 			stdLogger := logger.NewStdOut()
-			builder := binder.NewBuilder(accounts, stdLogger)
+			builder := binder.NewBuilder(manager, stdLogger)
 			storage := storage.New(ldb)
 			swapper := swapper.New(builder, storage, stdLogger)
 			swapper.Run(doneCh, swaps, statuses)

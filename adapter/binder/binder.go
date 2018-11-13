@@ -4,23 +4,23 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/republicprotocol/swapperd/adapter/account"
 	"github.com/republicprotocol/swapperd/adapter/binder/btc"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
 	"github.com/republicprotocol/swapperd/adapter/binder/eth"
+	"github.com/republicprotocol/swapperd/adapter/fund"
 	"github.com/republicprotocol/swapperd/adapter/server"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type builder struct {
-	account.Accounts
+	fund.Manager
 	swapper.Logger
 }
 
-func NewBuilder(accounts account.Accounts, logger swapper.Logger) swapper.ContractBuilder {
+func NewBuilder(manager fund.Manager, logger swapper.Logger) swapper.ContractBuilder {
 	return &builder{
-		accounts,
+		manager,
 		logger,
 	}
 }
@@ -44,19 +44,19 @@ func (builder *builder) BuildSwapContracts(swap swapper.Swap) (swapper.Contract,
 func (builder *builder) buildBinder(swap foundation.Swap, password string) (swapper.Contract, error) {
 	switch swap.Token {
 	case foundation.TokenBTC:
-		btcAccount, err := builder.GetBitcoinAccount(password)
+		btcAccount, err := builder.BitcoinAccount(password)
 		if err != nil {
 			return nil, err
 		}
 		return btc.NewBTCSwapContractBinder(btcAccount, swap, builder.Logger)
 	case foundation.TokenETH:
-		ethAccount, err := builder.GetEthereumAccount(password)
+		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
 		}
 		return eth.NewETHSwapContractBinder(ethAccount, swap, builder.Logger)
 	case foundation.TokenWBTC:
-		ethAccount, err := builder.GetEthereumAccount(password)
+		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
 		}
@@ -158,12 +158,12 @@ func (builder *builder) calculateAddresses(swap swapper.Swap) (string, string, e
 		return "", "", err
 	}
 
-	ethAccount, err := builder.GetEthereumAccount(swap.Password)
+	ethAccount, err := builder.EthereumAccount(swap.Password)
 	if err != nil {
 		return "", "", err
 	}
 
-	btcAccount, err := builder.GetBitcoinAccount(swap.Password)
+	btcAccount, err := builder.BitcoinAccount(swap.Password)
 	if err != nil {
 		return "", "", err
 	}

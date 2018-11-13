@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/republicprotocol/swapperd/adapter/funds"
+	"github.com/republicprotocol/swapperd/adapter/fund"
 	"github.com/republicprotocol/swapperd/core/auth"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
@@ -15,7 +15,7 @@ import (
 )
 
 // NewHandler creates a new http handler
-func NewHandler(authenticator auth.Authenticator, manager funds.Manager, swaps chan<- swapper.Swap, statusQueries chan<- status.Query) http.Handler {
+func NewHandler(authenticator auth.Authenticator, manager fund.Manager, swaps chan<- swapper.Swap, statusQueries chan<- status.Query) http.Handler {
 	s := NewServer(authenticator, manager, swaps, statusQueries)
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", postSwapsHandler(s)).Methods("POST")
@@ -137,18 +137,11 @@ func postWithdrawHandler(server *server) http.HandlerFunc {
 // of the accounts held by the swapper.
 func getBalancesHandler(server *server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		username, password, ok := r.BasicAuth()
-		if !ok || !server.authenticator.VerifyUsernameAndPassword(username, password) {
-			writeError(w, http.StatusUnauthorized, "invalid username or password")
-			return
-		}
-
-		balancesRes, err := server.GetBalances(password)
+		balancesRes, err := server.GetBalances()
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get balances: %v", err))
 			return
 		}
-
 		if err := json.NewEncoder(w).Encode(balancesRes); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
 			return

@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/republicprotocol/swapperd/adapter/funds"
+	"github.com/republicprotocol/swapperd/adapter/fund"
 	"github.com/republicprotocol/swapperd/core/auth"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
@@ -17,19 +17,20 @@ import (
 
 type server struct {
 	authenticator  auth.Authenticator
-	fundManager    funds.Manager
+	fundManager    fund.Manager
 	swapperQueries chan<- swapper.Swap
 	statusQueries  chan<- status.Query
 }
 
-func NewServer(authenticator auth.Authenticator, fundManager funds.Manager, swaps chan<- swapper.Swap, statusQueries chan<- status.Query) *server {
+func NewServer(authenticator auth.Authenticator, fundManager fund.Manager, swaps chan<- swapper.Swap, statusQueries chan<- status.Query) *server {
 	return &server{authenticator, fundManager, swaps, statusQueries}
 }
 
 func (server *server) GetWhoAmI() GetWhoAmIResponse {
 	return GetWhoAmIResponse{
-		Version:         "0.1.0",
-		SupportedTokens: server.fundManager.SupportedTokens(),
+		Version:              "0.2.0",
+		SupportedBlockchains: server.fundManager.SupportedBlockchains(),
+		SupportedTokens:      server.fundManager.SupportedTokens(),
 	}
 }
 
@@ -56,13 +57,13 @@ func (server *server) PostSwaps(swap foundation.SwapBlob, password string) (foun
 	return swap, nil
 }
 
-func (server *server) GetBalances(password string) (GetBalanceResponse, error) {
+func (server *server) GetBalances() (GetBalanceResponse, error) {
 	resp := GetBalanceResponse{}
-	balanceMap, err := server.fundManager.Balances(password)
+	balanceBook, err := server.fundManager.Balances()
 	if err != nil {
 		return resp, err
 	}
-	for token, balance := range balanceMap {
+	for token, balance := range balanceBook {
 		resp.Balances = append(resp.Balances, Balance{
 			Token:   token.Name,
 			Address: balance.Address,
@@ -105,7 +106,7 @@ func (server *server) patchSwap(swapBlob foundation.SwapBlob, password string) (
 }
 
 func (server *server) validateTokenDetails(swapBlob foundation.SwapBlob, password string) error {
-	balanceBook, err := server.fundManager.Balances(password)
+	balanceBook, err := server.fundManager.Balances()
 	if err != nil {
 		return err
 	}
