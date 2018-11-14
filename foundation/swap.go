@@ -3,6 +3,7 @@ package foundation
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"math/big"
 )
 
@@ -64,7 +65,7 @@ type SwapBlob struct {
 	SecretHash          string `json:"secretHash"`
 	ShouldInitiateFirst bool   `json:"shouldInitiateFirst"`
 
-	Delay            bool   `json:"delayed"`
-	DelayInfo        string `json:"delayInfo"`
-	DelayCallbackURL string `json:"delayCallbackUrl"`
+	Delay            bool            `json:"delayed"`
+	DelayInfo        json.RawMessage `json:"delayInfo"`
+	DelayCallbackURL string          `json:"delayCallbackUrl"`
 }
