@@ -1,4 +1,4 @@
-package client
+package callback
 
 import (
 	"bytes"
@@ -10,18 +10,17 @@ import (
 	"time"
 
 	"github.com/republicprotocol/swapperd/core/swapper"
-
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-type client struct {
+type callback struct {
 }
 
-func New() swapper.SwapFiller {
-	return &client{}
+func New() swapper.DelayCallback {
+	return &callback{}
 }
 
-func (client *client) DelayCallback(partialSwap foundation.SwapBlob) (foundation.SwapBlob, error) {
+func (callback *callback) DelayCallback(partialSwap foundation.SwapBlob) (foundation.SwapBlob, error) {
 	for {
 		data, err := json.MarshalIndent(partialSwap, "", "  ")
 		if err != nil {

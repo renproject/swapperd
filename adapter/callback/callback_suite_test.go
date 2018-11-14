@@ -1,4 +1,4 @@
-package client_test
+package callback_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestClient(t *testing.T) {
+func TestCallback(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Client Suite")
+	RunSpecs(t, "Callback Suite")
 }

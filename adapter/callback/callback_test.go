@@ -1,4 +1,4 @@
-package client_test
+package callback_test
 
 import (
 	"crypto/rand"
@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/swapperd/adapter/client"
+	. "github.com/republicprotocol/swapperd/adapter/callback"
+
+	"github.com/gorilla/mux"
 	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/rs/cors"
 )
@@ -114,10 +114,15 @@ var _ = Describe("Server Adapter", func() {
 		false,
 	}
 
+	type TestDelayInfo struct {
+		Index int `json:"index"`
+	}
+
 	partialSwaps := []foundation.SwapBlob{}
 	for _, tokenPairOption := range tokenPairOptions {
 		for i, amountOption := range amountOptions {
 			for _, initiationOption := range initiationOptions {
+				delayInfo, _ := json.Marshal(TestDelayInfo{i})
 				swap := foundation.SwapBlob{
 					ID:                   foundation.RandomID(),
 					SendToken:            tokenPairOption.sendToken,
@@ -127,7 +132,7 @@ var _ = Describe("Server Adapter", func() {
 					MinimumReceiveAmount: amountOption.minReceiveAmount,
 					ShouldInitiateFirst:  initiationOption,
 					Delay:                true,
-					DelayInfo:            fmt.Sprintf("%d", i),
+					DelayInfo:            delayInfo,
 				}
 
 				if initiationOption {
@@ -188,14 +193,14 @@ var _ = Describe("Server Adapter", func() {
 					return
 				}
 
-				index, err := strconv.ParseInt(swap.DelayInfo, 10, 64)
-				if err != nil {
+				testDelayInfo := TestDelayInfo{}
+				if err := json.Unmarshal(swap.DelayInfo, &testDelayInfo); err != nil {
 					writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to parse delay info: %v", err))
 					return
 				}
 
-				swap.SendAmount = honestUpdateAmountOptions[index].sendAmount
-				swap.ReceiveAmount = honestUpdateAmountOptions[index].receiveAmount
+				swap.SendAmount = honestUpdateAmountOptions[testDelayInfo.Index].sendAmount
+				swap.ReceiveAmount = honestUpdateAmountOptions[testDelayInfo.Index].receiveAmount
 
 				if !swap.ShouldInitiateFirst {
 					swap.SecretHash = randomString()
@@ -233,14 +238,14 @@ var _ = Describe("Server Adapter", func() {
 					return
 				}
 
-				index, err := strconv.ParseInt(swap.DelayInfo, 10, 64)
-				if err != nil {
+				testDelayInfo := TestDelayInfo{}
+				if err := json.Unmarshal(swap.DelayInfo, &testDelayInfo); err != nil {
 					writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to parse delay info: %v", err))
 					return
 				}
 
-				swap.SendAmount = maliciousUpdateAmountOptions[index].sendAmount
-				swap.ReceiveAmount = maliciousUpdateAmountOptions[index].receiveAmount
+				swap.SendAmount = maliciousUpdateAmountOptions[testDelayInfo.Index].sendAmount
+				swap.ReceiveAmount = maliciousUpdateAmountOptions[testDelayInfo.Index].receiveAmount
 
 				if !swap.ShouldInitiateFirst {
 					swap.SecretHash = randomString()
