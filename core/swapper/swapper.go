@@ -28,7 +28,7 @@ type ContractBuilder interface {
 	BuildSwapContracts(swap Swap) (Contract, Contract, error)
 }
 
-type SwapFiller interface {
+type DelayCallback interface {
 	DelayCallback(foundation.SwapBlob) (foundation.SwapBlob, error)
 }
 
@@ -50,10 +50,10 @@ type Swapper interface {
 }
 
 type swapper struct {
-	filler  SwapFiller
-	builder ContractBuilder
-	storage Storage
-	logger  Logger
+	callback DelayCallback
+	builder  ContractBuilder
+	storage  Storage
+	logger   Logger
 }
 
 type result struct {
@@ -65,12 +65,12 @@ func newResult(id foundation.SwapID, success bool) result {
 	return result{id, success}
 }
 
-func New(filler SwapFiller, builder ContractBuilder, storage Storage, logger Logger) Swapper {
+func New(callback DelayCallback, builder ContractBuilder, storage Storage, logger Logger) Swapper {
 	return &swapper{
-		filler:  filler,
-		builder: builder,
-		storage: storage,
-		logger:  logger,
+		callback: callback,
+		builder:  builder,
+		storage:  storage,
+		logger:   logger,
 	}
 }
 
@@ -123,7 +123,7 @@ func (swapper *swapper) execute(results chan<- result, statuses chan<- foundatio
 	}
 
 	if swap.Delay {
-		filledSwap, err := swapper.filler.DelayCallback(swap.SwapBlob)
+		filledSwap, err := swapper.callback.DelayCallback(swap.SwapBlob)
 		if err != nil {
 			swapper.logger.LogError(swap.ID, err)
 			results <- newResult(swap.ID, false)
