@@ -5,6 +5,8 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/republicprotocol/swapperd/adapter/client"
+
 	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/adapter/binder"
 	"github.com/republicprotocol/swapperd/adapter/server"
@@ -55,7 +57,8 @@ func Run(doneCh <-chan struct{}, network, port string) {
 			stdLogger := logger.NewStdOut()
 			builder := binder.NewBuilder(manager, stdLogger)
 			storage := storage.New(ldb)
-			swapper := swapper.New(builder, storage, stdLogger)
+			filler := client.New()
+			swapper := swapper.New(filler, builder, storage, stdLogger)
 			swapper.Run(doneCh, swaps, statuses)
 		},
 		func() {
