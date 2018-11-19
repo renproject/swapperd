@@ -78,9 +78,9 @@ func getSwapsHandler(server *server) http.HandlerFunc {
 // information and starts the Atomic Swap.
 func postSwapsHandler(server *server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		username, password, ok := r.BasicAuth()
-		if !ok || !server.authenticator.VerifyUsernameAndPassword(username, password) {
-			writeError(w, http.StatusUnauthorized, "invalid username or password")
+		_, password, ok := r.BasicAuth()
+		if !ok || !server.authenticator.VerifyPassword(password) {
+			writeError(w, http.StatusUnauthorized, "invalid password")
 			return
 		}
 
@@ -107,9 +107,9 @@ func postSwapsHandler(server *server) http.HandlerFunc {
 // postWithdrawHandler handles the post withdrawal request.
 func postWithdrawHandler(server *server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		username, password, ok := r.BasicAuth()
-		if !ok || !server.authenticator.VerifyUsernameAndPassword(username, password) {
-			writeError(w, http.StatusUnauthorized, "invalid username or password")
+		_, password, ok := r.BasicAuth()
+		if !ok || !server.authenticator.VerifyPassword(password) {
+			writeError(w, http.StatusUnauthorized, "invalid password")
 			return
 		}
 
