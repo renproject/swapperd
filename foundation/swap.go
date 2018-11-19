@@ -1,6 +1,9 @@
 package foundation
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
 	"math/big"
 )
 
@@ -24,6 +27,12 @@ type SwapStatus struct {
 	Status int    `json:"status"`
 }
 
+func RandomID() SwapID {
+	id := [32]byte{}
+	rand.Read(id[:])
+	return SwapID(base64.StdEncoding.EncodeToString(id[:]))
+}
+
 func NewSwapStatus(id SwapID, status int) SwapStatus {
 	return SwapStatus{id, status}
 }
@@ -45,13 +54,18 @@ type SwapBlob struct {
 	SendToken    string `json:"sendToken"`
 	ReceiveToken string `json:"receiveToken"`
 
-	// SendAmount and ReceiveAmount are hex encoded.
-	SendAmount    string `json:"sendAmount"`
-	ReceiveAmount string `json:"receiveAmount"`
+	// SendAmount and ReceiveAmount are decimal strings.
+	SendAmount           string `json:"sendAmount"`
+	ReceiveAmount        string `json:"receiveAmount"`
+	MinimumReceiveAmount string `json:"minimumReceiveAmount"`
 
 	SendTo              string `json:"sendTo"`
 	ReceiveFrom         string `json:"receiveFrom"`
 	TimeLock            int64  `json:"timeLock"`
 	SecretHash          string `json:"secretHash"`
 	ShouldInitiateFirst bool   `json:"shouldInitiateFirst"`
+
+	Delay            bool            `json:"delayed"`
+	DelayInfo        json.RawMessage `json:"delayInfo"`
+	DelayCallbackURL string          `json:"delayCallbackUrl"`
 }

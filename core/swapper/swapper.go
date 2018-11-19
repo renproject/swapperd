@@ -28,6 +28,10 @@ type ContractBuilder interface {
 	BuildSwapContracts(swap Swap) (Contract, Contract, error)
 }
 
+type DelayCallback interface {
+	DelayCallback(foundation.SwapBlob) (foundation.SwapBlob, error)
+}
+
 type Storage interface {
 	InsertSwap(swap Swap) error
 	PendingSwap(foundation.SwapID) (Swap, error)
@@ -46,9 +50,10 @@ type Swapper interface {
 }
 
 type swapper struct {
-	builder ContractBuilder
-	storage Storage
-	logger  Logger
+	callback DelayCallback
+	builder  ContractBuilder
+	storage  Storage
+	logger   Logger
 }
 
 type result struct {
@@ -60,11 +65,12 @@ func newResult(id foundation.SwapID, success bool) result {
 	return result{id, success}
 }
 
-func New(builder ContractBuilder, storage Storage, logger Logger) Swapper {
+func New(callback DelayCallback, builder ContractBuilder, storage Storage, logger Logger) Swapper {
 	return &swapper{
-		builder: builder,
-		storage: storage,
-		logger:  logger,
+		callback: callback,
+		builder:  builder,
+		storage:  storage,
+		logger:   logger,
 	}
 }
 
@@ -77,11 +83,7 @@ func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan Swap, statuses ch
 	}
 	co.ForAll(swapsToRetry, func(i int) {
 		swap := swapsToRetry[i]
-		native, foreign, err := swapper.builder.BuildSwapContracts(swap)
-		if err != nil {
-			return
-		}
-		go execute(results, statuses, native, foreign, swap, swapper.logger)
+		go swapper.execute(results, statuses, swap)
 	})
 
 	for {
@@ -91,12 +93,7 @@ func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan Swap, statuses ch
 
 		case swap := <-swaps:
 			swapper.storage.InsertSwap(swap)
-			native, foreign, err := swapper.builder.BuildSwapContracts(swap)
-			if err != nil {
-				swapper.logger.LogError(swap.ID, err)
-				continue
-			}
-			go execute(results, statuses, native, foreign, swap, swapper.logger)
+			go swapper.execute(results, statuses, swap)
 
 		case result := <-results:
 			if result.success {
@@ -112,22 +109,34 @@ func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan Swap, statuses ch
 				swapper.logger.LogError(result.id, err)
 				continue
 			}
-			native, foreign, err := swapper.builder.BuildSwapContracts(swap)
-			if err != nil {
-				swapper.logger.LogError(result.id, err)
-				continue
-			}
-			go execute(results, statuses, native, foreign, swap, swapper.logger)
+			go swapper.execute(results, statuses, swap)
 		}
 	}
 }
 
-func execute(results chan<- result, statuses chan<- foundation.SwapStatus, native, foreign Contract, swap Swap, logger Logger) {
-	if swap.ShouldInitiateFirst {
-		initiate(results, statuses, native, foreign, swap, logger)
+func (swapper *swapper) execute(results chan<- result, statuses chan<- foundation.SwapStatus, swap Swap) {
+	native, foreign, err := swapper.builder.BuildSwapContracts(swap)
+	if err != nil {
+		swapper.logger.LogError(swap.ID, err)
+		results <- newResult(swap.ID, false)
 		return
 	}
-	respond(results, statuses, native, foreign, swap, logger)
+
+	if swap.Delay {
+		filledSwap, err := swapper.callback.DelayCallback(swap.SwapBlob)
+		if err != nil {
+			swapper.logger.LogError(swap.ID, err)
+			results <- newResult(swap.ID, false)
+			return
+		}
+		swap.SwapBlob = filledSwap
+	}
+
+	if swap.ShouldInitiateFirst {
+		initiate(results, statuses, native, foreign, swap, swapper.logger)
+		return
+	}
+	respond(results, statuses, native, foreign, swap, swapper.logger)
 }
 
 func initiate(results chan<- result, statuses chan<- foundation.SwapStatus, native, foreign Contract, swap Swap, logger Logger) {
