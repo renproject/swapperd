@@ -83,7 +83,7 @@ func LoadAuthenticator(network string) (auth.Authenticator, error) {
 		return nil, err
 	}
 	passwordHash, err := toBytes32(keystore.PasswordHash)
-	return auth.NewAuthenticator(keystore.Username, passwordHash), nil
+	return auth.NewAuthenticator(passwordHash), err
 }
 
 func Generate(network, username, password string) (string, error) {
