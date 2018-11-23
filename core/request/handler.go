@@ -54,9 +54,9 @@ func (handler *handler) GetSwaps() GetSwapsResponse {
 	resp := GetSwapsResponse{}
 	responder := make(chan map[foundation.SwapID]foundation.SwapStatus)
 	handler.statuses <- foundation.StatusQuery{Responder: responder}
-	receiptMap := <-responder
-	for _, receipt := range receiptMap {
-		resp.Swaps = append(resp.Swaps, receipt)
+	statusMap := <-responder
+	for _, status := range statusMap {
+		resp.Swaps = append(resp.Swaps, status)
 	}
 	return resp
 }
