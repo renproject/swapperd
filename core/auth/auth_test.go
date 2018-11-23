@@ -1,2 +1,0 @@
-package auth_test
-
