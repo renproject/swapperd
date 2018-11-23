@@ -1,19 +1,11 @@
 package swapper
 
 import (
-	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-type Swap struct {
-	foundation.SwapBlob
-
-	Secret   [32]byte `json:"secret"`
-	Password string   `json:"password"`
-}
-
-func NewSwap(swapBlob foundation.SwapBlob, secret [32]byte, password string) Swap {
-	return Swap{swapBlob, secret, password}
+type Swapper interface {
+	Run(done <-chan struct{}, swaps <-chan foundation.SwapRequest, results chan<- foundation.SwapResult, updates chan<- foundation.StatusUpdate)
 }
 
 type Contract interface {
@@ -25,177 +17,117 @@ type Contract interface {
 }
 
 type ContractBuilder interface {
-	BuildSwapContracts(swap Swap) (Contract, Contract, error)
+	BuildSwapContracts(swap foundation.SwapRequest) (Contract, Contract, error)
 }
 
 type DelayCallback interface {
 	DelayCallback(foundation.SwapBlob) (foundation.SwapBlob, error)
 }
 
-type Storage interface {
-	InsertSwap(swap Swap) error
-	PendingSwap(foundation.SwapID) (Swap, error)
-	DeletePendingSwap(foundation.SwapID) error
-	PendingSwaps() ([]Swap, error)
-}
-
-type Logger interface {
-	LogInfo(foundation.SwapID, string)
-	LogDebug(foundation.SwapID, string)
-	LogError(foundation.SwapID, error)
-}
-
-type Swapper interface {
-	Run(done <-chan struct{}, swaps <-chan Swap, statuses chan<- foundation.SwapStatus)
-}
-
 type swapper struct {
 	callback DelayCallback
 	builder  ContractBuilder
-	storage  Storage
-	logger   Logger
+	logger   foundation.Logger
 }
 
-type result struct {
-	id      foundation.SwapID
-	success bool
-}
-
-func newResult(id foundation.SwapID, success bool) result {
-	return result{id, success}
-}
-
-func New(callback DelayCallback, builder ContractBuilder, storage Storage, logger Logger) Swapper {
+func New(callback DelayCallback, builder ContractBuilder, logger foundation.Logger) Swapper {
 	return &swapper{
 		callback: callback,
 		builder:  builder,
-		storage:  storage,
 		logger:   logger,
 	}
 }
 
-func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan Swap, statuses chan<- foundation.SwapStatus) {
-	results := make(chan result)
-
-	swapsToRetry, err := swapper.storage.PendingSwaps()
-	if err != nil {
-		return
-	}
-	co.ForAll(swapsToRetry, func(i int) {
-		swap := swapsToRetry[i]
-		go swapper.execute(results, statuses, swap)
-	})
-
+func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan foundation.SwapRequest, results chan<- foundation.SwapResult, updates chan<- foundation.StatusUpdate) {
 	for {
 		select {
 		case <-done:
 			return
-
-		case swap := <-swaps:
-			swapper.storage.InsertSwap(swap)
-			go swapper.execute(results, statuses, swap)
-
-		case result := <-results:
-			if result.success {
-				if err := swapper.storage.DeletePendingSwap(result.id); err != nil {
-					swapper.logger.LogError(result.id, err)
+		case swap, ok := <-swaps:
+			if !ok {
+				return
+			}
+			native, foreign, err := swapper.builder.BuildSwapContracts(swap)
+			if err != nil {
+				swapper.logger.LogError(swap.ID, err)
+				results <- foundation.NewSwapResult(swap.ID, false)
+				continue
+			}
+			if swap.Delay {
+				filledSwap, err := swapper.callback.DelayCallback(swap.SwapBlob)
+				if err != nil {
+					swapper.logger.LogError(swap.ID, err)
+					results <- foundation.NewSwapResult(swap.ID, false)
 					continue
 				}
-				swapper.logger.LogInfo(result.id, "removed from pending swaps")
+				swap.SwapBlob = filledSwap
+			}
+			if swap.ShouldInitiateFirst {
+				go swapper.initiate(results, updates, native, foreign, swap)
 				continue
 			}
-			swap, err := swapper.storage.PendingSwap(result.id)
-			if err != nil {
-				swapper.logger.LogError(result.id, err)
-				continue
-			}
-			go swapper.execute(results, statuses, swap)
+			go swapper.respond(results, updates, native, foreign, swap)
 		}
 	}
 }
 
-func (swapper *swapper) execute(results chan<- result, statuses chan<- foundation.SwapStatus, swap Swap) {
-	native, foreign, err := swapper.builder.BuildSwapContracts(swap)
-	if err != nil {
+func (swapper *swapper) initiate(results chan<- foundation.SwapResult, updates chan<- foundation.StatusUpdate, native, foreign Contract, swap foundation.SwapRequest) {
+	if err := native.Initiate(); err != nil {
 		swapper.logger.LogError(swap.ID, err)
-		results <- newResult(swap.ID, false)
+		results <- foundation.NewSwapResult(swap.ID, false)
 		return
 	}
-
-	if swap.Delay {
-		filledSwap, err := swapper.callback.DelayCallback(swap.SwapBlob)
-		if err != nil {
-			swapper.logger.LogError(swap.ID, err)
-			results <- newResult(swap.ID, false)
-			return
-		}
-		swap.SwapBlob = filledSwap
-	}
-
-	if swap.ShouldInitiateFirst {
-		initiate(results, statuses, native, foreign, swap, swapper.logger)
-		return
-	}
-	respond(results, statuses, native, foreign, swap, swapper.logger)
-}
-
-func initiate(results chan<- result, statuses chan<- foundation.SwapStatus, native, foreign Contract, swap Swap, logger Logger) {
-	if err := native.Initiate(); err != nil {
-		logger.LogError(swap.ID, err)
-		results <- newResult(swap.ID, false)
-		return
-	}
-	statuses <- foundation.NewSwapStatus(swap.ID, foundation.Initiated)
+	updates <- foundation.NewStatusUpdate(swap.ID, foundation.Initiated)
 	if err := foreign.Audit(); err != nil {
-		statuses <- foundation.NewSwapStatus(swap.ID, foundation.AuditFailed)
+		updates <- foundation.NewStatusUpdate(swap.ID, foundation.AuditFailed)
 		if err := native.Refund(); err != nil {
-			logger.LogError(swap.ID, err)
-			results <- newResult(swap.ID, false)
+			swapper.logger.LogError(swap.ID, err)
+			results <- foundation.NewSwapResult(swap.ID, false)
 			return
 		}
-		results <- newResult(swap.ID, true)
-		statuses <- foundation.NewSwapStatus(swap.ID, foundation.Refunded)
+		results <- foundation.NewSwapResult(swap.ID, true)
+		updates <- foundation.NewStatusUpdate(swap.ID, foundation.Refunded)
 		return
 	}
-	statuses <- foundation.NewSwapStatus(swap.ID, foundation.Audited)
+	updates <- foundation.NewStatusUpdate(swap.ID, foundation.Audited)
 	if err := foreign.Redeem(swap.Secret); err != nil {
-		logger.LogError(swap.ID, err)
-		results <- newResult(swap.ID, false)
+		swapper.logger.LogError(swap.ID, err)
+		results <- foundation.NewSwapResult(swap.ID, false)
 		return
 	}
-	statuses <- foundation.NewSwapStatus(swap.ID, foundation.Redeemed)
-	results <- newResult(swap.ID, true)
+	updates <- foundation.NewStatusUpdate(swap.ID, foundation.Redeemed)
+	results <- foundation.NewSwapResult(swap.ID, true)
 }
 
-func respond(results chan<- result, statuses chan<- foundation.SwapStatus, native, foreign Contract, swap Swap, logger Logger) {
+func (swapper *swapper) respond(results chan<- foundation.SwapResult, updates chan<- foundation.StatusUpdate, native, foreign Contract, swap foundation.SwapRequest) {
 	if err := foreign.Audit(); err != nil {
-		statuses <- foundation.NewSwapStatus(swap.ID, foundation.AuditFailed)
-		results <- newResult(swap.ID, true)
+		updates <- foundation.NewStatusUpdate(swap.ID, foundation.AuditFailed)
+		results <- foundation.NewSwapResult(swap.ID, true)
 		return
 	}
-	statuses <- foundation.NewSwapStatus(swap.ID, foundation.Audited)
+	updates <- foundation.NewStatusUpdate(swap.ID, foundation.Audited)
 	if err := native.Initiate(); err != nil {
-		logger.LogError(swap.ID, err)
-		results <- newResult(swap.ID, false)
+		swapper.logger.LogError(swap.ID, err)
+		results <- foundation.NewSwapResult(swap.ID, false)
 		return
 	}
-	statuses <- foundation.NewSwapStatus(swap.ID, foundation.Initiated)
+	updates <- foundation.NewStatusUpdate(swap.ID, foundation.Initiated)
 	secret, err := native.AuditSecret()
 	if err != nil {
 		if err := native.Refund(); err != nil {
-			logger.LogError(swap.ID, err)
-			results <- newResult(swap.ID, false)
+			swapper.logger.LogError(swap.ID, err)
+			results <- foundation.NewSwapResult(swap.ID, false)
 			return
 		}
-		statuses <- foundation.NewSwapStatus(swap.ID, foundation.Refunded)
-		results <- newResult(swap.ID, true)
+		updates <- foundation.NewStatusUpdate(swap.ID, foundation.Refunded)
+		results <- foundation.NewSwapResult(swap.ID, true)
 		return
 	}
 	if err := foreign.Redeem(secret); err != nil {
-		logger.LogError(swap.ID, err)
-		results <- newResult(swap.ID, false)
+		swapper.logger.LogError(swap.ID, err)
+		results <- foundation.NewSwapResult(swap.ID, false)
 		return
 	}
-	statuses <- foundation.NewSwapStatus(swap.ID, foundation.Redeemed)
-	results <- newResult(swap.ID, true)
+	updates <- foundation.NewStatusUpdate(swap.ID, foundation.Redeemed)
+	results <- foundation.NewSwapResult(swap.ID, true)
 }
