@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
@@ -13,7 +12,7 @@ const white = "\033[m"
 type stdOut struct {
 }
 
-func NewStdOut() swapper.Logger {
+func NewStdOut() foundation.Logger {
 	return &stdOut{}
 }
 
@@ -30,6 +29,18 @@ func (logger *stdOut) LogDebug(swapID foundation.SwapID, msg string) {
 func (logger *stdOut) LogError(swapID foundation.SwapID, err error) {
 	clr := pickColor(swapID)
 	fmt.Println(fmt.Sprintf("[ERR] (%s%s%s) %s", clr, swapID, white, err))
+}
+
+func (logger *stdOut) GlobalLogInfo(msg string) {
+	fmt.Println(fmt.Sprintf("[INF] %s", msg))
+}
+
+func (logger *stdOut) GlobalLogDebug(msg string) {
+	fmt.Println(fmt.Sprintf("[DEB] %s", msg))
+}
+
+func (logger *stdOut) GlobalLogError(err error) {
+	fmt.Println(fmt.Sprintf("[ERR] %s", err))
 }
 
 func pickColor(swapID foundation.SwapID) string {
