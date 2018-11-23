@@ -22,14 +22,22 @@ func (monitor *monitor) get() map[foundation.SwapID]foundation.SwapStatus {
 	monitor.mu.RLock()
 	defer monitor.mu.RUnlock()
 	statuses := make(map[foundation.SwapID]foundation.SwapStatus, len(monitor.statuses))
-	for swapID, status := range monitor.statuses {
-		statuses[swapID] = status
+	for id, status := range monitor.statuses {
+		statuses[id] = status
 	}
 	return statuses
 }
 
-func (monitor *monitor) set(id foundation.SwapID, status foundation.SwapStatus) {
+func (monitor *monitor) set(status foundation.SwapStatus) {
 	monitor.mu.Lock()
 	defer monitor.mu.Unlock()
-	monitor.statuses[id] = status
+	monitor.statuses[status.ID] = status
+}
+
+func (monitor *monitor) update(status foundation.StatusUpdate) {
+	monitor.mu.Lock()
+	defer monitor.mu.Unlock()
+	status := monitor.statuses[status.ID]
+	status.Status = status.Status
+	monitor.statuses[status.ID] = status
 }
