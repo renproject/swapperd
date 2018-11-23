@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/republicprotocol/swapperd/adapter/fund"
-	"github.com/republicprotocol/swapperd/core/auth"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/sha3"
 )
@@ -72,18 +71,17 @@ func FundManager(network string) (fund.Manager, error) {
 	return fund.New(keystore.Config), nil
 }
 
-func LoadAuthenticator(network string) (auth.Authenticator, error) {
+func LoadPasswordHash(network string) ([32]byte, error) {
 	path := keystorePath(network)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return [32]byte{}, err
 	}
 	keystore := Keystore{}
 	if err := json.Unmarshal(data, &keystore); err != nil {
-		return nil, err
+		return [32]byte{}, err
 	}
-	passwordHash, err := toBytes32(keystore.PasswordHash)
-	return auth.NewAuthenticator(passwordHash), err
+	return toBytes32(keystore.PasswordHash)
 }
 
 func Generate(network, username, password, mnemonic string) error {
