@@ -89,21 +89,10 @@ func createHomeDir() error {
 		}
 		return nil
 	}
-
 	windows := os.Getenv("userprofile")
 	if windows != "" {
-		cmd := exec.Command("cmd", "/C", "md", loc)
-		var out bytes.Buffer
-		var stderr bytes.Buffer
-		cmd.Stdout = &out
-		cmd.Stderr = &stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
-			return err
-		}
 		return nil
 	}
-
 	return errors.New("unknown Operating System")
 }
 
