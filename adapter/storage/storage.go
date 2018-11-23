@@ -3,12 +3,11 @@ package storage
 import (
 	"encoding/base64"
 	"encoding/json"
-	"sync"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 
-	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/core/router"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
@@ -23,36 +22,31 @@ var (
 )
 
 type storage struct {
-	mu *sync.RWMutex
 	db *leveldb.DB
 }
 
-func New(db *leveldb.DB) swapper.Storage {
+func New(db *leveldb.DB) router.Storage {
 	return &storage{
-		mu: new(sync.RWMutex),
 		db: db,
 	}
 }
 
-func (storage *storage) InsertSwap(swap swapper.Swap) error {
+func (storage *storage) InsertSwap(swap foundation.SwapRequest) error {
 	pendingSwapData, err := json.Marshal(swap)
 	if err != nil {
 		return err
 	}
-	swapData, err := json.Marshal(swap.SwapBlob)
+	swapData, err := json.Marshal(foundation.NewSwapStatus(swap.SwapBlob))
 	if err != nil {
 		return err
 	}
-
 	id, err := base64.StdEncoding.DecodeString(string(swap.ID))
 	if err != nil {
 		return err
 	}
-
 	if err := storage.db.Put(append(TablePendingSwaps[:], id...), pendingSwapData, nil); err != nil {
 		return err
 	}
-
 	return storage.db.Put(append(TableSwaps[:], id...), swapData, nil)
 }
 
@@ -64,52 +58,69 @@ func (storage *storage) DeletePendingSwap(swapID foundation.SwapID) error {
 	return storage.db.Delete(append(TablePendingSwaps[:], id...), nil)
 }
 
-func (storage *storage) PendingSwap(swapID foundation.SwapID) (swapper.Swap, error) {
+func (storage *storage) PendingSwap(swapID foundation.SwapID) (foundation.SwapRequest, error) {
 	id, err := base64.StdEncoding.DecodeString(string(swapID))
 	if err != nil {
-		return swapper.Swap{}, err
+		return foundation.SwapRequest{}, err
 	}
 	swapBlobBytes, err := storage.db.Get(append(TablePendingSwaps[:], id...), nil)
 	if err != nil {
-		return swapper.Swap{}, err
+		return foundation.SwapRequest{}, err
 	}
-	swap := swapper.Swap{}
+	swap := foundation.SwapRequest{}
 	if err := json.Unmarshal(swapBlobBytes, &swap); err != nil {
-		return swapper.Swap{}, err
+		return foundation.SwapRequest{}, err
 	}
 	return swap, nil
 }
 
-func (storage *storage) Swaps() ([]foundation.SwapBlob, error) {
+func (storage *storage) Swaps() ([]foundation.SwapStatus, error) {
 	iterator := storage.db.NewIterator(&util.Range{Start: TableSwapsStart[:], Limit: TableSwapsLimit[:]}, nil)
 	defer iterator.Release()
-
-	swaps := []foundation.SwapBlob{}
+	swaps := []foundation.SwapStatus{}
 	for iterator.Next() {
 		value := iterator.Value()
-		swap := foundation.SwapBlob{}
+		swap := foundation.SwapStatus{}
 		if err := json.Unmarshal(value, &swap); err != nil {
 			return swaps, err
 		}
 		swaps = append(swaps, swap)
 	}
-
 	return swaps, iterator.Error()
 }
 
-func (storage *storage) PendingSwaps() ([]swapper.Swap, error) {
+func (storage *storage) PendingSwaps() ([]foundation.SwapRequest, error) {
 	iterator := storage.db.NewIterator(&util.Range{Start: TablePendingSwapsStart[:], Limit: TablePendingSwapsLimit[:]}, nil)
 	defer iterator.Release()
-
-	pendingSwaps := []swapper.Swap{}
+	pendingSwaps := []foundation.SwapRequest{}
 	for iterator.Next() {
 		value := iterator.Value()
-		swap := swapper.Swap{}
+		swap := foundation.SwapRequest{}
 		if err := json.Unmarshal(value, &swap); err != nil {
 			return pendingSwaps, err
 		}
 		pendingSwaps = append(pendingSwaps, swap)
 	}
-
 	return pendingSwaps, iterator.Error()
+}
+
+func (storage *storage) UpdateStatus(update foundation.StatusUpdate) error {
+	id, err := base64.StdEncoding.DecodeString(string(update.ID))
+	if err != nil {
+		return err
+	}
+	receiptBytes, err := storage.db.Get(append(TableSwaps[:], id...), nil)
+	if err != nil {
+		return err
+	}
+	status := foundation.SwapStatus{}
+	if err := json.Unmarshal(receiptBytes, &status); err != nil {
+		return err
+	}
+	status.Status = update.Status
+	updatedReceiptBytes, err := json.Marshal(status)
+	if err != nil {
+		return err
+	}
+	return storage.db.Put(append(TableSwaps[:], id...), updatedReceiptBytes, nil)
 }
