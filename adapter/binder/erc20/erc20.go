@@ -20,7 +20,7 @@ type erc20SwapContractBinder struct {
 	id             [32]byte
 	account        beth.Account
 	swap           foundation.Swap
-	logger         swapper.Logger
+	logger         foundation.Logger
 	swapperAddress common.Address
 	tokenAddress   common.Address
 	swapperBinder  *RenExAtomicSwapper
@@ -28,7 +28,7 @@ type erc20SwapContractBinder struct {
 }
 
 // NewERC20SwapContractBinder returns a new ERC20 Atom instance
-func NewERC20SwapContractBinder(account beth.Account, swap foundation.Swap, logger swapper.Logger) (swapper.Contract, error) {
+func NewERC20SwapContractBinder(account beth.Account, swap foundation.Swap, logger foundation.Logger) (swapper.Contract, error) {
 	tokenAddress, err := account.ReadAddress(fmt.Sprintf("%s", swap.Token.Name))
 	if err != nil {
 		return nil, err
