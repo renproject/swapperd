@@ -7,7 +7,7 @@ import (
 
 type ErrUnsupportedToken string
 
-func NewErrUnsupportedToken(token string) error {
+func NewErrUnsupportedToken(token TokenName) error {
 	return ErrUnsupportedToken(fmt.Sprintf("unsupported token: %s", token))
 }
 
@@ -15,26 +15,33 @@ func (err ErrUnsupportedToken) Error() string {
 	return string(err)
 }
 
-type Blockchain string
+type BlockchainName string
+type TokenName string
 
 var (
-	Bitcoin  = Blockchain("bitcoin")
-	Ethereum = Blockchain("ethereum")
+	Bitcoin  = BlockchainName("bitcoin")
+	Ethereum = BlockchainName("ethereum")
 )
 
 type Token struct {
-	Name       string     `json:"name"`
-	Blockchain Blockchain `json:"blockchain"`
+	Name       TokenName      `json:"name"`
+	Blockchain BlockchainName `json:"blockchain"`
 }
 
 func (token Token) String() string {
-	return token.Name
+	return string(token.Name)
 }
 
 var (
-	TokenBTC  = Token{"BTC", Bitcoin}
-	TokenETH  = Token{"ETH", Ethereum}
-	TokenWBTC = Token{"WBTC", Ethereum}
+	BTC  = TokenName("BTC")
+	ETH  = TokenName("ETH")
+	WBTC = TokenName("WBTC")
+)
+
+var (
+	TokenBTC  = Token{TokenName("BTC"), Bitcoin}
+	TokenETH  = Token{TokenName("ETH"), Ethereum}
+	TokenWBTC = Token{TokenName("WBTC"), Ethereum}
 )
 
 func PatchToken(token string) (Token, error) {
