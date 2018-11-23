@@ -3,10 +3,26 @@ package fund
 import (
 	"math/big"
 
-	"github.com/republicprotocol/beth-go"
-	"github.com/republicprotocol/libbtc-go"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/adapter/binder"
+	"github.com/republicprotocol/swapperd/core/request"
 )
+
+type Config struct {
+	Mnemonic string           `json:"mnemonic"`
+	Ethereum BlockchainConfig `json:"ethereum"`
+	Bitcoin  BlockchainConfig `json:"bitcoin"`
+}
+
+type BlockchainConfig struct {
+	Network Network  `json:"network"`
+	Address string   `json:"address"`
+	Tokens  []string `json:"tokens"`
+}
+
+type Network struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
 
 type Balance struct {
 	Address string
@@ -14,12 +30,8 @@ type Balance struct {
 }
 
 type Manager interface {
-	SupportedTokens() []foundation.Token
-	SupportedBlockchains() []Blockchain
-	Balances() (map[foundation.Token]Balance, error)
-	Withdraw(password string, token foundation.Token, to string, amount *big.Int) (string, error)
-	BitcoinAccount(password string) (libbtc.Account, error)
-	EthereumAccount(password string) (beth.Account, error)
+	request.FundManager
+	binder.Accounts
 }
 
 type manager struct {

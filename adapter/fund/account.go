@@ -2,7 +2,6 @@ package fund
 
 import (
 	"crypto/ecdsa"
-	"fmt"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
@@ -11,23 +10,6 @@ import (
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/libbtc-go"
 )
-
-type Config struct {
-	Mnemonic string           `json:"mnemonic"`
-	Ethereum BlockchainConfig `json:"ethereum"`
-	Bitcoin  BlockchainConfig `json:"bitcoin"`
-}
-
-type BlockchainConfig struct {
-	Network Network  `json:"network"`
-	Address string   `json:"address"`
-	Tokens  []string `json:"tokens"`
-}
-
-type Network struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
-}
 
 func (manager *manager) EthereumAccount(password string) (beth.Account, error) {
 	var derivationPath []uint32
@@ -81,12 +63,4 @@ func (manager *manager) loadKey(password string, path []uint32) (*ecdsa.PrivateK
 		return nil, err
 	}
 	return privKey.ToECDSA(), nil
-}
-
-func SwapperKey(token string) string {
-	return fmt.Sprintf("SWAPPER:%s", token)
-}
-
-func ERC20Key(token string) string {
-	return fmt.Sprintf("ERC20:%s", token)
 }
