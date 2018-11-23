@@ -22,7 +22,7 @@ func usage(errmsg string) {
 func main() {
 	const svcName = "swapperd"
 	const network = "testnet"
-	const port = "7777"
+	const port = "7927"
 
 	isIntSess, err := svc.IsAnInteractiveSession()
 	if err != nil {

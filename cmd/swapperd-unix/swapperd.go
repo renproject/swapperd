@@ -10,7 +10,7 @@ import (
 
 func main() {
 	network := flag.String("network", "testnet", "Which network to use")
-	port := flag.String("port", "7777", "Which network to use")
+	port := flag.String("port", "7927", "Which network to use")
 	flag.Parse()
 
 	done := make(chan struct{})
