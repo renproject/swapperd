@@ -1,4 +1,4 @@
-package listener
+package server
 
 import (
 	"encoding/json"
@@ -12,19 +12,19 @@ import (
 	"github.com/rs/cors"
 )
 
-type httpRequestListener struct {
+type httpServer struct {
 	manager      request.FundManager
 	logger       foundation.Logger
 	passwordHash [32]byte
 	port         string
 }
 
-func NewHttpListener(manager request.FundManager, logger foundation.Logger, passwordHash [32]byte, port string) request.Listener {
-	return &httpRequestListener{manager, logger, passwordHash, port}
+func NewHttpServer(manager request.FundManager, logger foundation.Logger, passwordHash [32]byte, port string) request.Listener {
+	return &httpServer{manager, logger, passwordHash, port}
 }
 
 // NewHttpListener creates a new http listener
-func (listener *httpRequestListener) Run(doneCh <-chan struct{}, swapRequests chan<- foundation.SwapRequest, statusQueries chan<- foundation.StatusQuery) {
+func (listener *httpServer) Run(doneCh <-chan struct{}, swapRequests chan<- foundation.SwapRequest, statusQueries chan<- foundation.StatusQuery) {
 	reqHandler := request.NewHandler(listener.passwordHash, listener.manager, swapRequests, statusQueries)
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", postSwapsHandler(reqHandler)).Methods("POST")
