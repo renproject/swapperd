@@ -1,4 +1,4 @@
-package storage
+package db
 
 import (
 	"encoding/base64"
@@ -21,17 +21,17 @@ var (
 	TablePendingSwapsLimit = [40]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 )
 
-type storage struct {
+type db struct {
 	db *leveldb.DB
 }
 
 func New(db *leveldb.DB) router.Storage {
-	return &storage{
+	return &db{
 		db: db,
 	}
 }
 
-func (storage *storage) InsertSwap(swap foundation.SwapRequest) error {
+func (db *db) InsertSwap(swap foundation.SwapRequest) error {
 	pendingSwapData, err := json.Marshal(swap)
 	if err != nil {
 		return err
@@ -44,26 +44,26 @@ func (storage *storage) InsertSwap(swap foundation.SwapRequest) error {
 	if err != nil {
 		return err
 	}
-	if err := storage.db.Put(append(TablePendingSwaps[:], id...), pendingSwapData, nil); err != nil {
+	if err := db.db.Put(append(TablePendingSwaps[:], id...), pendingSwapData, nil); err != nil {
 		return err
 	}
-	return storage.db.Put(append(TableSwaps[:], id...), swapData, nil)
+	return db.db.Put(append(TableSwaps[:], id...), swapData, nil)
 }
 
-func (storage *storage) DeletePendingSwap(swapID foundation.SwapID) error {
+func (db *db) DeletePendingSwap(swapID foundation.SwapID) error {
 	id, err := base64.StdEncoding.DecodeString(string(swapID))
 	if err != nil {
 		return err
 	}
-	return storage.db.Delete(append(TablePendingSwaps[:], id...), nil)
+	return db.db.Delete(append(TablePendingSwaps[:], id...), nil)
 }
 
-func (storage *storage) PendingSwap(swapID foundation.SwapID) (foundation.SwapRequest, error) {
+func (db *db) PendingSwap(swapID foundation.SwapID) (foundation.SwapRequest, error) {
 	id, err := base64.StdEncoding.DecodeString(string(swapID))
 	if err != nil {
 		return foundation.SwapRequest{}, err
 	}
-	swapBlobBytes, err := storage.db.Get(append(TablePendingSwaps[:], id...), nil)
+	swapBlobBytes, err := db.db.Get(append(TablePendingSwaps[:], id...), nil)
 	if err != nil {
 		return foundation.SwapRequest{}, err
 	}
@@ -74,8 +74,8 @@ func (storage *storage) PendingSwap(swapID foundation.SwapID) (foundation.SwapRe
 	return swap, nil
 }
 
-func (storage *storage) Swaps() ([]foundation.SwapStatus, error) {
-	iterator := storage.db.NewIterator(&util.Range{Start: TableSwapsStart[:], Limit: TableSwapsLimit[:]}, nil)
+func (db *db) Swaps() ([]foundation.SwapStatus, error) {
+	iterator := db.db.NewIterator(&util.Range{Start: TableSwapsStart[:], Limit: TableSwapsLimit[:]}, nil)
 	defer iterator.Release()
 	swaps := []foundation.SwapStatus{}
 	for iterator.Next() {
@@ -89,8 +89,8 @@ func (storage *storage) Swaps() ([]foundation.SwapStatus, error) {
 	return swaps, iterator.Error()
 }
 
-func (storage *storage) PendingSwaps() ([]foundation.SwapRequest, error) {
-	iterator := storage.db.NewIterator(&util.Range{Start: TablePendingSwapsStart[:], Limit: TablePendingSwapsLimit[:]}, nil)
+func (db *db) PendingSwaps() ([]foundation.SwapRequest, error) {
+	iterator := db.db.NewIterator(&util.Range{Start: TablePendingSwapsStart[:], Limit: TablePendingSwapsLimit[:]}, nil)
 	defer iterator.Release()
 	pendingSwaps := []foundation.SwapRequest{}
 	for iterator.Next() {
@@ -104,12 +104,12 @@ func (storage *storage) PendingSwaps() ([]foundation.SwapRequest, error) {
 	return pendingSwaps, iterator.Error()
 }
 
-func (storage *storage) UpdateStatus(update foundation.StatusUpdate) error {
+func (db *db) UpdateStatus(update foundation.StatusUpdate) error {
 	id, err := base64.StdEncoding.DecodeString(string(update.ID))
 	if err != nil {
 		return err
 	}
-	receiptBytes, err := storage.db.Get(append(TableSwaps[:], id...), nil)
+	receiptBytes, err := db.db.Get(append(TableSwaps[:], id...), nil)
 	if err != nil {
 		return err
 	}
@@ -122,5 +122,5 @@ func (storage *storage) UpdateStatus(update foundation.StatusUpdate) error {
 	if err != nil {
 		return err
 	}
-	return storage.db.Put(append(TableSwaps[:], id...), updatedReceiptBytes, nil)
+	return db.db.Put(append(TableSwaps[:], id...), updatedReceiptBytes, nil)
 }
