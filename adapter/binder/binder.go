@@ -5,28 +5,22 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/republicprotocol/beth-go"
-	"github.com/republicprotocol/libbtc-go"
 	"github.com/republicprotocol/swapperd/adapter/binder/btc"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
 	"github.com/republicprotocol/swapperd/adapter/binder/eth"
+	"github.com/republicprotocol/swapperd/adapter/fund"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-type Accounts interface {
-	EthereumAccount(password string) (beth.Account, error)
-	BitcoinAccount(password string) (libbtc.Account, error)
-}
-
 type builder struct {
-	Accounts
+	fund.Manager
 	foundation.Logger
 }
 
-func NewBuilder(accounts Accounts, logger foundation.Logger) swapper.ContractBuilder {
+func NewBuilder(manager fund.Manager, logger foundation.Logger) swapper.ContractBuilder {
 	return &builder{
-		accounts,
+		manager,
 		logger,
 	}
 }
