@@ -1,4 +1,4 @@
-package request
+package server
 
 import "github.com/republicprotocol/swapperd/foundation"
 
