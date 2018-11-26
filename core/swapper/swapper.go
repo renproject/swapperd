@@ -2,6 +2,7 @@ package swapper
 
 import (
 	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/sirupsen/logrus"
 )
 
 type Swapper interface {
@@ -27,10 +28,10 @@ type DelayCallback interface {
 type swapper struct {
 	callback DelayCallback
 	builder  ContractBuilder
-	logger   foundation.Logger
+	logger   logrus.FieldLogger
 }
 
-func New(callback DelayCallback, builder ContractBuilder, logger foundation.Logger) Swapper {
+func New(callback DelayCallback, builder ContractBuilder, logger logrus.FieldLogger) Swapper {
 	return &swapper{
 		callback: callback,
 		builder:  builder,
@@ -47,16 +48,17 @@ func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan foundation.SwapRe
 			if !ok {
 				return
 			}
+			logger := swapper.logger.WithField("SwapID", swap.ID)
 			native, foreign, err := swapper.builder.BuildSwapContracts(swap)
 			if err != nil {
-				swapper.logger.LogError(swap.ID, err)
+				logger.Error(err)
 				results <- foundation.NewSwapResult(swap.ID, false)
 				continue
 			}
 			if swap.Delay {
 				filledSwap, err := swapper.callback.DelayCallback(swap.SwapBlob)
 				if err != nil {
-					swapper.logger.LogError(swap.ID, err)
+					logger.Error(err)
 					results <- foundation.NewSwapResult(swap.ID, false)
 					continue
 				}
@@ -72,8 +74,9 @@ func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan foundation.SwapRe
 }
 
 func (swapper *swapper) initiate(results chan<- foundation.SwapResult, updates chan<- foundation.StatusUpdate, native, foreign Contract, swap foundation.SwapRequest) {
+	logger := swapper.logger.WithField("SwapID", swap.ID)
 	if err := native.Initiate(); err != nil {
-		swapper.logger.LogError(swap.ID, err)
+		logger.Error(err)
 		results <- foundation.NewSwapResult(swap.ID, false)
 		return
 	}
@@ -81,7 +84,7 @@ func (swapper *swapper) initiate(results chan<- foundation.SwapResult, updates c
 	if err := foreign.Audit(); err != nil {
 		updates <- foundation.NewStatusUpdate(swap.ID, foundation.AuditFailed)
 		if err := native.Refund(); err != nil {
-			swapper.logger.LogError(swap.ID, err)
+			logger.Error(err)
 			results <- foundation.NewSwapResult(swap.ID, false)
 			return
 		}
@@ -91,7 +94,7 @@ func (swapper *swapper) initiate(results chan<- foundation.SwapResult, updates c
 	}
 	updates <- foundation.NewStatusUpdate(swap.ID, foundation.Audited)
 	if err := foreign.Redeem(swap.Secret); err != nil {
-		swapper.logger.LogError(swap.ID, err)
+		logger.Error(err)
 		results <- foundation.NewSwapResult(swap.ID, false)
 		return
 	}
@@ -100,6 +103,7 @@ func (swapper *swapper) initiate(results chan<- foundation.SwapResult, updates c
 }
 
 func (swapper *swapper) respond(results chan<- foundation.SwapResult, updates chan<- foundation.StatusUpdate, native, foreign Contract, swap foundation.SwapRequest) {
+	logger := swapper.logger.WithField("SwapID", swap.ID)
 	if err := foreign.Audit(); err != nil {
 		updates <- foundation.NewStatusUpdate(swap.ID, foundation.AuditFailed)
 		results <- foundation.NewSwapResult(swap.ID, true)
@@ -107,7 +111,7 @@ func (swapper *swapper) respond(results chan<- foundation.SwapResult, updates ch
 	}
 	updates <- foundation.NewStatusUpdate(swap.ID, foundation.Audited)
 	if err := native.Initiate(); err != nil {
-		swapper.logger.LogError(swap.ID, err)
+		logger.Error(err)
 		results <- foundation.NewSwapResult(swap.ID, false)
 		return
 	}
@@ -115,7 +119,7 @@ func (swapper *swapper) respond(results chan<- foundation.SwapResult, updates ch
 	secret, err := native.AuditSecret()
 	if err != nil {
 		if err := native.Refund(); err != nil {
-			swapper.logger.LogError(swap.ID, err)
+			logger.Error(err)
 			results <- foundation.NewSwapResult(swap.ID, false)
 			return
 		}
@@ -124,7 +128,7 @@ func (swapper *swapper) respond(results chan<- foundation.SwapResult, updates ch
 		return
 	}
 	if err := foreign.Redeem(secret); err != nil {
-		swapper.logger.LogError(swap.ID, err)
+		logger.Error(err)
 		results <- foundation.NewSwapResult(swap.ID, false)
 		return
 	}
