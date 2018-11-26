@@ -1,12 +1,11 @@
 package swapperd
 
 import (
-	"github.com/republicprotocol/swapperd/core/router"
-
 	"github.com/republicprotocol/swapperd/adapter/binder"
 	"github.com/republicprotocol/swapperd/adapter/callback"
-	"github.com/republicprotocol/swapperd/adapter/listener"
-	"github.com/republicprotocol/swapperd/adapter/storage"
+	"github.com/republicprotocol/swapperd/adapter/db"
+	"github.com/republicprotocol/swapperd/adapter/router"
+	"github.com/republicprotocol/swapperd/adapter/server"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/driver/keystore"
@@ -35,9 +34,9 @@ func Run(doneCh <-chan struct{}, network, port string) {
 	router := router.New(
 		swapper.New(callback.New(), binder.NewBuilder(manager, logger), logger),
 		status.New(),
-		storage.New(ldb),
+		db.New(ldb),
 		logger,
-		listener.NewHttpListener(manager, logger, passwordHash, port),
+		server.NewHttpServer(manager, logger, passwordHash, port),
 	)
 
 	go router.Run(doneCh)
