@@ -1,12 +1,11 @@
 package swapperd
 
 import (
-	"github.com/republicprotocol/swapperd/core/router"
-
 	"github.com/republicprotocol/swapperd/adapter/binder"
 	"github.com/republicprotocol/swapperd/adapter/callback"
 	"github.com/republicprotocol/swapperd/adapter/listener"
 	"github.com/republicprotocol/swapperd/adapter/storage"
+	"github.com/republicprotocol/swapperd/core/router"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/driver/keystore"
