@@ -13,18 +13,19 @@ import (
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/sirupsen/logrus"
 )
 
 type ethSwapContractBinder struct {
 	id      [32]byte
 	account beth.Account
 	swap    foundation.Swap
-	logger  foundation.Logger
+	logger  logrus.FieldLogger
 	binder  *RenExAtomicSwapper
 }
 
 // NewETHSwapContractBinder returns a new Ethereum RequestAtom instance
-func NewETHSwapContractBinder(account beth.Account, swap foundation.Swap, logger foundation.Logger) (swapper.Contract, error) {
+func NewETHSwapContractBinder(account beth.Account, swap foundation.Swap, logger logrus.FieldLogger) (swapper.Contract, error) {
 	swapperAddr, err := account.ReadAddress(fmt.Sprintf("Swapperd%s", swap.Token.Name))
 	if err != nil {
 		return nil, err
@@ -40,7 +41,13 @@ func NewETHSwapContractBinder(account beth.Account, swap foundation.Swap, logger
 		return nil, err
 	}
 
-	logger.LogInfo(swap.ID, fmt.Sprintf("Ethereum Atomic Swap ID: %s", base64.StdEncoding.EncodeToString(id[:])))
+	fields := logrus.Fields{}
+	fields["SwapID"] = swap.ID
+	fields["ContractID"] = base64.StdEncoding.EncodeToString(id[:])
+	fields["Token"] = swap.Token.Name
+	logger = logger.WithFields(fields)
+
+	logger.Info(swap.ID, fmt.Sprintf("Ethereum Atomic Swap ID: %s", base64.StdEncoding.EncodeToString(id[:])))
 	return &ethSwapContractBinder{
 		account: account,
 		binder:  contract,
@@ -52,7 +59,7 @@ func NewETHSwapContractBinder(account beth.Account, swap foundation.Swap, logger
 
 // Initiate a new Atom swap by calling a function on ethereum
 func (atom *ethSwapContractBinder) Initiate() error {
-	atom.logger.LogInfo(atom.swap.ID, "Initiating on Ethereum blockchain")
+	atom.logger.Info("Initiating")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
@@ -74,8 +81,8 @@ func (atom *ethSwapContractBinder) Initiate() error {
 				return tx, err
 			}
 			tops.Value = big.NewInt(0)
-			msg, _ := atom.account.FormatTransactionView("Initiated the atomic swap on Ethereum blockchain", tx.Hash().String())
-			atom.logger.LogInfo(atom.swap.ID, msg)
+			msg, _ := atom.account.FormatTransactionView("Initiated the atomic swap", tx.Hash().String())
+			atom.logger.Info(msg)
 			return tx, nil
 		},
 		func() bool {
@@ -94,7 +101,7 @@ func (atom *ethSwapContractBinder) Initiate() error {
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *ethSwapContractBinder) Refund() error {
-	atom.logger.LogInfo(atom.swap.ID, "Refunding the atomic swap on Ethereum blockchain")
+	atom.logger.Info("Refunding the atomic swap")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
@@ -113,8 +120,8 @@ func (atom *ethSwapContractBinder) Refund() error {
 			if err != nil {
 				return nil, err
 			}
-			msg, _ := atom.account.FormatTransactionView("Refunded the atomic swap on Ethereum blockchain", tx.Hash().String())
-			atom.logger.LogInfo(atom.swap.ID, msg)
+			msg, _ := atom.account.FormatTransactionView("Refunded the atomic swap", tx.Hash().String())
+			atom.logger.Info(msg)
 			return tx, nil
 		},
 		func() bool {
@@ -134,16 +141,17 @@ func (atom *ethSwapContractBinder) Refund() error {
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
 func (atom *ethSwapContractBinder) AuditSecret() ([32]byte, error) {
 	for {
-		atom.logger.LogInfo(atom.swap.ID, "Auditing secret on ethereum blockchain")
+		atom.logger.Info("Auditing secret on ethereum blockchain")
 		redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
 		if err != nil {
-			atom.logger.LogError(atom.swap.ID, err)
+			atom.logger.Error(err)
 			return [32]byte{}, err
 		}
 		if !redeemable {
 			break
 		}
 		if time.Now().Unix() > atom.swap.TimeLock {
+			atom.logger.Error(fmt.Errorf("Timed Out"))
 			return [32]byte{}, fmt.Errorf("Timed Out")
 		}
 		time.Sleep(15 * time.Second)
@@ -152,16 +160,17 @@ func (atom *ethSwapContractBinder) AuditSecret() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Audit success on ethereum blockchain secret=%s", base64.StdEncoding.EncodeToString(secret[:])))
+	atom.logger.Info(fmt.Sprintf("Audit success on ethereum blockchain secret=%s", base64.StdEncoding.EncodeToString(secret[:])))
 	return secret, nil
 }
 
 // Audit an Atom swap by calling a function on ethereum
 func (atom *ethSwapContractBinder) Audit() error {
-	atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Waiting for initiation on ethereum blockchain"))
+	atom.logger.Info(fmt.Sprintf("Waiting for initiation on ethereum blockchain"))
 	for {
 		initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
 		if err != nil {
+			atom.logger.Error(err)
 			return err
 		}
 		if !initiatable {
@@ -171,18 +180,20 @@ func (atom *ethSwapContractBinder) Audit() error {
 	}
 	auditReport, err := atom.binder.Audit(&bind.CallOpts{}, atom.id)
 	if err != nil {
+		atom.logger.Error(err)
 		return err
 	}
 	if auditReport.Value.Cmp(atom.swap.Value) != 0 {
+		atom.logger.Error(fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.swap.Value, auditReport.Value))
 		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.swap.Value, auditReport.Value)
 	}
-	atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Audit successful on Ethereum blockchain"))
+	atom.logger.Info(fmt.Sprintf("Audit successful"))
 	return nil
 }
 
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
-	atom.logger.LogInfo(atom.swap.ID, "Redeeming the atomic swap on Ethereum blockchain")
+	atom.logger.Info("Redeeming the atomic swap")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
@@ -202,7 +213,7 @@ func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 				return nil, err
 			}
 			msg, _ := atom.account.FormatTransactionView("Redeemed the atomic swap on ERC20 blockchain", tx.Hash().String())
-			atom.logger.LogInfo(atom.swap.ID, msg)
+			atom.logger.Info(msg)
 			return tx, nil
 		},
 		func() bool {

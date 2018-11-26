@@ -5,29 +5,23 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/republicprotocol/beth-go"
-	"github.com/republicprotocol/libbtc-go"
-
 	"github.com/republicprotocol/swapperd/adapter/binder/btc"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
 	"github.com/republicprotocol/swapperd/adapter/binder/eth"
+	"github.com/republicprotocol/swapperd/adapter/fund"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/sirupsen/logrus"
 )
 
-type Accounts interface {
-	EthereumAccount(password string) (beth.Account, error)
-	BitcoinAccount(password string) (libbtc.Account, error)
-}
-
 type builder struct {
-	Accounts
-	foundation.Logger
+	fund.Manager
+	logrus.FieldLogger
 }
 
-func NewBuilder(accounts Accounts, logger foundation.Logger) swapper.ContractBuilder {
+func NewBuilder(manager fund.Manager, logger logrus.FieldLogger) swapper.ContractBuilder {
 	return &builder{
-		accounts,
+		manager,
 		logger,
 	}
 }
@@ -55,19 +49,19 @@ func (builder *builder) buildBinder(swap foundation.Swap, password string) (swap
 		if err != nil {
 			return nil, err
 		}
-		return btc.NewBTCSwapContractBinder(btcAccount, swap, builder.Logger)
+		return btc.NewBTCSwapContractBinder(btcAccount, swap, builder.FieldLogger)
 	case foundation.TokenETH:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
 		}
-		return eth.NewETHSwapContractBinder(ethAccount, swap, builder.Logger)
+		return eth.NewETHSwapContractBinder(ethAccount, swap, builder.FieldLogger)
 	case foundation.TokenWBTC:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
 		}
-		return erc20.NewERC20SwapContractBinder(ethAccount, swap, builder.Logger)
+		return erc20.NewERC20SwapContractBinder(ethAccount, swap, builder.FieldLogger)
 	default:
 		return nil, foundation.NewErrUnsupportedToken(swap.Token.Name)
 	}

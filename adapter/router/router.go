@@ -3,12 +3,11 @@ package router
 import (
 	"time"
 
+	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
-
-	"github.com/republicprotocol/co-go"
-	"github.com/republicprotocol/swapperd/core/request"
 	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/sirupsen/logrus"
 )
 
 type Storage interface {
@@ -20,6 +19,10 @@ type Storage interface {
 	Swaps() ([]foundation.SwapStatus, error)
 }
 
+type Server interface {
+	Run(done <-chan struct{}, swapRequests chan<- foundation.SwapRequest, statusQueries chan<- foundation.StatusQuery)
+}
+
 type Router interface {
 	Run(done <-chan struct{})
 }
@@ -28,12 +31,12 @@ type router struct {
 	swapper    swapper.Swapper
 	statusBook status.Book
 	storage    Storage
-	logger     foundation.Logger
-	listeners  []request.Listener
+	logger     logrus.FieldLogger
+	servers    []Server
 }
 
-func New(swapper swapper.Swapper, statusBook status.Book, storage Storage, logger foundation.Logger, listeners ...request.Listener) Router {
-	return &router{swapper, statusBook, storage, logger, listeners}
+func New(swapper swapper.Swapper, statusBook status.Book, storage Storage, logger logrus.FieldLogger, servers ...Server) Router {
+	return &router{swapper, statusBook, storage, logger, servers}
 }
 
 func (router *router) Run(done <-chan struct{}) {
@@ -66,8 +69,8 @@ func (router *router) Run(done <-chan struct{}) {
 	// starting the swapperd's router
 	co.ParBegin(
 		func() {
-			co.ForAll(router.listeners, func(i int) {
-				router.listeners[i].Run(done, swapRequests, statusQueries)
+			co.ForAll(router.servers, func(i int) {
+				router.servers[i].Run(done, swapRequests, statusQueries)
 			})
 		},
 		func() {
@@ -83,27 +86,31 @@ func (router *router) Run(done <-chan struct{}) {
 				case <-done:
 					return
 				case swap := <-swapRequests:
+					logger := router.logger.WithField("SwapID", swap.ID)
 					router.storage.InsertSwap(swap)
 					statuses <- foundation.NewSwapStatus(swap.SwapBlob)
-					router.logger.LogInfo(swap.ID, "adding to the swap queue")
+					logger.Info("adding to the swap queue")
 					swaps <- swap
 				case update := <-updateRequests:
+					logger := router.logger.WithField("SwapID", update.ID)
 					if err := router.storage.UpdateStatus(update); err != nil {
-						router.logger.LogError(update.ID, err)
+						logger.Error(err)
+						continue
 					}
 					updates <- update
 				case result := <-results:
+					logger := router.logger.WithField("SwapID", result.ID)
 					if result.Success {
 						if err := router.storage.DeletePendingSwap(result.ID); err != nil {
-							router.logger.LogError(result.ID, err)
+							logger.Error(err)
 							continue
 						}
-						router.logger.LogInfo(result.ID, "removed from pending swaps")
+						logger.Info("removed from pending swaps")
 						continue
 					}
 					swap, err := router.storage.PendingSwap(result.ID)
 					if err != nil {
-						router.logger.LogError(result.ID, err)
+						logger.Error(err)
 						continue
 					}
 					go func() {

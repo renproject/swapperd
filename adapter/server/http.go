@@ -1,4 +1,4 @@
-package listener
+package server
 
 import (
 	"encoding/json"
@@ -7,25 +7,27 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/republicprotocol/swapperd/core/request"
+	"github.com/republicprotocol/swapperd/adapter/fund"
+	"github.com/republicprotocol/swapperd/adapter/router"
 	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/rs/cors"
+	"github.com/sirupsen/logrus"
 )
 
-type httpRequestListener struct {
-	manager      request.FundManager
-	logger       foundation.Logger
+type httpServer struct {
+	manager      fund.Manager
+	logger       logrus.FieldLogger
 	passwordHash [32]byte
 	port         string
 }
 
-func NewHttpListener(manager request.FundManager, logger foundation.Logger, passwordHash [32]byte, port string) request.Listener {
-	return &httpRequestListener{manager, logger, passwordHash, port}
+func NewHttpServer(manager fund.Manager, logger logrus.FieldLogger, passwordHash [32]byte, port string) router.Server {
+	return &httpServer{manager, logger, passwordHash, port}
 }
 
 // NewHttpListener creates a new http listener
-func (listener *httpRequestListener) Run(doneCh <-chan struct{}, swapRequests chan<- foundation.SwapRequest, statusQueries chan<- foundation.StatusQuery) {
-	reqHandler := request.NewHandler(listener.passwordHash, listener.manager, swapRequests, statusQueries)
+func (listener *httpServer) Run(doneCh <-chan struct{}, swapRequests chan<- foundation.SwapRequest, statusQueries chan<- foundation.StatusQuery) {
+	reqHandler := NewHandler(listener.passwordHash, listener.manager, swapRequests, statusQueries)
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", postSwapsHandler(reqHandler)).Methods("POST")
 	r.HandleFunc("/swaps", getSwapsHandler(reqHandler)).Methods("GET")
@@ -48,7 +50,7 @@ func (listener *httpRequestListener) Run(doneCh <-chan struct{}, swapRequests ch
 			panic(err)
 		}
 	}()
-	listener.logger.GlobalLogInfo(fmt.Sprintf("listening for swaps on http://127.0.0.1:%s", listener.port))
+	listener.logger.Info(fmt.Sprintf("listening for swaps on http://127.0.0.1:%s", listener.port))
 	<-doneCh
 	httpListener.Close()
 }
@@ -75,7 +77,7 @@ func recoveryHandler(h http.Handler) http.Handler {
 
 // getInfoHandler handles the get info request, it returns the basic information
 // of the swapper such as the version, supported tokens addresses.
-func getInfoHandler(reqHandler request.Handler) http.HandlerFunc {
+func getInfoHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := json.NewEncoder(w).Encode(reqHandler.GetInfo()); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode info response: %v", err))
@@ -86,7 +88,7 @@ func getInfoHandler(reqHandler request.Handler) http.HandlerFunc {
 
 // getSwapsHandler handles the get swaps request, it returns the status of all
 // the existing swaps on the swapper.
-func getSwapsHandler(reqHandler request.Handler) http.HandlerFunc {
+func getSwapsHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := json.NewEncoder(w).Encode(reqHandler.GetSwaps()); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
@@ -97,7 +99,7 @@ func getSwapsHandler(reqHandler request.Handler) http.HandlerFunc {
 
 // postSwapsHandler handles the post swaps request, it fills incomplete
 // information and starts the Atomic Swap.
-func postSwapsHandler(reqHandler request.Handler) http.HandlerFunc {
+func postSwapsHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, password, ok := r.BasicAuth()
 		if !ok {
@@ -105,7 +107,7 @@ func postSwapsHandler(reqHandler request.Handler) http.HandlerFunc {
 			return
 		}
 
-		swapReq := request.PostSwapRequest{}
+		swapReq := PostSwapRequest{}
 		if err := json.NewDecoder(r.Body).Decode(&swapReq); err != nil {
 			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode swap request: %v", err))
 			return
@@ -126,8 +128,8 @@ func postSwapsHandler(reqHandler request.Handler) http.HandlerFunc {
 	}
 }
 
-// postTransferHandler handles the post withdrawal request.
-func postTransfersHandler(reqHandler request.Handler) http.HandlerFunc {
+// postTransferHandler handles the post withdrawal
+func postTransfersHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, password, ok := r.BasicAuth()
 		if !ok {
@@ -135,7 +137,7 @@ func postTransfersHandler(reqHandler request.Handler) http.HandlerFunc {
 			return
 		}
 
-		transferReq := request.PostTransfersRequest{}
+		transferReq := PostTransfersRequest{}
 		if err := json.NewDecoder(r.Body).Decode(&transferReq); err != nil {
 			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode transfers request: %v", err))
 			return
@@ -158,7 +160,7 @@ func postTransfersHandler(reqHandler request.Handler) http.HandlerFunc {
 
 // getBalancesHandler handles the get balances request, and returns the balances
 // of the accounts held by the swapper.
-func getBalancesHandler(reqHandler request.Handler) http.HandlerFunc {
+func getBalancesHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		balancesRes, err := reqHandler.GetBalances()
 		if err != nil {

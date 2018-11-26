@@ -37,7 +37,7 @@ func (monitor *monitor) set(status foundation.SwapStatus) {
 func (monitor *monitor) update(status foundation.StatusUpdate) {
 	monitor.mu.Lock()
 	defer monitor.mu.Unlock()
-	status := monitor.statuses[status.ID]
-	status.Status = status.Status
-	monitor.statuses[status.ID] = status
+	statusObj := monitor.statuses[status.ID]
+	statusObj.Status = status.Status
+	monitor.statuses[status.ID] = statusObj
 }

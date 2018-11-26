@@ -7,7 +7,6 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
-
 	"github.com/republicprotocol/swapperd/foundation"
 )
 

@@ -1,4 +1,4 @@
-package listener_test
+package server_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestListener(t *testing.T) {
+func TestServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Listener Suite")
+	RunSpecs(t, "Server Suite")
 }

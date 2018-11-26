@@ -1,4 +1,4 @@
-package request
+package server
 
 import (
 	"crypto/rand"
@@ -9,13 +9,14 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/republicprotocol/swapperd/adapter/fund"
 	"github.com/republicprotocol/swapperd/foundation"
 	"golang.org/x/crypto/sha3"
 )
 
 type handler struct {
 	passwordHash [32]byte
-	fundManager  FundManager
+	fundManager  fund.Manager
 	swaps        chan<- foundation.SwapRequest
 	statuses     chan<- foundation.StatusQuery
 }
@@ -29,16 +30,7 @@ type Handler interface {
 	PostTransfers(PostTransfersRequest) (PostTransfersResponse, error)
 }
 
-type FundManager interface {
-	SupportedTokens() []foundation.Token
-	SupportedBlockchains() []foundation.Blockchain
-	Balances() (map[foundation.TokenName]foundation.Balance, error)
-	Transfer(password string, token foundation.Token, to string, amount *big.Int) (string, error)
-	VerifyAddress(blockchain foundation.BlockchainName, address string) error
-	VerifyBalance(token foundation.Token, balance *big.Int) error
-}
-
-func NewHandler(passwordHash [32]byte, fundManager FundManager, swaps chan<- foundation.SwapRequest, statuses chan<- foundation.StatusQuery) Handler {
+func NewHandler(passwordHash [32]byte, fundManager fund.Manager, swaps chan<- foundation.SwapRequest, statuses chan<- foundation.StatusQuery) Handler {
 	return &handler{passwordHash, fundManager, swaps, statuses}
 }
 
