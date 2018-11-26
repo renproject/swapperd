@@ -11,14 +11,15 @@ import (
 	"github.com/republicprotocol/swapperd/adapter/fund"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/sirupsen/logrus"
 )
 
 type builder struct {
 	fund.Manager
-	foundation.Logger
+	logrus.FieldLogger
 }
 
-func NewBuilder(manager fund.Manager, logger foundation.Logger) swapper.ContractBuilder {
+func NewBuilder(manager fund.Manager, logger logrus.FieldLogger) swapper.ContractBuilder {
 	return &builder{
 		manager,
 		logger,
@@ -48,19 +49,19 @@ func (builder *builder) buildBinder(swap foundation.Swap, password string) (swap
 		if err != nil {
 			return nil, err
 		}
-		return btc.NewBTCSwapContractBinder(btcAccount, swap, builder.Logger)
+		return btc.NewBTCSwapContractBinder(btcAccount, swap, builder.FieldLogger)
 	case foundation.TokenETH:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
 		}
-		return eth.NewETHSwapContractBinder(ethAccount, swap, builder.Logger)
+		return eth.NewETHSwapContractBinder(ethAccount, swap, builder.FieldLogger)
 	case foundation.TokenWBTC:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
 		}
-		return erc20.NewERC20SwapContractBinder(ethAccount, swap, builder.Logger)
+		return erc20.NewERC20SwapContractBinder(ethAccount, swap, builder.FieldLogger)
 	default:
 		return nil, foundation.NewErrUnsupportedToken(swap.Token.Name)
 	}
