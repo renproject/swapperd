@@ -10,7 +10,7 @@ type MockContractBuilder struct {
 }
 
 func (builder MockContractBuilder)BuildSwapContracts(swap foundation.SwapRequest) (swapper.Contract, swapper.Contract, error){
-
+	// cool, which means I can pick cherrys if I got fired by RP
 }
 
 type MockContract struct {

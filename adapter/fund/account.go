@@ -5,10 +5,9 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/tyler-smith/go-bip39"
-
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/libbtc-go"
+	"github.com/tyler-smith/go-bip39"
 )
 
 func (manager *manager) EthereumAccount(password string) (beth.Account, error) {

@@ -6,6 +6,10 @@ import (
 )
 
 var _ = Describe("swapper", func() {
+	init := func() {
+
+	}
+
 	Context("", func() {
 		It("", func() {
 
