@@ -4,11 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/republicprotocol/swapperd/adapter/router"
+	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
-
-	"github.com/republicprotocol/swapperd/core/router"
-	"github.com/republicprotocol/swapperd/foundation"
 )
 
 var (
@@ -21,17 +20,17 @@ var (
 	TablePendingSwapsLimit = [40]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 )
 
-type db struct {
+type dbStorage struct {
 	db *leveldb.DB
 }
 
 func New(db *leveldb.DB) router.Storage {
-	return &db{
+	return &dbStorage{
 		db: db,
 	}
 }
 
-func (db *db) InsertSwap(swap foundation.SwapRequest) error {
+func (db *dbStorage) InsertSwap(swap foundation.SwapRequest) error {
 	pendingSwapData, err := json.Marshal(swap)
 	if err != nil {
 		return err
@@ -50,7 +49,7 @@ func (db *db) InsertSwap(swap foundation.SwapRequest) error {
 	return db.db.Put(append(TableSwaps[:], id...), swapData, nil)
 }
 
-func (db *db) DeletePendingSwap(swapID foundation.SwapID) error {
+func (db *dbStorage) DeletePendingSwap(swapID foundation.SwapID) error {
 	id, err := base64.StdEncoding.DecodeString(string(swapID))
 	if err != nil {
 		return err
@@ -58,7 +57,7 @@ func (db *db) DeletePendingSwap(swapID foundation.SwapID) error {
 	return db.db.Delete(append(TablePendingSwaps[:], id...), nil)
 }
 
-func (db *db) PendingSwap(swapID foundation.SwapID) (foundation.SwapRequest, error) {
+func (db *dbStorage) PendingSwap(swapID foundation.SwapID) (foundation.SwapRequest, error) {
 	id, err := base64.StdEncoding.DecodeString(string(swapID))
 	if err != nil {
 		return foundation.SwapRequest{}, err
@@ -74,7 +73,7 @@ func (db *db) PendingSwap(swapID foundation.SwapID) (foundation.SwapRequest, err
 	return swap, nil
 }
 
-func (db *db) Swaps() ([]foundation.SwapStatus, error) {
+func (db *dbStorage) Swaps() ([]foundation.SwapStatus, error) {
 	iterator := db.db.NewIterator(&util.Range{Start: TableSwapsStart[:], Limit: TableSwapsLimit[:]}, nil)
 	defer iterator.Release()
 	swaps := []foundation.SwapStatus{}
@@ -89,7 +88,7 @@ func (db *db) Swaps() ([]foundation.SwapStatus, error) {
 	return swaps, iterator.Error()
 }
 
-func (db *db) PendingSwaps() ([]foundation.SwapRequest, error) {
+func (db *dbStorage) PendingSwaps() ([]foundation.SwapRequest, error) {
 	iterator := db.db.NewIterator(&util.Range{Start: TablePendingSwapsStart[:], Limit: TablePendingSwapsLimit[:]}, nil)
 	defer iterator.Release()
 	pendingSwaps := []foundation.SwapRequest{}
@@ -104,7 +103,7 @@ func (db *db) PendingSwaps() ([]foundation.SwapRequest, error) {
 	return pendingSwaps, iterator.Error()
 }
 
-func (db *db) UpdateStatus(update foundation.StatusUpdate) error {
+func (db *dbStorage) UpdateStatus(update foundation.StatusUpdate) error {
 	id, err := base64.StdEncoding.DecodeString(string(update.ID))
 	if err != nil {
 		return err
