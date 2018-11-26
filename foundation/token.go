@@ -5,27 +5,45 @@ import (
 	"strings"
 )
 
-type ErrUnsupportedToken string
+// ErrUnsupportedToken is returned when the token is not supported by swapperd.
+type ErrUnsupportedToken error
 
+// NewErrUnsupportedToken returns a new ErrUnsupportedToken error.
 func NewErrUnsupportedToken(token TokenName) error {
-	return ErrUnsupportedToken(fmt.Sprintf("unsupported token: %s", token))
+	return fmt.Errorf("unsupported token: %s", token)
 }
 
-func (err ErrUnsupportedToken) Error() string {
-	return string(err)
-}
-
+// BlockchainName is the name of the blockchain.
 type BlockchainName string
-type TokenName string
 
 var (
 	Bitcoin  = BlockchainName("bitcoin")
 	Ethereum = BlockchainName("ethereum")
 )
 
+// TokenName is the name of the token.
+type TokenName string
+
+var (
+	BTC  = TokenName("BTC")
+	ETH  = TokenName("ETH")
+	WBTC = TokenName("WBTC")
+)
+
+// Token represents the token we are trading.
 type Token struct {
 	Name       TokenName      `json:"name"`
 	Blockchain BlockchainName `json:"blockchain"`
+}
+
+var (
+	TokenBTC  = Token{TokenName("BTC"), Bitcoin}
+	TokenETH  = Token{TokenName("ETH"), Ethereum}
+	TokenWBTC = Token{TokenName("WBTC"), Ethereum}
+)
+
+func (token Token) String() string {
+	return string(token.Name)
 }
 
 type Balance struct {
@@ -38,24 +56,8 @@ type Blockchain struct {
 	Address string         `json:"address"`
 }
 
-func (token Token) String() string {
-	return string(token.Name)
-}
-
-var (
-	BTC  = TokenName("BTC")
-	ETH  = TokenName("ETH")
-	WBTC = TokenName("WBTC")
-)
-
-var (
-	TokenBTC  = Token{TokenName("BTC"), Bitcoin}
-	TokenETH  = Token{TokenName("ETH"), Ethereum}
-	TokenWBTC = Token{TokenName("WBTC"), Ethereum}
-)
-
 func PatchToken(token string) (Token, error) {
-	token = strings.ToLower(token)
+	token = strings.TrimSpace(strings.ToLower(token))
 	switch token {
 	case "bitcoin", "btc", "xbt":
 		return TokenBTC, nil
@@ -64,6 +66,6 @@ func PatchToken(token string) (Token, error) {
 	case "ethereum", "eth", "ether":
 		return TokenETH, nil
 	default:
-		return Token{}, fmt.Errorf("unsupported token: %s", token)
+		return Token{}, NewErrUnsupportedToken(TokenName(token))
 	}
 }
