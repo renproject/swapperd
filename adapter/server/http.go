@@ -8,19 +8,20 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/republicprotocol/swapperd/adapter/fund"
-	"github.com/republicprotocol/swapperd/core/router"
+	"github.com/republicprotocol/swapperd/adapter/router"
 	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/rs/cors"
+	"github.com/sirupsen/logrus"
 )
 
 type httpServer struct {
 	manager      fund.Manager
-	logger       foundation.Logger
+	logger       logrus.FieldLogger
 	passwordHash [32]byte
 	port         string
 }
 
-func NewHttpServer(manager fund.Manager, logger foundation.Logger, passwordHash [32]byte, port string) router.Server {
+func NewHttpServer(manager fund.Manager, logger logrus.FieldLogger, passwordHash [32]byte, port string) router.Server {
 	return &httpServer{manager, logger, passwordHash, port}
 }
 
@@ -49,7 +50,7 @@ func (listener *httpServer) Run(doneCh <-chan struct{}, swapRequests chan<- foun
 			panic(err)
 		}
 	}()
-	listener.logger.GlobalLogInfo(fmt.Sprintf("listening for swaps on http://127.0.0.1:%s", listener.port))
+	listener.logger.Info(fmt.Sprintf("listening for swaps on http://127.0.0.1:%s", listener.port))
 	<-doneCh
 	httpListener.Close()
 }
