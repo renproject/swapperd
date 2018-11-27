@@ -17,13 +17,13 @@ func (manager *manager) SupportedTokens() []foundation.Token {
 	}
 }
 
-func (manager *manager) SupportedBlockchains() []Blockchain {
-	return []Blockchain{
-		Blockchain{
+func (manager *manager) SupportedBlockchains() []foundation.Blockchain {
+	return []foundation.Blockchain{
+		foundation.Blockchain{
 			foundation.Bitcoin,
 			manager.config.Bitcoin.Address,
 		},
-		Blockchain{
+		foundation.Blockchain{
 			foundation.Ethereum,
 			manager.config.Ethereum.Address,
 		},

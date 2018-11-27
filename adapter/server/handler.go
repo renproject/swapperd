@@ -1,150 +1,155 @@
 package server
 
 import (
-	"encoding/json"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
 	"fmt"
-	"net/http"
+	"math/big"
+	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/republicprotocol/swapperd/adapter/fund"
-	"github.com/republicprotocol/swapperd/core/auth"
-	"github.com/republicprotocol/swapperd/core/status"
-	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
-	"github.com/rs/cors"
+	"golang.org/x/crypto/sha3"
 )
 
-// NewHandler creates a new http handler
-func NewHandler(authenticator auth.Authenticator, manager fund.Manager, swaps chan<- swapper.Swap, statusQueries chan<- status.Query) http.Handler {
-	s := NewServer(authenticator, manager, swaps, statusQueries)
-	r := mux.NewRouter()
-	r.HandleFunc("/swaps", postSwapsHandler(s)).Methods("POST")
-	r.HandleFunc("/swaps", getSwapsHandler(s)).Methods("GET")
-	r.HandleFunc("/withdrawals", postWithdrawHandler(s)).Methods("POST")
-	r.HandleFunc("/balances", getBalancesHandler(s)).Methods("GET")
-	r.HandleFunc("/whoami", getWhoAmIHandler(s)).Methods("GET")
-	r.Use(recoveryHandler)
-	handler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowCredentials: true,
-		AllowedMethods:   []string{"GET", "POST"},
-	}).Handler(r)
-	return handler
+type handler struct {
+	passwordHash [32]byte
+	fundManager  fund.Manager
+	swaps        chan<- foundation.SwapRequest
+	statuses     chan<- foundation.StatusQuery
 }
 
-// writeError response.
-func writeError(w http.ResponseWriter, statusCode int, err string) {
-	w.WriteHeader(statusCode)
-	w.Write([]byte(err))
-	return
+// The Handler for swapperd requests
+type Handler interface {
+	GetInfo() GetInfoResponse
+	GetBalances() (GetBalancesResponse, error)
+	GetSwaps() GetSwapsResponse
+	PostSwaps(PostSwapRequest) (PostSwapResponse, error)
+	PostTransfers(PostTransfersRequest) (PostTransfersResponse, error)
 }
 
-// recoveryHandler handles errors while processing the requests and populates
-// the errors in the response.
-func recoveryHandler(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if r := recover(); r != nil {
-				writeError(w, http.StatusInternalServerError, fmt.Sprintf("%v", r))
-			}
-		}()
-		h.ServeHTTP(w, r)
-	})
+func NewHandler(passwordHash [32]byte, fundManager fund.Manager, swaps chan<- foundation.SwapRequest, statuses chan<- foundation.StatusQuery) Handler {
+	return &handler{passwordHash, fundManager, swaps, statuses}
 }
 
-// getWhoAmIHandler handles the get whoami request, it returns the basic information
-// of the swapper such as the version, supported tokens ad addresses.
-func getWhoAmIHandler(server *server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := json.NewEncoder(w).Encode(server.GetWhoAmI()); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode whoami response: %v", err))
-			return
-		}
+func (handler *handler) GetInfo() GetInfoResponse {
+	return GetInfoResponse{
+		Version:              "0.2.0",
+		SupportedBlockchains: handler.fundManager.SupportedBlockchains(),
+		SupportedTokens:      handler.fundManager.SupportedTokens(),
 	}
 }
 
-// getSwapsHandler handles the get swaps request, it returns the status of all
-// the existing swaps on the swapper.
-func getSwapsHandler(server *server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := json.NewEncoder(w).Encode(server.GetSwaps()); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
-			return
-		}
+func (handler *handler) GetSwaps() GetSwapsResponse {
+	resp := GetSwapsResponse{}
+	responder := make(chan map[foundation.SwapID]foundation.SwapStatus)
+	handler.statuses <- foundation.StatusQuery{Responder: responder}
+	statusMap := <-responder
+	for _, status := range statusMap {
+		resp.Swaps = append(resp.Swaps, status)
 	}
+	return resp
 }
 
-// postSwapsHandler handles the post swaps request, it fills incomplete
-// information and starts the Atomic Swap.
-func postSwapsHandler(server *server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		_, password, ok := r.BasicAuth()
-		if !ok || !server.authenticator.VerifyPassword(password) {
-			writeError(w, http.StatusUnauthorized, "invalid password")
-			return
-		}
-
-		swap := foundation.SwapBlob{}
-		if err := json.NewDecoder(r.Body).Decode(&swap); err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode swap request: %v", err))
-			return
-		}
-
-		patchedSwap, err := server.PostSwaps(swap, password)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(patchedSwap); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swap response: %v", err))
-			return
-		}
-	}
+func (handler *handler) GetBalances() (GetBalancesResponse, error) {
+	return handler.fundManager.Balances()
 }
 
-// postWithdrawHandler handles the post withdrawal request.
-func postWithdrawHandler(server *server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		_, password, ok := r.BasicAuth()
-		if !ok || !server.authenticator.VerifyPassword(password) {
-			writeError(w, http.StatusUnauthorized, "invalid password")
-			return
-		}
-
-		withdrawReq := PostWithdrawalsRequest{}
-		if err := json.NewDecoder(r.Body).Decode(&withdrawReq); err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode withdrawals request: %v", err))
-			return
-		}
-
-		withdrawResp, err := server.PostWithdraw(password, withdrawReq)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode withdrawals request: %v", err))
-			return
-		}
-
-		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(withdrawResp); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode withdrawals response: %v", err))
-			return
-		}
+func (handler *handler) PostSwaps(req PostSwapRequest) (PostSwapResponse, error) {
+	swap, secret, err := handler.patchSwap(req)
+	if err != nil {
+		return PostSwapResponse{}, err
 	}
+	handler.swaps <- foundation.NewSwapRequest(swap, secret, req.Password)
+	return PostSwapResponse{}, nil
 }
 
-// getBalancesHandler handles the get balances request, and returns the balances
-// of the accounts held by the swapper.
-func getBalancesHandler(server *server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		balancesRes, err := server.GetBalances()
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get balances: %v", err))
-			return
-		}
-		if err := json.NewEncoder(w).Encode(balancesRes); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
-			return
-		}
+func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersResponse, error) {
+	response := PostTransfersResponse{}
+	token, err := foundation.PatchToken(req.Token)
+	if err != nil {
+		return response, err
 	}
+
+	if err := handler.fundManager.VerifyAddress(token.Blockchain, req.To); err != nil {
+		return response, err
+	}
+
+	amount, ok := big.NewInt(0).SetString(req.Amount, 10)
+	if !ok {
+		return response, fmt.Errorf("invalid amount %s", req.Amount)
+	}
+
+	if err := handler.fundManager.VerifyBalance(token, amount); err != nil {
+		return response, err
+	}
+
+	txHash, err := handler.fundManager.Transfer(req.Password, token, req.To, amount)
+	if err != nil {
+		return response, err
+	}
+
+	response.TxHash = txHash
+	return response, nil
+}
+
+func (handler *handler) verifyPassword(password string) bool {
+	passwordHash := sha3.Sum256([]byte(password))
+	passwordOk := subtle.ConstantTimeCompare(passwordHash[:], handler.passwordHash[:]) == 1
+	return passwordOk
+}
+
+func (handler *handler) patchSwap(req PostSwapRequest) (foundation.SwapBlob, [32]byte, error) {
+	if err := handler.validateTokenDetails(req.SwapBlob, req.Password); err != nil {
+		return foundation.SwapBlob{}, [32]byte{}, err
+	}
+	return patchSwapDetails(req.SwapBlob)
+}
+
+func (handler *handler) validateTokenDetails(swapBlob foundation.SwapBlob, password string) error {
+	// verify send details
+	if err := handler.verifyTokenDetails(swapBlob.SendToken, swapBlob.SendTo, swapBlob.SendAmount); err != nil {
+		return err
+	}
+	// verify receive details
+	return handler.verifyTokenDetails(swapBlob.ReceiveToken, swapBlob.ReceiveFrom, swapBlob.ReceiveAmount)
+}
+
+func patchSwapDetails(swapBlob foundation.SwapBlob) (foundation.SwapBlob, [32]byte, error) {
+	swapID := [32]byte{}
+	rand.Read(swapID[:])
+	swapBlob.ID = foundation.SwapID(base64.StdEncoding.EncodeToString(swapID[:]))
+	secret := [32]byte{}
+	if swapBlob.ShouldInitiateFirst {
+		swapBlob.TimeLock = time.Now().Unix() + 3*foundation.ExpiryUnit
+		rand.Read(secret[:])
+		hash := sha256.Sum256(secret[:])
+		swapBlob.SecretHash = base64.StdEncoding.EncodeToString(hash[:])
+		return swapBlob, secret, nil
+	}
+	secretHash, err := base64.StdEncoding.DecodeString(swapBlob.SecretHash)
+	if len(secretHash) != 32 || err != nil {
+		return swapBlob, secret, fmt.Errorf("invalid secret hash")
+	}
+	if time.Now().Unix()+2*foundation.ExpiryUnit > swapBlob.TimeLock {
+		return swapBlob, secret, fmt.Errorf("not enough time to do the atomic swap")
+	}
+	return swapBlob, secret, nil
+}
+
+func (handler *handler) verifyTokenDetails(tokenString, addressString, amountString string) error {
+	token, err := foundation.PatchToken(tokenString)
+	if err != nil {
+		return err
+	}
+	amount, ok := big.NewInt(0).SetString(amountString, 10)
+	if !ok {
+		return fmt.Errorf("invalid amount %s", amountString)
+	}
+	if err := handler.fundManager.VerifyAddress(token.Blockchain, addressString); err != nil {
+		return err
+	}
+	return handler.fundManager.VerifyBalance(token, amount)
 }

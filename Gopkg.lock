@@ -134,6 +134,12 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/konsorten/go-windows-terminal-sequences"
+  packages = ["."]
+  revision = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242"
+  version = "v1.0.1"
+
+[[projects]]
   name = "github.com/onsi/ginkgo"
   packages = [
     ".",
@@ -191,12 +197,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/republicprotocol/co-go"
-  packages = ["."]
-  revision = "4e299fdb0e808f64667498735da03fdc2e0e84c9"
-
-[[projects]]
-  branch = "master"
   name = "github.com/republicprotocol/libbtc-go"
   packages = ["."]
   revision = "dc267506aefd8f9b392f26789b4a938170ce07cf"
@@ -212,6 +212,12 @@
   packages = ["."]
   revision = "9a47f48565a795472d43519dd49aac781f3034fb"
   version = "v1.6.0"
+
+[[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "bcd833dfe83d3cebad139e4a29ed79cb2318bf95"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -331,6 +337,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "32b0129ea1dc2aea00d16b728b52d0e67062570b4f8132384f0f9a0befdc978d"
+  inputs-digest = "f7828a8ab794e39f2f6473308afcde87bb03676c37a4ccebc2a7f763bd5831d8"
   solver-name = "gps-cdcl"
   solver-version = 1

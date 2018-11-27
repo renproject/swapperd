@@ -17,7 +17,7 @@ func buildDBPath() string {
 	}
 	windows := os.Getenv("userprofile")
 	if windows != "" {
-		return windows + "\\swapperd\\db"
+		return "C:\\windows\\system32\\config\\systemprofile\\swapperd\\db"
 	}
 	panic("unknown Operating System")
 }

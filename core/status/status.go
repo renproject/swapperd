@@ -4,12 +4,8 @@ import (
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-type Query struct {
-	Responder chan<- map[foundation.SwapID]foundation.SwapStatus
-}
-
 type Book interface {
-	Run(done <-chan struct{}, statuses <-chan foundation.SwapStatus, queries <-chan Query)
+	Run(done <-chan struct{}, swaps <-chan foundation.SwapStatus, updates <-chan foundation.StatusUpdate, queries <-chan foundation.StatusQuery)
 }
 
 type book struct {
@@ -20,7 +16,7 @@ func New() Book {
 	return &book{newMonitor()}
 }
 
-func (book *book) Run(done <-chan struct{}, statuses <-chan foundation.SwapStatus, queries <-chan Query) {
+func (book *book) Run(done <-chan struct{}, statuses <-chan foundation.SwapStatus, updates <-chan foundation.StatusUpdate, queries <-chan foundation.StatusQuery) {
 	for {
 		select {
 		case <-done:
@@ -29,7 +25,12 @@ func (book *book) Run(done <-chan struct{}, statuses <-chan foundation.SwapStatu
 			if !ok {
 				return
 			}
-			book.monitor.set(status.ID, status)
+			book.monitor.set(status)
+		case update, ok := <-updates:
+			if !ok {
+				return
+			}
+			book.monitor.update(update)
 		case query, ok := <-queries:
 			if !ok {
 				return

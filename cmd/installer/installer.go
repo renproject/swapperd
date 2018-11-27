@@ -23,6 +23,7 @@ func main() {
 	networkFlag := flag.String("network", "testnet", "Defines mainnet or testnet for blockchain interactions")
 	usernameFlag := flag.String("username", "", "Username for HTTP basic authentication")
 	passwordFlag := flag.String("password", "", "Password for HTTP basic authentication")
+	mnemonicFlag := flag.String("mnemonic", "", "Mneumonic for restoring an existing account")
 	flag.Parse()
 
 	if _, err := keystore.FundManager(*networkFlag); err == nil {
@@ -43,13 +44,9 @@ func main() {
 		username, password = credentials()
 	}
 
-	mnemonic, err := keystore.Generate(*networkFlag, username, password)
-	if err != nil {
+	if err := keystore.Generate(*networkFlag, username, password, *mnemonicFlag); err != nil {
 		panic(err)
 	}
-
-	fmt.Printf("\n%sPlease backup the following mnemonic to restore your swapper wallet:\n", bold)
-	fmt.Printf("%s%s%s\n", cyan, mnemonic, reset)
 }
 
 func credentials() (string, string) {
@@ -92,21 +89,10 @@ func createHomeDir() error {
 		}
 		return nil
 	}
-
 	windows := os.Getenv("userprofile")
 	if windows != "" {
-		cmd := exec.Command("cmd", "/C", "md", loc)
-		var out bytes.Buffer
-		var stderr bytes.Buffer
-		cmd.Stdout = &out
-		cmd.Stderr = &stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
-			return err
-		}
 		return nil
 	}
-
 	return errors.New("unknown Operating System")
 }
 
@@ -117,7 +103,7 @@ func getDefaultSwapperHome() string {
 	}
 	windows := os.Getenv("userprofile")
 	if windows != "" {
-		return strings.Join(strings.Split(windows, "\\"), "\\\\") + "\\swapperd"
+		return "C:\\windows\\system32\\config\\systemprofile\\swapperd"
 	}
 	panic("unknown Operating System")
 }

@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/republicprotocol/swapperd/adapter/fund"
-	"github.com/republicprotocol/swapperd/core/auth"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/sha3"
 )
@@ -72,40 +71,39 @@ func FundManager(network string) (fund.Manager, error) {
 	return fund.New(keystore.Config), nil
 }
 
-func LoadAuthenticator(network string) (auth.Authenticator, error) {
+func LoadPasswordHash(network string) ([32]byte, error) {
 	path := keystorePath(network)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return [32]byte{}, err
 	}
 	keystore := Keystore{}
 	if err := json.Unmarshal(data, &keystore); err != nil {
-		return nil, err
+		return [32]byte{}, err
 	}
-	passwordHash, err := toBytes32(keystore.PasswordHash)
-	return auth.NewAuthenticator(passwordHash), err
+	return toBytes32(keystore.PasswordHash)
 }
 
-func Generate(network, username, password string) (string, error) {
+func Generate(network, username, password, mnemonic string) error {
 	network = strings.ToLower(network)
 	path := keystorePath(network)
 	keystore := Keystore{}
 	keystore.Username = username
 	passwordHashBytes := sha3.Sum256([]byte(password))
 	keystore.PasswordHash = base64.StdEncoding.EncodeToString(passwordHashBytes[:])
-	config, err := generateConfig(network, password)
+	config, err := generateConfig(network, password, mnemonic)
 	if err != nil {
-		return "", err
+		return err
 	}
 	keystore.Config = config
 	data, err := json.Marshal(keystore)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return config.Mnemonic, ioutil.WriteFile(path, data, 0644)
+	return ioutil.WriteFile(path, data, 0644)
 }
 
-func generateConfig(network string, password string) (fund.Config, error) {
+func generateConfig(network, password, mnemonic string) (fund.Config, error) {
 	var config fund.Config
 	switch network {
 	case "testnet":
@@ -119,10 +117,14 @@ func generateConfig(network string, password string) (fund.Config, error) {
 	if err != nil {
 		return fund.Config{}, err
 	}
-	mnemonic, err := bip39.NewMnemonic(entropy)
-	if err != nil {
-		return fund.Config{}, err
+
+	if mnemonic == "" {
+		mnemonic, err = bip39.NewMnemonic(entropy)
+		if err != nil {
+			return fund.Config{}, err
+		}
 	}
+
 	config.Mnemonic = mnemonic
 	manager := fund.New(config)
 	ethAccount, err := manager.EthereumAccount(password)
@@ -150,7 +152,7 @@ func keystorePath(network string) string {
 	}
 	windows := os.Getenv("userprofile")
 	if windows != "" {
-		return fmt.Sprintf("%s\\%s.json", strings.Join(strings.Split(windows, "\\"), "\\\\")+"\\swapperd", network)
+		return fmt.Sprintf("C:\\windows\\system32\\config\\systemprofile\\swapperd\\%s.json", network)
 	}
 	panic(fmt.Sprintf("unknown operating system"))
 }

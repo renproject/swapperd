@@ -7,20 +7,20 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/republicprotocol/beth-go"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/sirupsen/logrus"
 )
 
 type erc20SwapContractBinder struct {
 	id             [32]byte
 	account        beth.Account
 	swap           foundation.Swap
-	logger         swapper.Logger
+	logger         logrus.FieldLogger
 	swapperAddress common.Address
 	tokenAddress   common.Address
 	swapperBinder  *RenExAtomicSwapper
@@ -28,7 +28,7 @@ type erc20SwapContractBinder struct {
 }
 
 // NewERC20SwapContractBinder returns a new ERC20 Atom instance
-func NewERC20SwapContractBinder(account beth.Account, swap foundation.Swap, logger swapper.Logger) (swapper.Contract, error) {
+func NewERC20SwapContractBinder(account beth.Account, swap foundation.Swap, logger logrus.FieldLogger) (swapper.Contract, error) {
 	tokenAddress, err := account.ReadAddress(fmt.Sprintf("%s", swap.Token.Name))
 	if err != nil {
 		return nil, err
@@ -54,7 +54,12 @@ func NewERC20SwapContractBinder(account beth.Account, swap foundation.Swap, logg
 		return nil, err
 	}
 
-	logger.LogInfo(swap.ID, fmt.Sprintf("%s atomic swap = %s", swap.Token.Name, base64.StdEncoding.EncodeToString(id[:])))
+	fields := logrus.Fields{}
+	fields["SwapID"] = swap.ID
+	fields["ContractID"] = base64.StdEncoding.EncodeToString(id[:])
+	fields["Token"] = swap.Token.Name
+	logger = logger.WithFields(fields)
+
 	return &erc20SwapContractBinder{
 		account:        account,
 		swapperAddress: swapperAddress,
@@ -78,10 +83,10 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 	}
 
 	if !initiatable {
-		atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Skipping initiate on Ethereum blockchain"))
+		atom.logger.Info(fmt.Sprintf("Skipping initiate on Ethereum blockchain"))
 		return nil
 	}
-	atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Initiating on Ethereum blockchain"))
+	atom.logger.Info(fmt.Sprintf("Initiating on Ethereum blockchain"))
 
 	// Approve the contract to transfer tokens
 	if err := atom.account.Transact(
@@ -93,7 +98,7 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 				return tx, err
 			}
 			msg, _ := atom.account.FormatTransactionView("Approved on Ethereum blockchain", tx.Hash().String())
-			atom.logger.LogInfo(atom.swap.ID, msg)
+			atom.logger.Info(msg)
 			return tx, nil
 		},
 		nil,
@@ -112,7 +117,7 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 				return tx, err
 			}
 			msg, _ := atom.account.FormatTransactionView("Initiated on Ethereum blockchain", tx.Hash().String())
-			atom.logger.LogInfo(atom.swap.ID, msg)
+			atom.logger.Info(msg)
 			return tx, nil
 		},
 		func() bool {
@@ -128,7 +133,7 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 
 // Refund an Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) Refund() error {
-	atom.logger.LogInfo(atom.swap.ID, "Refunding on Ethereum blockchain")
+	atom.logger.Info("Refunding on Ethereum blockchain")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	if err := atom.account.Transact(
@@ -146,7 +151,7 @@ func (atom *erc20SwapContractBinder) Refund() error {
 				return nil, err
 			}
 			msg, _ := atom.account.FormatTransactionView("Refunded on Ethereum blockchain", tx.Hash().String())
-			atom.logger.LogInfo(atom.swap.ID, msg)
+			atom.logger.Info(msg)
 			return tx, nil
 		},
 		func() bool {
@@ -166,10 +171,10 @@ func (atom *erc20SwapContractBinder) Refund() error {
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) AuditSecret() ([32]byte, error) {
 	for {
-		atom.logger.LogInfo(atom.swap.ID, "Auditing secret on Ethereum blockchain")
+		atom.logger.Info("Auditing secret on Ethereum blockchain")
 		redeemable, err := atom.swapperBinder.Redeemable(&bind.CallOpts{}, atom.id)
 		if err != nil {
-			atom.logger.LogError(atom.swap.ID, err)
+			atom.logger.Error(err)
 			return [32]byte{}, err
 		}
 		if !redeemable {
@@ -184,13 +189,13 @@ func (atom *erc20SwapContractBinder) AuditSecret() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Audit succeeded on Ethereum blockchain secret = %s", base64.StdEncoding.EncodeToString(secret[:])))
+	atom.logger.Info(fmt.Sprintf("Audit succeeded on Ethereum blockchain secret = %s", base64.StdEncoding.EncodeToString(secret[:])))
 	return secret, nil
 }
 
 // Audit an Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) Audit() error {
-	atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Waiting for initiation on Ethereum blockchain"))
+	atom.logger.Info(fmt.Sprintf("Waiting for initiation on Ethereum blockchain"))
 	for {
 		initiatable, err := atom.swapperBinder.Initiatable(&bind.CallOpts{}, atom.id)
 		if err != nil {
@@ -208,7 +213,7 @@ func (atom *erc20SwapContractBinder) Audit() error {
 	if auditReport.Value.Cmp(atom.swap.Value) != 0 {
 		return fmt.Errorf("Receive value mismatch: expected %v, got %v", atom.swap.Value, auditReport.Value)
 	}
-	atom.logger.LogInfo(atom.swap.ID, fmt.Sprintf("Audit successful on Ethereum blockchain"))
+	atom.logger.Info(fmt.Sprintf("Audit successful on Ethereum blockchain"))
 	return nil
 }
 
@@ -231,7 +236,7 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 				return nil, err
 			}
 			msg, _ := atom.account.FormatTransactionView("Redeemed the atomic swap on Ethereum blockchain", tx.Hash().String())
-			atom.logger.LogInfo(atom.swap.ID, msg)
+			atom.logger.Info(msg)
 			return tx, nil
 		},
 		func() bool {
@@ -244,7 +249,7 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 		1,
 	); err != nil {
 		if err == beth.ErrPreConditionCheckFailed {
-			atom.logger.LogInfo(atom.swap.ID, "Skipping redeem on Ethereum Blockchain")
+			atom.logger.Info("Skipping redeem on Ethereum Blockchain")
 		}
 		return err
 	}
