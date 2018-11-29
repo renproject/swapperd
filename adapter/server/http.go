@@ -8,7 +8,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/republicprotocol/swapperd/adapter/fund"
-	"github.com/republicprotocol/swapperd/adapter/router"
 	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
@@ -21,7 +20,7 @@ type httpServer struct {
 	port         string
 }
 
-func NewHttpServer(manager fund.Manager, logger logrus.FieldLogger, passwordHash [32]byte, port string) router.Server {
+func NewHttpServer(manager fund.Manager, logger logrus.FieldLogger, passwordHash [32]byte, port string) Server {
 	return &httpServer{manager, logger, passwordHash, port}
 }
 
