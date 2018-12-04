@@ -17,11 +17,11 @@ import (
 type httpServer struct {
 	manager      fund.Manager
 	logger       logrus.FieldLogger
-	passwordHash [32]byte
+	passwordHash []byte
 	port         string
 }
 
-func NewHttpServer(manager fund.Manager, logger logrus.FieldLogger, passwordHash [32]byte, port string) Server {
+func NewHttpServer(manager fund.Manager, logger logrus.FieldLogger, passwordHash []byte, port string) Server {
 	return &httpServer{manager, logger, passwordHash, port}
 }
 

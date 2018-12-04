@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/republicprotocol/swapperd/adapter/fund"
-	"golang.org/x/crypto/sha3"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Testnet is the Swapperd's testnet config object
@@ -70,17 +70,17 @@ func FundManager(network string) (fund.Manager, error) {
 	return fund.New(keystore.Config), nil
 }
 
-func LoadPasswordHash(network string) ([32]byte, error) {
+func LoadPasswordHash(network string) ([]byte, error) {
 	path := keystorePath(network)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return [32]byte{}, err
+		return nil, err
 	}
 	keystore := Keystore{}
 	if err := json.Unmarshal(data, &keystore); err != nil {
-		return [32]byte{}, err
+		return nil, err
 	}
-	return toBytes32(keystore.PasswordHash)
+	return base64.StdEncoding.DecodeString(keystore.PasswordHash)
 }
 
 func Generate(network, username, password, mnemonic string) error {
@@ -88,8 +88,13 @@ func Generate(network, username, password, mnemonic string) error {
 	path := keystorePath(network)
 	keystore := Keystore{}
 	keystore.Username = username
-	passwordHashBytes := sha3.Sum256([]byte(password))
-	keystore.PasswordHash = base64.StdEncoding.EncodeToString(passwordHashBytes[:])
+
+	passwordHashBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	keystore.PasswordHash = base64.StdEncoding.EncodeToString(passwordHashBytes)
 	config, err := generateConfig(network, password, mnemonic)
 	if err != nil {
 		return err
