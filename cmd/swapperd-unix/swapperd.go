@@ -9,13 +9,14 @@ import (
 )
 
 func main() {
-	network := flag.String("network", "testnet", "Which network to use")
-	port := flag.String("port", "7927", "Which network to use")
 	flag.Parse()
-
 	done := make(chan struct{})
-	composer := composer.New(*network, *port)
-	go composer.Run(done)
+
+	testnet := composer.New("testnet", "17927")
+	go testnet.Run(done)
+	mainnet := composer.New("mainnet", "7927")
+	go mainnet.Run(done)
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	<-c
