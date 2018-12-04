@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/republicprotocol/swapperd/driver/keystore"
+	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -20,23 +21,12 @@ const cyan = "\033[36m"
 const bold = "\033[1m"
 
 func main() {
-	networkFlag := flag.String("network", "testnet", "Defines mainnet or testnet for blockchain interactions")
 	usernameFlag := flag.String("username", "", "Username for HTTP basic authentication")
 	passwordFlag := flag.String("password", "", "Password for HTTP basic authentication")
 	mnemonicFlag := flag.String("mnemonic", "", "Mneumonic for restoring an existing account")
 	flag.Parse()
 
-	if _, err := keystore.FundManager(*networkFlag); err == nil {
-		fmt.Printf("Swapper already exists at the default location (%s)\n", getDefaultSwapperHome())
-		return
-	}
-
-	if err := createHomeDir(); err != nil {
-		panic(err)
-	}
-
 	var username, password string
-
 	if *usernameFlag != "" && *passwordFlag != "" {
 		username = *usernameFlag
 		password = *passwordFlag
@@ -44,7 +34,36 @@ func main() {
 		username, password = credentials()
 	}
 
-	if err := keystore.Generate(*networkFlag, username, password, *mnemonicFlag); err != nil {
+	if *mnemonicFlag != "" {
+		createKeystore("testnet", username, password, *mnemonicFlag)
+		createKeystore("mainnet", username, password, *mnemonicFlag)
+		return
+	}
+
+	entropy, err := bip39.NewEntropy(128)
+	if err != nil {
+		panic(err)
+	}
+
+	mnemonic, err := bip39.NewMnemonic(entropy)
+	if err != nil {
+		panic(err)
+	}
+	createKeystore("testnet", username, password, mnemonic)
+	createKeystore("mainnet", username, password, mnemonic)
+}
+
+func createKeystore(network, username, password, mnemonic string) {
+	if _, err := keystore.FundManager(network); err == nil {
+		fmt.Printf("swapper already exists at the default location (%s)\n", getDefaultSwapperHome())
+		return
+	}
+
+	if err := createHomeDir(); err != nil {
+		panic(err)
+	}
+
+	if err := keystore.Generate(network, username, password, mnemonic); err != nil {
 		panic(err)
 	}
 }
