@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/republicprotocol/swapperd/driver/swapperd"
+	"github.com/republicprotocol/swapperd/driver/composer"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
 	"golang.org/x/sys/windows/svc/eventlog"
@@ -12,15 +12,14 @@ import (
 var elog debug.Log
 
 type swapperdService struct {
-	network string
-	port    string
+	composer composer.Composer
 }
 
 func (m *swapperdService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
 	doneCh := make(chan struct{}, 1)
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue
 	changes <- svc.Status{State: svc.StartPending}
-	swapperd.Run(doneCh, m.network, m.port)
+	go m.composer.Run(doneCh)
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 loop:
 	for {
@@ -46,7 +45,7 @@ loop:
 	return
 }
 
-func runService(name, network, port string, isDebug bool) {
+func runService(name, composer composer.Composer, isDebug bool) {
 	var err error
 	if isDebug {
 		elog = debug.New(name)
@@ -63,7 +62,7 @@ func runService(name, network, port string, isDebug bool) {
 	if isDebug {
 		run = debug.Run
 	}
-	err = run(name, &swapperdService{network, port})
+	err = run(name, &swapperdService{composer})
 	if err != nil {
 		elog.Error(1, fmt.Sprintf("%s service failed: %v", name, err))
 		return

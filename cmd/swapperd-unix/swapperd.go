@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/republicprotocol/swapperd/driver/swapperd"
+	"github.com/republicprotocol/swapperd/driver/composer"
 )
 
 func main() {
@@ -14,7 +14,8 @@ func main() {
 	flag.Parse()
 
 	done := make(chan struct{})
-	swapperd.Run(done, *network, *port)
+	composer := composer.New(*network, *port)
+	go composer.Run(done)
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	<-c

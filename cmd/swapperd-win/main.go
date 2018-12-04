@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/republicprotocol/swapperd/driver/composer"
 	"golang.org/x/sys/windows/svc"
 )
 
@@ -21,15 +22,14 @@ func usage(errmsg string) {
 
 func main() {
 	const svcName = "swapperd"
-	const network = "testnet"
-	const port = "7927"
+	composer := composer.New("testnet", "7927")
 
 	isIntSess, err := svc.IsAnInteractiveSession()
 	if err != nil {
 		log.Fatalf("failed to determine if we are running in an interactive session: %v", err)
 	}
 	if !isIntSess {
-		runService(svcName, network, port, false)
+		runService(svcName, composer, false)
 		return
 	}
 
@@ -40,7 +40,7 @@ func main() {
 	cmd := strings.ToLower(os.Args[1])
 	switch cmd {
 	case "debug":
-		runService(svcName, network, port, true)
+		runService(svcName, composer, true)
 		return
 	case "install":
 		err = installService(svcName, "Swapperd Service")
