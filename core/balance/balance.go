@@ -45,7 +45,9 @@ func (balances *balances) Run(done <-chan struct{}, queries <-chan BalanceQuery)
 			if !ok {
 				return
 			}
-			query.Response <- balances.read()
+			go func() {
+				query.Response <- balances.read()
+			}()
 		}
 	}
 }
