@@ -21,6 +21,11 @@ var (
 	Ethereum = BlockchainName("ethereum")
 )
 
+type Blockchain struct {
+	Name    BlockchainName `json:"name"`
+	Address string         `json:"address"`
+}
+
 // TokenName is the name of the token.
 type TokenName string
 
@@ -49,11 +54,6 @@ func (token Token) String() string {
 type Balance struct {
 	Address string `json:"address"`
 	Amount  string `json:"balance"`
-}
-
-type Blockchain struct {
-	Name    BlockchainName `json:"name"`
-	Address string         `json:"address"`
 }
 
 func PatchToken(token string) (Token, error) {

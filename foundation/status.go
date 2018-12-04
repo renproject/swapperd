@@ -15,7 +15,7 @@ type StatusUpdate struct {
 	Status int    `json:"status"`
 }
 
-// NewStatusUpdate creates a new `StatusUpdate` with given ID and status.
+// NewStatusUpdate creates a new `StatusUpdate` with given swap ID and status.
 func NewStatusUpdate(id SwapID, status int) StatusUpdate {
 	return StatusUpdate{id, status}
 }

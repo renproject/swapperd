@@ -1,4 +1,4 @@
-package status_test
+package db_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestStatus(t *testing.T) {
+func TestDb(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Status Suite")
+	RunSpecs(t, "Db Suite")
 }
