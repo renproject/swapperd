@@ -137,6 +137,7 @@ rm swapper.zip
 rm bin/installer
 
 mkdir -p $HOME/.swapperd_backup
-cp $HOME/.swapperd/testnet.json $HOME/.swapperd_backup/testnet-$(timestamp).json
+timestamp=$(date +%s)
+cp $HOME/.swapperd/testnet.json $HOME/.swapperd_backup/testnet-$timestamp.json
 
 echo "Swapperd is installed now. Great!"
