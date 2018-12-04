@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/republicprotocol/swapperd/adapter/fund"
+	"github.com/republicprotocol/swapperd/core/balance"
 	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
@@ -25,13 +26,13 @@ func NewHttpServer(manager fund.Manager, logger logrus.FieldLogger, passwordHash
 }
 
 // NewHttpListener creates a new http listener
-func (listener *httpServer) Run(doneCh <-chan struct{}, swapRequests chan<- foundation.SwapRequest, statusQueries chan<- foundation.StatusQuery) {
-	reqHandler := NewHandler(listener.passwordHash, listener.manager, swapRequests, statusQueries)
+func (listener *httpServer) Run(doneCh <-chan struct{}, swapRequests chan<- foundation.SwapRequest, statusQueries chan<- foundation.StatusQuery, balanceQueries chan<- balance.BalanceQuery) {
+	reqHandler := NewHandler(listener.passwordHash, listener.manager)
 	r := mux.NewRouter()
-	r.HandleFunc("/swaps", postSwapsHandler(reqHandler)).Methods("POST")
-	r.HandleFunc("/swaps", getSwapsHandler(reqHandler)).Methods("GET")
+	r.HandleFunc("/swaps", postSwapsHandler(reqHandler, swapRequests)).Methods("POST")
+	r.HandleFunc("/swaps", getSwapsHandler(reqHandler, statusQueries)).Methods("GET")
 	r.HandleFunc("/transfers", postTransfersHandler(reqHandler)).Methods("POST")
-	r.HandleFunc("/balances", getBalancesHandler(reqHandler)).Methods("GET")
+	r.HandleFunc("/balances", getBalancesHandler(reqHandler, balanceQueries)).Methods("GET")
 	r.HandleFunc("/info", getInfoHandler(reqHandler)).Methods("GET")
 	r.Use(recoveryHandler)
 	httpHandler := cors.New(cors.Options{
@@ -87,9 +88,9 @@ func getInfoHandler(reqHandler Handler) http.HandlerFunc {
 
 // getSwapsHandler handles the get swaps request, it returns the status of all
 // the existing swaps on the swapper.
-func getSwapsHandler(reqHandler Handler) http.HandlerFunc {
+func getSwapsHandler(reqHandler Handler, statusQueries chan<- foundation.StatusQuery) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := json.NewEncoder(w).Encode(reqHandler.GetSwaps()); err != nil {
+		if err := json.NewEncoder(w).Encode(reqHandler.GetSwaps(statusQueries)); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
 			return
 		}
@@ -98,7 +99,7 @@ func getSwapsHandler(reqHandler Handler) http.HandlerFunc {
 
 // postSwapsHandler handles the post swaps request, it fills incomplete
 // information and starts the Atomic Swap.
-func postSwapsHandler(reqHandler Handler) http.HandlerFunc {
+func postSwapsHandler(reqHandler Handler, swapRequests chan<- foundation.SwapRequest) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, password, ok := r.BasicAuth()
 		if !ok {
@@ -113,7 +114,7 @@ func postSwapsHandler(reqHandler Handler) http.HandlerFunc {
 		}
 		swapReq.Password = password
 
-		patchedSwap, err := reqHandler.PostSwaps(swapReq)
+		patchedSwap, err := reqHandler.PostSwaps(swapReq, swapRequests)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
@@ -159,14 +160,9 @@ func postTransfersHandler(reqHandler Handler) http.HandlerFunc {
 
 // getBalancesHandler handles the get balances request, and returns the balances
 // of the accounts held by the swapper.
-func getBalancesHandler(reqHandler Handler) http.HandlerFunc {
+func getBalancesHandler(reqHandler Handler, balancesQuery chan<- balance.BalanceQuery) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		balancesRes, err := reqHandler.GetBalances()
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get balances: %v", err))
-			return
-		}
-		if err := json.NewEncoder(w).Encode(balancesRes); err != nil {
+		if err := json.NewEncoder(w).Encode(reqHandler.GetBalances(balancesQuery)); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
 			return
 		}

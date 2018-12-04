@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/republicprotocol/swapperd/adapter/fund"
+	"github.com/republicprotocol/swapperd/core/balance"
 	"github.com/republicprotocol/swapperd/foundation"
 	"golang.org/x/crypto/sha3"
 )
@@ -17,21 +18,19 @@ import (
 type handler struct {
 	passwordHash [32]byte
 	fundManager  fund.Manager
-	swaps        chan<- foundation.SwapRequest
-	statuses     chan<- foundation.StatusQuery
 }
 
 // The Handler for swapperd requests
 type Handler interface {
 	GetInfo() GetInfoResponse
-	GetBalances() (GetBalancesResponse, error)
-	GetSwaps() GetSwapsResponse
-	PostSwaps(PostSwapRequest) (PostSwapResponse, error)
+	GetSwaps(chan<- foundation.StatusQuery) GetSwapsResponse
+	GetBalances(chan<- balance.BalanceQuery) GetBalancesResponse
+	PostSwaps(PostSwapRequest, chan<- foundation.SwapRequest) (PostSwapResponse, error)
 	PostTransfers(PostTransfersRequest) (PostTransfersResponse, error)
 }
 
-func NewHandler(passwordHash [32]byte, fundManager fund.Manager, swaps chan<- foundation.SwapRequest, statuses chan<- foundation.StatusQuery) Handler {
-	return &handler{passwordHash, fundManager, swaps, statuses}
+func NewHandler(passwordHash [32]byte, fundManager fund.Manager) Handler {
+	return &handler{passwordHash, fundManager}
 }
 
 func (handler *handler) GetInfo() GetInfoResponse {
@@ -42,10 +41,10 @@ func (handler *handler) GetInfo() GetInfoResponse {
 	}
 }
 
-func (handler *handler) GetSwaps() GetSwapsResponse {
+func (handler *handler) GetSwaps(statuses chan<- foundation.StatusQuery) GetSwapsResponse {
 	resp := GetSwapsResponse{}
 	responder := make(chan map[foundation.SwapID]foundation.SwapStatus)
-	handler.statuses <- foundation.StatusQuery{Responder: responder}
+	statuses <- foundation.StatusQuery{Responder: responder}
 	statusMap := <-responder
 	for _, status := range statusMap {
 		resp.Swaps = append(resp.Swaps, status)
@@ -53,16 +52,22 @@ func (handler *handler) GetSwaps() GetSwapsResponse {
 	return resp
 }
 
-func (handler *handler) GetBalances() (GetBalancesResponse, error) {
-	return handler.fundManager.Balances()
+func (handler *handler) GetBalances(balanceQueries chan<- balance.BalanceQuery) GetBalancesResponse {
+	response := make(chan map[foundation.TokenName]foundation.Balance)
+	query := balance.BalanceQuery{
+		Response: response,
+	}
+	balanceQueries <- query
+	resp := <-response
+	return resp
 }
 
-func (handler *handler) PostSwaps(req PostSwapRequest) (PostSwapResponse, error) {
+func (handler *handler) PostSwaps(req PostSwapRequest, swaps chan<- foundation.SwapRequest) (PostSwapResponse, error) {
 	swap, secret, err := handler.patchSwap(req)
 	if err != nil {
 		return PostSwapResponse{}, err
 	}
-	handler.swaps <- foundation.NewSwapRequest(swap, secret, req.Password)
+	swaps <- foundation.NewSwapRequest(swap, secret, req.Password)
 	return PostSwapResponse{}, nil
 }
 
