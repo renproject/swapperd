@@ -39,8 +39,8 @@ var Mainnet = fund.Config{
 	},
 	Ethereum: fund.BlockchainConfig{
 		Network: fund.Network{
-			Name: "kovan",
-			URL:  "https://kovan.infura.io",
+			Name: "mainnet",
+			URL:  "https://mainnet.infura.io",
 		},
 		Tokens: []string{"ETH", "WBTC"},
 	},
