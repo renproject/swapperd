@@ -1,11 +1,14 @@
 package composer
 
 import (
+	"time"
+
 	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/adapter/binder"
 	"github.com/republicprotocol/swapperd/adapter/callback"
 	"github.com/republicprotocol/swapperd/adapter/db"
 	"github.com/republicprotocol/swapperd/adapter/server"
+	"github.com/republicprotocol/swapperd/core/balance"
 	"github.com/republicprotocol/swapperd/core/router"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
@@ -32,6 +35,7 @@ func (composer *composer) Run(done <-chan struct{}) {
 	swapRequests := make(chan foundation.SwapRequest)
 	statusUpdates := make(chan foundation.StatusUpdate)
 	statusQueries := make(chan foundation.StatusQuery)
+	balanceQueries := make(chan balance.BalanceQuery)
 	ftSwapRequests := make(chan foundation.SwapRequest)
 	ftStatusUpdates := make(chan foundation.StatusUpdate)
 	statuses := make(chan foundation.SwapStatus)
@@ -42,7 +46,7 @@ func (composer *composer) Run(done <-chan struct{}) {
 		panic(err)
 	}
 
-	ldb, err := leveldb.NewStore()
+	ldb, err := leveldb.NewStore(composer.network)
 	if err != nil {
 		panic(err)
 	}
@@ -56,8 +60,11 @@ func (composer *composer) Run(done <-chan struct{}) {
 
 	co.ParBegin(
 		func() {
+
+		},
+		func() {
 			httpServer := server.NewHttpServer(manager, logger, passwordHash, composer.port)
-			httpServer.Run(done, swapRequests, statusQueries)
+			httpServer.Run(done, swapRequests, statusQueries, balanceQueries)
 		},
 		func() {
 			router := router.New(db.New(ldb), logger)
@@ -70,6 +77,11 @@ func (composer *composer) Run(done <-chan struct{}) {
 		func() {
 			statusHandler := status.New()
 			statusHandler.Run(done, statuses, ftStatusUpdates, statusQueries)
+		},
+		func() {
+			updateFrequency := 15 * time.Second
+			balanceHandler := balance.New(updateFrequency, manager, logger)
+			balanceHandler.Run(done, balanceQueries)
 		},
 	)
 }
