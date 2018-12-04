@@ -12,14 +12,16 @@ import (
 var elog debug.Log
 
 type swapperdService struct {
-	composer composer.Composer
+	testnet composer.Composer
+	mainnet composer.Composer
 }
 
 func (m *swapperdService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
 	doneCh := make(chan struct{}, 1)
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue
 	changes <- svc.Status{State: svc.StartPending}
-	go m.composer.Run(doneCh)
+	go m.testnet.Run(doneCh)
+	go m.mainnet.Run(doneCh)
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 loop:
 	for {
@@ -33,8 +35,9 @@ loop:
 				close(doneCh)
 				changes <- svc.Status{State: svc.Paused, Accepts: cmdsAccepted}
 			case svc.Continue:
-				doneCh = make(chan struct{}, 1)
-				swapperd.Run(doneCh, m.network, m.port)
+				doneCh := make(chan struct{}, 1)
+				go m.testnet.Run(doneCh)
+				go m.mainnet.Run(doneCh)
 				changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 			default:
 				elog.Error(1, fmt.Sprintf("unexpected control request #%d", c))
@@ -45,7 +48,7 @@ loop:
 	return
 }
 
-func runService(name, composer composer.Composer, isDebug bool) {
+func runService(name string, testnet, mainnet composer.Composer, isDebug bool) {
 	var err error
 	if isDebug {
 		elog = debug.New(name)
@@ -62,7 +65,7 @@ func runService(name, composer composer.Composer, isDebug bool) {
 	if isDebug {
 		run = debug.Run
 	}
-	err = run(name, &swapperdService{composer})
+	err = run(name, &swapperdService{testnet, mainnet})
 	if err != nil {
 		elog.Error(1, fmt.Sprintf("%s service failed: %v", name, err))
 		return
