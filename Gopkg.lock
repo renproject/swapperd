@@ -2,10 +2,19 @@
 
 
 [[projects]]
+  name = "github.com/allegro/bigcache"
+  packages = [
+    ".",
+    "queue"
+  ]
+  revision = "f31987a23e44c5121ef8c8b2f2ea2e8ffa37b068"
+  version = "v1.1.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "5faa74ffbed7096292069fdcd0eae96146a3158a"
+  revision = "f7cbe917ef623dd7062366ce4a1a0558c997f437"
 
 [[projects]]
   branch = "master"
@@ -17,7 +26,7 @@
     "txscript",
     "wire"
   ]
-  revision = "67e573d211ace594f1366b4ce9d39726c4b19bd0"
+  revision = "7d2daa5bfef28c5e282571bc06416516936115ee"
 
 [[projects]]
   branch = "master"
@@ -79,8 +88,8 @@
     "rpc",
     "trie"
   ]
-  revision = "8bbe72075e4e16442c4e28d999edee12e294329e"
-  version = "v1.8.17"
+  revision = "dae82f098570e15d44584f0d7f350713f4774727"
+  version = "v1.8.19"
 
 [[projects]]
   name = "github.com/go-stack/stack"
@@ -97,8 +106,8 @@
 [[projects]]
   name = "github.com/google/uuid"
   packages = ["."]
-  revision = "d460ce9f8df2e77fb1ba55ca87fafed96c607494"
-  version = "v1.0.0"
+  revision = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8"
+  version = "v1.1.0"
 
 [[projects]]
   name = "github.com/gorilla/context"
@@ -161,8 +170,8 @@
     "reporters/stenographer/support/go-isatty",
     "types"
   ]
-  revision = "3774a09d95489ccaa16032e0770d08ea77ba6184"
-  version = "v1.6.0"
+  revision = "2e1be8f7d90e9d3e3e58b0ce470f2f14d075406f"
+  version = "v1.7.0"
 
 [[projects]]
   name = "github.com/onsi/gomega"
@@ -180,8 +189,8 @@
     "matchers/support/goraph/util",
     "types"
   ]
-  revision = "7615b9433f86a8bdf29709bf288bc4fd0636a369"
-  version = "v1.4.2"
+  revision = "65fb64232476ad9046e57c26cd0bff3d3a8dc6cd"
+  version = "v1.4.3"
 
 [[projects]]
   name = "github.com/pborman/uuid"
@@ -193,7 +202,13 @@
   branch = "master"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "345dd8026350762fb222ceeb7e3b72e2868d5b41"
+  revision = "8967cde5bf604958a84764a6e07cc0502b64454c"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/republicprotocol/co-go"
+  packages = ["."]
+  revision = "4e299fdb0e808f64667498735da03fdc2e0e84c9"
 
 [[projects]]
   branch = "master"
@@ -236,7 +251,7 @@
     "leveldb/table",
     "leveldb/util"
   ]
-  revision = "f9080354173f192dfc8821931eacf9cfd6819253"
+  revision = "b001fa50d6b27f3f0bb175a87d0cb55426d0a0ae"
 
 [[projects]]
   name = "github.com/tyler-smith/go-bip39"
@@ -257,7 +272,7 @@
     "sha3",
     "ssh/terminal"
   ]
-  revision = "3d3f9f413869b949e48070b5bc593aa22cc2b8f2"
+  revision = "505ab145d0a99da450461ae2c1a9f6cd10d1f447"
 
 [[projects]]
   branch = "master"
@@ -268,7 +283,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "03003ca0c849e57b6ea29a4bab8d3cb6e4d568fe"
+  revision = "351d144fa1fc0bd934e2408202be0c29f25e35a0"
 
 [[projects]]
   branch = "master"
@@ -283,7 +298,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "66b7b1311ac80bbafcd2daeef9a5e6e2cd1e2399"
+  revision = "4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -331,12 +346,12 @@
 [[projects]]
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
-  version = "v2.2.1"
+  revision = "51d6538a90f86fe93ac480b35f37b2be17fef232"
+  version = "v2.2.2"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f7828a8ab794e39f2f6473308afcde87bb03676c37a4ccebc2a7f763bd5831d8"
+  inputs-digest = "ca3c8bb6437f6ec9f6bd451706c2cac83f1f864ca73709fa817525abede18bd4"
   solver-name = "gps-cdcl"
   solver-version = 1
