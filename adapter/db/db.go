@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
-	"github.com/republicprotocol/swapperd/adapter/router"
+	"github.com/republicprotocol/swapperd/core/router"
 	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
