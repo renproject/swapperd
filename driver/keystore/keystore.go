@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/republicprotocol/swapperd/adapter/fund"
-	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -113,18 +112,6 @@ func generateConfig(network, password, mnemonic string) (fund.Config, error) {
 	default:
 		return fund.Config{}, fmt.Errorf("Invalid Network %s", network)
 	}
-	entropy, err := bip39.NewEntropy(128)
-	if err != nil {
-		return fund.Config{}, err
-	}
-
-	if mnemonic == "" {
-		mnemonic, err = bip39.NewMnemonic(entropy)
-		if err != nil {
-			return fund.Config{}, err
-		}
-	}
-
 	config.Mnemonic = mnemonic
 	manager := fund.New(config)
 	ethAccount, err := manager.EthereumAccount(password)
