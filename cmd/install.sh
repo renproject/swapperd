@@ -45,6 +45,10 @@ WantedBy=default.target" > swapperd.service
 mv swapperd.service $HOME/.config/systemd/user/swapperd.service
 }
 
+timestamp() {
+  date +"%Y-%m-%d_%H-%M-%S"
+}
+
 # install unzip if command not found
 if ! [ -x "$(command -v unzip)" ];then
   echo "please install unzip"
@@ -137,6 +141,7 @@ rm swapper.zip
 rm bin/installer
 
 mkdir -p $HOME/.swapperd_backup
+timestamp=$(date +%s)
 cp $HOME/.swapperd/testnet.json $HOME/.swapperd_backup/testnet-$(timestamp).json
 
 echo "Swapperd is installed now. Great!"
