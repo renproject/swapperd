@@ -120,9 +120,9 @@ func getDefaultSwapperHome() string {
 	if unix != "" {
 		return unix + "/.swapperd"
 	}
-	windows := os.Getenv("userprofile")
+	windows := os.Getenv("windir")
 	if windows != "" {
-		return "C:\\windows\\system32\\config\\systemprofile\\swapperd"
+		return windows + "\\swapperd"
 	}
 	panic("unknown Operating System")
 }

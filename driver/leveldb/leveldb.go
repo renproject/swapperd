@@ -15,9 +15,9 @@ func buildDBPath(network string) string {
 	if unix != "" {
 		return unix + "/.swapperd/db/" + network
 	}
-	windows := os.Getenv("userprofile")
+	windows := os.Getenv("windir")
 	if windows != "" {
-		return "C:\\windows\\system32\\config\\systemprofile\\swapperd\\db\\" + network
+		return windows + "\\swapperd\\db\\" + network
 	}
 	panic("unknown Operating System")
 }
