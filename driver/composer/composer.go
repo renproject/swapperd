@@ -19,6 +19,7 @@ import (
 )
 
 type composer struct {
+	homeDir string
 	network string
 	port    string
 }
@@ -27,8 +28,8 @@ type Composer interface {
 	Run(doneCh <-chan struct{})
 }
 
-func New(network, port string) Composer {
-	return &composer{network, port}
+func New(homeDir, network, port string) Composer {
+	return &composer{homeDir, network, port}
 }
 
 func (composer *composer) Run(done <-chan struct{}) {
@@ -41,17 +42,17 @@ func (composer *composer) Run(done <-chan struct{}) {
 	statuses := make(chan foundation.SwapStatus)
 	results := make(chan foundation.SwapResult)
 
-	manager, err := keystore.FundManager(composer.network)
+	manager, err := keystore.FundManager(composer.homeDir, composer.network)
 	if err != nil {
 		panic(err)
 	}
 
-	ldb, err := leveldb.NewStore(composer.network)
+	ldb, err := leveldb.NewStore(composer.homeDir, composer.network)
 	if err != nil {
 		panic(err)
 	}
 
-	passwordHash, err := keystore.LoadPasswordHash(composer.network)
+	passwordHash, err := keystore.LoadPasswordHash(composer.homeDir, composer.network)
 	if err != nil {
 		panic(err)
 	}
