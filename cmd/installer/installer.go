@@ -54,7 +54,8 @@ func main() {
 }
 
 func createKeystore(network, username, password, mnemonic string) {
-	if _, err := keystore.FundManager(network); err == nil {
+	homeDir := getDefaultSwapperHome()
+	if _, err := keystore.FundManager(homeDir, network); err == nil {
 		fmt.Printf("swapper already exists at the default location (%s)\n", getDefaultSwapperHome())
 		return
 	}
@@ -63,7 +64,7 @@ func createKeystore(network, username, password, mnemonic string) {
 		panic(err)
 	}
 
-	if err := keystore.Generate(network, username, password, mnemonic); err != nil {
+	if err := keystore.Generate(homeDir, network, username, password, mnemonic); err != nil {
 		panic(err)
 	}
 }
@@ -108,7 +109,7 @@ func createHomeDir() error {
 		}
 		return nil
 	}
-	windows := os.Getenv("userprofile")
+	windows := os.Getenv("programfiles(x86)")
 	if windows != "" {
 		return nil
 	}
@@ -120,9 +121,10 @@ func getDefaultSwapperHome() string {
 	if unix != "" {
 		return unix + "/.swapperd"
 	}
-	windows := os.Getenv("windir")
+
+	windows := os.Getenv("programfiles(x86)")
 	if windows != "" {
-		return windows + "\\swapperd"
+		return windows + "\\Swapperd"
 	}
 	panic("unknown Operating System")
 }
