@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
+	"path"
 	"strings"
 
 	"github.com/republicprotocol/swapperd/adapter/fund"
@@ -57,8 +57,8 @@ type Address struct {
 	Address    string `json:"address"`
 }
 
-func FundManager(network string) (fund.Manager, error) {
-	path := keystorePath(network)
+func FundManager(homeDir, network string) (fund.Manager, error) {
+	path := keystorePath(homeDir, network)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -70,8 +70,8 @@ func FundManager(network string) (fund.Manager, error) {
 	return fund.New(keystore.Config), nil
 }
 
-func LoadPasswordHash(network string) ([]byte, error) {
-	path := keystorePath(network)
+func LoadPasswordHash(homeDir, network string) ([]byte, error) {
+	path := keystorePath(homeDir, network)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -83,9 +83,9 @@ func LoadPasswordHash(network string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(keystore.PasswordHash)
 }
 
-func Generate(network, username, password, mnemonic string) error {
+func Generate(homeDir, network, username, password, mnemonic string) error {
 	network = strings.ToLower(network)
-	path := keystorePath(network)
+	path := keystorePath(homeDir, network)
 	keystore := Keystore{}
 	keystore.Username = username
 
@@ -136,17 +136,8 @@ func generateConfig(network, password, mnemonic string) (fund.Config, error) {
 	return config, nil
 }
 
-func keystorePath(network string) string {
-	network = strings.ToLower(network)
-	unix := os.Getenv("HOME")
-	if unix != "" {
-		return fmt.Sprintf("%s/%s.json", unix+"/.swapperd", network)
-	}
-	windows := os.Getenv("userprofile")
-	if windows != "" {
-		return fmt.Sprintf("C:\\windows\\system32\\config\\systemprofile\\swapperd\\%s.json", network)
-	}
-	panic(fmt.Sprintf("unknown operating system"))
+func keystorePath(homeDir, network string) string {
+	return path.Join(homeDir, fmt.Sprintf("%s.json", network))
 }
 
 func toBytes32(data string) ([32]byte, error) {
