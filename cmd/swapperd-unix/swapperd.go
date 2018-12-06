@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"os"
 	"os/signal"
 
@@ -9,12 +8,12 @@ import (
 )
 
 func main() {
-	flag.Parse()
 	done := make(chan struct{})
+	homeDir := os.Getenv("HOME") + "/.swapperd"
 
-	testnet := composer.New("testnet", "17927")
+	testnet := composer.New(homeDir, "testnet", "17927")
 	go testnet.Run(done)
-	mainnet := composer.New("mainnet", "7927")
+	mainnet := composer.New(homeDir, "mainnet", "7927")
 	go mainnet.Run(done)
 
 	c := make(chan os.Signal, 1)

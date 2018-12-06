@@ -22,9 +22,10 @@ func usage(errmsg string) {
 
 func main() {
 	const svcName = "swapperd"
+	homeDir := os.Getenv("programfiles(x86)") + "\\Swapperd"
 
-	testnet := composer.New("testnet", "17927")
-	mainnet := composer.New("mainnet", "7927")
+	testnet := composer.New(homeDir, "testnet", "17927")
+	mainnet := composer.New(homeDir, "mainnet", "7927")
 
 	isIntSess, err := svc.IsAnInteractiveSession()
 	if err != nil {
