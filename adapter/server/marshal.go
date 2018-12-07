@@ -20,6 +20,7 @@ type PostSwapRequest struct {
 }
 
 type PostSwapResponse struct {
+	foundation.SwapBlob
 }
 
 type PostTransfersRequest struct {

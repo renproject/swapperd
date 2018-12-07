@@ -68,7 +68,7 @@ func (handler *handler) PostSwaps(req PostSwapRequest, swaps chan<- foundation.S
 		return PostSwapResponse{}, err
 	}
 	swaps <- foundation.NewSwapRequest(swap, secret, req.Password)
-	return PostSwapResponse{}, nil
+	return PostSwapResponse{swap}, nil
 }
 
 func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersResponse, error) {
