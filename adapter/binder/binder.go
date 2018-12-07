@@ -95,18 +95,30 @@ func (builder *builder) buildNativeSwap(swap foundation.SwapBlob, timelock int64
 	if !ok {
 		return foundation.Swap{}, fmt.Errorf("corrupted send value: %v", swap.SendAmount)
 	}
+
+	fee, ok := big.NewInt(0).SetString(swap.SendFee, 10)
+	if !ok {
+		return foundation.Swap{}, fmt.Errorf("corrupted send fee: %v", swap.SendFee)
+	}
+
+	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(swap.BrokerFee)), big.NewInt(10000))
+
 	secretHash, err := unmarshalSecretHash(swap.SecretHash)
 	if err != nil {
 		return foundation.Swap{}, err
 	}
+
 	return foundation.Swap{
 		ID:              swap.ID,
 		Token:           token,
 		Value:           value,
+		Fee:             fee,
 		SecretHash:      secretHash,
 		TimeLock:        swap.TimeLock,
 		SpendingAddress: swap.SendTo,
 		FundingAddress:  fundingAddress,
+		BrokerAddress:   swap.BrokerSendTokenAddr,
+		BrokerFee:       brokerFee,
 	}, nil
 }
 
@@ -118,8 +130,15 @@ func (builder *builder) buildForeignSwap(swap foundation.SwapBlob, timelock int6
 
 	value, ok := big.NewInt(0).SetString(swap.ReceiveAmount, 10)
 	if !ok {
-		return foundation.Swap{}, fmt.Errorf("corrupted send value: %v", swap.ReceiveAmount)
+		return foundation.Swap{}, fmt.Errorf("corrupted receive value: %v", swap.ReceiveAmount)
 	}
+
+	fee, ok := big.NewInt(0).SetString(swap.ReceiveFee, 10)
+	if !ok {
+		return foundation.Swap{}, fmt.Errorf("corrupted receive fee: %v", swap.ReceiveFee)
+	}
+
+	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(swap.BrokerFee)), big.NewInt(10000))
 
 	secretHash, err := unmarshalSecretHash(swap.SecretHash)
 	if err != nil {
@@ -130,10 +149,13 @@ func (builder *builder) buildForeignSwap(swap foundation.SwapBlob, timelock int6
 		ID:              swap.ID,
 		Token:           token,
 		Value:           value,
+		Fee:             fee,
 		SecretHash:      secretHash,
 		TimeLock:        swap.TimeLock,
 		SpendingAddress: spendingAddress,
 		FundingAddress:  swap.ReceiveFrom,
+		BrokerAddress:   swap.BrokerReceiveTokenAddr,
+		BrokerFee:       brokerFee,
 	}, nil
 }
 
