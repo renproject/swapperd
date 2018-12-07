@@ -14,7 +14,7 @@
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "f7cbe917ef623dd7062366ce4a1a0558c997f437"
+  revision = "e17947f884f63c85799a86637524c213d798c7ec"
 
 [[projects]]
   branch = "master"
@@ -266,10 +266,11 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
+    "bcrypt",
+    "blowfish",
     "pbkdf2",
     "ripemd160",
     "scrypt",
-    "sha3",
     "ssh/terminal"
   ]
   revision = "505ab145d0a99da450461ae2c1a9f6cd10d1f447"
@@ -298,7 +299,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31"
+  revision = "a5c9d58dba9a56f97aaa86f55e638b718c5a6c42"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -352,6 +353,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ca3c8bb6437f6ec9f6bd451706c2cac83f1f864ca73709fa817525abede18bd4"
+  inputs-digest = "561926fa5df078550a70679d81f4442a4722e22baddc7a0300c011bef5bf3dae"
   solver-name = "gps-cdcl"
   solver-version = 1
