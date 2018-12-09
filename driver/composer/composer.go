@@ -42,7 +42,7 @@ func (composer *composer) Run(done <-chan struct{}) {
 	receipts := make(chan foundation.SwapStatus)
 	results := make(chan foundation.SwapResult)
 
-	manager, err := keystore.FundManager(composer.homeDir, composer.network)
+	wallet, err := keystore.Wallet(composer.homeDir, composer.network)
 	if err != nil {
 		panic(err)
 	}
@@ -61,7 +61,7 @@ func (composer *composer) Run(done <-chan struct{}) {
 
 	co.ParBegin(
 		func() {
-			httpServer := server.NewHttpServer(manager, logger, passwordHash, composer.port)
+			httpServer := server.NewHttpServer(wallet, logger, passwordHash, composer.port)
 			httpServer.Run(done, swapRequests, statusQueries, balanceQueries)
 		},
 		func() {
@@ -69,7 +69,7 @@ func (composer *composer) Run(done <-chan struct{}) {
 			router.Run(done, swapRequests, statusUpdates, ftSwapRequests, ftStatusUpdates, receipts)
 		},
 		func() {
-			swapper := swapper.New(callback.New(), binder.NewBuilder(manager, logger), logger)
+			swapper := swapper.New(callback.New(), binder.NewBuilder(wallet, logger), logger)
 			swapper.Run(done, ftSwapRequests, results, statusUpdates)
 		},
 		func() {
@@ -78,7 +78,7 @@ func (composer *composer) Run(done <-chan struct{}) {
 		},
 		func() {
 			updateFrequency := 15 * time.Second
-			balanceHandler := balance.New(updateFrequency, manager, logger)
+			balanceHandler := balance.New(updateFrequency, wallet, logger)
 			balanceHandler.Run(done, balanceQueries)
 		},
 	)
