@@ -10,14 +10,14 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/republicprotocol/swapperd/adapter/fund"
 	"github.com/republicprotocol/swapperd/core/balance"
 	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/susruth/ace-go/services/wallet"
 )
 
 type handler struct {
 	passwordHash []byte
-	fundManager  fund.Manager
+	wallet       wallet.Wallet
 }
 
 // The Handler for swapperd requests
@@ -29,15 +29,15 @@ type Handler interface {
 	PostTransfers(PostTransfersRequest) (PostTransfersResponse, error)
 }
 
-func NewHandler(passwordHash []byte, fundManager fund.Manager) Handler {
-	return &handler{passwordHash, fundManager}
+func NewHandler(passwordHash []byte, wallet wallet.Wallet) Handler {
+	return &handler{passwordHash, wallet}
 }
 
 func (handler *handler) GetInfo() GetInfoResponse {
 	return GetInfoResponse{
 		Version:              "0.2.0",
-		SupportedBlockchains: handler.fundManager.SupportedBlockchains(),
-		SupportedTokens:      handler.fundManager.SupportedTokens(),
+		SupportedBlockchains: handler.wallet.SupportedBlockchains(),
+		SupportedTokens:      handler.wallet.SupportedTokens(),
 	}
 }
 
@@ -78,7 +78,7 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersRe
 		return response, err
 	}
 
-	if err := handler.fundManager.VerifyAddress(token.Blockchain, req.To); err != nil {
+	if err := handler.wallet.VerifyAddress(token.Blockchain, req.To); err != nil {
 		return response, err
 	}
 
@@ -87,11 +87,11 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersRe
 		return response, fmt.Errorf("invalid amount %s", req.Amount)
 	}
 
-	if err := handler.fundManager.VerifyBalance(token, amount); err != nil {
+	if err := handler.wallet.VerifyBalance(token, amount); err != nil {
 		return response, err
 	}
 
-	txHash, err := handler.fundManager.Transfer(req.Password, token, req.To, amount)
+	txHash, err := handler.wallet.Transfer(req.Password, token, req.To, amount)
 	if err != nil {
 		return response, err
 	}
@@ -151,8 +151,8 @@ func (handler *handler) verifyTokenDetails(tokenString, addressString, amountStr
 	if !ok {
 		return fmt.Errorf("invalid amount %s", amountString)
 	}
-	if err := handler.fundManager.VerifyAddress(token.Blockchain, addressString); err != nil {
+	if err := handler.wallet.VerifyAddress(token.Blockchain, addressString); err != nil {
 		return err
 	}
-	return handler.fundManager.VerifyBalance(token, amount)
+	return handler.wallet.VerifyBalance(token, amount)
 }

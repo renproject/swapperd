@@ -7,27 +7,27 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/republicprotocol/swapperd/adapter/fund"
 	"github.com/republicprotocol/swapperd/core/balance"
 	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
+	"github.com/susruth/ace-go/services/wallet"
 )
 
 type httpServer struct {
-	manager      fund.Manager
+	wallet       wallet.Wallet
 	logger       logrus.FieldLogger
 	passwordHash []byte
 	port         string
 }
 
-func NewHttpServer(manager fund.Manager, logger logrus.FieldLogger, passwordHash []byte, port string) Server {
-	return &httpServer{manager, logger, passwordHash, port}
+func NewHttpServer(wallet wallet.Wallet, logger logrus.FieldLogger, passwordHash []byte, port string) Server {
+	return &httpServer{wallet, logger, passwordHash, port}
 }
 
 // NewHttpListener creates a new http listener
 func (listener *httpServer) Run(doneCh <-chan struct{}, swapRequests chan<- foundation.SwapRequest, statusQueries chan<- foundation.StatusQuery, balanceQueries chan<- balance.BalanceQuery) {
-	reqHandler := NewHandler(listener.passwordHash, listener.manager)
+	reqHandler := NewHandler(listener.passwordHash, listener.wallet)
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", postSwapsHandler(reqHandler, swapRequests)).Methods("POST")
 	r.HandleFunc("/swaps", getSwapsHandler(reqHandler, statusQueries)).Methods("GET")
