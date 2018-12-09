@@ -1,4 +1,4 @@
-package fund
+package wallet
 
 import (
 	"context"
@@ -15,10 +15,10 @@ import (
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-func (manager *manager) Balances() (map[foundation.TokenName]foundation.Balance, error) {
+func (wallet *wallet) Balances() (map[foundation.TokenName]foundation.Balance, error) {
 	balanceMap := map[foundation.TokenName]foundation.Balance{}
-	for _, token := range manager.SupportedTokens() {
-		balance, err := manager.balance(token.Name)
+	for _, token := range wallet.SupportedTokens() {
+		balance, err := wallet.balance(token.Name)
 		if err != nil {
 			return balanceMap, err
 		}
@@ -27,28 +27,28 @@ func (manager *manager) Balances() (map[foundation.TokenName]foundation.Balance,
 	return balanceMap, nil
 }
 
-func (manager *manager) balance(token foundation.TokenName) (foundation.Balance, error) {
+func (wallet *wallet) balance(token foundation.TokenName) (foundation.Balance, error) {
 	switch token {
 	case foundation.BTC:
-		return manager.balanceBTC()
+		return wallet.balanceBTC()
 	case foundation.ETH:
-		return manager.balanceETH()
+		return wallet.balanceETH()
 	case foundation.WBTC:
-		return manager.balanceERC20(token)
+		return wallet.balanceERC20(token)
 	}
 	return foundation.Balance{}, foundation.NewErrUnsupportedToken(token)
 }
 
-func (manager *manager) balanceBTC() (foundation.Balance, error) {
+func (wallet *wallet) balanceBTC() (foundation.Balance, error) {
 	randomKey, err := crypto.GenerateKey()
 	if err != nil {
 		return foundation.Balance{}, err
 	}
-	btcAccount := libbtc.NewAccount(libbtc.NewBlockchainInfoClient(manager.config.Bitcoin.Network.Name), randomKey)
+	btcAccount := libbtc.NewAccount(libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name), randomKey)
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	address := manager.config.Bitcoin.Address
+	address := wallet.config.Bitcoin.Address
 	balance, err := btcAccount.Balance(ctx, address, 0)
 	if err != nil {
 		return foundation.Balance{}, err
@@ -60,12 +60,12 @@ func (manager *manager) balanceBTC() (foundation.Balance, error) {
 	}, nil
 }
 
-func (manager *manager) balanceETH() (foundation.Balance, error) {
-	client, err := beth.Connect(manager.config.Ethereum.Network.URL)
+func (wallet *wallet) balanceETH() (foundation.Balance, error) {
+	client, err := beth.Connect(wallet.config.Ethereum.Network.URL)
 	if err != nil {
 		return foundation.Balance{}, err
 	}
-	address := manager.config.Ethereum.Address
+	address := wallet.config.Ethereum.Address
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
@@ -81,12 +81,12 @@ func (manager *manager) balanceETH() (foundation.Balance, error) {
 	}, nil
 }
 
-func (manager *manager) balanceERC20(token foundation.TokenName) (foundation.Balance, error) {
-	client, err := beth.Connect(manager.config.Ethereum.Network.URL)
+func (wallet *wallet) balanceERC20(token foundation.TokenName) (foundation.Balance, error) {
+	client, err := beth.Connect(wallet.config.Ethereum.Network.URL)
 	if err != nil {
 		return foundation.Balance{}, err
 	}
-	address := manager.config.Ethereum.Address
+	address := wallet.config.Ethereum.Address
 	tokenAddr, err := client.ReadAddress(string(token))
 	if err != nil {
 		return foundation.Balance{}, err

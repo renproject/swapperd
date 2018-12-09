@@ -1,4 +1,4 @@
-package fund
+package wallet
 
 import (
 	"math/big"
@@ -30,7 +30,7 @@ type Balance struct {
 	Amount  *big.Int
 }
 
-type Manager interface {
+type Wallet interface {
 	SupportedTokens() []foundation.Token
 	SupportedBlockchains() []foundation.Blockchain
 	Balances() (map[foundation.TokenName]foundation.Balance, error)
@@ -41,12 +41,12 @@ type Manager interface {
 	BitcoinAccount(password string) (libbtc.Account, error)
 }
 
-type manager struct {
+type wallet struct {
 	config Config
 }
 
-func New(config Config) Manager {
-	return &manager{
+func New(config Config) Wallet {
+	return &wallet{
 		config: config,
 	}
 }

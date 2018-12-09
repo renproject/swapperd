@@ -1,4 +1,4 @@
-package fund
+package wallet
 
 import (
 	"github.com/republicprotocol/swapperd/foundation"
@@ -9,7 +9,7 @@ type Blockchain struct {
 	Address string
 }
 
-func (manager *manager) SupportedTokens() []foundation.Token {
+func (wallet *wallet) SupportedTokens() []foundation.Token {
 	return []foundation.Token{
 		foundation.TokenBTC,
 		foundation.TokenETH,
@@ -17,15 +17,15 @@ func (manager *manager) SupportedTokens() []foundation.Token {
 	}
 }
 
-func (manager *manager) SupportedBlockchains() []foundation.Blockchain {
+func (wallet *wallet) SupportedBlockchains() []foundation.Blockchain {
 	return []foundation.Blockchain{
 		foundation.Blockchain{
 			foundation.Bitcoin,
-			manager.config.Bitcoin.Address,
+			wallet.config.Bitcoin.Address,
 		},
 		foundation.Blockchain{
 			foundation.Ethereum,
-			manager.config.Ethereum.Address,
+			wallet.config.Ethereum.Address,
 		},
 	}
 }

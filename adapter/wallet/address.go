@@ -1,4 +1,4 @@
-package fund
+package wallet
 
 import (
 	"encoding/hex"
@@ -10,18 +10,18 @@ import (
 	"github.com/republicprotocol/swapperd/foundation"
 )
 
-func (manager *manager) VerifyAddress(blockchain foundation.BlockchainName, address string) error {
+func (wallet *wallet) VerifyAddress(blockchain foundation.BlockchainName, address string) error {
 	switch blockchain {
 	case foundation.Ethereum:
-		return manager.verifyEthereumAddress(address)
+		return wallet.verifyEthereumAddress(address)
 	case foundation.Bitcoin:
-		return manager.verifyBitcoinAddress(address)
+		return wallet.verifyBitcoinAddress(address)
 	default:
 		return foundation.NewErrUnsupportedToken("unsupported blockchain")
 	}
 }
 
-func (manager *manager) verifyEthereumAddress(address string) error {
+func (wallet *wallet) verifyEthereumAddress(address string) error {
 	address = strings.ToLower(address)
 	if address[:2] == "0x" {
 		address = address[2:]
@@ -33,8 +33,8 @@ func (manager *manager) verifyEthereumAddress(address string) error {
 	return nil
 }
 
-func (manager *manager) verifyBitcoinAddress(address string) error {
-	network := manager.config.Bitcoin.Network.Name
+func (wallet *wallet) verifyBitcoinAddress(address string) error {
+	network := wallet.config.Bitcoin.Network.Name
 	switch network {
 	case "mainnet":
 		if _, err := btcutil.DecodeAddress(address, &chaincfg.MainNetParams); err != nil {
