@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
+	"path"
 	"strings"
 
 	"github.com/republicprotocol/swapperd/adapter/fund"
-	"github.com/tyler-smith/go-bip39"
-	"golang.org/x/crypto/sha3"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Testnet is the Swapperd's testnet config object
@@ -40,8 +39,8 @@ var Mainnet = fund.Config{
 	},
 	Ethereum: fund.BlockchainConfig{
 		Network: fund.Network{
-			Name: "kovan",
-			URL:  "https://kovan.infura.io",
+			Name: "mainnet",
+			URL:  "https://mainnet.infura.io",
 		},
 		Tokens: []string{"ETH", "WBTC"},
 	},
@@ -58,8 +57,8 @@ type Address struct {
 	Address    string `json:"address"`
 }
 
-func FundManager(network string) (fund.Manager, error) {
-	path := keystorePath(network)
+func FundManager(homeDir, network string) (fund.Manager, error) {
+	path := keystorePath(homeDir, network)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -71,26 +70,31 @@ func FundManager(network string) (fund.Manager, error) {
 	return fund.New(keystore.Config), nil
 }
 
-func LoadPasswordHash(network string) ([32]byte, error) {
-	path := keystorePath(network)
+func LoadPasswordHash(homeDir, network string) ([]byte, error) {
+	path := keystorePath(homeDir, network)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return [32]byte{}, err
+		return nil, err
 	}
 	keystore := Keystore{}
 	if err := json.Unmarshal(data, &keystore); err != nil {
-		return [32]byte{}, err
+		return nil, err
 	}
-	return toBytes32(keystore.PasswordHash)
+	return base64.StdEncoding.DecodeString(keystore.PasswordHash)
 }
 
-func Generate(network, username, password, mnemonic string) error {
+func Generate(homeDir, network, username, password, mnemonic string) error {
 	network = strings.ToLower(network)
-	path := keystorePath(network)
+	path := keystorePath(homeDir, network)
 	keystore := Keystore{}
 	keystore.Username = username
-	passwordHashBytes := sha3.Sum256([]byte(password))
-	keystore.PasswordHash = base64.StdEncoding.EncodeToString(passwordHashBytes[:])
+
+	passwordHashBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	keystore.PasswordHash = base64.StdEncoding.EncodeToString(passwordHashBytes)
 	config, err := generateConfig(network, password, mnemonic)
 	if err != nil {
 		return err
@@ -113,18 +117,6 @@ func generateConfig(network, password, mnemonic string) (fund.Config, error) {
 	default:
 		return fund.Config{}, fmt.Errorf("Invalid Network %s", network)
 	}
-	entropy, err := bip39.NewEntropy(128)
-	if err != nil {
-		return fund.Config{}, err
-	}
-
-	if mnemonic == "" {
-		mnemonic, err = bip39.NewMnemonic(entropy)
-		if err != nil {
-			return fund.Config{}, err
-		}
-	}
-
 	config.Mnemonic = mnemonic
 	manager := fund.New(config)
 	ethAccount, err := manager.EthereumAccount(password)
@@ -144,17 +136,8 @@ func generateConfig(network, password, mnemonic string) (fund.Config, error) {
 	return config, nil
 }
 
-func keystorePath(network string) string {
-	network = strings.ToLower(network)
-	unix := os.Getenv("HOME")
-	if unix != "" {
-		return fmt.Sprintf("%s/%s.json", unix+"/.swapperd", network)
-	}
-	windows := os.Getenv("userprofile")
-	if windows != "" {
-		return fmt.Sprintf("C:\\windows\\system32\\config\\systemprofile\\swapperd\\%s.json", network)
-	}
-	panic(fmt.Sprintf("unknown operating system"))
+func keystorePath(homeDir, network string) string {
+	return path.Join(homeDir, fmt.Sprintf("%s.json", network))
 }
 
 func toBytes32(data string) ([32]byte, error) {

@@ -35,7 +35,9 @@ func (book *book) Run(done <-chan struct{}, statuses <-chan foundation.SwapStatu
 			if !ok {
 				return
 			}
-			query.Responder <- book.monitor.get()
+			go func() {
+				query.Responder <- book.monitor.get()
+			}()
 		}
 	}
 }

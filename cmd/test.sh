@@ -65,9 +65,9 @@ cputype="$(uname -m)"
 
 # download swapperd binary depending on the system and architecture
 if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
-  curl -s 'https://releases.republicprotocol.com/swapperd/0.2.0/swapper_linux_amd64.zip' > swapper.zip
+  curl -s 'https://releases.republicprotocol.com/test/swapper_linux_amd64.zip' > swapper.zip
 elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
-  curl -s 'https://releases.republicprotocol.com/swapperd/0.2.0/swapper_darwin_amd64.zip' > swapper.zip
+  curl -s 'https://releases.republicprotocol.com/test/swapper_darwin_amd64.zip' > swapper.zip
 else
   echo 'unsupported OS type or architecture'
   cd ..
@@ -75,47 +75,15 @@ else
   exit 1
 fi
 
-# choose which network to use
-while :
-do
-  echo "Please enter the network you want to use (1/2)"
-  echo ""
-  echo "1. Testnet (default)" # testnet by default
-  echo "2. Mainnet"
-  read choice </dev/tty
-  if [ "$choice" = "" ] || [ "$choice" = "1" ]; then 
-    NETWORK="testnet"
-    break
-  elif [ "$choice" = "2" ]; then
-   NETWORK="mainnet"
-    break
-  fi
-  echo "The network entered is invalid. Please try again."
-done
-
 unzip -o swapper.zip
 chmod +x bin/swapperd
 chmod +x bin/installer
 
-# assume the service/plist file exists
-if ls "$HOME"/.swapperd/*.json 1> /dev/null 2>&1; then
-  echo "Swapperd has already been installed, updating..."
-  if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
-    systemctl --user restart swapperd.service
-  elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
-    if [ "$(launchctl list | grep ren.swapperd | wc -l)" -ge 1 ]; then
-      launchctl unload -w "$HOME/Library/LaunchAgents/ren.swapperd.plist"
-      sleep 5
-    fi
-    launchctl load -w "$HOME/Library/LaunchAgents/ren.swapperd.plist"
-  fi
-  rm swapper.zip
-  rm bin/installer
-  echo "Swapperd has been updated. Great!"
-  exit 0
+if [ "$3" = '' ]; then 
+  ./bin/installer --username $1 --password $2
+else 
+  ./bin/installer --username $1 --password $2 --mnemonic "$3"
 fi
-
-./bin/installer --network $NETWORK < /dev/tty
 
 # make sure the swapper service is started when booted
 if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
@@ -141,7 +109,7 @@ rm swapper.zip
 rm bin/installer
 
 mkdir -p $HOME/.swapperd_backup
-timestamp=$(date +%s)
 cp $HOME/.swapperd/testnet.json $HOME/.swapperd_backup/testnet-$(timestamp).json
+cp $HOME/.swapperd/mainnet.json $HOME/.swapperd_backup/mainnet-$(timestamp).json
 
 echo "Swapperd is installed now. Great!"
