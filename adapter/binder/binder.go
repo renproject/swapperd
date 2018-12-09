@@ -8,20 +8,20 @@ import (
 	"github.com/republicprotocol/swapperd/adapter/binder/btc"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
 	"github.com/republicprotocol/swapperd/adapter/binder/eth"
-	"github.com/republicprotocol/swapperd/adapter/fund"
+	"github.com/republicprotocol/swapperd/adapter/wallet"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/sirupsen/logrus"
 )
 
 type builder struct {
-	fund.Manager
+	wallet.Wallet
 	logrus.FieldLogger
 }
 
-func NewBuilder(manager fund.Manager, logger logrus.FieldLogger) swapper.ContractBuilder {
+func NewBuilder(wallet wallet.Wallet, logger logrus.FieldLogger) swapper.ContractBuilder {
 	return &builder{
-		manager,
+		wallet,
 		logger,
 	}
 }
