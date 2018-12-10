@@ -17,20 +17,21 @@ import (
 )
 
 var Random *rand.Rand
+var Logger *logrus.Logger
 
 func init() {
 	Random = rand.New(rand.NewSource(time.Now().Unix()))
+	Logger = logrus.New()
+	Logger.SetOutput(os.Stdout)
 }
 
 var _ = Describe("Token balance on blockchain", func() {
 
 	init := func(frequency time.Duration) (chan struct{}, map[foundation.TokenName]foundation.Balance, *testutils.MockBlockchain, Balances) {
 		balance := randomBalance()
-		logger := logrus.New()
-		logger.SetOutput(os.Stdout)
 		done := make(chan struct{})
 		blockchain := testutils.NewMockBlockchain(balance)
-		balances := New(frequency, blockchain, logger)
+		balances := New(frequency, blockchain, Logger)
 		return done, balance, blockchain, balances
 	}
 
@@ -101,12 +102,10 @@ var _ = Describe("Token balance on blockchain", func() {
 
 		It("should use the cached balance when something wrong with the blockchain", func() {
 			balance := randomBalance()
-			logger := logrus.New()
-			logger.SetOutput(os.Stdout)
 			done := make(chan struct{})
 			defer close(done)
 			blockchain := testutils.NewFaultyBlockchain(balance)
-			balances := New(200*time.Millisecond, blockchain, logger)
+			balances := New(200*time.Millisecond, blockchain, Logger)
 			queries := make(chan BalanceQuery)
 			go balances.Run(done, queries)
 			time.Sleep(10 * time.Millisecond)
@@ -133,7 +132,6 @@ var _ = Describe("Token balance on blockchain", func() {
 				close(queries)
 				time.Sleep(10 * time.Millisecond)
 			}).ShouldNot(Panic())
-
 		})
 	})
 })

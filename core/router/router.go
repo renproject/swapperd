@@ -4,16 +4,22 @@ import (
 	"time"
 
 	"github.com/republicprotocol/co-go"
-	"github.com/republicprotocol/swapperd/foundation"
 	"github.com/sirupsen/logrus"
+
+	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type Storage interface {
 	InsertSwap(swap foundation.SwapRequest) error
+
 	PendingSwap(foundation.SwapID) (foundation.SwapRequest, error)
+
 	DeletePendingSwap(foundation.SwapID) error
+
 	PendingSwaps() ([]foundation.SwapRequest, error)
+
 	UpdateStatus(update foundation.StatusUpdate) error
+
 	Swaps() ([]foundation.SwapStatus, error)
 }
 
