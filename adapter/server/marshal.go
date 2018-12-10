@@ -17,10 +17,7 @@ type GetSwapsResponse struct {
 
 type GetBalancesResponse map[blockchain.TokenName]blockchain.Balance
 
-type PostSwapRequest struct {
-	swap.SwapBlob
-	Password string
-}
+type PostSwapRequest swap.SwapBlob
 
 type PostSwapResponse struct {
 }

@@ -6,5 +6,5 @@ import (
 )
 
 type Server interface {
-	Run(done <-chan struct{}, swapRequests chan<- swap.SwapRequest, statusQueries chan<- swap.ReceiptQuery, balanceQueries chan<- balance.BalanceQuery)
+	Run(doneCh <-chan struct{}, swaps chan<- swap.SwapBlob, receipts chan<- swap.SwapReceipt, statusQueries chan<- swap.ReceiptQuery, balanceQueries chan<- balance.BalanceQuery)
 }

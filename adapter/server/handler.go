@@ -8,30 +8,40 @@ import (
 	"math/big"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/republicprotocol/swapperd/adapter/wallet"
 	"github.com/republicprotocol/swapperd/core/balance"
+	"github.com/republicprotocol/swapperd/core/bootload"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
+	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/sha3"
 )
 
+func NewErrBootloadRequired(msg string) error {
+	return fmt.Errorf("please bootload before calling %s", msg)
+}
+
 type handler struct {
+	bootloaded   bool
 	passwordHash []byte
 	wallet       wallet.Wallet
+	storage      Storage
+	bootloader   bootload.Bootloader
 }
 
 // The Handler for swapperd requests
 type Handler interface {
 	GetInfo() GetInfoResponse
-	GetSwaps(chan<- swap.ReceiptQuery) GetSwapsResponse
+	GetSwaps(chan<- swap.ReceiptQuery) (GetSwapsResponse, error)
 	GetBalances(chan<- balance.BalanceQuery) GetBalancesResponse
-	PostSwaps(PostSwapRequest, chan<- swap.SwapRequest) (PostSwapResponse, error)
 	PostTransfers(PostTransfersRequest) (PostTransfersResponse, error)
+	PostSwaps(PostSwapRequest, chan<- swap.SwapReceipt, chan<- swap.SwapBlob) (PostSwapResponse, error)
+	PostBootload(password string, receipts chan<- swap.SwapReceipt, swaps chan<- swap.SwapBlob)
+	VerifyPassword(password string) bool
 }
 
-func NewHandler(passwordHash []byte, wallet wallet.Wallet) Handler {
-	return &handler{passwordHash, wallet}
+func NewHandler(passwordHash []byte, wallet wallet.Wallet, storage Storage, bootloader bootload.Bootloader) Handler {
+	return &handler{false, passwordHash, wallet, storage, bootloader}
 }
 
 func (handler *handler) GetInfo() GetInfoResponse {
@@ -42,15 +52,18 @@ func (handler *handler) GetInfo() GetInfoResponse {
 	}
 }
 
-func (handler *handler) GetSwaps(statuses chan<- swap.ReceiptQuery) GetSwapsResponse {
+func (handler *handler) GetSwaps(statuses chan<- swap.ReceiptQuery) (GetSwapsResponse, error) {
 	resp := GetSwapsResponse{}
+	if !handler.bootloaded {
+		return resp, NewErrBootloadRequired("get swaps")
+	}
 	responder := make(chan map[swap.SwapID]swap.SwapReceipt)
 	statuses <- swap.ReceiptQuery{Responder: responder}
 	statusMap := <-responder
 	for _, status := range statusMap {
 		resp.Swaps = append(resp.Swaps, status)
 	}
-	return resp
+	return resp, nil
 }
 
 func (handler *handler) GetBalances(balanceQueries chan<- balance.BalanceQuery) GetBalancesResponse {
@@ -63,12 +76,22 @@ func (handler *handler) GetBalances(balanceQueries chan<- balance.BalanceQuery) 
 	return resp
 }
 
-func (handler *handler) PostSwaps(req PostSwapRequest, swaps chan<- swap.SwapRequest) (PostSwapResponse, error) {
-	blob, secret, err := handler.patchSwap(req)
+func (handler *handler) PostSwaps(swapReq PostSwapRequest, receipts chan<- swap.SwapReceipt, swaps chan<- swap.SwapBlob) (PostSwapResponse, error) {
+	if !handler.bootloaded {
+		return PostSwapResponse{}, NewErrBootloadRequired("get swaps")
+	}
+	password := swapReq.Password
+	blob, err := handler.patchSwap(swap.SwapBlob(swapReq))
 	if err != nil {
 		return PostSwapResponse{}, err
 	}
-	swaps <- swap.NewSwapRequest(blob, secret, req.Password)
+	blob.Password = ""
+	handler.storage.InsertSwap(blob)
+	blob.Password = password
+	go func() {
+		swaps <- blob
+		receipts <- swap.NewSwapReceipt(blob)
+	}()
 	return PostSwapResponse{}, nil
 }
 
@@ -101,46 +124,50 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersRe
 	return response, nil
 }
 
-func (handler *handler) verifyPassword(password string) bool {
+func (handler *handler) PostBootload(password string, receipts chan<- swap.SwapReceipt, swaps chan<- swap.SwapBlob) {
+	handler.bootloader.Bootload(password, receipts, swaps)
+}
+
+func (handler *handler) VerifyPassword(password string) bool {
 	return (bcrypt.CompareHashAndPassword(handler.passwordHash, []byte(password)) != nil)
 }
 
-func (handler *handler) patchSwap(req PostSwapRequest) (swap.SwapBlob, [32]byte, error) {
-	if err := handler.validateTokenDetails(req.SwapBlob, req.Password); err != nil {
-		return swap.SwapBlob{}, [32]byte{}, err
+func (handler *handler) patchSwap(req swap.SwapBlob) (swap.SwapBlob, error) {
+	if err := handler.validateTokenDetails(req); err != nil {
+		return swap.SwapBlob{}, err
 	}
-	return patchSwapDetails(req.SwapBlob)
+	return patchSwapDetails(req)
 }
 
-func (handler *handler) validateTokenDetails(swapBlob swap.SwapBlob, password string) error {
+func (handler *handler) validateTokenDetails(blob swap.SwapBlob) error {
 	// verify send details
-	if err := handler.verifyTokenDetails(swapBlob.SendToken, swapBlob.SendTo, swapBlob.SendAmount); err != nil {
+	if err := handler.verifyTokenDetails(blob.SendToken, blob.SendTo, blob.SendAmount); err != nil {
 		return err
 	}
 	// verify receive details
-	return handler.verifyTokenDetails(swapBlob.ReceiveToken, swapBlob.ReceiveFrom, swapBlob.ReceiveAmount)
+	return handler.verifyTokenDetails(blob.ReceiveToken, blob.ReceiveFrom, blob.ReceiveAmount)
 }
 
-func patchSwapDetails(swapBlob swap.SwapBlob) (swap.SwapBlob, [32]byte, error) {
+func patchSwapDetails(swapBlob swap.SwapBlob) (swap.SwapBlob, error) {
 	swapID := [32]byte{}
 	rand.Read(swapID[:])
 	swapBlob.ID = swap.SwapID(base64.StdEncoding.EncodeToString(swapID[:]))
 	secret := [32]byte{}
 	if swapBlob.ShouldInitiateFirst {
 		swapBlob.TimeLock = time.Now().Unix() + 3*swap.ExpiryUnit
-		rand.Read(secret[:])
+		secret = sha3.Sum256(append([]byte(swapBlob.Password), []byte(swapBlob.ID)...))
 		hash := sha256.Sum256(secret[:])
 		swapBlob.SecretHash = base64.StdEncoding.EncodeToString(hash[:])
-		return swapBlob, secret, nil
+		return swapBlob, nil
 	}
 	secretHash, err := base64.StdEncoding.DecodeString(swapBlob.SecretHash)
 	if len(secretHash) != 32 || err != nil {
-		return swapBlob, secret, fmt.Errorf("invalid secret hash")
+		return swapBlob, fmt.Errorf("invalid secret hash")
 	}
 	if time.Now().Unix()+2*swap.ExpiryUnit > swapBlob.TimeLock {
-		return swapBlob, secret, fmt.Errorf("not enough time to do the atomic swap")
+		return swapBlob, fmt.Errorf("not enough time to do the atomic swap")
 	}
-	return swapBlob, secret, nil
+	return swapBlob, nil
 }
 
 func (handler *handler) verifyTokenDetails(tokenString, addressString, amountString string) error {

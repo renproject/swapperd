@@ -9,30 +9,39 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/republicprotocol/swapperd/adapter/wallet"
 	"github.com/republicprotocol/swapperd/core/balance"
+	"github.com/republicprotocol/swapperd/core/bootload"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 )
 
+type Storage interface {
+	InsertSwap(swap swap.SwapBlob) error
+	bootload.Storage
+}
 type httpServer struct {
+	bootloader   bootload.Bootloader
 	wallet       wallet.Wallet
+	storage      Storage
 	logger       logrus.FieldLogger
 	passwordHash []byte
 	port         string
+	loggedin     bool
 }
 
-func NewHttpServer(wallet wallet.Wallet, logger logrus.FieldLogger, passwordHash []byte, port string) Server {
-	return &httpServer{wallet, logger, passwordHash, port}
+func NewHttpServer(wallet wallet.Wallet, storage Storage, logger logrus.FieldLogger, passwordHash []byte, port string) Server {
+	return &httpServer{bootload.New(storage, logger), wallet, storage, logger, passwordHash, port, false}
 }
 
 // NewHttpListener creates a new http listener
-func (listener *httpServer) Run(doneCh <-chan struct{}, swapRequests chan<- swap.SwapRequest, statusQueries chan<- swap.ReceiptQuery, balanceQueries chan<- balance.BalanceQuery) {
-	reqHandler := NewHandler(listener.passwordHash, listener.wallet)
+func (listener *httpServer) Run(doneCh <-chan struct{}, swaps chan<- swap.SwapBlob, receipts chan<- swap.SwapReceipt, statusQueries chan<- swap.ReceiptQuery, balanceQueries chan<- balance.BalanceQuery) {
+	reqHandler := NewHandler(listener.passwordHash, listener.wallet, listener.storage, listener.bootloader)
 	r := mux.NewRouter()
-	r.HandleFunc("/swaps", postSwapsHandler(reqHandler, swapRequests)).Methods("POST")
+	r.HandleFunc("/swaps", postSwapsHandler(reqHandler, receipts, swaps)).Methods("POST")
 	r.HandleFunc("/swaps", getSwapsHandler(reqHandler, statusQueries)).Methods("GET")
 	r.HandleFunc("/transfers", postTransfersHandler(reqHandler)).Methods("POST")
 	r.HandleFunc("/balances", getBalancesHandler(reqHandler, balanceQueries)).Methods("GET")
+	r.HandleFunc("/bootload", postBootloadHandler(reqHandler, receipts, swaps)).Methods("POST")
 	r.HandleFunc("/info", getInfoHandler(reqHandler)).Methods("GET")
 	r.Use(recoveryHandler)
 	httpHandler := cors.New(cors.Options{
@@ -75,6 +84,25 @@ func recoveryHandler(h http.Handler) http.Handler {
 	})
 }
 
+// postBootloadHandler handles the post login request, it loads pending swaps and
+// historical swap receipts into memory.
+func postBootloadHandler(reqHandler Handler, receipts chan<- swap.SwapReceipt, swaps chan<- swap.SwapBlob) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, password, ok := r.BasicAuth()
+		if !ok {
+			writeError(w, http.StatusUnauthorized, "authentication required")
+			return
+		}
+
+		if !reqHandler.VerifyPassword(password) {
+			writeError(w, http.StatusUnauthorized, "incorrect password")
+			return
+		}
+		reqHandler.PostBootload(password, receipts, swaps)
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
 // getInfoHandler handles the get info request, it returns the basic information
 // of the swapper such as the version, supported tokens addresses.
 func getInfoHandler(reqHandler Handler) http.HandlerFunc {
@@ -90,7 +118,13 @@ func getInfoHandler(reqHandler Handler) http.HandlerFunc {
 // the existing swaps on the swapper.
 func getSwapsHandler(reqHandler Handler, statusQueries chan<- swap.ReceiptQuery) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := json.NewEncoder(w).Encode(reqHandler.GetSwaps(statusQueries)); err != nil {
+		resp, err := reqHandler.GetSwaps(statusQueries)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot get swaps: %v", err))
+			return
+		}
+
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
 			return
 		}
@@ -99,11 +133,16 @@ func getSwapsHandler(reqHandler Handler, statusQueries chan<- swap.ReceiptQuery)
 
 // postSwapsHandler handles the post swaps request, it fills incomplete
 // information and starts the Atomic Swap.
-func postSwapsHandler(reqHandler Handler, swapRequests chan<- swap.SwapRequest) http.HandlerFunc {
+func postSwapsHandler(reqHandler Handler, receipts chan<- swap.SwapReceipt, swapRequests chan<- swap.SwapBlob) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, password, ok := r.BasicAuth()
 		if !ok {
 			writeError(w, http.StatusUnauthorized, "authentication required")
+			return
+		}
+
+		if !reqHandler.VerifyPassword(password) {
+			writeError(w, http.StatusUnauthorized, "incorrect password")
 			return
 		}
 
@@ -114,7 +153,7 @@ func postSwapsHandler(reqHandler Handler, swapRequests chan<- swap.SwapRequest) 
 		}
 		swapReq.Password = password
 
-		patchedSwap, err := reqHandler.PostSwaps(swapReq, swapRequests)
+		patchedSwap, err := reqHandler.PostSwaps(swapReq, receipts, swapRequests)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
