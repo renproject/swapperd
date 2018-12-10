@@ -27,7 +27,7 @@ func NewBuilder(wallet wallet.Wallet, logger logrus.FieldLogger) swapper.Contrac
 	}
 }
 
-func (builder *builder) BuildSwapContracts(swap swap.SwapRequest) (swapper.Contract, swapper.Contract, error) {
+func (builder *builder) BuildSwapContracts(swap swap.SwapBlob) (swapper.Contract, swapper.Contract, error) {
 	native, foreign, err := builder.buildComplementarySwaps(swap)
 	if err != nil {
 		return nil, nil, err
@@ -68,45 +68,44 @@ func (builder *builder) buildBinder(swap swap.Swap, password string) (swapper.Co
 	}
 }
 
-func (builder *builder) buildComplementarySwaps(swapReq swap.SwapRequest) (swap.Swap, swap.Swap, error) {
-	fundingAddr, spendingAddr, err := builder.calculateAddresses(swapReq)
+func (builder *builder) buildComplementarySwaps(blob swap.SwapBlob) (swap.Swap, swap.Swap, error) {
+	fundingAddr, spendingAddr, err := builder.calculateAddresses(blob)
 	if err != nil {
 		return swap.Swap{}, swap.Swap{}, err
 	}
+	nativeExpiry, foreignExpiry := builder.calculateTimeLocks(blob)
 
-	nativeExpiry, foreignExpiry := builder.calculateTimeLocks(swapReq.SwapBlob)
-
-	nativeSwap, err := builder.buildNativeSwap(swapReq.SwapBlob, nativeExpiry, fundingAddr)
+	nativeSwap, err := builder.buildNativeSwap(blob, nativeExpiry, fundingAddr)
 	if err != nil {
 		return swap.Swap{}, swap.Swap{}, err
 	}
-	foreignSwap, err := builder.buildForeignSwap(swapReq.SwapBlob, foreignExpiry, spendingAddr)
+	foreignSwap, err := builder.buildForeignSwap(blob, foreignExpiry, spendingAddr)
 	if err != nil {
 		return swap.Swap{}, swap.Swap{}, err
 	}
 	return nativeSwap, foreignSwap, nil
 }
 
-func (builder *builder) buildNativeSwap(swapReq swap.SwapBlob, timelock int64, fundingAddress string) (swap.Swap, error) {
-	token, err := blockchain.PatchToken(swapReq.SendToken)
+func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fundingAddress string) (swap.Swap, error) {
+	token, err := blockchain.PatchToken(blob.SendToken)
 	if err != nil {
 		return swap.Swap{}, err
 	}
-	value, ok := big.NewInt(0).SetString(swapReq.SendAmount, 10)
+	value, ok := big.NewInt(0).SetString(blob.SendAmount, 10)
 	if !ok {
-		return swap.Swap{}, fmt.Errorf("corrupted send value: %v", swapReq.SendAmount)
+		return swap.Swap{}, fmt.Errorf("corrupted send value: %v", blob.SendAmount)
 	}
-	secretHash, err := unmarshalSecretHash(swapReq.SecretHash)
+	secretHash, err := unmarshalSecretHash(blob.SecretHash)
 	if err != nil {
 		return swap.Swap{}, err
 	}
 	return swap.Swap{
-		ID:              swapReq.ID,
+		ID:              blob.ID,
 		Token:           token,
 		Value:           value,
 		SecretHash:      secretHash,
-		TimeLock:        swapReq.TimeLock,
-		SpendingAddress: swapReq.SendTo,
+		TimeLock:        blob.TimeLock,
+		SpendingAddress: blob.SendTo,
 		FundingAddress:  fundingAddress,
 	}, nil
 }
@@ -149,7 +148,7 @@ func (builder *builder) calculateTimeLocks(swap swap.SwapBlob) (native, foreign 
 	return
 }
 
-func (builder *builder) calculateAddresses(swap swap.SwapRequest) (string, string, error) {
+func (builder *builder) calculateAddresses(swap swap.SwapBlob) (string, string, error) {
 	sendToken, err := blockchain.PatchToken(swap.SendToken)
 	if err != nil {
 		return "", "", err
