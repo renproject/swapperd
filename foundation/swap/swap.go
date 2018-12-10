@@ -56,7 +56,7 @@ type SwapBlob struct {
 	// SendAmount and ReceiveAmount are decimal strings.
 	SendAmount           string `json:"sendAmount"`
 	ReceiveAmount        string `json:"receiveAmount"`
-	MinimumReceiveAmount string `json:"minimumReceiveAmount"`
+	MinimumReceiveAmount string `json:"minimumReceiveAmount,omitempty"`
 
 	SendTo              string `json:"sendTo"`
 	ReceiveFrom         string `json:"receiveFrom"`
@@ -64,29 +64,11 @@ type SwapBlob struct {
 	SecretHash          string `json:"secretHash"`
 	ShouldInitiateFirst bool   `json:"shouldInitiateFirst"`
 
-	Delay            bool            `json:"delayed"`
-	DelayInfo        json.RawMessage `json:"delayInfo"`
-	DelayCallbackURL string          `json:"delayCallbackUrl"`
-}
+	Delay            bool            `json:"delayed,omitempty"`
+	DelayInfo        json.RawMessage `json:"delayInfo,omitempty"`
+	DelayCallbackURL string          `json:"delayCallbackUrl,omitempty"`
 
-type SwapRequest struct {
-	SwapBlob
-
-	Secret   [32]byte `json:"secret"`
-	Password string   `json:"password"`
-}
-
-func NewSwapRequest(swapBlob SwapBlob, secret [32]byte, password string) SwapRequest {
-	return SwapRequest{swapBlob, secret, password}
-}
-
-type SwapResult struct {
-	ID      SwapID
-	Success bool
-}
-
-func NewSwapResult(id SwapID, success bool) SwapResult {
-	return SwapResult{id, success}
+	Password string `json:"password,omitempty"`
 }
 
 type ReceiptQuery struct {
