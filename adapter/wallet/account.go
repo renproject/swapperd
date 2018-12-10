@@ -1,7 +1,9 @@
 package wallet
 
 import (
+	"bytes"
 	"crypto/ecdsa"
+	"crypto/rsa"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
@@ -19,7 +21,7 @@ func (wallet *wallet) EthereumAccount(password string) (beth.Account, error) {
 	case "mainnet":
 		derivationPath = []uint32{44, 60, 0, 0, 0}
 	}
-	privKey, err := wallet.loadKey(password, derivationPath)
+	privKey, err := wallet.loadECDSAKey(password, derivationPath)
 	if err != nil {
 		return nil, err
 	}
@@ -39,14 +41,14 @@ func (wallet *wallet) BitcoinAccount(password string) (libbtc.Account, error) {
 	case "mainnet":
 		derivationPath = []uint32{44, 0, 0, 0, 0}
 	}
-	privKey, err := wallet.loadKey(password, derivationPath)
+	privKey, err := wallet.loadECDSAKey(password, derivationPath)
 	if err != nil {
 		return nil, err
 	}
 	return libbtc.NewAccount(libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name), privKey), nil
 }
 
-func (wallet *wallet) loadKey(password string, path []uint32) (*ecdsa.PrivateKey, error) {
+func (wallet *wallet) loadECDSAKey(password string, path []uint32) (*ecdsa.PrivateKey, error) {
 	seed := bip39.NewSeed(wallet.config.Mnemonic, password)
 	key, err := hdkeychain.NewMaster(seed, &chaincfg.MainNetParams)
 	if err != nil {
@@ -63,4 +65,9 @@ func (wallet *wallet) loadKey(password string, path []uint32) (*ecdsa.PrivateKey
 		return nil, err
 	}
 	return privKey.ToECDSA(), nil
+}
+
+func (wallet *wallet) loadRSAKey(password string) (*rsa.PrivateKey, error) {
+	seed := bip39.NewSeed(wallet.config.Mnemonic, password)
+	return rsa.GenerateKey(bytes.NewReader(seed), 2048)
 }
