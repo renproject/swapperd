@@ -13,24 +13,14 @@ const ExpiryUnit = int64(2 * 60 * 60)
 // A SwapID uniquely identifies a Swap that is being executed.
 type SwapID string
 
+// RandomID create a random SwapID.
 func RandomID() SwapID {
 	id := [32]byte{}
 	rand.Read(id[:])
 	return SwapID(base64.StdEncoding.EncodeToString(id[:]))
 }
 
-// The SwapStatus contains the swap details and the status.
-type SwapStatus struct {
-	ID            SwapID `json:"id"`
-	SendToken     string `json:"sendToken"`
-	ReceiveToken  string `json:"receiveToken"`
-	SendAmount    string `json:"sendAmount"`
-	ReceiveAmount string `json:"receiveAmount"`
-	Timestamp     int64  `json:"timestamp"`
-	Status        int    `json:"status"`
-}
-
-// NewSwapStatus returns the `SwapStatus` with given SwapBlob
+// NewSwapStatus returns the `SwapStatus` from the given SwapBlob.
 func NewSwapStatus(blob SwapBlob) SwapStatus {
 	return SwapStatus{blob.ID, blob.SendToken, blob.ReceiveToken, blob.SendAmount, blob.ReceiveAmount, time.Now().Unix(), 1}
 }

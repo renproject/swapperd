@@ -1,5 +1,6 @@
 vendor
 
+*.coverprofile
 temp
 temp/*
 local_*

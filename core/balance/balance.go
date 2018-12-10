@@ -4,9 +4,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/republicprotocol/swapperd/foundation"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Blockchain interface {
@@ -30,11 +30,20 @@ type balances struct {
 }
 
 func New(updateFrequency time.Duration, blockchain Blockchain, logger logrus.FieldLogger) Balances {
-	return &balances{new(sync.RWMutex), updateFrequency, map[foundation.TokenName]foundation.Balance{}, logger, blockchain}
+	return &balances{
+		mu:              new(sync.RWMutex),
+		updateFrequency: updateFrequency,
+		balanceMap:      map[foundation.TokenName]foundation.Balance{},
+		logger:          logger,
+		blockchain:      blockchain,
+	}
 }
 
 func (balances *balances) Run(done <-chan struct{}, queries <-chan BalanceQuery) {
 	ticker := time.NewTicker(balances.updateFrequency)
+	defer ticker.Stop()
+	go balances.update()
+
 	for {
 		select {
 		case <-done:
@@ -46,7 +55,10 @@ func (balances *balances) Run(done <-chan struct{}, queries <-chan BalanceQuery)
 				return
 			}
 			go func() {
-				query.Response <- balances.read()
+				select {
+				case query.Response <- balances.read():
+				case <-done:
+				}
 			}()
 		}
 	}
@@ -60,11 +72,21 @@ func (balances *balances) update() {
 	}
 	balances.mu.Lock()
 	defer balances.mu.Unlock()
-	balances.balanceMap = balanceMap
+
+	balances.balanceMap = copyBalanceMap(balanceMap)
 }
 
 func (balances *balances) read() map[foundation.TokenName]foundation.Balance {
 	balances.mu.RLock()
 	defer balances.mu.RUnlock()
-	return balances.balanceMap
+
+	return copyBalanceMap(balances.balanceMap)
+}
+
+func copyBalanceMap(balance map[foundation.TokenName]foundation.Balance) map[foundation.TokenName]foundation.Balance {
+	copied := map[foundation.TokenName]foundation.Balance{}
+	for i, j := range balance {
+		copied[i] = j
+	}
+	return copied
 }

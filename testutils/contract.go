@@ -6,42 +6,41 @@ import (
 )
 
 type MockContractBuilder struct {
-
 }
 
-func (builder MockContractBuilder)BuildSwapContracts(swap foundation.SwapRequest) (swapper.Contract, swapper.Contract, error){
+func (builder MockContractBuilder) BuildSwapContracts(swap foundation.SwapRequest) (swapper.Contract, swapper.Contract, error) {
 	// cool, which means I can pick cherrys if I got fired by RP
+	return nil, nil, nil
 }
 
 type MockContract struct {
-	swap foundation.Swap
+	swap   foundation.Swap
 	status int
 }
 
-func NewMockContract(swap foundation.Swap) MockContract{
+func NewMockContract(swap foundation.Swap) MockContract {
 	return MockContract{
-		swap:swap,
-		status : 0,
+		swap:   swap,
+		status: 0,
 	}
 }
 
 func (contract MockContract) Initiate() error {
-	contract.status = foundation.Initiated
 	return nil
 }
 
 func (contract MockContract) Audit() error {
-
+	return nil
 }
 
 func (contract MockContract) Redeem([32]byte) error {
-
+	return nil
 }
 
 func (contract MockContract) AuditSecret() ([32]byte, error) {
-
+	return [32]byte{}, nil
 }
 
 func (contract MockContract) Refund() error {
-
+	return nil
 }
