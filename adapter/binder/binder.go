@@ -95,18 +95,30 @@ func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fund
 	if !ok {
 		return swap.Swap{}, fmt.Errorf("corrupted send value: %v", blob.SendAmount)
 	}
+
+	fee, ok := big.NewInt(0).SetString(blob.SendFee, 10)
+	if !ok {
+		return swap.Swap{}, fmt.Errorf("corrupted send fee: %v", blob.SendFee)
+	}
+
+	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000))
+
 	secretHash, err := unmarshalSecretHash(blob.SecretHash)
 	if err != nil {
 		return swap.Swap{}, err
 	}
+
 	return swap.Swap{
 		ID:              blob.ID,
 		Token:           token,
 		Value:           value,
+		Fee:             fee,
 		SecretHash:      secretHash,
 		TimeLock:        blob.TimeLock,
 		SpendingAddress: blob.SendTo,
 		FundingAddress:  fundingAddress,
+		BrokerAddress:   blob.BrokerSendTokenAddr,
+		BrokerFee:       brokerFee,
 	}, nil
 }
 
@@ -118,8 +130,15 @@ func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spe
 
 	value, ok := big.NewInt(0).SetString(blob.ReceiveAmount, 10)
 	if !ok {
-		return swap.Swap{}, fmt.Errorf("corrupted send value: %v", blob.ReceiveAmount)
+		return swap.Swap{}, fmt.Errorf("corrupted receive value: %v", blob.ReceiveAmount)
 	}
+
+	fee, ok := big.NewInt(0).SetString(blob.ReceiveFee, 10)
+	if !ok {
+		return swap.Swap{}, fmt.Errorf("corrupted receive fee: %v", blob.ReceiveFee)
+	}
+
+	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000))
 
 	secretHash, err := unmarshalSecretHash(blob.SecretHash)
 	if err != nil {
@@ -130,10 +149,13 @@ func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spe
 		ID:              blob.ID,
 		Token:           token,
 		Value:           value,
+		Fee:             fee,
 		SecretHash:      secretHash,
 		TimeLock:        blob.TimeLock,
 		SpendingAddress: spendingAddress,
 		FundingAddress:  blob.ReceiveFrom,
+		BrokerAddress:   blob.BrokerReceiveTokenAddr,
+		BrokerFee:       brokerFee,
 	}, nil
 }
 

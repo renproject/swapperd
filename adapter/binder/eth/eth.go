@@ -21,17 +21,17 @@ type ethSwapContractBinder struct {
 	account beth.Account
 	swap    swap.Swap
 	logger  logrus.FieldLogger
-	binder  *RenExAtomicSwapper
+	binder  *SwapperdEth
 }
 
 // NewETHSwapContractBinder returns a new Ethereum RequestAtom instance
 func NewETHSwapContractBinder(account beth.Account, swap swap.Swap, logger logrus.FieldLogger) (swapper.Contract, error) {
-	swapperAddr, err := account.ReadAddress(fmt.Sprintf("Swapperd%s", swap.Token.Name))
+	swapperAddr, err := account.ReadAddress("SwapperdETH")
 	if err != nil {
 		return nil, err
 	}
 
-	contract, err := NewRenExAtomicSwapper(swapperAddr, bind.ContractBackend(account.EthClient()))
+	contract, err := NewSwapperdEth(swapperAddr, bind.ContractBackend(account.EthClient()))
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +75,9 @@ func (atom *ethSwapContractBinder) Initiate() error {
 			return initiatable
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
-			tops.Value = atom.swap.Value
-			tx, err := atom.binder.Initiate(tops, atom.id, common.HexToAddress(atom.swap.SpendingAddress), atom.swap.SecretHash, big.NewInt(atom.swap.TimeLock))
+			tops.GasPrice = atom.swap.Fee
+			tops.Value = atom.swap.Value.Add(atom.swap.Value, atom.swap.BrokerFee)
+			tx, err := atom.binder.Initiate(tops, atom.id, common.HexToAddress(atom.swap.SpendingAddress), common.HexToAddress(atom.swap.BrokerAddress), atom.swap.BrokerFee, atom.swap.SecretHash, big.NewInt(atom.swap.TimeLock))
 			if err != nil {
 				return tx, err
 			}
@@ -116,6 +117,7 @@ func (atom *ethSwapContractBinder) Refund() error {
 			return refundable
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
+			tops.GasPrice = atom.swap.Fee
 			tx, err := atom.binder.Refund(tops, atom.id)
 			if err != nil {
 				return nil, err
@@ -208,6 +210,7 @@ func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 			return redeemable
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
+			tops.GasPrice = atom.swap.Fee
 			tx, err := atom.binder.Redeem(tops, atom.id, secret)
 			if err != nil {
 				return nil, err

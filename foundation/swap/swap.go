@@ -41,10 +41,13 @@ type Swap struct {
 	ID              SwapID
 	Token           blockchain.Token
 	Value           *big.Int
+	Fee             *big.Int
+	BrokerFee       *big.Int
 	SecretHash      [32]byte
 	TimeLock        int64
 	SpendingAddress string
 	FundingAddress  string
+	BrokerAddress   string
 }
 
 // A SwapBlob is used to encode a Swap for storage and transmission.
@@ -54,7 +57,9 @@ type SwapBlob struct {
 	ReceiveToken string `json:"receiveToken"`
 
 	// SendAmount and ReceiveAmount are decimal strings.
+	SendFee              string `json:"sendFee"`
 	SendAmount           string `json:"sendAmount"`
+	ReceiveFee           string `json:"receiveFee"`
 	ReceiveAmount        string `json:"receiveAmount"`
 	MinimumReceiveAmount string `json:"minimumReceiveAmount,omitempty"`
 
@@ -67,6 +72,10 @@ type SwapBlob struct {
 	Delay            bool            `json:"delayed,omitempty"`
 	DelayInfo        json.RawMessage `json:"delayInfo,omitempty"`
 	DelayCallbackURL string          `json:"delayCallbackUrl,omitempty"`
+
+	BrokerFee              int64  `json:"brokerFee"` // should be between 0 and 100
+	BrokerSendTokenAddr    string `json:"brokerSendTokenAddr"`
+	BrokerReceiveTokenAddr string `json:"brokerReceiveTokenAddr"`
 
 	Password string `json:"password,omitempty"`
 }
