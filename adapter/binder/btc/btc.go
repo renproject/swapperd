@@ -12,14 +12,14 @@ import (
 	"github.com/btcsuite/btcutil"
 	"github.com/republicprotocol/libbtc-go"
 	"github.com/republicprotocol/swapperd/core/swapper"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
 )
 
 type btcSwapContractBinder struct {
 	scriptAddr string
 	script     []byte
-	swap       foundation.Swap
+	swap       swap.Swap
 	txVersion  int32
 	fee        int64
 	verify     bool
@@ -28,7 +28,7 @@ type btcSwapContractBinder struct {
 }
 
 // NewBTCSwapContractBinder returns a new Bitcoin Atom instance
-func NewBTCSwapContractBinder(account libbtc.Account, swap foundation.Swap, logger logrus.FieldLogger) (swapper.Contract, error) {
+func NewBTCSwapContractBinder(account libbtc.Account, swap swap.Swap, logger logrus.FieldLogger) (swapper.Contract, error) {
 	script, scriptAddr, err := buildInitiateScript(swap, account.NetworkParams())
 	if err != nil {
 		return nil, err

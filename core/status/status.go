@@ -1,11 +1,9 @@
 package status
 
-import (
-	"github.com/republicprotocol/swapperd/foundation"
-)
+import "github.com/republicprotocol/swapperd/foundation/swap"
 
 type Statuses interface {
-	Run(done <-chan struct{}, swaps <-chan foundation.SwapStatus, updates <-chan foundation.StatusUpdate, queries <-chan foundation.StatusQuery)
+	Run(done <-chan struct{}, swaps <-chan swap.SwapReceipt, updates <-chan swap.StatusUpdate, queries <-chan swap.ReceiptQuery)
 }
 
 type statuses struct {
@@ -16,7 +14,7 @@ func New() Statuses {
 	return &statuses{newMonitor()}
 }
 
-func (statuses *statuses) Run(done <-chan struct{}, receipts <-chan foundation.SwapStatus, updates <-chan foundation.StatusUpdate, queries <-chan foundation.StatusQuery) {
+func (statuses *statuses) Run(done <-chan struct{}, receipts <-chan swap.SwapReceipt, updates <-chan swap.StatusUpdate, queries <-chan swap.ReceiptQuery) {
 	for {
 		select {
 		case <-done:

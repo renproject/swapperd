@@ -4,21 +4,21 @@ import (
 	"time"
 
 	"github.com/republicprotocol/co-go"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
 )
 
 type Storage interface {
-	InsertSwap(swap foundation.SwapRequest) error
-	PendingSwap(foundation.SwapID) (foundation.SwapRequest, error)
-	DeletePendingSwap(foundation.SwapID) error
-	PendingSwaps() ([]foundation.SwapRequest, error)
-	UpdateStatus(update foundation.StatusUpdate) error
-	Swaps() ([]foundation.SwapStatus, error)
+	InsertSwap(swap swap.SwapRequest) error
+	PendingSwap(swap.SwapID) (swap.SwapRequest, error)
+	DeletePendingSwap(swap.SwapID) error
+	PendingSwaps() ([]swap.SwapRequest, error)
+	UpdateStatus(update swap.StatusUpdate) error
+	Swaps() ([]swap.SwapReceipt, error)
 }
 
 type Router interface {
-	Run(done <-chan struct{}, swapRequests <-chan foundation.SwapRequest, updateRequests <-chan foundation.StatusUpdate, swaps chan<- foundation.SwapRequest, updates chan<- foundation.StatusUpdate, statuses chan<- foundation.SwapStatus)
+	Run(done <-chan struct{}, swapRequests <-chan swap.SwapRequest, updateRequests <-chan swap.StatusUpdate, swaps chan<- swap.SwapRequest, updates chan<- swap.StatusUpdate, statuses chan<- swap.SwapReceipt)
 }
 
 type router struct {
@@ -30,16 +30,16 @@ func New(storage Storage, logger logrus.FieldLogger) Router {
 	return &router{storage, logger}
 }
 
-func (router *router) Run(done <-chan struct{}, swapRequests <-chan foundation.SwapRequest, updateRequests <-chan foundation.StatusUpdate, swaps chan<- foundation.SwapRequest, updates chan<- foundation.StatusUpdate, statuses chan<- foundation.SwapStatus) {
-	results := make(chan foundation.SwapResult)
+func (router *router) Run(done <-chan struct{}, swapRequests <-chan swap.SwapRequest, updateRequests <-chan swap.StatusUpdate, swaps chan<- swap.SwapRequest, updates chan<- swap.StatusUpdate, statuses chan<- swap.SwapReceipt) {
+	results := make(chan swap.SwapResult)
 
 	// Loading swap statuses from storage
-	SwapStatuses, err := router.storage.Swaps()
+	SwapReceiptes, err := router.storage.Swaps()
 	if err != nil {
 		return
 	}
-	go co.ParForAll(SwapStatuses, func(i int) {
-		statuses <- SwapStatuses[i]
+	go co.ParForAll(SwapReceiptes, func(i int) {
+		statuses <- SwapReceiptes[i]
 	})
 
 	// Loading pending swaps from storage
@@ -56,12 +56,12 @@ func (router *router) Run(done <-chan struct{}, swapRequests <-chan foundation.S
 		select {
 		case <-done:
 			return
-		case swap := <-swapRequests:
-			logger := router.logger.WithField("SwapID", swap.ID)
-			router.storage.InsertSwap(swap)
-			statuses <- foundation.NewSwapStatus(swap.SwapBlob)
+		case swapReq := <-swapRequests:
+			logger := router.logger.WithField("SwapID", swapReq.ID)
+			router.storage.InsertSwap(swapReq)
+			statuses <- swap.NewSwapReceipt(swapReq.SwapBlob)
 			logger.Info("adding to the swap queue")
-			swaps <- swap
+			swaps <- swapReq
 		case update := <-updateRequests:
 			logger := router.logger.WithField("SwapID", update.ID)
 			if err := router.storage.UpdateStatus(update); err != nil {

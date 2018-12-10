@@ -15,7 +15,7 @@ import (
 	"github.com/republicprotocol/swapperd/driver/keystore"
 	"github.com/republicprotocol/swapperd/driver/leveldb"
 	"github.com/republicprotocol/swapperd/driver/logger"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/swap"
 )
 
 type composer struct {
@@ -33,14 +33,14 @@ func New(homeDir, network, port string) Composer {
 }
 
 func (composer *composer) Run(done <-chan struct{}) {
-	swapRequests := make(chan foundation.SwapRequest)
-	statusUpdates := make(chan foundation.StatusUpdate)
-	statusQueries := make(chan foundation.StatusQuery)
+	swapRequests := make(chan swap.SwapRequest)
+	statusUpdates := make(chan swap.StatusUpdate)
+	statusQueries := make(chan swap.ReceiptQuery)
 	balanceQueries := make(chan balance.BalanceQuery)
-	ftSwapRequests := make(chan foundation.SwapRequest)
-	ftStatusUpdates := make(chan foundation.StatusUpdate)
-	receipts := make(chan foundation.SwapStatus)
-	results := make(chan foundation.SwapResult)
+	ftSwapRequests := make(chan swap.SwapRequest)
+	ftStatusUpdates := make(chan swap.StatusUpdate)
+	receipts := make(chan swap.SwapReceipt)
+	results := make(chan swap.SwapResult)
 
 	wallet, err := keystore.Wallet(composer.homeDir, composer.network)
 	if err != nil {

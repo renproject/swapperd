@@ -118,13 +118,13 @@ func generateConfig(network, password, mnemonic string) (wallet.Config, error) {
 		return wallet.Config{}, fmt.Errorf("Invalid Network %s", network)
 	}
 	config.Mnemonic = mnemonic
-	wallet := wallet.New(config)
-	ethAccount, err := wallet.EthereumAccount(password)
+	w := wallet.New(config)
+	ethAccount, err := w.EthereumAccount(password)
 	if err != nil {
 		return wallet.Config{}, err
 	}
 	config.Ethereum.Address = ethAccount.Address().String()
-	btcAccount, err := wallet.BitcoinAccount(password)
+	btcAccount, err := w.BitcoinAccount(password)
 	if err != nil {
 		return wallet.Config{}, err
 	}

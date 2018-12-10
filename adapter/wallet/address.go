@@ -7,17 +7,17 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
-func (wallet *wallet) VerifyAddress(blockchain foundation.BlockchainName, address string) error {
-	switch blockchain {
-	case foundation.Ethereum:
+func (wallet *wallet) VerifyAddress(blockchainName blockchain.BlockchainName, address string) error {
+	switch blockchainName {
+	case blockchain.Ethereum:
 		return wallet.verifyEthereumAddress(address)
-	case foundation.Bitcoin:
+	case blockchain.Bitcoin:
 		return wallet.verifyBitcoinAddress(address)
 	default:
-		return foundation.NewErrUnsupportedToken("unsupported blockchain")
+		return blockchain.NewErrUnsupportedToken("unsupported blockchain")
 	}
 }
 

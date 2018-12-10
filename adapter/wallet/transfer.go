@@ -10,19 +10,19 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
-func (wallet *wallet) Transfer(password string, token foundation.Token, to string, amount *big.Int) (string, error) {
+func (wallet *wallet) Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error) {
 	switch token {
-	case foundation.TokenBTC:
+	case blockchain.TokenBTC:
 		return wallet.transferBTC(password, to, amount)
-	case foundation.TokenETH:
+	case blockchain.TokenETH:
 		return wallet.transferETH(password, to, amount)
-	case foundation.TokenWBTC:
+	case blockchain.TokenWBTC:
 		return wallet.transferERC20(password, token, to, amount)
 	}
-	return "", foundation.NewErrUnsupportedToken(token.Name)
+	return "", blockchain.NewErrUnsupportedToken(token.Name)
 }
 
 func (wallet *wallet) transferBTC(password, to string, amount *big.Int) (string, error) {
@@ -45,7 +45,7 @@ func (wallet *wallet) transferETH(password, to string, amount *big.Int) (string,
 	return "", account.Transfer(ctx, common.HexToAddress(to), amount, 1)
 }
 
-func (wallet *wallet) transferERC20(password string, token foundation.Token, to string, amount *big.Int) (string, error) {
+func (wallet *wallet) transferERC20(password string, token blockchain.Token, to string, amount *big.Int) (string, error) {
 	var txHash string
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()

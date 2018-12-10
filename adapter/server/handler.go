@@ -10,9 +10,10 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/republicprotocol/swapperd/adapter/wallet"
 	"github.com/republicprotocol/swapperd/core/balance"
-	"github.com/republicprotocol/swapperd/foundation"
-	"github.com/susruth/ace-go/services/wallet"
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	"github.com/republicprotocol/swapperd/foundation/swap"
 )
 
 type handler struct {
@@ -23,9 +24,9 @@ type handler struct {
 // The Handler for swapperd requests
 type Handler interface {
 	GetInfo() GetInfoResponse
-	GetSwaps(chan<- foundation.StatusQuery) GetSwapsResponse
+	GetSwaps(chan<- swap.ReceiptQuery) GetSwapsResponse
 	GetBalances(chan<- balance.BalanceQuery) GetBalancesResponse
-	PostSwaps(PostSwapRequest, chan<- foundation.SwapRequest) (PostSwapResponse, error)
+	PostSwaps(PostSwapRequest, chan<- swap.SwapRequest) (PostSwapResponse, error)
 	PostTransfers(PostTransfersRequest) (PostTransfersResponse, error)
 }
 
@@ -41,10 +42,10 @@ func (handler *handler) GetInfo() GetInfoResponse {
 	}
 }
 
-func (handler *handler) GetSwaps(statuses chan<- foundation.StatusQuery) GetSwapsResponse {
+func (handler *handler) GetSwaps(statuses chan<- swap.ReceiptQuery) GetSwapsResponse {
 	resp := GetSwapsResponse{}
-	responder := make(chan map[foundation.SwapID]foundation.SwapStatus)
-	statuses <- foundation.StatusQuery{Responder: responder}
+	responder := make(chan map[swap.SwapID]swap.SwapReceipt)
+	statuses <- swap.ReceiptQuery{Responder: responder}
 	statusMap := <-responder
 	for _, status := range statusMap {
 		resp.Swaps = append(resp.Swaps, status)
@@ -53,7 +54,7 @@ func (handler *handler) GetSwaps(statuses chan<- foundation.StatusQuery) GetSwap
 }
 
 func (handler *handler) GetBalances(balanceQueries chan<- balance.BalanceQuery) GetBalancesResponse {
-	response := make(chan map[foundation.TokenName]foundation.Balance)
+	response := make(chan map[blockchain.TokenName]blockchain.Balance)
 	query := balance.BalanceQuery{
 		Response: response,
 	}
@@ -62,18 +63,18 @@ func (handler *handler) GetBalances(balanceQueries chan<- balance.BalanceQuery) 
 	return resp
 }
 
-func (handler *handler) PostSwaps(req PostSwapRequest, swaps chan<- foundation.SwapRequest) (PostSwapResponse, error) {
-	swap, secret, err := handler.patchSwap(req)
+func (handler *handler) PostSwaps(req PostSwapRequest, swaps chan<- swap.SwapRequest) (PostSwapResponse, error) {
+	blob, secret, err := handler.patchSwap(req)
 	if err != nil {
 		return PostSwapResponse{}, err
 	}
-	swaps <- foundation.NewSwapRequest(swap, secret, req.Password)
+	swaps <- swap.NewSwapRequest(blob, secret, req.Password)
 	return PostSwapResponse{}, nil
 }
 
 func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersResponse, error) {
 	response := PostTransfersResponse{}
-	token, err := foundation.PatchToken(req.Token)
+	token, err := blockchain.PatchToken(req.Token)
 	if err != nil {
 		return response, err
 	}
@@ -104,14 +105,14 @@ func (handler *handler) verifyPassword(password string) bool {
 	return (bcrypt.CompareHashAndPassword(handler.passwordHash, []byte(password)) != nil)
 }
 
-func (handler *handler) patchSwap(req PostSwapRequest) (foundation.SwapBlob, [32]byte, error) {
+func (handler *handler) patchSwap(req PostSwapRequest) (swap.SwapBlob, [32]byte, error) {
 	if err := handler.validateTokenDetails(req.SwapBlob, req.Password); err != nil {
-		return foundation.SwapBlob{}, [32]byte{}, err
+		return swap.SwapBlob{}, [32]byte{}, err
 	}
 	return patchSwapDetails(req.SwapBlob)
 }
 
-func (handler *handler) validateTokenDetails(swapBlob foundation.SwapBlob, password string) error {
+func (handler *handler) validateTokenDetails(swapBlob swap.SwapBlob, password string) error {
 	// verify send details
 	if err := handler.verifyTokenDetails(swapBlob.SendToken, swapBlob.SendTo, swapBlob.SendAmount); err != nil {
 		return err
@@ -120,13 +121,13 @@ func (handler *handler) validateTokenDetails(swapBlob foundation.SwapBlob, passw
 	return handler.verifyTokenDetails(swapBlob.ReceiveToken, swapBlob.ReceiveFrom, swapBlob.ReceiveAmount)
 }
 
-func patchSwapDetails(swapBlob foundation.SwapBlob) (foundation.SwapBlob, [32]byte, error) {
+func patchSwapDetails(swapBlob swap.SwapBlob) (swap.SwapBlob, [32]byte, error) {
 	swapID := [32]byte{}
 	rand.Read(swapID[:])
-	swapBlob.ID = foundation.SwapID(base64.StdEncoding.EncodeToString(swapID[:]))
+	swapBlob.ID = swap.SwapID(base64.StdEncoding.EncodeToString(swapID[:]))
 	secret := [32]byte{}
 	if swapBlob.ShouldInitiateFirst {
-		swapBlob.TimeLock = time.Now().Unix() + 3*foundation.ExpiryUnit
+		swapBlob.TimeLock = time.Now().Unix() + 3*swap.ExpiryUnit
 		rand.Read(secret[:])
 		hash := sha256.Sum256(secret[:])
 		swapBlob.SecretHash = base64.StdEncoding.EncodeToString(hash[:])
@@ -136,14 +137,14 @@ func patchSwapDetails(swapBlob foundation.SwapBlob) (foundation.SwapBlob, [32]by
 	if len(secretHash) != 32 || err != nil {
 		return swapBlob, secret, fmt.Errorf("invalid secret hash")
 	}
-	if time.Now().Unix()+2*foundation.ExpiryUnit > swapBlob.TimeLock {
+	if time.Now().Unix()+2*swap.ExpiryUnit > swapBlob.TimeLock {
 		return swapBlob, secret, fmt.Errorf("not enough time to do the atomic swap")
 	}
 	return swapBlob, secret, nil
 }
 
 func (handler *handler) verifyTokenDetails(tokenString, addressString, amountString string) error {
-	token, err := foundation.PatchToken(tokenString)
+	token, err := blockchain.PatchToken(tokenString)
 	if err != nil {
 		return err
 	}

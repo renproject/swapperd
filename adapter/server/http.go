@@ -7,11 +7,11 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/republicprotocol/swapperd/adapter/wallet"
 	"github.com/republicprotocol/swapperd/core/balance"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
-	"github.com/susruth/ace-go/services/wallet"
 )
 
 type httpServer struct {
@@ -26,7 +26,7 @@ func NewHttpServer(wallet wallet.Wallet, logger logrus.FieldLogger, passwordHash
 }
 
 // NewHttpListener creates a new http listener
-func (listener *httpServer) Run(doneCh <-chan struct{}, swapRequests chan<- foundation.SwapRequest, statusQueries chan<- foundation.StatusQuery, balanceQueries chan<- balance.BalanceQuery) {
+func (listener *httpServer) Run(doneCh <-chan struct{}, swapRequests chan<- swap.SwapRequest, statusQueries chan<- swap.ReceiptQuery, balanceQueries chan<- balance.BalanceQuery) {
 	reqHandler := NewHandler(listener.passwordHash, listener.wallet)
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", postSwapsHandler(reqHandler, swapRequests)).Methods("POST")
@@ -88,7 +88,7 @@ func getInfoHandler(reqHandler Handler) http.HandlerFunc {
 
 // getSwapsHandler handles the get swaps request, it returns the status of all
 // the existing swaps on the swapper.
-func getSwapsHandler(reqHandler Handler, statusQueries chan<- foundation.StatusQuery) http.HandlerFunc {
+func getSwapsHandler(reqHandler Handler, statusQueries chan<- swap.ReceiptQuery) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := json.NewEncoder(w).Encode(reqHandler.GetSwaps(statusQueries)); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
@@ -99,7 +99,7 @@ func getSwapsHandler(reqHandler Handler, statusQueries chan<- foundation.StatusQ
 
 // postSwapsHandler handles the post swaps request, it fills incomplete
 // information and starts the Atomic Swap.
-func postSwapsHandler(reqHandler Handler, swapRequests chan<- foundation.SwapRequest) http.HandlerFunc {
+func postSwapsHandler(reqHandler Handler, swapRequests chan<- swap.SwapRequest) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, password, ok := r.BasicAuth()
 		if !ok {

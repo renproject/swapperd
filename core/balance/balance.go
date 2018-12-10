@@ -4,17 +4,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/sirupsen/logrus"
-
-	"github.com/republicprotocol/swapperd/foundation"
 )
 
 type Blockchain interface {
-	Balances() (map[foundation.TokenName]foundation.Balance, error)
+	Balances() (map[blockchain.TokenName]blockchain.Balance, error)
 }
 
 type BalanceQuery struct {
-	Response chan<- map[foundation.TokenName]foundation.Balance
+	Response chan<- map[blockchain.TokenName]blockchain.Balance
 }
 
 type Balances interface {
@@ -24,13 +23,13 @@ type Balances interface {
 type balances struct {
 	mu              *sync.RWMutex
 	updateFrequency time.Duration
-	balanceMap      map[foundation.TokenName]foundation.Balance
+	balanceMap      map[blockchain.TokenName]blockchain.Balance
 	logger          logrus.FieldLogger
 	blockchain      Blockchain
 }
 
-func New(updateFrequency time.Duration, blockchain Blockchain, logger logrus.FieldLogger) Balances {
-	return &balances{new(sync.RWMutex), updateFrequency, map[foundation.TokenName]foundation.Balance{}, logger, blockchain}
+func New(updateFrequency time.Duration, bc Blockchain, logger logrus.FieldLogger) Balances {
+	return &balances{new(sync.RWMutex), updateFrequency, map[blockchain.TokenName]blockchain.Balance{}, logger, bc}
 }
 
 func (balances *balances) Run(done <-chan struct{}, queries <-chan BalanceQuery) {
@@ -63,7 +62,7 @@ func (balances *balances) update() {
 	balances.balanceMap = balanceMap
 }
 
-func (balances *balances) read() map[foundation.TokenName]foundation.Balance {
+func (balances *balances) read() map[blockchain.TokenName]blockchain.Balance {
 	balances.mu.RLock()
 	defer balances.mu.RUnlock()
 	return balances.balanceMap

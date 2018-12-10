@@ -4,23 +4,23 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
-func (wallet *wallet) VerifyBalance(token foundation.Token, amount *big.Int) error {
+func (wallet *wallet) VerifyBalance(token blockchain.Token, amount *big.Int) error {
 	switch token.Blockchain {
-	case foundation.Ethereum:
+	case blockchain.Ethereum:
 		return wallet.verifyEthereumBalance()
-	case foundation.Bitcoin:
+	case blockchain.Bitcoin:
 
 		return wallet.verifyBitcoinBalance(amount)
 	default:
-		return foundation.NewErrUnsupportedToken("unsupported blockchain")
+		return blockchain.NewErrUnsupportedToken("unsupported blockchain")
 	}
 }
 
 func (wallet *wallet) verifyEthereumBalance() error {
-	balance, err := wallet.balance(foundation.ETH)
+	balance, err := wallet.balance(blockchain.ETH)
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func (wallet *wallet) verifyEthereumBalance() error {
 }
 
 func (wallet *wallet) verifyBitcoinBalance(amount *big.Int) error {
-	balance, err := wallet.balance(foundation.BTC)
+	balance, err := wallet.balance(blockchain.BTC)
 	if err != nil {
 		return err
 	}
