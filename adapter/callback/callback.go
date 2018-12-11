@@ -7,52 +7,48 @@ import (
 	"io/ioutil"
 	"math/big"
 	"net/http"
-	"time"
 
-	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/core/delayed"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 )
 
-type callback struct {
+type cb struct {
 }
 
-func New() swapper.DelayCallback {
-	return &callback{}
+func New() delayed.DelayCallback {
+	return &cb{}
 }
 
-func (callback *callback) DelayCallback(partialSwap swap.SwapBlob) (swap.SwapBlob, error) {
-	for {
-		data, err := json.MarshalIndent(partialSwap, "", "  ")
-		if err != nil {
-			return partialSwap, err
-		}
-		buf := bytes.NewBuffer(data)
-
-		resp, err := http.Post(fmt.Sprintf(partialSwap.DelayCallbackURL), "application/json", buf)
-		if err != nil {
-			return partialSwap, err
-		}
-
-		respBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return partialSwap, err
-		}
-
-		filledSwap := swap.SwapBlob{}
-		if resp.StatusCode == 200 {
-			if err := json.Unmarshal(respBytes, &filledSwap); err != nil {
-				return partialSwap, err
-			}
-			return verifyDelaySwap(partialSwap, filledSwap)
-		}
-
-		if resp.StatusCode == 404 {
-			time.Sleep(30 * time.Second)
-			continue
-		}
-
-		return partialSwap, fmt.Errorf("unexpected error %d: %s", resp.StatusCode, respBytes)
+func (cb *cb) DelayCallback(partialSwap swap.SwapBlob) (swap.SwapBlob, error) {
+	data, err := json.MarshalIndent(partialSwap, "", "  ")
+	if err != nil {
+		return partialSwap, err
 	}
+	buf := bytes.NewBuffer(data)
+
+	resp, err := http.Post(fmt.Sprintf(partialSwap.DelayCallbackURL), "application/json", buf)
+	if err != nil {
+		return partialSwap, err
+	}
+
+	respBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return partialSwap, err
+	}
+
+	filledSwap := swap.SwapBlob{}
+	if resp.StatusCode == 200 {
+		if err := json.Unmarshal(respBytes, &filledSwap); err != nil {
+			return partialSwap, err
+		}
+		return verifyDelaySwap(partialSwap, filledSwap)
+	}
+
+	if resp.StatusCode == 404 {
+		return partialSwap, delayed.ErrSwapDetailsUnavailable
+	}
+
+	return partialSwap, fmt.Errorf("unexpected error %d: %s", resp.StatusCode, respBytes)
 }
 
 func verifyDelaySwap(partialSwap, filledSwap swap.SwapBlob) (swap.SwapBlob, error) {
@@ -89,7 +85,10 @@ func verifyDelaySwap(partialSwap, filledSwap swap.SwapBlob) (swap.SwapBlob, erro
 		return partialSwap, fmt.Errorf("invalid filled swap unfavorable price")
 	}
 
-	filledSwap.Delay = false
+	if filledSwap.BrokerFee > partialSwap.BrokerFee {
+		return partialSwap, fmt.Errorf("invalid filled swap unfavourable broker fee")
+	}
 
+	filledSwap.Delay = false
 	return filledSwap, nil
 }
