@@ -39,8 +39,6 @@ func NewERC20SwapContractBinder(account beth.Account, swap swap.Swap, logger log
 		return nil, err
 	}
 
-	fmt.Println("Swapperd Address: ", swapperAddress.String())
-
 	tokenBinder, err := NewCompatibleERC20(tokenAddress, bind.ContractBackend(account.EthClient()))
 	if err != nil {
 		return nil, err
