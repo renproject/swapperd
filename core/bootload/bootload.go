@@ -1,9 +1,10 @@
 package bootload
 
 import (
-	co "github.com/republicprotocol/co-go"
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/republicprotocol/co-go"
 	"github.com/sirupsen/logrus"
+
+	"github.com/republicprotocol/swapperd/foundation/swap"
 )
 
 type Storage interface {

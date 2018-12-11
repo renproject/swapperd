@@ -30,7 +30,7 @@ type SwapReceipt struct {
 	SendAmount    string `json:"sendAmount"`
 	ReceiveAmount string `json:"receiveAmount"`
 	Timestamp     int64  `json:"timestamp"`
-	Status        Status `json:"status"`
+	Status        int    `json:"status"`
 }
 
 // NewSwapReceipt returns a SwapReceipt from a swapBlob.

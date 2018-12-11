@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	. "github.com/republicprotocol/swapperd/core/balance"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/testutils"
 )
 
@@ -27,12 +27,12 @@ func init() {
 
 var _ = Describe("Token balance on blockchain", func() {
 
-	init := func(frequency time.Duration) (chan struct{}, map[foundation.TokenName]foundation.Balance, *testutils.MockBlockchain, Balances) {
+	init := func(frequency time.Duration) (chan struct{}, map[blockchain.TokenName]blockchain.Balance, *testutils.MockBlockchain, Balances) {
 		balance := randomBalance()
 		done := make(chan struct{})
-		blockchain := testutils.NewMockBlockchain(balance)
-		balances := New(frequency, blockchain, Logger)
-		return done, balance, blockchain, balances
+		bc := testutils.NewMockBlockchain(balance)
+		balances := New(frequency, bc, Logger)
+		return done, balance, bc, balances
 	}
 
 	Context("when querying balance", func() {
@@ -44,7 +44,7 @@ var _ = Describe("Token balance on blockchain", func() {
 			go balances.Run(done, queries)
 			time.Sleep(10 * time.Millisecond)
 
-			responder := make(chan map[foundation.TokenName]foundation.Balance, 1)
+			responder := make(chan map[blockchain.TokenName]blockchain.Balance, 1)
 			query := BalanceQuery{
 				Response: responder,
 			}
@@ -54,7 +54,7 @@ var _ = Describe("Token balance on blockchain", func() {
 		})
 
 		It("should return the cached balance", func() {
-			done, balance, blockchain, balances := init(2 * time.Second)
+			done, balance, bc, balances := init(2 * time.Second)
 			defer close(done)
 			queries := make(chan BalanceQuery)
 			go balances.Run(done, queries)
@@ -62,9 +62,9 @@ var _ = Describe("Token balance on blockchain", func() {
 
 			for i := 0; i < 10; i++ {
 				newBalance := randomBalance()
-				blockchain.UpdateBalance(newBalance)
+				bc.UpdateBalance(newBalance)
 				time.Sleep(100 * time.Millisecond)
-				responder := make(chan map[foundation.TokenName]foundation.Balance, 1)
+				responder := make(chan map[blockchain.TokenName]blockchain.Balance, 1)
 				query := BalanceQuery{
 					Response: responder,
 				}
@@ -75,7 +75,7 @@ var _ = Describe("Token balance on blockchain", func() {
 		})
 
 		It("should update the balance in the background with given frequency", func() {
-			done, balance, blockchain, balances := init(200 * time.Millisecond)
+			done, balance, bc, balances := init(200 * time.Millisecond)
 			defer close(done)
 			queries := make(chan BalanceQuery)
 			go balances.Run(done, queries)
@@ -83,9 +83,9 @@ var _ = Describe("Token balance on blockchain", func() {
 
 			for i := 0; i < 10; i++ {
 				newBalance := randomBalance()
-				blockchain.UpdateBalance(newBalance)
+				bc.UpdateBalance(newBalance)
 				time.Sleep(100 * time.Millisecond)
-				responder := make(chan map[foundation.TokenName]foundation.Balance)
+				responder := make(chan map[blockchain.TokenName]blockchain.Balance)
 				query := BalanceQuery{
 					Response: responder,
 				}
@@ -104,15 +104,15 @@ var _ = Describe("Token balance on blockchain", func() {
 			balance := randomBalance()
 			done := make(chan struct{})
 			defer close(done)
-			blockchain := testutils.NewFaultyBlockchain(balance)
-			balances := New(200*time.Millisecond, blockchain, Logger)
+			bc := testutils.NewFaultyBlockchain(balance)
+			balances := New(200*time.Millisecond, bc, Logger)
 			queries := make(chan BalanceQuery)
 			go balances.Run(done, queries)
 			time.Sleep(10 * time.Millisecond)
 
 			for i := 0; i < 10; i++ {
 				time.Sleep(100 * time.Millisecond)
-				responder := make(chan map[foundation.TokenName]foundation.Balance)
+				responder := make(chan map[blockchain.TokenName]blockchain.Balance)
 				query := BalanceQuery{
 					Response: responder,
 				}
@@ -136,9 +136,9 @@ var _ = Describe("Token balance on blockchain", func() {
 	})
 })
 
-func randomBalance() map[foundation.TokenName]foundation.Balance {
-	balancePara, ok := quick.Value(reflect.TypeOf(map[foundation.TokenName]foundation.Balance{}), Random)
+func randomBalance() map[blockchain.TokenName]blockchain.Balance {
+	balancePara, ok := quick.Value(reflect.TypeOf(map[blockchain.TokenName]blockchain.Balance{}), Random)
 	Expect(ok).Should(BeTrue())
-	balance := balancePara.Interface().(map[foundation.TokenName]foundation.Balance)
+	balance := balancePara.Interface().(map[blockchain.TokenName]blockchain.Balance)
 	return balance
 }

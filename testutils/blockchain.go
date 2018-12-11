@@ -4,17 +4,17 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
 // MockBlockchain implements the `balance.Blockchain` interface.
 type MockBlockchain struct {
 	mu      *sync.Mutex
-	balance map[bl.TokenName]foundation.Balance
+	balance map[blockchain.TokenName]blockchain.Balance
 }
 
 // NewMockBlockchain creates a new `MockBlockchain`.
-func NewMockBlockchain(balance map[foundation.TokenName]foundation.Balance) *MockBlockchain {
+func NewMockBlockchain(balance map[blockchain.TokenName]blockchain.Balance) *MockBlockchain {
 	return &MockBlockchain{
 		mu:      new(sync.Mutex),
 		balance: copyBalanceMap(balance),
@@ -22,7 +22,7 @@ func NewMockBlockchain(balance map[foundation.TokenName]foundation.Balance) *Moc
 }
 
 // Balances implements the `balance.Blockchain` interface.
-func (blockchain *MockBlockchain) Balances() (map[foundation.TokenName]foundation.Balance, error) {
+func (blockchain *MockBlockchain) Balances() (map[blockchain.TokenName]blockchain.Balance, error) {
 	blockchain.mu.Lock()
 	defer blockchain.mu.Unlock()
 
@@ -30,7 +30,7 @@ func (blockchain *MockBlockchain) Balances() (map[foundation.TokenName]foundatio
 }
 
 // UpdateBalance with given data.
-func (blockchain *MockBlockchain) UpdateBalance(balance map[foundation.TokenName]foundation.Balance) {
+func (blockchain *MockBlockchain) UpdateBalance(balance map[blockchain.TokenName]blockchain.Balance) {
 	blockchain.mu.Lock()
 	defer blockchain.mu.Unlock()
 
@@ -38,18 +38,18 @@ func (blockchain *MockBlockchain) UpdateBalance(balance map[foundation.TokenName
 }
 
 type FaultyBlockchain struct {
-	balance map[foundation.TokenName]foundation.Balance
+	balance map[blockchain.TokenName]blockchain.Balance
 	counter int
 }
 
-func NewFaultyBlockchain(balance map[foundation.TokenName]foundation.Balance) *FaultyBlockchain {
+func NewFaultyBlockchain(balance map[blockchain.TokenName]blockchain.Balance) *FaultyBlockchain {
 	return &FaultyBlockchain{
 		balance: balance,
 		counter: 0,
 	}
 }
 
-func (blockchain *FaultyBlockchain) Balances() (map[foundation.TokenName]foundation.Balance, error) {
+func (blockchain *FaultyBlockchain) Balances() (map[blockchain.TokenName]blockchain.Balance, error) {
 	blockchain.counter++
 	if blockchain.counter%2 != 0 {
 		return blockchain.balance, nil
@@ -57,8 +57,8 @@ func (blockchain *FaultyBlockchain) Balances() (map[foundation.TokenName]foundat
 	return nil, errors.New("cannot get the balance")
 }
 
-func copyBalanceMap(balance map[foundation.TokenName]foundation.Balance) map[foundation.TokenName]foundation.Balance {
-	copied := map[foundation.TokenName]foundation.Balance{}
+func copyBalanceMap(balance map[blockchain.TokenName]blockchain.Balance) map[blockchain.TokenName]blockchain.Balance {
+	copied := map[blockchain.TokenName]blockchain.Balance{}
 	for i, j := range balance {
 		copied[i] = j
 	}

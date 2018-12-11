@@ -4,8 +4,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/sirupsen/logrus"
+
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
 type Blockchain interface {
