@@ -36,12 +36,12 @@ func New(db *leveldb.DB) Storage {
 	}
 }
 
-func (db *dbStorage) InsertSwap(blob swap.SwapBlob) error {
+func (db *dbStorage) InsertSwap(blob swap.SwapBlob, receipt swap.SwapReceipt) error {
 	pendingSwapData, err := json.Marshal(blob)
 	if err != nil {
 		return err
 	}
-	swapData, err := json.Marshal(swap.NewSwapReceipt(blob))
+	receiptData, err := json.Marshal(receipt)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func (db *dbStorage) InsertSwap(blob swap.SwapBlob) error {
 	if err := db.db.Put(append(TablePendingSwaps[:], id...), pendingSwapData, nil); err != nil {
 		return err
 	}
-	return db.db.Put(append(TableSwaps[:], id...), swapData, nil)
+	return db.db.Put(append(TableSwaps[:], id...), receiptData, nil)
 }
 
 func (db *dbStorage) DeletePendingSwap(swapID swap.SwapID) error {
