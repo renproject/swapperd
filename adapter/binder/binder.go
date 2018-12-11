@@ -101,6 +101,10 @@ func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fund
 		return swap.Swap{}, fmt.Errorf("corrupted send fee: %v", blob.SendFee)
 	}
 
+	if err := builder.Wallet.VerifyAddress(token.Blockchain, blob.BrokerSendTokenAddr); err != nil {
+		return swap.Swap{}, fmt.Errorf("corrupted send broker address: %v", blob.BrokerSendTokenAddr)
+	}
+
 	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000))
 
 	secretHash, err := unmarshalSecretHash(blob.SecretHash)
@@ -139,6 +143,10 @@ func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spe
 	}
 
 	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000))
+
+	if err := builder.Wallet.VerifyAddress(token.Blockchain, blob.BrokerReceiveTokenAddr); err != nil {
+		return swap.Swap{}, fmt.Errorf("corrupted receive broker address: %v", blob.BrokerReceiveTokenAddr)
+	}
 
 	secretHash, err := unmarshalSecretHash(blob.SecretHash)
 	if err != nil {
