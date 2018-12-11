@@ -27,42 +27,42 @@ func NewBuilder(wallet wallet.Wallet, logger logrus.FieldLogger) swapper.Contrac
 	}
 }
 
-func (builder *builder) BuildSwapContracts(swap swap.SwapBlob) (swapper.Contract, swapper.Contract, error) {
+func (builder *builder) BuildSwapContracts(swap swap.SwapBlob, nativeCost, foreignCost blockchain.Cost) (swapper.Contract, swapper.Contract, error) {
 	native, foreign, err := builder.buildComplementarySwaps(swap)
 	if err != nil {
 		return nil, nil, err
 	}
-	nativeBinder, err := builder.buildBinder(native, swap.Password)
+	nativeBinder, err := builder.buildBinder(native, nativeCost, swap.Password)
 	if err != nil {
 		return nil, nil, err
 	}
-	foreignBinder, err := builder.buildBinder(foreign, swap.Password)
+	foreignBinder, err := builder.buildBinder(foreign, foreignCost, swap.Password)
 	if err != nil {
 		return nil, nil, err
 	}
 	return nativeBinder, foreignBinder, nil
 }
 
-func (builder *builder) buildBinder(swap swap.Swap, password string) (swapper.Contract, error) {
+func (builder *builder) buildBinder(swap swap.Swap, cost blockchain.Cost, password string) (swapper.Contract, error) {
 	switch swap.Token {
 	case blockchain.TokenBTC:
 		btcAccount, err := builder.BitcoinAccount(password)
 		if err != nil {
 			return nil, err
 		}
-		return btc.NewBTCSwapContractBinder(btcAccount, swap, builder.FieldLogger)
+		return btc.NewBTCSwapContractBinder(btcAccount, swap, cost, builder.FieldLogger)
 	case blockchain.TokenETH:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
 		}
-		return eth.NewETHSwapContractBinder(ethAccount, swap, builder.FieldLogger)
+		return eth.NewETHSwapContractBinder(ethAccount, swap, cost, builder.FieldLogger)
 	case blockchain.TokenWBTC:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
 		}
-		return erc20.NewERC20SwapContractBinder(ethAccount, swap, builder.FieldLogger)
+		return erc20.NewERC20SwapContractBinder(ethAccount, swap, cost, builder.FieldLogger)
 	default:
 		return nil, blockchain.NewErrUnsupportedToken(swap.Token.Name)
 	}

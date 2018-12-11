@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/btcsuite/btcd/txscript"
@@ -12,6 +13,7 @@ import (
 	"github.com/btcsuite/btcutil"
 	"github.com/republicprotocol/libbtc-go"
 	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
 )
@@ -23,12 +25,13 @@ type btcSwapContractBinder struct {
 	txVersion  int32
 	fee        int64
 	verify     bool
+	cost       blockchain.Cost
 	logrus.FieldLogger
 	libbtc.Account
 }
 
 // NewBTCSwapContractBinder returns a new Bitcoin Atom instance
-func NewBTCSwapContractBinder(account libbtc.Account, swap swap.Swap, logger logrus.FieldLogger) (swapper.Contract, error) {
+func NewBTCSwapContractBinder(account libbtc.Account, swap swap.Swap, cost blockchain.Cost, logger logrus.FieldLogger) (swapper.Contract, error) {
 	script, scriptAddr, err := buildInitiateScript(swap, account.NetworkParams())
 	if err != nil {
 		return nil, err
@@ -40,6 +43,10 @@ func NewBTCSwapContractBinder(account libbtc.Account, swap swap.Swap, logger log
 	fields["Token"] = swap.Token.Name
 	logger = logger.WithFields(fields)
 
+	if _, ok := cost[blockchain.BTC]; !ok {
+		cost[blockchain.BTC] = big.NewInt(0)
+	}
+
 	logger.Info(swap.ID, fmt.Sprintf("BTC atomic swap = %s", scriptAddr))
 	return &btcSwapContractBinder{
 		scriptAddr:  scriptAddr,
@@ -50,6 +57,7 @@ func NewBTCSwapContractBinder(account libbtc.Account, swap swap.Swap, logger log
 		verify:      true,
 		FieldLogger: logger,
 		Account:     account,
+		cost:        cost,
 	}, nil
 }
 
@@ -102,6 +110,7 @@ func (atom *btcSwapContractBinder) Initiate() error {
 	); err != nil && err != libbtc.ErrPreConditionCheckFailed {
 		return err
 	}
+	atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(atom.fee), atom.cost[blockchain.BTC])
 	return nil
 }
 
@@ -178,6 +187,7 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 	); err != nil && err != libbtc.ErrPreConditionCheckFailed {
 		return err
 	}
+	atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(atom.fee), atom.cost[blockchain.BTC])
 	return nil
 }
 
@@ -259,5 +269,10 @@ func (atom *btcSwapContractBinder) Refund() error {
 	); err != nil && err != libbtc.ErrPreConditionCheckFailed {
 		return err
 	}
+	atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(atom.fee), atom.cost[blockchain.BTC])
 	return nil
+}
+
+func (atom *btcSwapContractBinder) Cost() blockchain.Cost {
+	return atom.cost
 }

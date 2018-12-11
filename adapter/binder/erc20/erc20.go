@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
 )
@@ -25,10 +26,11 @@ type erc20SwapContractBinder struct {
 	tokenAddress   common.Address
 	swapperBinder  *SwapperdERC20
 	tokenBinder    *CompatibleERC20
+	cost           blockchain.Cost
 }
 
 // NewERC20SwapContractBinder returns a new ERC20 Atom instance
-func NewERC20SwapContractBinder(account beth.Account, swap swap.Swap, logger logrus.FieldLogger) (swapper.Contract, error) {
+func NewERC20SwapContractBinder(account beth.Account, swap swap.Swap, cost blockchain.Cost, logger logrus.FieldLogger) (swapper.Contract, error) {
 	tokenAddress, err := account.ReadAddress(fmt.Sprintf("%s", swap.Token.Name))
 	if err != nil {
 		return nil, err
@@ -60,6 +62,14 @@ func NewERC20SwapContractBinder(account beth.Account, swap swap.Swap, logger log
 	fields["Token"] = swap.Token.Name
 	logger = logger.WithFields(fields)
 
+	if _, ok := cost[blockchain.ETH]; !ok {
+		cost[blockchain.ETH] = big.NewInt(0)
+	}
+
+	if _, ok := cost[swap.Token.Name]; !ok {
+		cost[swap.Token.Name] = big.NewInt(0)
+	}
+
 	return &erc20SwapContractBinder{
 		account:        account,
 		swapperAddress: swapperAddress,
@@ -69,6 +79,7 @@ func NewERC20SwapContractBinder(account beth.Account, swap swap.Swap, logger log
 		logger:         logger,
 		swap:           swap,
 		id:             id,
+		cost:           cost,
 	}, nil
 }
 
@@ -99,6 +110,8 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 			if err != nil {
 				return tx, err
 			}
+			atom.cost[atom.swap.Token.Name] = new(big.Int).Add(atom.cost[atom.swap.Token.Name], depositValue)
+			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], tx.Cost())
 			msg, _ := atom.account.FormatTransactionView("Approved on Ethereum blockchain", tx.Hash().String())
 			atom.logger.Info(msg)
 			return tx, nil
@@ -119,6 +132,7 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 			if err != nil {
 				return tx, err
 			}
+			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], tx.Cost())
 			msg, _ := atom.account.FormatTransactionView("Initiated on Ethereum blockchain", tx.Hash().String())
 			atom.logger.Info(msg)
 			return tx, nil
@@ -154,6 +168,7 @@ func (atom *erc20SwapContractBinder) Refund() error {
 			if err != nil {
 				return nil, err
 			}
+			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], tx.Cost())
 			msg, _ := atom.account.FormatTransactionView("Refunded on Ethereum blockchain", tx.Hash().String())
 			atom.logger.Info(msg)
 			return tx, nil
@@ -240,6 +255,7 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 			if err != nil {
 				return nil, err
 			}
+			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], tx.Cost())
 			msg, _ := atom.account.FormatTransactionView("Redeemed the atomic swap on Ethereum blockchain", tx.Hash().String())
 			atom.logger.Info(msg)
 			return tx, nil
@@ -259,4 +275,8 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 		return err
 	}
 	return nil
+}
+
+func (atom *erc20SwapContractBinder) Cost() blockchain.Cost {
+	return atom.cost
 }
