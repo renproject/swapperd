@@ -44,8 +44,12 @@ func (cb *cb) DelayCallback(partialSwap swap.SwapBlob) (swap.SwapBlob, error) {
 		return verifyDelaySwap(partialSwap, filledSwap)
 	}
 
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == http.StatusNoContent {
 		return partialSwap, delayed.ErrSwapDetailsUnavailable
+	}
+
+	if resp.StatusCode == http.StatusGone {
+		return partialSwap, delayed.ErrSwapCancelled
 	}
 
 	return partialSwap, fmt.Errorf("unexpected error %d: %s", resp.StatusCode, respBytes)
