@@ -1,4 +1,4 @@
-package fund
+package wallet
 
 import (
 	"context"
@@ -10,46 +10,46 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
-func (manager *manager) Transfer(password string, token foundation.Token, to string, amount *big.Int) (string, error) {
+func (wallet *wallet) Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error) {
 	switch token {
-	case foundation.TokenBTC:
-		return manager.transferBTC(password, to, amount)
-	case foundation.TokenETH:
-		return manager.transferETH(password, to, amount)
-	case foundation.TokenWBTC:
-		return manager.transferERC20(password, token, to, amount)
+	case blockchain.TokenBTC:
+		return wallet.transferBTC(password, to, amount)
+	case blockchain.TokenETH:
+		return wallet.transferETH(password, to, amount)
+	case blockchain.TokenWBTC:
+		return wallet.transferERC20(password, token, to, amount)
 	}
-	return "", foundation.NewErrUnsupportedToken(token.Name)
+	return "", blockchain.NewErrUnsupportedToken(token.Name)
 }
 
-func (manager *manager) transferBTC(password, to string, amount *big.Int) (string, error) {
+func (wallet *wallet) transferBTC(password, to string, amount *big.Int) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	account, err := manager.BitcoinAccount(password)
+	account, err := wallet.BitcoinAccount(password)
 	if err != nil {
 		return "", err
 	}
 	return "", account.Transfer(ctx, to, amount.Int64())
 }
 
-func (manager *manager) transferETH(password, to string, amount *big.Int) (string, error) {
+func (wallet *wallet) transferETH(password, to string, amount *big.Int) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	account, err := manager.EthereumAccount(password)
+	account, err := wallet.EthereumAccount(password)
 	if err != nil {
 		return "", err
 	}
 	return "", account.Transfer(ctx, common.HexToAddress(to), amount, 1)
 }
 
-func (manager *manager) transferERC20(password string, token foundation.Token, to string, amount *big.Int) (string, error) {
+func (wallet *wallet) transferERC20(password string, token blockchain.Token, to string, amount *big.Int) (string, error) {
 	var txHash string
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	account, err := manager.EthereumAccount(password)
+	account, err := wallet.EthereumAccount(password)
 	if err != nil {
 		return txHash, err
 	}

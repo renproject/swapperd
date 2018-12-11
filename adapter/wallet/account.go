@@ -1,7 +1,9 @@
-package fund
+package wallet
 
 import (
+	"bytes"
 	"crypto/ecdsa"
+	"crypto/rsa"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
@@ -10,19 +12,19 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
-func (manager *manager) EthereumAccount(password string) (beth.Account, error) {
+func (wallet *wallet) EthereumAccount(password string) (beth.Account, error) {
 	var derivationPath []uint32
-	switch manager.config.Ethereum.Network.Name {
+	switch wallet.config.Ethereum.Network.Name {
 	case "kovan", "ropsten":
 		derivationPath = []uint32{44, 1, 0, 0, 0}
 	case "mainnet":
 		derivationPath = []uint32{44, 60, 0, 0, 0}
 	}
-	privKey, err := manager.loadKey(password, derivationPath)
+	privKey, err := wallet.loadECDSAKey(password, derivationPath)
 	if err != nil {
 		return nil, err
 	}
-	ethAccount, err := beth.NewAccount(manager.config.Ethereum.Network.URL, privKey)
+	ethAccount, err := beth.NewAccount(wallet.config.Ethereum.Network.URL, privKey)
 	if err != nil {
 		return nil, err
 	}
@@ -30,23 +32,23 @@ func (manager *manager) EthereumAccount(password string) (beth.Account, error) {
 }
 
 // BitcoinAccount returns the bitcoin account
-func (manager *manager) BitcoinAccount(password string) (libbtc.Account, error) {
+func (wallet *wallet) BitcoinAccount(password string) (libbtc.Account, error) {
 	var derivationPath []uint32
-	switch manager.config.Bitcoin.Network.Name {
+	switch wallet.config.Bitcoin.Network.Name {
 	case "testnet", "testnet3":
 		derivationPath = []uint32{44, 1, 0, 0, 0}
 	case "mainnet":
 		derivationPath = []uint32{44, 0, 0, 0, 0}
 	}
-	privKey, err := manager.loadKey(password, derivationPath)
+	privKey, err := wallet.loadECDSAKey(password, derivationPath)
 	if err != nil {
 		return nil, err
 	}
-	return libbtc.NewAccount(libbtc.NewBlockchainInfoClient(manager.config.Bitcoin.Network.Name), privKey), nil
+	return libbtc.NewAccount(libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name), privKey), nil
 }
 
-func (manager *manager) loadKey(password string, path []uint32) (*ecdsa.PrivateKey, error) {
-	seed := bip39.NewSeed(manager.config.Mnemonic, password)
+func (wallet *wallet) loadECDSAKey(password string, path []uint32) (*ecdsa.PrivateKey, error) {
+	seed := bip39.NewSeed(wallet.config.Mnemonic, password)
 	key, err := hdkeychain.NewMaster(seed, &chaincfg.MainNetParams)
 	if err != nil {
 		return nil, err
@@ -62,4 +64,9 @@ func (manager *manager) loadKey(password string, path []uint32) (*ecdsa.PrivateK
 		return nil, err
 	}
 	return privKey.ToECDSA(), nil
+}
+
+func (wallet *wallet) loadRSAKey(password string) (*rsa.PrivateKey, error) {
+	seed := bip39.NewSeed(wallet.config.Mnemonic, password)
+	return rsa.GenerateKey(bytes.NewReader(seed), 2048)
 }

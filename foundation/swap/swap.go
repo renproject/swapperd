@@ -1,4 +1,4 @@
-package foundation
+package swap
 
 import (
 	"crypto/rand"
@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"math/big"
 	"time"
+
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
 const ExpiryUnit = int64(2 * 60 * 60)
@@ -20,15 +22,26 @@ func RandomID() SwapID {
 	return SwapID(base64.StdEncoding.EncodeToString(id[:]))
 }
 
-// NewSwapStatus returns the `SwapStatus` from the given SwapBlob.
-func NewSwapStatus(blob SwapBlob) SwapStatus {
-	return SwapStatus{blob.ID, blob.SendToken, blob.ReceiveToken, blob.SendAmount, blob.ReceiveAmount, time.Now().Unix(), 1}
+// The SwapReceipt contains the swap details and the status.
+type SwapReceipt struct {
+	ID            SwapID `json:"id"`
+	SendToken     string `json:"sendToken"`
+	ReceiveToken  string `json:"receiveToken"`
+	SendAmount    string `json:"sendAmount"`
+	ReceiveAmount string `json:"receiveAmount"`
+	Timestamp     int64  `json:"timestamp"`
+	Status        Status `json:"status"`
+}
+
+// NewSwapReceipt returns a SwapReceipt from a swapBlob.
+func NewSwapReceipt(blob SwapBlob) SwapReceipt {
+	return SwapReceipt{blob.ID, blob.SendToken, blob.ReceiveToken, blob.SendAmount, blob.ReceiveAmount, time.Now().Unix(), 1}
 }
 
 // A Swap stores all of the information required to execute an atomic swap.
 type Swap struct {
 	ID              SwapID
-	Token           Token
+	Token           blockchain.Token
 	Value           *big.Int
 	Fee             *big.Int
 	BrokerFee       *big.Int
@@ -50,7 +63,7 @@ type SwapBlob struct {
 	SendAmount           string `json:"sendAmount"`
 	ReceiveFee           string `json:"receiveFee"`
 	ReceiveAmount        string `json:"receiveAmount"`
-	MinimumReceiveAmount string `json:"minimumReceiveAmount"`
+	MinimumReceiveAmount string `json:"minimumReceiveAmount,omitempty"`
 
 	SendTo              string `json:"sendTo"`
 	ReceiveFrom         string `json:"receiveFrom"`
@@ -58,31 +71,17 @@ type SwapBlob struct {
 	SecretHash          string `json:"secretHash"`
 	ShouldInitiateFirst bool   `json:"shouldInitiateFirst"`
 
-	Delay            bool            `json:"delayed"`
-	DelayInfo        json.RawMessage `json:"delayInfo"`
-	DelayCallbackURL string          `json:"delayCallbackUrl"`
+	Delay            bool            `json:"delayed,omitempty"`
+	DelayInfo        json.RawMessage `json:"delayInfo,omitempty"`
+	DelayCallbackURL string          `json:"delayCallbackUrl,omitempty"`
 
 	BrokerFee              int64  `json:"brokerFee"` // should be between 0 and 100
 	BrokerSendTokenAddr    string `json:"brokerSendTokenAddr"`
 	BrokerReceiveTokenAddr string `json:"brokerReceiveTokenAddr"`
+
+	Password string `json:"password,omitempty"`
 }
 
-type SwapRequest struct {
-	SwapBlob
-
-	Secret   [32]byte `json:"secret"`
-	Password string   `json:"password"`
-}
-
-func NewSwapRequest(swapBlob SwapBlob, secret [32]byte, password string) SwapRequest {
-	return SwapRequest{swapBlob, secret, password}
-}
-
-type SwapResult struct {
-	ID      SwapID
-	Success bool
-}
-
-func NewSwapResult(id SwapID, success bool) SwapResult {
-	return SwapResult{id, success}
+type ReceiptQuery struct {
+	Responder chan<- map[SwapID]SwapReceipt
 }

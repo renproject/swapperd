@@ -55,7 +55,7 @@ func main() {
 
 func createKeystore(network, username, password, mnemonic string) {
 	homeDir := getDefaultSwapperHome()
-	if _, err := keystore.FundManager(homeDir, network); err == nil {
+	if _, err := keystore.Wallet(homeDir, network); err == nil {
 		fmt.Printf("swapper already exists at the default location (%s)\n", getDefaultSwapperHome())
 		return
 	}

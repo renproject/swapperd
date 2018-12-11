@@ -12,14 +12,14 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/swapperd/core/swapper"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
 )
 
 type erc20SwapContractBinder struct {
 	id             [32]byte
 	account        beth.Account
-	swap           foundation.Swap
+	swap           swap.Swap
 	logger         logrus.FieldLogger
 	swapperAddress common.Address
 	tokenAddress   common.Address
@@ -28,7 +28,7 @@ type erc20SwapContractBinder struct {
 }
 
 // NewERC20SwapContractBinder returns a new ERC20 Atom instance
-func NewERC20SwapContractBinder(account beth.Account, swap foundation.Swap, logger logrus.FieldLogger) (swapper.Contract, error) {
+func NewERC20SwapContractBinder(account beth.Account, swap swap.Swap, logger logrus.FieldLogger) (swapper.Contract, error) {
 	tokenAddress, err := account.ReadAddress(fmt.Sprintf("%s", swap.Token.Name))
 	if err != nil {
 		return nil, err

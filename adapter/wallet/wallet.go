@@ -1,11 +1,11 @@
-package fund
+package wallet
 
 import (
 	"math/big"
 
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/libbtc-go"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
 type Config struct {
@@ -30,23 +30,23 @@ type Balance struct {
 	Amount  *big.Int
 }
 
-type Manager interface {
-	SupportedTokens() []foundation.Token
-	SupportedBlockchains() []foundation.Blockchain
-	Balances() (map[foundation.TokenName]foundation.Balance, error)
-	Transfer(password string, token foundation.Token, to string, amount *big.Int) (string, error)
-	VerifyAddress(blockchain foundation.BlockchainName, address string) error
-	VerifyBalance(token foundation.Token, balance *big.Int) error
+type Wallet interface {
+	SupportedTokens() []blockchain.Token
+	SupportedBlockchains() []blockchain.Blockchain
+	Balances() (map[blockchain.TokenName]blockchain.Balance, error)
+	Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error)
+	VerifyAddress(blockchain blockchain.BlockchainName, address string) error
+	VerifyBalance(token blockchain.Token, balance *big.Int) error
 	EthereumAccount(password string) (beth.Account, error)
 	BitcoinAccount(password string) (libbtc.Account, error)
 }
 
-type manager struct {
+type wallet struct {
 	config Config
 }
 
-func New(config Config) Manager {
-	return &manager{
+func New(config Config) Wallet {
+	return &wallet{
 		config: config,
 	}
 }

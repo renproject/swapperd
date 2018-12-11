@@ -65,12 +65,12 @@ var _ = Describe("Server Adapter", func() {
 	tokenPairOptions := []struct {
 		sendToken, receiveToken string
 	}{
-		{foundation.TokenBTC.String(), foundation.TokenETH.String()},
-		{foundation.TokenBTC.String(), foundation.TokenWBTC.String()},
-		{foundation.TokenETH.String(), foundation.TokenBTC.String()},
-		{foundation.TokenETH.String(), foundation.TokenWBTC.String()},
-		{foundation.TokenWBTC.String(), foundation.TokenBTC.String()},
-		{foundation.TokenWBTC.String(), foundation.TokenETH.String()},
+		{blockchian.TokenBTC.String(), blockchian.TokenETH.String()},
+		{blockchian.TokenBTC.String(), blockchian.TokenWBTC.String()},
+		{blockchian.TokenETH.String(), blockchian.TokenBTC.String()},
+		{blockchian.TokenETH.String(), blockchian.TokenWBTC.String()},
+		{blockchian.TokenWBTC.String(), blockchian.TokenBTC.String()},
+		{blockchian.TokenWBTC.String(), blockchian.TokenETH.String()},
 	}
 
 	amountOptions := []struct {
@@ -118,13 +118,13 @@ var _ = Describe("Server Adapter", func() {
 		Index int `json:"index"`
 	}
 
-	partialSwaps := []foundation.SwapBlob{}
+	partialSwaps := []swap.SwapBlob{}
 	for _, tokenPairOption := range tokenPairOptions {
 		for i, amountOption := range amountOptions {
 			for _, initiationOption := range initiationOptions {
 				delayInfo, _ := json.Marshal(TestDelayInfo{i})
-				swap := foundation.SwapBlob{
-					ID:                   foundation.RandomID(),
+				swap := swap.SwapBlob{
+					ID:                   swap.RandomID(),
 					SendToken:            tokenPairOption.sendToken,
 					ReceiveToken:         tokenPairOption.receiveToken,
 					SendAmount:           amountOption.sendAmount,
@@ -149,7 +149,7 @@ var _ = Describe("Server Adapter", func() {
 		doneCh := make(chan struct{})
 		go startTestServer(func() http.HandlerFunc {
 			return func(w http.ResponseWriter, r *http.Request) {
-				swap := foundation.SwapBlob{}
+				swap := swap.SwapBlob{}
 				if err := json.NewDecoder(r.Body).Decode(&swap); err != nil {
 					writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode swap request: %v", err))
 					return
@@ -187,7 +187,7 @@ var _ = Describe("Server Adapter", func() {
 		doneCh := make(chan struct{})
 		go startTestServer(func() http.HandlerFunc {
 			return func(w http.ResponseWriter, r *http.Request) {
-				swap := foundation.SwapBlob{}
+				swap := swap.SwapBlob{}
 				if err := json.NewDecoder(r.Body).Decode(&swap); err != nil {
 					writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode swap request: %v", err))
 					return
@@ -232,7 +232,7 @@ var _ = Describe("Server Adapter", func() {
 		doneCh := make(chan struct{})
 		go startTestServer(func() http.HandlerFunc {
 			return func(w http.ResponseWriter, r *http.Request) {
-				swap := foundation.SwapBlob{}
+				swap := swap.SwapBlob{}
 				if err := json.NewDecoder(r.Body).Decode(&swap); err != nil {
 					writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode swap request: %v", err))
 					return

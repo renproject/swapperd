@@ -9,13 +9,12 @@ import (
 	"github.com/republicprotocol/swapperd/adapter/db"
 	"github.com/republicprotocol/swapperd/adapter/server"
 	"github.com/republicprotocol/swapperd/core/balance"
-	"github.com/republicprotocol/swapperd/core/router"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/driver/keystore"
 	"github.com/republicprotocol/swapperd/driver/leveldb"
 	"github.com/republicprotocol/swapperd/driver/logger"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/swap"
 )
 
 type composer struct {
@@ -33,16 +32,14 @@ func New(homeDir, network, port string) Composer {
 }
 
 func (composer *composer) Run(done <-chan struct{}) {
-	swapRequests := make(chan foundation.SwapRequest)
-	statusUpdates := make(chan foundation.StatusUpdate)
-	statusQueries := make(chan foundation.StatusQuery)
-	balanceQueries := make(chan balance.BalanceQuery)
-	ftSwapRequests := make(chan foundation.SwapRequest)
-	ftStatusUpdates := make(chan foundation.StatusUpdate)
-	statuses := make(chan foundation.SwapStatus)
-	results := make(chan foundation.SwapResult)
+	swaps := make(chan swap.SwapBlob)
+	receipts := make(chan swap.SwapReceipt)
 
-	manager, err := keystore.FundManager(composer.homeDir, composer.network)
+	statusUpdates := make(chan swap.StatusUpdate)
+	receiptQueries := make(chan swap.ReceiptQuery)
+	balanceQueries := make(chan balance.BalanceQuery)
+
+	wallet, err := keystore.Wallet(composer.homeDir, composer.network)
 	if err != nil {
 		panic(err)
 	}
@@ -51,6 +48,8 @@ func (composer *composer) Run(done <-chan struct{}) {
 	if err != nil {
 		panic(err)
 	}
+
+	storage := db.New(ldb)
 
 	passwordHash, err := keystore.LoadPasswordHash(composer.homeDir, composer.network)
 	if err != nil {
@@ -61,27 +60,20 @@ func (composer *composer) Run(done <-chan struct{}) {
 
 	co.ParBegin(
 		func() {
-
+			httpServer := server.NewHttpServer(wallet, storage, logger, passwordHash, composer.port)
+			httpServer.Run(done, swaps, receipts, receiptQueries, balanceQueries)
 		},
 		func() {
-			httpServer := server.NewHttpServer(manager, logger, passwordHash, composer.port)
-			httpServer.Run(done, swapRequests, statusQueries, balanceQueries)
+			swapper := swapper.New(callback.New(), binder.NewBuilder(wallet, logger), storage, logger)
+			swapper.Run(done, swaps, statusUpdates)
 		},
 		func() {
-			router := router.New(db.New(ldb), logger)
-			router.Run(done, swapRequests, statusUpdates, ftSwapRequests, ftStatusUpdates, statuses)
-		},
-		func() {
-			swapper := swapper.New(callback.New(), binder.NewBuilder(manager, logger), logger)
-			swapper.Run(done, ftSwapRequests, results, statusUpdates)
-		},
-		func() {
-			statusHandler := status.New()
-			statusHandler.Run(done, statuses, ftStatusUpdates, statusQueries)
+			statuses := status.New()
+			statuses.Run(done, receipts, statusUpdates, receiptQueries)
 		},
 		func() {
 			updateFrequency := 15 * time.Second
-			balanceHandler := balance.New(updateFrequency, manager, logger)
+			balanceHandler := balance.New(updateFrequency, wallet, logger)
 			balanceHandler.Run(done, balanceQueries)
 		},
 	)

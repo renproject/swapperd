@@ -10,7 +10,7 @@ import (
 // MockBlockchain implements the `balance.Blockchain` interface.
 type MockBlockchain struct {
 	mu      *sync.Mutex
-	balance map[foundation.TokenName]foundation.Balance
+	balance map[bl.TokenName]foundation.Balance
 }
 
 // NewMockBlockchain creates a new `MockBlockchain`.

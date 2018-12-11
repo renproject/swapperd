@@ -4,17 +4,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/republicprotocol/swapperd/foundation"
-
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/sirupsen/logrus"
 )
 
 type Blockchain interface {
-	Balances() (map[foundation.TokenName]foundation.Balance, error)
+	Balances() (map[blockchain.TokenName]blockchain.Balance, error)
 }
 
 type BalanceQuery struct {
-	Response chan<- map[foundation.TokenName]foundation.Balance
+	Response chan<- map[blockchain.TokenName]blockchain.Balance
 }
 
 type Balances interface {
@@ -24,18 +23,18 @@ type Balances interface {
 type balances struct {
 	mu              *sync.RWMutex
 	updateFrequency time.Duration
-	balanceMap      map[foundation.TokenName]foundation.Balance
+	balanceMap      map[blockchain.TokenName]blockchain.Balance
 	logger          logrus.FieldLogger
 	blockchain      Blockchain
 }
 
-func New(updateFrequency time.Duration, blockchain Blockchain, logger logrus.FieldLogger) Balances {
+func New(updateFrequency time.Duration, bc Blockchain, logger logrus.FieldLogger) Balances {
 	return &balances{
 		mu:              new(sync.RWMutex),
 		updateFrequency: updateFrequency,
-		balanceMap:      map[foundation.TokenName]foundation.Balance{},
+		balanceMap:      map[blockchain.TokenName]blockchain.Balance{},
 		logger:          logger,
-		blockchain:      blockchain,
+		blockchain:      bc,
 	}
 }
 
@@ -76,15 +75,15 @@ func (balances *balances) update() {
 	balances.balanceMap = copyBalanceMap(balanceMap)
 }
 
-func (balances *balances) read() map[foundation.TokenName]foundation.Balance {
+func (balances *balances) read() map[blockchain.TokenName]blockchain.Balance {
 	balances.mu.RLock()
 	defer balances.mu.RUnlock()
 
 	return copyBalanceMap(balances.balanceMap)
 }
 
-func copyBalanceMap(balance map[foundation.TokenName]foundation.Balance) map[foundation.TokenName]foundation.Balance {
-	copied := map[foundation.TokenName]foundation.Balance{}
+func copyBalanceMap(balance map[blockchain.TokenName]blockchain.Balance) map[blockchain.TokenName]blockchain.Balance {
+	copied := map[blockchain.TokenName]blockchain.Balance{}
 	for i, j := range balance {
 		copied[i] = j
 	}

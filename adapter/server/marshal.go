@@ -1,26 +1,25 @@
 package server
 
-import "github.com/republicprotocol/swapperd/foundation"
+import (
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	"github.com/republicprotocol/swapperd/foundation/swap"
+)
 
 type GetInfoResponse struct {
 	Version              string                  `json:"version"`
-	SupportedBlockchains []foundation.Blockchain `json:"supportedBlockchains"`
-	SupportedTokens      []foundation.Token      `json:"supportedTokens"`
+	SupportedBlockchains []blockchain.Blockchain `json:"supportedBlockchains"`
+	SupportedTokens      []blockchain.Token      `json:"supportedTokens"`
 }
 
 type GetSwapsResponse struct {
-	Swaps []foundation.SwapStatus `json:"swaps"`
+	Swaps []swap.SwapReceipt `json:"swaps"`
 }
 
-type GetBalancesResponse map[foundation.TokenName]foundation.Balance
+type GetBalancesResponse map[blockchain.TokenName]blockchain.Balance
 
-type PostSwapRequest struct {
-	foundation.SwapBlob
-	Password string
-}
+type PostSwapRequest swap.SwapBlob
 
 type PostSwapResponse struct {
-	foundation.SwapBlob
 }
 
 type PostTransfersRequest struct {

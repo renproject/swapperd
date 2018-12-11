@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/republicprotocol/swapperd/core/swapper"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/swap"
 )
 
 type callback struct {
@@ -20,7 +20,7 @@ func New() swapper.DelayCallback {
 	return &callback{}
 }
 
-func (callback *callback) DelayCallback(partialSwap foundation.SwapBlob) (foundation.SwapBlob, error) {
+func (callback *callback) DelayCallback(partialSwap swap.SwapBlob) (swap.SwapBlob, error) {
 	for {
 		data, err := json.MarshalIndent(partialSwap, "", "  ")
 		if err != nil {
@@ -38,7 +38,7 @@ func (callback *callback) DelayCallback(partialSwap foundation.SwapBlob) (founda
 			return partialSwap, err
 		}
 
-		filledSwap := foundation.SwapBlob{}
+		filledSwap := swap.SwapBlob{}
 		if resp.StatusCode == 200 {
 			if err := json.Unmarshal(respBytes, &filledSwap); err != nil {
 				return partialSwap, err
@@ -55,7 +55,7 @@ func (callback *callback) DelayCallback(partialSwap foundation.SwapBlob) (founda
 	}
 }
 
-func verifyDelaySwap(partialSwap, filledSwap foundation.SwapBlob) (foundation.SwapBlob, error) {
+func verifyDelaySwap(partialSwap, filledSwap swap.SwapBlob) (swap.SwapBlob, error) {
 	initialMinReceiveValue, ok := big.NewInt(0).SetString(partialSwap.MinimumReceiveAmount, 10)
 	if !ok {
 		return partialSwap, fmt.Errorf("corrupted minimum receive value")
