@@ -7,7 +7,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/swap"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -120,7 +120,7 @@ func addressToPubKeyHash(addrString string, chainParams *chaincfg.Params) (*btcu
 	return addr, nil
 }
 
-func buildInitiateScript(swap foundation.Swap, Net *chaincfg.Params) ([]byte, string, error) {
+func buildInitiateScript(swap swap.Swap, Net *chaincfg.Params) ([]byte, string, error) {
 	// decoding bitcoin addresses
 	FundingAddr, err := addressToPubKeyHash(swap.FundingAddress, Net)
 	if err != nil {

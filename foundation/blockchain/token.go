@@ -1,4 +1,4 @@
-package foundation
+package blockchain
 
 import (
 	"fmt"
@@ -15,27 +15,11 @@ func (err ErrUnsupportedToken) Error() string {
 	return string(err)
 }
 
-type BlockchainName string
 type TokenName string
-
-var (
-	Bitcoin  = BlockchainName("bitcoin")
-	Ethereum = BlockchainName("ethereum")
-)
 
 type Token struct {
 	Name       TokenName      `json:"name"`
 	Blockchain BlockchainName `json:"blockchain"`
-}
-
-type Balance struct {
-	Address string `json:"address"`
-	Amount  string `json:"balance"`
-}
-
-type Blockchain struct {
-	Name    BlockchainName `json:"name"`
-	Address string         `json:"address"`
 }
 
 func (token Token) String() string {

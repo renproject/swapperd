@@ -5,24 +5,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
+	"path"
 	"strings"
 
-	"github.com/republicprotocol/swapperd/adapter/fund"
-	"github.com/tyler-smith/go-bip39"
-	"golang.org/x/crypto/sha3"
+	"github.com/republicprotocol/swapperd/adapter/wallet"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Testnet is the Swapperd's testnet config object
-var Testnet = fund.Config{
-	Bitcoin: fund.BlockchainConfig{
-		Network: fund.Network{
+var Testnet = wallet.Config{
+	Bitcoin: wallet.BlockchainConfig{
+		Network: wallet.Network{
 			Name: "testnet",
 		},
 		Tokens: []string{"BTC"},
 	},
-	Ethereum: fund.BlockchainConfig{
-		Network: fund.Network{
+	Ethereum: wallet.BlockchainConfig{
+		Network: wallet.Network{
 			Name: "kovan",
 			URL:  "https://kovan.infura.io",
 		},
@@ -31,26 +30,26 @@ var Testnet = fund.Config{
 }
 
 // Mainnet is the Swapperd's mainnet config object
-var Mainnet = fund.Config{
-	Bitcoin: fund.BlockchainConfig{
-		Network: fund.Network{
+var Mainnet = wallet.Config{
+	Bitcoin: wallet.BlockchainConfig{
+		Network: wallet.Network{
 			Name: "mainnet",
 		},
 		Tokens: []string{"BTC"},
 	},
-	Ethereum: fund.BlockchainConfig{
-		Network: fund.Network{
-			Name: "kovan",
-			URL:  "https://kovan.infura.io",
+	Ethereum: wallet.BlockchainConfig{
+		Network: wallet.Network{
+			Name: "mainnet",
+			URL:  "https://mainnet.infura.io",
 		},
 		Tokens: []string{"ETH", "WBTC"},
 	},
 }
 
 type Keystore struct {
-	Username     string      `json:"username"`
-	PasswordHash string      `json:"passwordHash"`
-	Config       fund.Config `json:"config"`
+	Username     string        `json:"username"`
+	PasswordHash string        `json:"passwordHash"`
+	Config       wallet.Config `json:"config"`
 }
 
 type Address struct {
@@ -58,8 +57,8 @@ type Address struct {
 	Address    string `json:"address"`
 }
 
-func FundManager(network string) (fund.Manager, error) {
-	path := keystorePath(network)
+func Wallet(homeDir, network string) (wallet.Wallet, error) {
+	path := keystorePath(homeDir, network)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -68,29 +67,34 @@ func FundManager(network string) (fund.Manager, error) {
 	if err := json.Unmarshal(data, &keystore); err != nil {
 		return nil, err
 	}
-	return fund.New(keystore.Config), nil
+	return wallet.New(keystore.Config), nil
 }
 
-func LoadPasswordHash(network string) ([32]byte, error) {
-	path := keystorePath(network)
+func LoadPasswordHash(homeDir, network string) ([]byte, error) {
+	path := keystorePath(homeDir, network)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return [32]byte{}, err
+		return nil, err
 	}
 	keystore := Keystore{}
 	if err := json.Unmarshal(data, &keystore); err != nil {
-		return [32]byte{}, err
+		return nil, err
 	}
-	return toBytes32(keystore.PasswordHash)
+	return base64.StdEncoding.DecodeString(keystore.PasswordHash)
 }
 
-func Generate(network, username, password, mnemonic string) error {
+func Generate(homeDir, network, username, password, mnemonic string) error {
 	network = strings.ToLower(network)
-	path := keystorePath(network)
+	path := keystorePath(homeDir, network)
 	keystore := Keystore{}
 	keystore.Username = username
-	passwordHashBytes := sha3.Sum256([]byte(password))
-	keystore.PasswordHash = base64.StdEncoding.EncodeToString(passwordHashBytes[:])
+
+	passwordHashBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	keystore.PasswordHash = base64.StdEncoding.EncodeToString(passwordHashBytes)
 	config, err := generateConfig(network, password, mnemonic)
 	if err != nil {
 		return err
@@ -103,58 +107,37 @@ func Generate(network, username, password, mnemonic string) error {
 	return ioutil.WriteFile(path, data, 0644)
 }
 
-func generateConfig(network, password, mnemonic string) (fund.Config, error) {
-	var config fund.Config
+func generateConfig(network, password, mnemonic string) (wallet.Config, error) {
+	var config wallet.Config
 	switch network {
 	case "testnet":
 		config = Testnet
 	case "mainnet":
 		config = Mainnet
 	default:
-		return fund.Config{}, fmt.Errorf("Invalid Network %s", network)
+		return wallet.Config{}, fmt.Errorf("Invalid Network %s", network)
 	}
-	entropy, err := bip39.NewEntropy(128)
-	if err != nil {
-		return fund.Config{}, err
-	}
-
-	if mnemonic == "" {
-		mnemonic, err = bip39.NewMnemonic(entropy)
-		if err != nil {
-			return fund.Config{}, err
-		}
-	}
-
 	config.Mnemonic = mnemonic
-	manager := fund.New(config)
-	ethAccount, err := manager.EthereumAccount(password)
+	w := wallet.New(config)
+	ethAccount, err := w.EthereumAccount(password)
 	if err != nil {
-		return fund.Config{}, err
+		return wallet.Config{}, err
 	}
 	config.Ethereum.Address = ethAccount.Address().String()
-	btcAccount, err := manager.BitcoinAccount(password)
+	btcAccount, err := w.BitcoinAccount(password)
 	if err != nil {
-		return fund.Config{}, err
+		return wallet.Config{}, err
 	}
 	btcAddress, err := btcAccount.Address()
 	if err != nil {
-		return fund.Config{}, err
+		return wallet.Config{}, err
 	}
 	config.Bitcoin.Address = btcAddress.String()
 	return config, nil
 }
 
-func keystorePath(network string) string {
-	network = strings.ToLower(network)
-	unix := os.Getenv("HOME")
-	if unix != "" {
-		return fmt.Sprintf("%s/%s.json", unix+"/.swapperd", network)
-	}
-	windows := os.Getenv("userprofile")
-	if windows != "" {
-		return fmt.Sprintf("C:\\windows\\system32\\config\\systemprofile\\swapperd\\%s.json", network)
-	}
-	panic(fmt.Sprintf("unknown operating system"))
+func keystorePath(homeDir, network string) string {
+	return path.Join(homeDir, fmt.Sprintf("%s.json", network))
 }
 
 func toBytes32(data string) ([32]byte, error) {

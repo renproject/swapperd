@@ -1,41 +1,41 @@
 package status
 
-import (
-	"github.com/republicprotocol/swapperd/foundation"
-)
+import "github.com/republicprotocol/swapperd/foundation/swap"
 
-type Book interface {
-	Run(done <-chan struct{}, swaps <-chan foundation.SwapStatus, updates <-chan foundation.StatusUpdate, queries <-chan foundation.StatusQuery)
+type Statuses interface {
+	Run(done <-chan struct{}, swaps <-chan swap.SwapReceipt, updates <-chan swap.StatusUpdate, queries <-chan swap.ReceiptQuery)
 }
 
-type book struct {
+type statuses struct {
 	monitor *monitor
 }
 
-func New() Book {
-	return &book{newMonitor()}
+func New() Statuses {
+	return &statuses{newMonitor()}
 }
 
-func (book *book) Run(done <-chan struct{}, statuses <-chan foundation.SwapStatus, updates <-chan foundation.StatusUpdate, queries <-chan foundation.StatusQuery) {
+func (statuses *statuses) Run(done <-chan struct{}, receipts <-chan swap.SwapReceipt, updates <-chan swap.StatusUpdate, queries <-chan swap.ReceiptQuery) {
 	for {
 		select {
 		case <-done:
 			return
-		case status, ok := <-statuses:
+		case receipt, ok := <-receipts:
 			if !ok {
 				return
 			}
-			book.monitor.set(status)
+			statuses.monitor.set(receipt)
 		case update, ok := <-updates:
 			if !ok {
 				return
 			}
-			book.monitor.update(update)
+			statuses.monitor.update(update)
 		case query, ok := <-queries:
 			if !ok {
 				return
 			}
-			query.Responder <- book.monitor.get()
+			go func() {
+				query.Responder <- statuses.monitor.get()
+			}()
 		}
 	}
 }

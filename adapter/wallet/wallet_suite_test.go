@@ -1,4 +1,4 @@
-package router_test
+package wallet_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestRouter(t *testing.T) {
+func TestWallet(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Router Suite")
+	RunSpecs(t, "Wallet Suite")
 }
