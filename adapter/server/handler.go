@@ -8,12 +8,13 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/adapter/wallet"
 	"github.com/republicprotocol/swapperd/core/balance"
-	"github.com/republicprotocol/swapperd/core/bootload"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/sha3"
 )
@@ -27,7 +28,7 @@ type handler struct {
 	passwordHash []byte
 	wallet       wallet.Wallet
 	storage      Storage
-	bootloader   bootload.Bootloader
+	logger       logrus.FieldLogger
 }
 
 // The Handler for swapperd requests
@@ -39,17 +40,18 @@ type Handler interface {
 	PostTransfers(PostTransfersRequest) (PostTransfersResponse, error)
 	PostSwaps(PostSwapRequest, chan<- swap.SwapReceipt, chan<- swap.SwapBlob) (PostSwapResponse, error)
 	PostDelayedSwaps(PostSwapRequest, chan<- swap.SwapReceipt, chan<- swap.SwapBlob) error
-	PostBootload(password string, receipts chan<- swap.SwapReceipt, swaps chan<- swap.SwapBlob)
+	PostBootload(password string, swaps, delayedSwaps chan<- swap.SwapBlob) error
 	VerifyPassword(password string) bool
 }
 
-func NewHandler(passwordHash []byte, wallet wallet.Wallet, storage Storage, bootloader bootload.Bootloader) Handler {
-	return &handler{false, passwordHash, wallet, storage, bootloader}
+func NewHandler(passwordHash []byte, wallet wallet.Wallet, storage Storage, logger logrus.FieldLogger) Handler {
+	return &handler{false, passwordHash, wallet, storage, logger}
 }
 
 func (handler *handler) GetInfo() GetInfoResponse {
 	return GetInfoResponse{
 		Version:              "0.2.0",
+		Bootloaded:           handler.bootloaded,
 		SupportedBlockchains: handler.wallet.SupportedBlockchains(),
 		SupportedTokens:      handler.wallet.SupportedTokens(),
 	}
@@ -95,7 +97,11 @@ func (handler *handler) PostSwaps(swapReq PostSwapRequest, receipts chan<- swap.
 
 	receipt := handler.newSwapReceipt(blob)
 	blob.Password = ""
-	handler.storage.InsertSwap(blob, receipt)
+
+	if err := handler.storage.PutSwap(blob); err != nil {
+		return PostSwapResponse{}, err
+	}
+
 	blob.Password = password
 	go func() {
 		swaps <- blob
@@ -116,12 +122,16 @@ func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest, receipts chan<
 
 	receipt := handler.newSwapReceipt(blob)
 	blob.Password = ""
-	handler.storage.InsertSwap(blob, receipt)
+	if err := handler.storage.PutSwap(blob); err != nil {
+		return err
+	}
 	blob.Password = password
 	go func() {
 		swaps <- blob
 		receipts <- receipt
 	}()
+
+	handler.logger.Info("successfully opened delay swap: ", swapReq)
 	return nil
 }
 
@@ -154,13 +164,39 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersRe
 	return response, nil
 }
 
-func (handler *handler) PostBootload(password string, receipts chan<- swap.SwapReceipt, swaps chan<- swap.SwapBlob) {
-	handler.bootloader.Bootload(password, receipts, swaps)
+func (handler *handler) PostBootload(password string, swaps, delayedSwaps chan<- swap.SwapBlob) error {
+	if handler.bootloaded {
+		return fmt.Errorf("already bootloaded")
+	}
+
+	pendingSwaps, err := handler.storage.PendingSwaps()
+	if err != nil {
+		return err
+	}
+
+	handler.logger.Infof("loading %d pending atomic swaps", len(pendingSwaps))
+
+	co.ParForAll(pendingSwaps, func(i int) {
+		handler.logger.Info(pendingSwaps[i])
+		swap := pendingSwaps[i]
+		swap.Password = password
+		if swap.Delay {
+			delayedSwaps <- swap
+			return
+		}
+		swaps <- swap
+	})
+
 	handler.bootloaded = true
+	return nil
 }
 
 func (handler *handler) VerifyPassword(password string) bool {
-	return (bcrypt.CompareHashAndPassword(handler.passwordHash, []byte(password)) != nil)
+	if err := bcrypt.CompareHashAndPassword(handler.passwordHash, []byte(password)); err != nil {
+		handler.logger.Info("password length", len(handler.passwordHash))
+		handler.logger.Error(err)
+	}
+	return (bcrypt.CompareHashAndPassword(handler.passwordHash, []byte(password)) == nil)
 }
 
 func (handler *handler) patchSwap(swapBlob swap.SwapBlob) (swap.SwapBlob, error) {
@@ -199,11 +235,15 @@ func (handler *handler) patchDelayedSwap(blob swap.SwapBlob) (swap.SwapBlob, err
 		return blob, fmt.Errorf("delay url cannot be empty")
 	}
 
+	swapID := [32]byte{}
+	rand.Read(swapID[:])
+	blob.ID = swap.SwapID(base64.StdEncoding.EncodeToString(swapID[:]))
+
 	if err := handler.verifyTokenDetails(blob.SendToken, blob.SendTo, blob.SendAmount, false); err != nil {
 		return blob, err
 	}
 
-	if err := handler.verifyTokenDetails(blob.ReceiveToken, blob.ReceiveFrom, blob.ReceiveAmount, false); err != nil {
+	if _, err := blockchain.PatchToken(blob.ReceiveToken); err != nil {
 		return blob, err
 	}
 
@@ -234,5 +274,5 @@ func (handler *handler) verifyTokenDetails(tokenString, addressString, amountStr
 }
 
 func (handler *handler) newSwapReceipt(blob swap.SwapBlob) swap.SwapReceipt {
-	return swap.SwapReceipt{blob.ID, blob.SendToken, blob.ReceiveToken, blob.SendAmount, blob.ReceiveAmount, time.Now().Unix(), "", "", 1}
+	return swap.SwapReceipt{blob.ID, blob.SendToken, blob.ReceiveToken, blob.SendAmount, blob.ReceiveAmount, blockchain.Cost{}, blockchain.Cost{}, time.Now().Unix(), 1, blob.Delay, blob.DelayInfo}
 }
