@@ -82,7 +82,7 @@ func verifyDelaySwap(partialSwap, filledSwap swap.SwapBlob) (swap.SwapBlob, erro
 	}
 
 	if initialMinReceiveValue.Cmp(filledReceiveValue) > 0 || initialMaxSendValue.Cmp(filledSendValue) < 0 {
-		return partialSwap, fmt.Errorf("invalid filled swap receive value too low or send value too high")
+		return partialSwap, fmt.Errorf("invalid filled swap receive value too low or send value too high %v %v %v %v", initialMinReceiveValue, filledReceiveValue, initialMaxSendValue, filledSendValue)
 	}
 
 	if filledReceiveValue.Mul(filledReceiveValue, initialMaxSendValue).Cmp(initialReceiveValue.Mul(initialReceiveValue, filledSendValue)) < 0 {
