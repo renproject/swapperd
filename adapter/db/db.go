@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -24,6 +25,16 @@ var (
 )
 
 type Storage interface {
+	PutSwap(blob swap.SwapBlob) error
+	DeletePendingSwap(swapID swap.SwapID) error
+	PendingSwaps() ([]swap.SwapBlob, error)
+
+	PendingSwap(swapID swap.SwapID) (swap.SwapBlob, error)
+	PutReceipt(receipt swap.SwapReceipt) error
+	UpdateReceipt(swapID swap.SwapID, update func(receipt *swap.SwapReceipt)) error
+	Receipts() ([]swap.SwapReceipt, error)
+	Receipt(swapID swap.SwapID) (swap.SwapReceipt, error)
+	LoadCosts(swapID swap.SwapID) (blockchain.Cost, blockchain.Cost)
 }
 
 type dbStorage struct {
