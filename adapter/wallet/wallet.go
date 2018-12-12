@@ -35,8 +35,12 @@ type Wallet interface {
 	SupportedBlockchains() []blockchain.Blockchain
 	Balances() (map[blockchain.TokenName]blockchain.Balance, error)
 	Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error)
+	GetAddress(blockchain blockchain.BlockchainName) (string, error)
+	Addresses() (map[blockchain.TokenName]string, error)
 	VerifyAddress(blockchain blockchain.BlockchainName, address string) error
 	VerifyBalance(token blockchain.Token, balance *big.Int) error
+	DefaultFee(blockchainName blockchain.BlockchainName) (*big.Int, error)
+
 	EthereumAccount(password string) (beth.Account, error)
 	BitcoinAccount(password string) (libbtc.Account, error)
 }
