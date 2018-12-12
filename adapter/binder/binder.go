@@ -98,7 +98,10 @@ func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fund
 
 	fee, ok := big.NewInt(0).SetString(blob.SendFee, 10)
 	if !ok {
-		return swap.Swap{}, fmt.Errorf("corrupted send fee: %v", blob.SendFee)
+		fee, err = builder.Wallet.DefaultFee(token.Blockchain)
+		if err != nil {
+			return swap.Swap{}, fmt.Errorf("failed to get default fee: %v", err)
+		}
 	}
 
 	if err := builder.Wallet.VerifyAddress(token.Blockchain, blob.BrokerSendTokenAddr); err != nil {
@@ -139,7 +142,10 @@ func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spe
 
 	fee, ok := big.NewInt(0).SetString(blob.ReceiveFee, 10)
 	if !ok {
-		return swap.Swap{}, fmt.Errorf("corrupted receive fee: %v", blob.ReceiveFee)
+		fee, err = builder.Wallet.DefaultFee(token.Blockchain)
+		if err != nil {
+			return swap.Swap{}, fmt.Errorf("failed to get default fee: %v", err)
+		}
 	}
 
 	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000))
