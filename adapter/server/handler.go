@@ -131,7 +131,6 @@ func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest, receipts chan<
 		receipts <- receipt
 	}()
 
-	handler.logger.Info("successfully opened delay swap: ", swapReq)
 	return nil
 }
 
