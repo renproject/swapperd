@@ -176,7 +176,6 @@ func (handler *handler) PostBootload(password string, swaps, delayedSwaps chan<-
 	handler.logger.Infof("loading %d pending atomic swaps", len(pendingSwaps))
 
 	co.ParForAll(pendingSwaps, func(i int) {
-		handler.logger.Info(pendingSwaps[i])
 		swap := pendingSwaps[i]
 		swap.Password = password
 		if swap.Delay {
