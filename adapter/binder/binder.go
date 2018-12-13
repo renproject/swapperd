@@ -91,12 +91,12 @@ func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fund
 	if err != nil {
 		return swap.Swap{}, err
 	}
-	value, ok := big.NewInt(0).SetString(blob.SendAmount, 10)
+	value, ok := new(big.Int).SetString(blob.SendAmount, 10)
 	if !ok {
 		return swap.Swap{}, fmt.Errorf("corrupted send value: %v", blob.SendAmount)
 	}
 
-	fee, ok := big.NewInt(0).SetString(blob.SendFee, 10)
+	fee, ok := new(big.Int).SetString(blob.SendFee, 10)
 	if !ok {
 		fee, err = builder.Wallet.DefaultFee(token.Blockchain)
 		if err != nil {
@@ -108,7 +108,7 @@ func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fund
 		return swap.Swap{}, fmt.Errorf("corrupted send broker address: %v", blob.BrokerSendTokenAddr)
 	}
 
-	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000))
+	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000-blob.BrokerFee))
 
 	secretHash, err := unmarshalSecretHash(blob.SecretHash)
 	if err != nil {
@@ -135,12 +135,12 @@ func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spe
 		return swap.Swap{}, err
 	}
 
-	value, ok := big.NewInt(0).SetString(blob.ReceiveAmount, 10)
+	value, ok := new(big.Int).SetString(blob.ReceiveAmount, 10)
 	if !ok {
 		return swap.Swap{}, fmt.Errorf("corrupted receive value: %v", blob.ReceiveAmount)
 	}
 
-	fee, ok := big.NewInt(0).SetString(blob.ReceiveFee, 10)
+	fee, ok := new(big.Int).SetString(blob.ReceiveFee, 10)
 	if !ok {
 		fee, err = builder.Wallet.DefaultFee(token.Blockchain)
 		if err != nil {
@@ -148,7 +148,7 @@ func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spe
 		}
 	}
 
-	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000))
+	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000-blob.BrokerFee))
 
 	if err := builder.Wallet.VerifyAddress(token.Blockchain, blob.BrokerReceiveTokenAddr); err != nil {
 		return swap.Swap{}, fmt.Errorf("corrupted receive broker address: %v", blob.BrokerReceiveTokenAddr)
