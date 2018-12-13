@@ -68,11 +68,11 @@ type SwapBlob struct {
 	SecretHash          string `json:"secretHash"`
 	ShouldInitiateFirst bool   `json:"shouldInitiateFirst"`
 
-	Delay            bool            `json:"delayed,omitempty"`
+	Delay            bool            `json:"delay,omitempty"`
 	DelayInfo        json.RawMessage `json:"delayInfo,omitempty"`
 	DelayCallbackURL string          `json:"delayCallbackUrl,omitempty"`
 
-	BrokerFee              int64  `json:"brokerReceiveTokenFee"` // in BIPs or (1/10000)
+	BrokerFee              int64  `json:"brokerFee"` // in BIPs or (1/10000)
 	BrokerSendTokenAddr    string `json:"brokerSendTokenAddr"`
 	BrokerReceiveTokenAddr string `json:"brokerReceiveTokenAddr"`
 
