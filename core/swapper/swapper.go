@@ -88,8 +88,8 @@ func (swapper *swapper) initiate(blob swap.SwapBlob, native, foreign Contract, u
 			receipt.ReceiveCost = foreign.Cost()
 		})
 	}()
+	secret := sha3.Sum256(append([]byte(blob.ID), []byte(blob.Password)...))
 
-	secret := sha3.Sum256(append([]byte(blob.Password), []byte(blob.ID)...))
 	logger := swapper.logger.WithField("SwapID", blob.ID)
 	if err := native.Initiate(); err != nil {
 		logger.Error(err)
