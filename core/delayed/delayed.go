@@ -63,10 +63,6 @@ func (callback *callback) fill(blob swap.SwapBlob, swaps chan<- swap.SwapBlob) {
 			callback.handleRemoveSwap(blob.ID, swap.Cancelled)
 			break
 		}
-		if time.Now().Unix() > blob.TimeLock {
-			callback.handleRemoveSwap(blob.ID, swap.Expired)
-			break
-		}
 		if err != ErrSwapDetailsUnavailable {
 			callback.logger.Error(err)
 		}
