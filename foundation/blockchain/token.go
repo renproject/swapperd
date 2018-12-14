@@ -51,3 +51,7 @@ func PatchToken(token string) (Token, error) {
 		return Token{}, fmt.Errorf("unsupported token: %s", token)
 	}
 }
+
+func IsValidToken(name TokenName) bool {
+	return (name == BTC || name == ETH || name == WBTC)
+}

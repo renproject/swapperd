@@ -7,6 +7,8 @@ const (
 	AuditFailed
 	Redeemed
 	Refunded
+	Cancelled
+	Expired
 )
 
 type StatusUpdate struct {

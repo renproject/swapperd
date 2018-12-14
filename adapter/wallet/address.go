@@ -10,6 +10,29 @@ import (
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
+func (wallet *wallet) Addresses() (map[blockchain.TokenName]string, error) {
+	addresses := map[blockchain.TokenName]string{}
+	for _, token := range wallet.SupportedTokens() {
+		addr, err := wallet.GetAddress(token.Blockchain)
+		if err != nil {
+			return nil, err
+		}
+		addresses[token.Name] = addr
+	}
+	return addresses, nil
+}
+
+func (wallet *wallet) GetAddress(blockchainName blockchain.BlockchainName) (string, error) {
+	switch blockchainName {
+	case blockchain.Ethereum:
+		return wallet.config.Ethereum.Address, nil
+	case blockchain.Bitcoin:
+		return wallet.config.Bitcoin.Address, nil
+	default:
+		return "", blockchain.NewErrUnsupportedToken("unsupported blockchain")
+	}
+}
+
 func (wallet *wallet) VerifyAddress(blockchainName blockchain.BlockchainName, address string) error {
 	switch blockchainName {
 	case blockchain.Ethereum:

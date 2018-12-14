@@ -1,5 +1,7 @@
 package blockchain
 
+import "fmt"
+
 type BlockchainName string
 
 var (
@@ -10,4 +12,14 @@ var (
 type Blockchain struct {
 	Name    BlockchainName `json:"name"`
 	Address string         `json:"address"`
+}
+
+type ErrUnsupportedBlockchain string
+
+func NewErrUnsupportedBlockchain(blockchain BlockchainName) error {
+	return ErrUnsupportedBlockchain(fmt.Sprintf("unsupported blockchain: %s", blockchain))
+}
+
+func (err ErrUnsupportedBlockchain) Error() string {
+	return string(err)
 }
