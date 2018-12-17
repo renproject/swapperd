@@ -21,8 +21,8 @@ func (db *dbStorage) PutReceipt(receipt swap.SwapReceipt) error {
 	return db.db.Put(append(TableSwapReceipts[:], id...), receiptData, nil)
 }
 
-func (db *dbStorage) UpdateReceipt(swapID swap.SwapID, update func(receipt *swap.SwapReceipt)) error {
-	id, err := base64.StdEncoding.DecodeString(string(swapID))
+func (db *dbStorage) UpdateReceipt(receiptUpdate swap.ReceiptUpdate) error {
+	id, err := base64.StdEncoding.DecodeString(string(receiptUpdate.ID))
 	if err != nil {
 		return err
 	}
@@ -34,7 +34,7 @@ func (db *dbStorage) UpdateReceipt(swapID swap.SwapID, update func(receipt *swap
 	if err := json.Unmarshal(receiptBytes, &receipt); err != nil {
 		return err
 	}
-	update(&receipt)
+	receiptUpdate.Update(&receipt)
 	updatedReceiptBytes, err := json.Marshal(receipt)
 	if err != nil {
 		return err
