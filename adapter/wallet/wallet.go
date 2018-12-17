@@ -43,6 +43,7 @@ type Wallet interface {
 
 	EthereumAccount(password string) (beth.Account, error)
 	BitcoinAccount(password string) (libbtc.Account, error)
+	ECDSASigner(password string) (Signer, error)
 }
 
 type wallet struct {

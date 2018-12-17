@@ -67,6 +67,14 @@ func (wallet *wallet) loadECDSAKey(password string, path []uint32) (*ecdsa.Priva
 	return privKey.ToECDSA(), nil
 }
 
+func (wallet *wallet) ECDSASigner(password string) (Signer, error) {
+	privKey, err := wallet.loadECDSAKey(password, []uint32{0})
+	if err != nil {
+		return nil, err
+	}
+	return &ecdsaSigner{privKey}, nil
+}
+
 func (wallet *wallet) loadRSAKey(password string) (*rsa.PrivateKey, error) {
 	seed := bip39.NewSeed(wallet.config.Mnemonic, password)
 	return rsa.GenerateKey(bytes.NewReader(seed), 2048)
