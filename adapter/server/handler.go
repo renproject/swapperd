@@ -87,7 +87,7 @@ func (handler *handler) GetBalances(balanceQueries chan<- balance.BalanceQuery) 
 
 func (handler *handler) PostSwaps(swapReq PostSwapRequest, receipts chan<- swap.SwapReceipt, swaps chan<- swap.SwapBlob) (PostSwapResponse, error) {
 	if !handler.bootloaded {
-		return PostSwapResponse{}, NewErrBootloadRequired("get swaps")
+		return PostSwapResponse{}, NewErrBootloadRequired("post swaps")
 	}
 	password := swapReq.Password
 	blob, err := handler.patchSwap(swap.SwapBlob(swapReq))
@@ -112,16 +112,19 @@ func (handler *handler) PostSwaps(swapReq PostSwapRequest, receipts chan<- swap.
 
 func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest, receipts chan<- swap.SwapReceipt, swaps chan<- swap.SwapBlob) error {
 	if !handler.bootloaded {
-		return NewErrBootloadRequired("get swaps")
+		return NewErrBootloadRequired("post swaps")
 	}
 	password := swapReq.Password
+
 	blob, err := handler.patchDelayedSwap(swap.SwapBlob(swapReq))
 	if err != nil {
 		return err
 	}
 
-	receipt := handler.newSwapReceipt(blob)
+	// handler.signDelayInfo(blob)
+
 	blob.Password = ""
+	receipt := handler.newSwapReceipt(blob)
 	if err := handler.storage.PutSwap(blob); err != nil {
 		return err
 	}
@@ -274,3 +277,23 @@ func (handler *handler) verifyTokenDetails(tokenString, addressString, amountStr
 func (handler *handler) newSwapReceipt(blob swap.SwapBlob) swap.SwapReceipt {
 	return swap.SwapReceipt{blob.ID, blob.SendToken, blob.ReceiveToken, blob.SendAmount, blob.ReceiveAmount, blockchain.Cost{}, blockchain.Cost{}, time.Now().Unix(), 1, blob.Delay, blob.DelayInfo}
 }
+
+// func (handler *handler) signDelayInfo(blob swap.SwapBlob) error {
+// 	signer, err := handler.wallet.ECDSASigner(blob.Password)
+// 	if err != nil {
+// 		return fmt.Errorf("unable to load ecdsa signer: %v", err)
+// 	}
+
+// 	delayInfoHash := sha3.Sum256(blob.DelayInfo)
+// 	delayInfoSig, err := signer.Sign(delayInfoHash[:])
+// 	if err != nil {
+// 		return fmt.Errorf("failed to sign delay info: %v", err)
+// 	}
+
+// 	signedDelayInfo := {
+// 		Message   json.RawMessage `json:"message"`
+// 		Signature string          `json:"signature"`
+// 	}
+
+// 	base64.StdEncoding.EncodeToString(delayInfoSig)
+// }
