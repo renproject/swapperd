@@ -31,7 +31,7 @@ type Storage interface {
 
 	PendingSwap(swapID swap.SwapID) (swap.SwapBlob, error)
 	PutReceipt(receipt swap.SwapReceipt) error
-	UpdateReceipt(swapID swap.SwapID, update func(receipt *swap.SwapReceipt)) error
+	UpdateReceipt(receiptUpdate swap.ReceiptUpdate) error
 	Receipts() ([]swap.SwapReceipt, error)
 	Receipt(swapID swap.SwapID) (swap.SwapReceipt, error)
 	LoadCosts(swapID swap.SwapID) (blockchain.Cost, blockchain.Cost)

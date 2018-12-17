@@ -67,7 +67,7 @@ func (composer *composer) Run(done <-chan struct{}) {
 		},
 		func() {
 			delayedCallback := delayed.New(callback.New(), storage, logger)
-			delayedCallback.Run(done, delayedSwaps, swaps)
+			delayedCallback.Run(done, delayedSwaps, swaps, receiptUpdates)
 		},
 		func() {
 			swapper := swapper.New(binder.NewBuilder(wallet, logger), storage, logger)

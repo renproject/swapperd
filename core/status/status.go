@@ -17,7 +17,7 @@ type ReceiptQuery struct {
 type Storage interface {
 	Receipts() ([]swap.SwapReceipt, error)
 	PutReceipt(receipt swap.SwapReceipt) error
-	UpdateReceipt(id swap.SwapID, update func(receipt *swap.SwapReceipt)) error
+	UpdateReceipt(receiptUpdate swap.ReceiptUpdate) error
 }
 type Statuses interface {
 	Run(done <-chan struct{}, swaps <-chan swap.SwapReceipt, updates <-chan swap.ReceiptUpdate, queries <-chan ReceiptQuery)
@@ -64,7 +64,7 @@ func (statuses *statuses) Run(done <-chan struct{}, receipts <-chan swap.SwapRec
 			}
 			statuses.update(update)
 			go func() {
-				if err := statuses.storage.UpdateReceipt(update.ID, update.Update); err != nil {
+				if err := statuses.storage.UpdateReceipt(update); err != nil {
 					statuses.logger.Error(err)
 				}
 			}()
