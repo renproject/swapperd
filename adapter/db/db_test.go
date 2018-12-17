@@ -11,8 +11,8 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/republicprotocol/swapperd/adapter/db"
 
-	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var _ bool = Describe("DB", func() {

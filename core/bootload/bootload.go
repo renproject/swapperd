@@ -9,6 +9,7 @@ import (
 
 type Storage interface {
 	PendingSwaps() ([]swap.SwapBlob, error)
+
 	Swaps() ([]swap.SwapReceipt, error)
 }
 
@@ -24,6 +25,7 @@ type bootloader struct {
 func New(storage Storage, logger logrus.FieldLogger) Bootloader {
 	return &bootloader{
 		storage: storage,
+		logger:  logger,
 	}
 }
 
