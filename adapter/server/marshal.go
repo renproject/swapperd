@@ -23,6 +23,8 @@ type GetAddressesResponse map[blockchain.TokenName]string
 type PostSwapRequest swap.SwapBlob
 
 type PostSwapResponse struct {
+	Swap      swap.SwapBlob `json:"swap"`
+	Signature string        `json:"signature"`
 }
 
 type PostTransfersRequest struct {

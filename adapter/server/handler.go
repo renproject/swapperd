@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"time"
@@ -97,7 +98,6 @@ func (handler *handler) PostSwaps(swapReq PostSwapRequest, receipts chan<- swap.
 
 	receipt := handler.newSwapReceipt(blob)
 	blob.Password = ""
-
 	if err := handler.storage.PutSwap(blob); err != nil {
 		return PostSwapResponse{}, err
 	}
@@ -107,7 +107,7 @@ func (handler *handler) PostSwaps(swapReq PostSwapRequest, receipts chan<- swap.
 		swaps <- blob
 		receipts <- receipt
 	}()
-	return PostSwapResponse{}, nil
+	return handler.buildSwapResponse(blob)
 }
 
 func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest, receipts chan<- swap.SwapReceipt, swaps chan<- swap.SwapBlob) error {
@@ -121,13 +121,17 @@ func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest, receipts chan<
 		return err
 	}
 
-	// handler.signDelayInfo(blob)
+	blob, err = handler.signDelayInfo(blob)
+	if err != nil {
+		return err
+	}
 
 	blob.Password = ""
 	receipt := handler.newSwapReceipt(blob)
 	if err := handler.storage.PutSwap(blob); err != nil {
 		return err
 	}
+
 	blob.Password = password
 	go func() {
 		swaps <- blob
@@ -275,25 +279,82 @@ func (handler *handler) verifyTokenDetails(tokenString, addressString, amountStr
 }
 
 func (handler *handler) newSwapReceipt(blob swap.SwapBlob) swap.SwapReceipt {
-	return swap.SwapReceipt{blob.ID, blob.SendToken, blob.ReceiveToken, blob.SendAmount, blob.ReceiveAmount, blockchain.Cost{}, blockchain.Cost{}, time.Now().Unix(), 1, blob.Delay, blob.DelayInfo}
+	return swap.SwapReceipt{blob.ID, blob.SendToken, blob.ReceiveToken, blob.SendAmount, blob.ReceiveAmount, blockchain.Cost{}, blockchain.Cost{}, time.Now().Unix(), 0, blob.Delay, blob.DelayInfo}
 }
 
-// func (handler *handler) signDelayInfo(blob swap.SwapBlob) error {
-// 	signer, err := handler.wallet.ECDSASigner(blob.Password)
-// 	if err != nil {
-// 		return fmt.Errorf("unable to load ecdsa signer: %v", err)
-// 	}
+func (handler *handler) signDelayInfo(blob swap.SwapBlob) (swap.SwapBlob, error) {
+	signer, err := handler.wallet.ECDSASigner(blob.Password)
+	if err != nil {
+		return blob, fmt.Errorf("unable to load ecdsa signer: %v", err)
+	}
 
-// 	delayInfoHash := sha3.Sum256(blob.DelayInfo)
-// 	delayInfoSig, err := signer.Sign(delayInfoHash[:])
-// 	if err != nil {
-// 		return fmt.Errorf("failed to sign delay info: %v", err)
-// 	}
+	delayInfoHash := sha3.Sum256(blob.DelayInfo)
+	delayInfoSig, err := signer.Sign(delayInfoHash[:])
+	if err != nil {
+		return blob, fmt.Errorf("failed to sign delay info: %v", err)
+	}
 
-// 	signedDelayInfo := {
-// 		Message   json.RawMessage `json:"message"`
-// 		Signature string          `json:"signature"`
-// 	}
+	signedDelayInfo, err := json.Marshal(struct {
+		Message   json.RawMessage `json:"message"`
+		Signature string          `json:"signature"`
+	}{
+		Message:   blob.DelayInfo,
+		Signature: base64.StdEncoding.EncodeToString(delayInfoSig),
+	})
+	if err != nil {
+		return blob, fmt.Errorf("unable to marshal signed delay info: %v", err)
+	}
 
-// 	base64.StdEncoding.EncodeToString(delayInfoSig)
-// }
+	blob.DelayInfo = signedDelayInfo
+	return blob, nil
+}
+
+func (handler *handler) buildSwapResponse(blob swap.SwapBlob) (PostSwapResponse, error) {
+	responseBlob := swap.SwapBlob{}
+	responseBlob.SendToken = blob.ReceiveToken
+	responseBlob.ReceiveToken = blob.SendToken
+	responseBlob.SendAmount = blob.ReceiveAmount
+	responseBlob.ReceiveAmount = blob.SendAmount
+	swapResponse := PostSwapResponse{}
+
+	sendToken, err := blockchain.PatchToken(responseBlob.SendToken)
+	if err != nil {
+		return swapResponse, err
+	}
+
+	receiveToken, err := blockchain.PatchToken(responseBlob.ReceiveToken)
+	if err != nil {
+		return swapResponse, err
+	}
+
+	sendTo, err := handler.wallet.GetAddress(sendToken.Blockchain)
+	if err != nil {
+		return swapResponse, err
+	}
+
+	receiveFrom, err := handler.wallet.GetAddress(receiveToken.Blockchain)
+	if err != nil {
+		return swapResponse, err
+	}
+
+	responseBlob.SendTo = sendTo
+	responseBlob.ReceiveFrom = receiveFrom
+	responseBlob.SecretHash = blob.SecretHash
+	responseBlob.TimeLock = blob.TimeLock
+
+	signer, err := handler.wallet.ECDSASigner(blob.Password)
+	if err != nil {
+		return swapResponse, fmt.Errorf("unable to load ecdsa signer: %v", err)
+	}
+
+	blobBytes, err := json.Marshal(blob)
+	blobHash := sha3.Sum256(blobBytes)
+	blobSig, err := signer.Sign(blobHash[:])
+	if err != nil {
+		return swapResponse, fmt.Errorf("failed to sign swap response: %v", err)
+	}
+
+	swapResponse.Swap = responseBlob
+	swapResponse.Signature = base64.StdEncoding.EncodeToString(blobSig)
+	return swapResponse, nil
+}
