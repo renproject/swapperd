@@ -145,14 +145,17 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 		return NewErrRedeem(err)
 	}
 
-	feeAddress, err := btcutil.DecodeAddress(atom.swap.BrokerAddress, atom.NetworkParams())
-	if err != nil {
-		return NewErrRedeem(err)
-	}
+	var feeAddrScript []byte
+	if atom.swap.BrokerFee.Int64() != 0 {
+		feeAddress, err := btcutil.DecodeAddress(atom.swap.BrokerAddress, atom.NetworkParams())
+		if err != nil {
+			return NewErrRedeem(err)
+		}
 
-	feeAddrScript, err := txscript.PayToAddrScript(feeAddress)
-	if err != nil {
-		return NewErrRedeem(err)
+		feeAddrScript, err = txscript.PayToAddrScript(feeAddress)
+		if err != nil {
+			return NewErrRedeem(err)
+		}
 	}
 
 	if err := atom.SendTransaction(
@@ -165,7 +168,9 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 				return false
 			}
 			if funded {
-				tx.AddTxOut(wire.NewTxOut(atom.swap.BrokerFee.Int64(), feeAddrScript))
+				if atom.swap.BrokerFee.Int64() != 0 {
+					tx.AddTxOut(wire.NewTxOut(atom.swap.BrokerFee.Int64(), feeAddrScript))
+				}
 				tx.AddTxOut(wire.NewTxOut(val-atom.swap.BrokerFee.Int64()-atom.fee, payToAddrScript))
 			}
 			return funded

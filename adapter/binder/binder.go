@@ -104,11 +104,13 @@ func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fund
 		}
 	}
 
-	if err := builder.Wallet.VerifyAddress(token.Blockchain, blob.BrokerSendTokenAddr); err != nil {
-		return swap.Swap{}, fmt.Errorf("corrupted send broker address: %v", blob.BrokerSendTokenAddr)
+	brokerFee := big.NewInt(0)
+	if blob.BrokerFee != 0 {
+		if err := builder.Wallet.VerifyAddress(token.Blockchain, blob.BrokerSendTokenAddr); err != nil {
+			return swap.Swap{}, fmt.Errorf("corrupted send broker address: %v", blob.BrokerSendTokenAddr)
+		}
+		brokerFee = new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000-blob.BrokerFee))
 	}
-
-	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000-blob.BrokerFee))
 
 	secretHash, err := unmarshalSecretHash(blob.SecretHash)
 	if err != nil {
@@ -148,10 +150,12 @@ func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spe
 		}
 	}
 
-	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000-blob.BrokerFee))
-
-	if err := builder.Wallet.VerifyAddress(token.Blockchain, blob.BrokerReceiveTokenAddr); err != nil {
-		return swap.Swap{}, fmt.Errorf("corrupted receive broker address: %v", blob.BrokerReceiveTokenAddr)
+	brokerFee := big.NewInt(0)
+	if blob.BrokerFee != 0 {
+		if err := builder.Wallet.VerifyAddress(token.Blockchain, blob.BrokerReceiveTokenAddr); err != nil {
+			return swap.Swap{}, fmt.Errorf("corrupted receive broker address: %v", blob.BrokerReceiveTokenAddr)
+		}
+		brokerFee = new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000-blob.BrokerFee))
 	}
 
 	secretHash, err := unmarshalSecretHash(blob.SecretHash)
