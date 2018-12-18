@@ -107,7 +107,7 @@ func (handler *handler) PostSwaps(swapReq PostSwapRequest, receipts chan<- swap.
 		swaps <- blob
 		receipts <- receipt
 	}()
-	return handler.buildSwapResponse(blob)
+	return handler.BuildSwapResponse(blob)
 }
 
 func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest, receipts chan<- swap.SwapReceipt, swaps chan<- swap.SwapBlob) error {
@@ -309,7 +309,7 @@ func (handler *handler) signDelayInfo(blob swap.SwapBlob) (swap.SwapBlob, error)
 	return blob, nil
 }
 
-func (handler *handler) buildSwapResponse(blob swap.SwapBlob) (PostSwapResponse, error) {
+func (handler *handler) BuildSwapResponse(blob swap.SwapBlob) (PostSwapResponse, error) {
 	responseBlob := swap.SwapBlob{}
 	responseBlob.SendToken = blob.ReceiveToken
 	responseBlob.ReceiveToken = blob.SendToken
@@ -341,6 +341,10 @@ func (handler *handler) buildSwapResponse(blob swap.SwapBlob) (PostSwapResponse,
 	responseBlob.ReceiveFrom = receiveFrom
 	responseBlob.SecretHash = blob.SecretHash
 	responseBlob.TimeLock = blob.TimeLock
+
+	responseBlob.BrokerFee = blob.BrokerFee
+	responseBlob.BrokerSendTokenAddr = blob.BrokerReceiveTokenAddr
+	responseBlob.BrokerReceiveTokenAddr = blob.BrokerSendTokenAddr
 
 	signer, err := handler.wallet.ECDSASigner(blob.Password)
 	if err != nil {
