@@ -67,7 +67,7 @@ func (wallet *wallet) loadECDSAKey(password string, path []uint32) (*ecdsa.Priva
 	return privKey.ToECDSA(), nil
 }
 
-func (wallet *wallet) ECDSASigner(password string) (Signer, error) {
+func (wallet *wallet) ECDSASigner(password string) (ECDSASigner, error) {
 	privKey, err := wallet.loadECDSAKey(password, []uint32{0})
 	if err != nil {
 		return nil, err
