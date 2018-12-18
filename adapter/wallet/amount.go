@@ -57,3 +57,7 @@ func (wallet *wallet) verifyBitcoinBalance(amount *big.Int) error {
 	}
 	return nil
 }
+
+func (wallet *wallet) ID() string {
+	return wallet.config.IDPublicKey
+}

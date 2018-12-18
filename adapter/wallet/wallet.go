@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	Mnemonic string           `json:"mnemonic"`
-	Ethereum BlockchainConfig `json:"ethereum"`
-	Bitcoin  BlockchainConfig `json:"bitcoin"`
+	Mnemonic    string           `json:"mnemonic"`
+	IDPublicKey string           `json:"idPublicKey"`
+	Ethereum    BlockchainConfig `json:"ethereum"`
+	Bitcoin     BlockchainConfig `json:"bitcoin"`
 }
 
 type BlockchainConfig struct {
@@ -31,6 +32,7 @@ type Balance struct {
 }
 
 type Wallet interface {
+	ID() string
 	SupportedTokens() []blockchain.Token
 	SupportedBlockchains() []blockchain.Blockchain
 	Balances() (map[blockchain.TokenName]blockchain.Balance, error)
