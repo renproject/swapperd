@@ -49,7 +49,7 @@ type GetSignatureResponseJSON struct {
 	Signature string          `json:"signature"`
 }
 
-type GetSignatureResponseBytes struct {
+type GetSignatureResponseString struct {
 	Message   string `json:"message"`
 	Signature string `json:"signature"`
 }

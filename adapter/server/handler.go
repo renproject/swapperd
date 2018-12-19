@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -40,7 +41,8 @@ type Handler interface {
 	GetBalances(chan<- balance.BalanceQuery) GetBalancesResponse
 	GetAddresses() (GetAddressesResponse, error)
 	GetJSONSignature(password string, message json.RawMessage) (GetSignatureResponseJSON, error)
-	GetBytesSignature(password string, message string) (GetSignatureResponseBytes, error)
+	GetBase64Signature(password string, message string) (GetSignatureResponseString, error)
+	GetHexSignature(password string, message string) (GetSignatureResponseString, error)
 	PostTransfers(PostTransfersRequest) (PostTransfersResponse, error)
 	PostSwaps(PostSwapRequest, chan<- swap.SwapReceipt, chan<- swap.SwapBlob) (PostSwapResponse, error)
 	PostDelayedSwaps(PostSwapRequest, chan<- swap.SwapReceipt, chan<- swap.SwapBlob) error
@@ -216,20 +218,40 @@ func (handler *handler) GetJSONSignature(password string, message json.RawMessag
 	}, nil
 }
 
-func (handler *handler) GetBytesSignature(password string, message string) (GetSignatureResponseBytes, error) {
+func (handler *handler) GetBase64Signature(password string, message string) (GetSignatureResponseString, error) {
 	msg, err := base64.StdEncoding.DecodeString(message)
 	if err != nil {
-		return GetSignatureResponseBytes{}, err
+		return GetSignatureResponseString{}, err
 	}
 
 	sig, err := handler.Sign(password, msg)
 	if err != nil {
-		return GetSignatureResponseBytes{}, err
+		return GetSignatureResponseString{}, err
 	}
 
-	return GetSignatureResponseBytes{
+	return GetSignatureResponseString{
 		Message:   message,
 		Signature: base64.StdEncoding.EncodeToString(sig),
+	}, nil
+}
+
+func (handler *handler) GetHexSignature(password string, message string) (GetSignatureResponseString, error) {
+	if len(message) > 2 && message[:2] == "0x" {
+		message = message[2:]
+	}
+	msg, err := hex.DecodeString(message)
+	if err != nil {
+		return GetSignatureResponseString{}, err
+	}
+
+	sig, err := handler.Sign(password, msg)
+	if err != nil {
+		return GetSignatureResponseString{}, err
+	}
+
+	return GetSignatureResponseString{
+		Message:   message,
+		Signature: hex.EncodeToString(sig),
 	}, nil
 }
 

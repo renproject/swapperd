@@ -309,7 +309,7 @@ func postSignatureHandler(reqHandler Handler) http.HandlerFunc {
 		vars := mux.Vars(r)
 		switch vars["type"] {
 		case "json":
-			resp, err := reqHandler.GetBytesSignature(password, string(msg))
+			resp, err := reqHandler.GetJSONSignature(password, msg)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to sign the message: %v", err))
 				return
@@ -318,8 +318,18 @@ func postSignatureHandler(reqHandler Handler) http.HandlerFunc {
 				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode signature response: %v", err))
 				return
 			}
-		case "bytes":
-			resp, err := reqHandler.GetJSONSignature(password, msg)
+		case "base64":
+			resp, err := reqHandler.GetBase64Signature(password, string(msg))
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to sign the message: %v", err))
+				return
+			}
+			if err := json.NewEncoder(w).Encode(resp); err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode signature response: %v", err))
+				return
+			}
+		case "hex":
+			resp, err := reqHandler.GetHexSignature(password, string(msg))
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to sign the message: %v", err))
 				return
