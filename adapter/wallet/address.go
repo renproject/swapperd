@@ -46,7 +46,7 @@ func (wallet *wallet) VerifyAddress(blockchainName blockchain.BlockchainName, ad
 
 func (wallet *wallet) verifyEthereumAddress(address string) error {
 	if address == "" {
-		return fmt.Errorf("empty ethereum address")
+		return fmt.Errorf("Empty ethereum address")
 	}
 
 	address = strings.ToLower(address)
@@ -55,26 +55,26 @@ func (wallet *wallet) verifyEthereumAddress(address string) error {
 	}
 	addrBytes, err := hex.DecodeString(address)
 	if err != nil || len(addrBytes) != 20 {
-		return fmt.Errorf("invalid ethereum address: %s", address)
+		return fmt.Errorf("Invalid ethereum address: %s", address)
 	}
 	return nil
 }
 
 func (wallet *wallet) verifyBitcoinAddress(address string) error {
 	if address == "" {
-		return fmt.Errorf("empty bitcoin address")
+		return fmt.Errorf("Empty bitcoin address")
 	}
 
 	network := wallet.config.Bitcoin.Network.Name
 	switch network {
 	case "mainnet":
 		if _, err := btcutil.DecodeAddress(address, &chaincfg.MainNetParams); err != nil {
-			return fmt.Errorf("invalid %s bitcoin address: %s", network, address)
+			return fmt.Errorf("Invalid %s bitcoin address: %s", network, address)
 		}
 
 	case "testnet":
 		if _, err := btcutil.DecodeAddress(address, &chaincfg.TestNet3Params); err != nil {
-			return fmt.Errorf("invalid %s bitcoin address: %s", network, address)
+			return fmt.Errorf("Invalid %s bitcoin address: %s", network, address)
 		}
 	}
 	return nil

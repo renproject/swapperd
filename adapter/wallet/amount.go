@@ -26,7 +26,7 @@ func (wallet *wallet) verifyEthereumBalance(amount *big.Int) error {
 
 	balanceAmount, ok := big.NewInt(0).SetString(balance.Amount, 10)
 	if !ok {
-		return fmt.Errorf("invalid balance amount %s", balance.Amount)
+		return fmt.Errorf("Invalid balance amount: %s", balance.Amount)
 	}
 
 	if amount != nil {
@@ -35,10 +35,10 @@ func (wallet *wallet) verifyEthereumBalance(amount *big.Int) error {
 
 	minVal, ok := big.NewInt(0).SetString("5000000000000000", 10) // 0.005 eth
 	if !ok {
-		return fmt.Errorf("invalid minimum value")
+		return fmt.Errorf("Invalid minimum value")
 	}
 	if balanceAmount.Cmp(minVal) < 0 {
-		return fmt.Errorf("minimum balance required to start an atomic swap on ethereum blockchain is 0.005 eth (to cover the transaction fees) leftover: %v", balanceAmount)
+		return fmt.Errorf("You must have at least 0.005 ETH remaining in your wallet to cover transaction fees. You have %v ETH", balanceAmount)
 	}
 	return nil
 }
@@ -55,12 +55,12 @@ func (wallet *wallet) verifyBitcoinBalance(amount *big.Int) error {
 
 	balanceAmount, ok := big.NewInt(0).SetString(balance.Amount, 10)
 	if !ok {
-		return fmt.Errorf("invalid balance amount %s", balance.Amount)
+		return fmt.Errorf("Invalid balance amount: %s", balance.Amount)
 	}
 
 	leftover := balanceAmount.Sub(balanceAmount, amount)
 	if leftover.Cmp(big.NewInt(10000)) < 0 {
-		return fmt.Errorf("not enough bitcoin to complete the swap have: %v need: %v", balanceAmount, amount)
+		return fmt.Errorf("You need at least %v BTC remaining in your wallet to cover transaction fees. You have: %v", amount, balanceAmount)
 	}
 	return nil
 }
