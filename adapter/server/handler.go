@@ -34,10 +34,13 @@ type handler struct {
 
 // The Handler for swapperd requests
 type Handler interface {
+	GetID() GetIDResponse
 	GetInfo() GetInfoResponse
 	GetSwaps(chan<- status.ReceiptQuery) (GetSwapsResponse, error)
 	GetBalances(chan<- balance.BalanceQuery) GetBalancesResponse
 	GetAddresses() (GetAddressesResponse, error)
+	GetJSONSignature(password string, message json.RawMessage) (GetSignatureResponseJSON, error)
+	GetBytesSignature(password string, message string) (GetSignatureResponseBytes, error)
 	PostTransfers(PostTransfersRequest) (PostTransfersResponse, error)
 	PostSwaps(PostSwapRequest, chan<- swap.SwapReceipt, chan<- swap.SwapBlob) (PostSwapResponse, error)
 	PostDelayedSwaps(PostSwapRequest, chan<- swap.SwapReceipt, chan<- swap.SwapBlob) error
@@ -196,6 +199,40 @@ func (handler *handler) PostBootload(password string, swaps, delayedSwaps chan<-
 	return nil
 }
 
+func (handler *handler) GetID() GetIDResponse {
+	return GetIDResponse{
+		PublicKey: handler.wallet.ID(),
+	}
+}
+
+func (handler *handler) GetJSONSignature(password string, message json.RawMessage) (GetSignatureResponseJSON, error) {
+	sig, err := handler.Sign(password, message)
+	if err != nil {
+		return GetSignatureResponseJSON{}, err
+	}
+	return GetSignatureResponseJSON{
+		Message:   message,
+		Signature: base64.StdEncoding.EncodeToString(sig),
+	}, nil
+}
+
+func (handler *handler) GetBytesSignature(password string, message string) (GetSignatureResponseBytes, error) {
+	msg, err := base64.StdEncoding.DecodeString(message)
+	if err != nil {
+		return GetSignatureResponseBytes{}, err
+	}
+
+	sig, err := handler.Sign(password, msg)
+	if err != nil {
+		return GetSignatureResponseBytes{}, err
+	}
+
+	return GetSignatureResponseBytes{
+		Message:   message,
+		Signature: base64.StdEncoding.EncodeToString(sig),
+	}, nil
+}
+
 func (handler *handler) VerifyPassword(password string) bool {
 	if err := bcrypt.CompareHashAndPassword(handler.passwordHash, []byte(password)); err != nil {
 		handler.logger.Info("password length", len(handler.passwordHash))
@@ -220,7 +257,7 @@ func (handler *handler) patchSwap(swapBlob swap.SwapBlob) (swap.SwapBlob, error)
 	secret := [32]byte{}
 	if swapBlob.ShouldInitiateFirst {
 		swapBlob.TimeLock = time.Now().Unix() + 3*swap.ExpiryUnit
-		secret = sha3.Sum256(append([]byte(swapBlob.Password), []byte(swapBlob.ID)...))
+		secret = genereateSecret(swapBlob.Password, swapBlob.ID)
 		hash := sha256.Sum256(secret[:])
 		swapBlob.SecretHash = base64.StdEncoding.EncodeToString(hash[:])
 		return swapBlob, nil
@@ -252,7 +289,7 @@ func (handler *handler) patchDelayedSwap(blob swap.SwapBlob) (swap.SwapBlob, err
 		return blob, err
 	}
 
-	secret := sha3.Sum256(append([]byte(blob.ID), []byte(blob.Password)...))
+	secret := genereateSecret(blob.Password, blob.ID)
 	secretHash := sha256.Sum256(secret[:])
 	blob.SecretHash = base64.StdEncoding.EncodeToString(secretHash[:])
 	blob.TimeLock = time.Now().Unix() + 3*swap.ExpiryUnit
@@ -346,19 +383,36 @@ func (handler *handler) BuildSwapResponse(blob swap.SwapBlob) (PostSwapResponse,
 	responseBlob.BrokerSendTokenAddr = blob.BrokerReceiveTokenAddr
 	responseBlob.BrokerReceiveTokenAddr = blob.BrokerSendTokenAddr
 
-	signer, err := handler.wallet.ECDSASigner(blob.Password)
+	blobBytes, err := json.Marshal(blob)
 	if err != nil {
-		return swapResponse, fmt.Errorf("unable to load ecdsa signer: %v", err)
+		return swapResponse, err
 	}
 
-	blobBytes, err := json.Marshal(blob)
-	blobHash := sha3.Sum256(blobBytes)
-	blobSig, err := signer.Sign(blobHash[:])
+	blobSig, err := handler.Sign(blob.Password, blobBytes)
 	if err != nil {
-		return swapResponse, fmt.Errorf("failed to sign swap response: %v", err)
+		return swapResponse, err
 	}
 
 	swapResponse.Swap = responseBlob
 	swapResponse.Signature = base64.StdEncoding.EncodeToString(blobSig)
 	return swapResponse, nil
+}
+
+func (handler *handler) Sign(password string, message []byte) ([]byte, error) {
+	signer, err := handler.wallet.ECDSASigner(password)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load ecdsa signer: %v", err)
+	}
+
+	hash := sha3.Sum256(message)
+	sig, err := signer.Sign(hash[:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign swap response: %v", err)
+	}
+
+	return sig, nil
+}
+
+func genereateSecret(password string, id swap.SwapID) [32]byte {
+	return sha3.Sum256(append([]byte(password), []byte(id)...))
 }
