@@ -80,5 +80,5 @@ func (db *dbStorage) LoadCosts(swapID swap.SwapID) (blockchain.Cost, blockchain.
 	if err != nil {
 		return blockchain.Cost{}, blockchain.Cost{}
 	}
-	return receipt.SendCost, receipt.ReceiveCost
+	return blockchain.CostBlobToCost(receipt.SendCost), blockchain.CostBlobToCost(receipt.ReceiveCost)
 }
