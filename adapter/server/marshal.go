@@ -1,6 +1,8 @@
 package server
 
 import (
+	"encoding/json"
+
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 )
@@ -22,7 +24,13 @@ type GetAddressesResponse map[blockchain.TokenName]string
 
 type PostSwapRequest swap.SwapBlob
 
+type GetIDResponse struct {
+	PublicKey string `json:"publicKey"`
+}
+
 type PostSwapResponse struct {
+	Swap      swap.SwapBlob `json:"swap"`
+	Signature string        `json:"signature"`
 }
 
 type PostTransfersRequest struct {
@@ -34,4 +42,14 @@ type PostTransfersRequest struct {
 
 type PostTransfersResponse struct {
 	TxHash string `json:"txHash"`
+}
+
+type GetSignatureResponseJSON struct {
+	Message   json.RawMessage `json:"message"`
+	Signature string          `json:"signature"`
+}
+
+type GetSignatureResponseString struct {
+	Message   string `json:"message"`
+	Signature string `json:"signature"`
 }

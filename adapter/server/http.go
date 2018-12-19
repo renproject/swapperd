@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 
@@ -46,6 +47,8 @@ func (listener *httpServer) Run(doneCh <-chan struct{}, swaps, delayedSwaps chan
 	r.HandleFunc("/addresses/{token}", getAddressesHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/bootload", postBootloadHandler(reqHandler, swaps, delayedSwaps)).Methods("POST")
 	r.HandleFunc("/info", getInfoHandler(reqHandler)).Methods("GET")
+	r.HandleFunc("/id", getIDHandler(reqHandler)).Methods("GET")
+	r.HandleFunc("/sign/{type}", postSignatureHandler(reqHandler)).Methods("POST")
 	r.Use(recoveryHandler)
 	httpHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
@@ -270,6 +273,73 @@ func getAddressesHandler(reqHandler Handler) http.HandlerFunc {
 
 		if err := json.NewEncoder(w).Encode(addresses[token.Name]); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
+			return
+		}
+	}
+}
+
+func getIDHandler(reqHandler Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewEncoder(w).Encode(reqHandler.GetID()); err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode get id response: %v", err))
+			return
+		}
+	}
+}
+
+func postSignatureHandler(reqHandler Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, password, ok := r.BasicAuth()
+		if !ok {
+			writeError(w, http.StatusUnauthorized, "authentication required")
+			return
+		}
+
+		if !reqHandler.VerifyPassword(password) {
+			writeError(w, http.StatusUnauthorized, "incorrect password")
+			return
+		}
+
+		msg, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		vars := mux.Vars(r)
+		switch vars["type"] {
+		case "json":
+			resp, err := reqHandler.GetJSONSignature(password, msg)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to sign the message: %v", err))
+				return
+			}
+			if err := json.NewEncoder(w).Encode(resp); err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode signature response: %v", err))
+				return
+			}
+		case "base64":
+			resp, err := reqHandler.GetBase64Signature(password, string(msg))
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to sign the message: %v", err))
+				return
+			}
+			if err := json.NewEncoder(w).Encode(resp); err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode signature response: %v", err))
+				return
+			}
+		case "hex":
+			resp, err := reqHandler.GetHexSignature(password, string(msg))
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to sign the message: %v", err))
+				return
+			}
+			if err := json.NewEncoder(w).Encode(resp); err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode signature response: %v", err))
+				return
+			}
+		default:
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("unknown message type: %s", vars["type"]))
 			return
 		}
 	}

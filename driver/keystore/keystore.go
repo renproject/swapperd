@@ -8,6 +8,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/republicprotocol/swapperd/adapter/wallet"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -133,6 +134,13 @@ func generateConfig(network, password, mnemonic string) (wallet.Config, error) {
 		return wallet.Config{}, err
 	}
 	config.Bitcoin.Address = btcAddress.String()
+	signer, err := w.ECDSASigner(password)
+	if err != nil {
+		return wallet.Config{}, err
+	}
+	pubKey := signer.PublicKey()
+	pubKeyBytes := crypto.FromECDSAPub(&pubKey)
+	config.IDPublicKey = base64.StdEncoding.EncodeToString(pubKeyBytes)
 	return config, nil
 }
 

@@ -45,6 +45,10 @@ func (wallet *wallet) VerifyAddress(blockchainName blockchain.BlockchainName, ad
 }
 
 func (wallet *wallet) verifyEthereumAddress(address string) error {
+	if address == "" {
+		return fmt.Errorf("empty ethereum address")
+	}
+
 	address = strings.ToLower(address)
 	if address[:2] == "0x" {
 		address = address[2:]
@@ -57,6 +61,10 @@ func (wallet *wallet) verifyEthereumAddress(address string) error {
 }
 
 func (wallet *wallet) verifyBitcoinAddress(address string) error {
+	if address == "" {
+		return fmt.Errorf("empty bitcoin address")
+	}
+
 	network := wallet.config.Bitcoin.Network.Name
 	switch network {
 	case "mainnet":

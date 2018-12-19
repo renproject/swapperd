@@ -19,11 +19,11 @@ type callback struct {
 }
 
 type Callback interface {
-	Run(done <-chan struct{}, delayedSwaps <-chan swap.SwapBlob, swaps chan<- swap.SwapBlob)
+	Run(done <-chan struct{}, delayedSwaps <-chan swap.SwapBlob, swaps chan<- swap.SwapBlob, updates chan<- swap.ReceiptUpdate)
 }
 
 type Storage interface {
-	UpdateReceipt(swapID swap.SwapID, update func(receipt *swap.SwapReceipt)) error
+	UpdateReceipt(update swap.ReceiptUpdate) error
 	DeletePendingSwap(swap.SwapID) error
 }
 
@@ -35,7 +35,7 @@ func New(delayCallback DelayCallback, storage Storage, logger logrus.FieldLogger
 	return &callback{delayCallback, storage, logger}
 }
 
-func (callback *callback) Run(done <-chan struct{}, delayedSwaps <-chan swap.SwapBlob, swaps chan<- swap.SwapBlob) {
+func (callback *callback) Run(done <-chan struct{}, delayedSwaps <-chan swap.SwapBlob, swaps chan<- swap.SwapBlob, updates chan<- swap.ReceiptUpdate) {
 	for {
 		select {
 		case <-done:
@@ -44,23 +44,24 @@ func (callback *callback) Run(done <-chan struct{}, delayedSwaps <-chan swap.Swa
 			if !ok {
 				return
 			}
-			go callback.fill(blob, swaps)
+			go callback.fill(blob, swaps, updates)
 		}
 	}
 }
 
-func (callback *callback) fill(blob swap.SwapBlob, swaps chan<- swap.SwapBlob) {
+func (callback *callback) fill(blob swap.SwapBlob, swaps chan<- swap.SwapBlob, updates chan<- swap.ReceiptUpdate) {
 	password := blob.Password
 	blob.Password = ""
 	for {
 		filledBlob, err := callback.delayCallback.DelayCallback(blob)
 		if err == nil {
 			filledBlob.Password = password
+			callback.handleUpdateSwap(filledBlob, updates)
 			swaps <- filledBlob
 			return
 		}
 		if err == ErrSwapCancelled {
-			callback.handleRemoveSwap(blob.ID, swap.Cancelled)
+			callback.handleCancelSwap(blob.ID, updates)
 			break
 		}
 		if err != ErrSwapDetailsUnavailable {
@@ -70,31 +71,22 @@ func (callback *callback) fill(blob swap.SwapBlob, swaps chan<- swap.SwapBlob) {
 	}
 }
 
-func (callback *callback) handleRemoveSwap(id swap.SwapID, status int) error {
-	if err := callback.storage.UpdateReceipt(id, func(receipt *swap.SwapReceipt) {
+func (callback *callback) handleCancelSwap(id swap.SwapID, updates chan<- swap.ReceiptUpdate) {
+	callback.logger.Infof("cancelled delayed swap (%s)", id)
+	update := swap.NewReceiptUpdate(id, func(receipt *swap.SwapReceipt) {
 		receipt.ID = id
-	}); err != nil {
-		callback.logger.Error(err)
-		return err
-	}
+		receipt.Status = swap.Cancelled
+	})
+	updates <- update
 	if err := callback.storage.DeletePendingSwap(id); err != nil {
 		callback.logger.Error(err)
-		return err
 	}
-	return nil
 }
 
-func (callback *callback) handleUpdateSwap(blob swap.SwapBlob) error {
-	if err := callback.storage.UpdateReceipt(blob.ID, func(receipt *swap.SwapReceipt) {
+func (callback *callback) handleUpdateSwap(blob swap.SwapBlob, updates chan<- swap.ReceiptUpdate) {
+	update := swap.NewReceiptUpdate(blob.ID, func(receipt *swap.SwapReceipt) {
 		receipt.ReceiveAmount = blob.ReceiveAmount
 		receipt.SendAmount = blob.SendAmount
-	}); err != nil {
-		callback.logger.Error(err)
-		return err
-	}
-	if err := callback.storage.DeletePendingSwap(blob.ID); err != nil {
-		callback.logger.Error(err)
-		return err
-	}
-	return nil
+	})
+	updates <- update
 }

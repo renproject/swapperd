@@ -14,7 +14,7 @@
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "e17947f884f63c85799a86637524c213d798c7ec"
+  revision = "aa2a42e13be68c4a95fe9e58003adaf63fe6476f"
 
 [[projects]]
   branch = "master"
@@ -88,8 +88,8 @@
     "rpc",
     "trie"
   ]
-  revision = "dae82f098570e15d44584f0d7f350713f4774727"
-  version = "v1.8.19"
+  revision = "24d727b6d6e2c0cde222fa12155c4a6db5caaf2e"
+  version = "v1.8.20"
 
 [[projects]]
   name = "github.com/go-stack/stack"
@@ -202,7 +202,7 @@
   branch = "master"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "8967cde5bf604958a84764a6e07cc0502b64454c"
+  revision = "d28940a21052c614e84c9fa2f067e9d543bbbe75"
 
 [[projects]]
   branch = "master"
@@ -271,6 +271,7 @@
     "pbkdf2",
     "ripemd160",
     "scrypt",
+    "sha3",
     "ssh/terminal"
   ]
   revision = "505ab145d0a99da450461ae2c1a9f6cd10d1f447"
@@ -284,7 +285,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "351d144fa1fc0bd934e2408202be0c29f25e35a0"
+  revision = "e147a9138326bc0e9d4e179541ffd8af41cff8a9"
 
 [[projects]]
   branch = "master"
@@ -299,7 +300,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "a5c9d58dba9a56f97aaa86f55e638b718c5a6c42"
+  revision = "074acd46bca67915925527c07849494d115e7c43"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -353,6 +354,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "561926fa5df078550a70679d81f4442a4722e22baddc7a0300c011bef5bf3dae"
+  inputs-digest = "cbf1b0f3321c4272e4580b0f834b50754226e2bd3978e038011779bca8d30d3a"
   solver-name = "gps-cdcl"
   solver-version = 1

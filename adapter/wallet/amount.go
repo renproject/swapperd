@@ -53,7 +53,11 @@ func (wallet *wallet) verifyBitcoinBalance(amount *big.Int) error {
 
 	leftover := balanceAmount.Sub(balanceAmount, amount)
 	if leftover.Cmp(big.NewInt(10000)) < 0 {
-		return fmt.Errorf("minimum send amount for bitcoin is 10000 sat")
+		return fmt.Errorf("not enough bitcoin to complete the swap have: %v need: %v", balanceAmount, amount)
 	}
 	return nil
+}
+
+func (wallet *wallet) ID() string {
+	return wallet.config.IDPublicKey
 }
