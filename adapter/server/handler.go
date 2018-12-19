@@ -101,7 +101,7 @@ func (handler *handler) PostSwaps(swapReq PostSwapRequest, receipts chan<- swap.
 		return PostSwapResponse{}, err
 	}
 
-	receipt := handler.newSwapReceipt(blob)
+	receipt := swap.NewSwapReceipt(blob)
 	blob.Password = ""
 	if err := handler.storage.PutSwap(blob); err != nil {
 		return PostSwapResponse{}, err
@@ -132,7 +132,7 @@ func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest, receipts chan<
 	}
 
 	blob.Password = ""
-	receipt := handler.newSwapReceipt(blob)
+	receipt := swap.NewSwapReceipt(blob)
 	if err := handler.storage.PutSwap(blob); err != nil {
 		return err
 	}
@@ -354,10 +354,6 @@ func (handler *handler) verifySendAmount(token blockchain.Token, amount string) 
 
 func (handler *handler) verifyReceiveAmount(token blockchain.Token) error {
 	return handler.wallet.VerifyBalance(token, nil)
-}
-
-func (handler *handler) newSwapReceipt(blob swap.SwapBlob) swap.SwapReceipt {
-	return swap.SwapReceipt{blob.ID, blob.SendToken, blob.ReceiveToken, blob.SendAmount, blob.ReceiveAmount, blockchain.CostBlob{}, blockchain.CostBlob{}, time.Now().Unix(), 0, blob.Delay, blob.DelayInfo}
 }
 
 func (handler *handler) signDelayInfo(blob swap.SwapBlob) (swap.SwapBlob, error) {

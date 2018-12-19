@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"math/big"
+	"time"
 
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
@@ -30,9 +31,27 @@ type SwapReceipt struct {
 	SendCost      blockchain.CostBlob `json:"sendCost"`
 	ReceiveCost   blockchain.CostBlob `json:"receiveCost"`
 	Timestamp     int64               `json:"timestamp"`
+	TimeLock      int64               `json:"timeLock"`
 	Status        int                 `json:"status"`
 	Delay         bool                `json:"delay"`
 	DelayInfo     json.RawMessage     `json:"delayInfo,omitempty"`
+}
+
+func NewSwapReceipt(blob SwapBlob) SwapReceipt {
+	return SwapReceipt{
+		ID:            blob.ID,
+		SendToken:     blob.SendToken,
+		ReceiveToken:  blob.ReceiveToken,
+		SendAmount:    blob.SendAmount,
+		ReceiveAmount: blob.ReceiveAmount,
+		SendCost:      blockchain.CostBlob{},
+		ReceiveCost:   blockchain.CostBlob{},
+		Timestamp:     time.Now().Unix(),
+		TimeLock:      blob.TimeLock,
+		Status:        0,
+		Delay:         blob.Delay,
+		DelayInfo:     blob.DelayInfo,
+	}
 }
 
 // A Swap stores all of the information required to execute an atomic swap.
