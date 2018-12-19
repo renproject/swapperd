@@ -10,16 +10,15 @@ import (
 func (wallet *wallet) VerifyBalance(token blockchain.Token, amount *big.Int) error {
 	switch token.Blockchain {
 	case blockchain.Ethereum:
-		return wallet.verifyEthereumBalance()
+		return wallet.verifyEthereumBalance(amount)
 	case blockchain.Bitcoin:
-
 		return wallet.verifyBitcoinBalance(amount)
 	default:
 		return blockchain.NewErrUnsupportedToken("unsupported blockchain")
 	}
 }
 
-func (wallet *wallet) verifyEthereumBalance() error {
+func (wallet *wallet) verifyEthereumBalance(amount *big.Int) error {
 	balance, err := wallet.balance(blockchain.ETH)
 	if err != nil {
 		return err
@@ -28,6 +27,10 @@ func (wallet *wallet) verifyEthereumBalance() error {
 	balanceAmount, ok := big.NewInt(0).SetString(balance.Amount, 10)
 	if !ok {
 		return fmt.Errorf("invalid balance amount %s", balance.Amount)
+	}
+
+	if amount != nil {
+		balanceAmount = new(big.Int).Sub(balanceAmount, amount)
 	}
 
 	minVal, ok := big.NewInt(0).SetString("5000000000000000", 10) // 0.005 eth
@@ -41,6 +44,10 @@ func (wallet *wallet) verifyEthereumBalance() error {
 }
 
 func (wallet *wallet) verifyBitcoinBalance(amount *big.Int) error {
+	if amount == nil {
+		return nil
+	}
+
 	balance, err := wallet.balance(blockchain.BTC)
 	if err != nil {
 		return err
