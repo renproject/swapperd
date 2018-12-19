@@ -316,7 +316,7 @@ func (handler *handler) verifyTokenDetails(tokenString, addressString, amountStr
 }
 
 func (handler *handler) newSwapReceipt(blob swap.SwapBlob) swap.SwapReceipt {
-	return swap.SwapReceipt{blob.ID, blob.SendToken, blob.ReceiveToken, blob.SendAmount, blob.ReceiveAmount, blockchain.Cost{}, blockchain.Cost{}, time.Now().Unix(), 0, blob.Delay, blob.DelayInfo}
+	return swap.SwapReceipt{blob.ID, blob.SendToken, blob.ReceiveToken, blob.SendAmount, blob.ReceiveAmount, blockchain.CostBlob{}, blockchain.CostBlob{}, time.Now().Unix(), 0, blob.Delay, blob.DelayInfo}
 }
 
 func (handler *handler) signDelayInfo(blob swap.SwapBlob) (swap.SwapBlob, error) {
