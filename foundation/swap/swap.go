@@ -22,17 +22,17 @@ const ExpiryUnit = int64(2 * 60 * 60)
 
 // The SwapReceipt contains the swap details and the status.
 type SwapReceipt struct {
-	ID            SwapID          `json:"id"`
-	SendToken     string          `json:"sendToken"`
-	ReceiveToken  string          `json:"receiveToken"`
-	SendAmount    string          `json:"sendAmount"`
-	ReceiveAmount string          `json:"receiveAmount"`
-	SendCost      blockchain.Cost `json:"sendCost"`
-	ReceiveCost   blockchain.Cost `json:"receiveCost"`
-	Timestamp     int64           `json:"timestamp"`
-	Status        int             `json:"status"`
-	Delay         bool            `json:"delay"`
-	DelayInfo     json.RawMessage `json:"delayInfo,omitempty"`
+	ID            SwapID              `json:"id"`
+	SendToken     string              `json:"sendToken"`
+	ReceiveToken  string              `json:"receiveToken"`
+	SendAmount    string              `json:"sendAmount"`
+	ReceiveAmount string              `json:"receiveAmount"`
+	SendCost      blockchain.CostBlob `json:"sendCost"`
+	ReceiveCost   blockchain.CostBlob `json:"receiveCost"`
+	Timestamp     int64               `json:"timestamp"`
+	Status        int                 `json:"status"`
+	Delay         bool                `json:"delay"`
+	DelayInfo     json.RawMessage     `json:"delayInfo,omitempty"`
 }
 
 // A Swap stores all of the information required to execute an atomic swap.
