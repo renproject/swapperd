@@ -84,8 +84,8 @@ func (swapper *swapper) initiate(blob swap.SwapBlob, native, foreign Contract, u
 	defer func() {
 		updates <- swap.NewReceiptUpdate(blob.ID, func(receipt *swap.SwapReceipt) {
 			receipt.Status = swapStatus
-			receipt.SendCost = native.Cost()
-			receipt.ReceiveCost = foreign.Cost()
+			receipt.SendCost = blockchain.CostToCostBlob(native.Cost())
+			receipt.ReceiveCost = blockchain.CostToCostBlob(foreign.Cost())
 		})
 	}()
 	secret := sha3.Sum256(append([]byte(blob.Password), []byte(blob.ID)...))
@@ -126,8 +126,8 @@ func (swapper *swapper) respond(blob swap.SwapBlob, native, foreign Contract, up
 	defer func() {
 		updates <- swap.NewReceiptUpdate(blob.ID, func(receipt *swap.SwapReceipt) {
 			receipt.Status = swapStatus
-			receipt.SendCost = native.Cost()
-			receipt.ReceiveCost = foreign.Cost()
+			receipt.SendCost = blockchain.CostToCostBlob(native.Cost())
+			receipt.ReceiveCost = blockchain.CostToCostBlob(foreign.Cost())
 		})
 	}()
 
