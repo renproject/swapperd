@@ -101,7 +101,7 @@ func (handler *handler) PostSwaps(swapReq PostSwapRequest, receipts chan<- swap.
 		return PostSwapResponse{}, err
 	}
 
-	receipt := handler.newSwapReceipt(blob)
+	receipt := swap.NewSwapReceipt(blob)
 	blob.Password = ""
 	if err := handler.storage.PutSwap(blob); err != nil {
 		return PostSwapResponse{}, err
@@ -132,7 +132,7 @@ func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest, receipts chan<
 	}
 
 	blob.Password = ""
-	receipt := handler.newSwapReceipt(blob)
+	receipt := swap.NewSwapReceipt(blob)
 	if err := handler.storage.PutSwap(blob); err != nil {
 		return err
 	}
@@ -264,12 +264,29 @@ func (handler *handler) VerifyPassword(password string) bool {
 }
 
 func (handler *handler) patchSwap(swapBlob swap.SwapBlob) (swap.SwapBlob, error) {
-	// verify send details
-	if err := handler.verifyTokenDetails(swapBlob.SendToken, swapBlob.SendTo, swapBlob.SendAmount, true); err != nil {
+	sendToken, err := blockchain.PatchToken(swapBlob.SendToken)
+	if err != nil {
 		return swapBlob, err
 	}
-	// verify receive details
-	if err := handler.verifyTokenDetails(swapBlob.ReceiveToken, swapBlob.ReceiveFrom, swapBlob.ReceiveAmount, true); err != nil {
+
+	if err := handler.wallet.VerifyAddress(sendToken.Blockchain, swapBlob.SendTo); err != nil {
+		return swapBlob, err
+	}
+
+	receiveToken, err := blockchain.PatchToken(swapBlob.ReceiveToken)
+	if err != nil {
+		return swapBlob, err
+	}
+
+	if err := handler.wallet.VerifyAddress(receiveToken.Blockchain, swapBlob.ReceiveFrom); err != nil {
+		return swapBlob, err
+	}
+
+	if err := handler.verifySendAmount(sendToken, swapBlob.SendAmount); err != nil {
+		return swapBlob, err
+	}
+
+	if err := handler.verifyReceiveAmount(receiveToken); err != nil {
 		return swapBlob, err
 	}
 
@@ -284,6 +301,7 @@ func (handler *handler) patchSwap(swapBlob swap.SwapBlob) (swap.SwapBlob, error)
 		swapBlob.SecretHash = base64.StdEncoding.EncodeToString(hash[:])
 		return swapBlob, nil
 	}
+
 	secretHash, err := base64.StdEncoding.DecodeString(swapBlob.SecretHash)
 	if len(secretHash) != 32 || err != nil {
 		return swapBlob, fmt.Errorf("invalid secret hash")
@@ -303,11 +321,19 @@ func (handler *handler) patchDelayedSwap(blob swap.SwapBlob) (swap.SwapBlob, err
 	rand.Read(swapID[:])
 	blob.ID = swap.SwapID(base64.StdEncoding.EncodeToString(swapID[:]))
 
-	if err := handler.verifyTokenDetails(blob.SendToken, blob.SendTo, blob.SendAmount, false); err != nil {
+	sendToken, err := blockchain.PatchToken(blob.SendToken)
+	if err != nil {
+		return blob, err
+	}
+	if err := handler.verifySendAmount(sendToken, blob.SendAmount); err != nil {
 		return blob, err
 	}
 
-	if _, err := blockchain.PatchToken(blob.ReceiveToken); err != nil {
+	receiveToken, err := blockchain.PatchToken(blob.ReceiveToken)
+	if err != nil {
+		return blob, err
+	}
+	if err := handler.verifyReceiveAmount(receiveToken); err != nil {
 		return blob, err
 	}
 
@@ -318,27 +344,16 @@ func (handler *handler) patchDelayedSwap(blob swap.SwapBlob) (swap.SwapBlob, err
 	return blob, nil
 }
 
-func (handler *handler) verifyTokenDetails(tokenString, addressString, amountString string, verifyAddress bool) error {
-	token, err := blockchain.PatchToken(tokenString)
-	if err != nil {
-		return err
-	}
-	amount, ok := big.NewInt(0).SetString(amountString, 10)
+func (handler *handler) verifySendAmount(token blockchain.Token, amount string) error {
+	sendAmount, ok := new(big.Int).SetString(amount, 10)
 	if !ok {
-		return fmt.Errorf("invalid amount %s", amountString)
+		return fmt.Errorf("invalid send amount")
 	}
-
-	if verifyAddress {
-		if err := handler.wallet.VerifyAddress(token.Blockchain, addressString); err != nil {
-			return err
-		}
-	}
-
-	return handler.wallet.VerifyBalance(token, amount)
+	return handler.wallet.VerifyBalance(token, sendAmount)
 }
 
-func (handler *handler) newSwapReceipt(blob swap.SwapBlob) swap.SwapReceipt {
-	return swap.SwapReceipt{blob.ID, blob.SendToken, blob.ReceiveToken, blob.SendAmount, blob.ReceiveAmount, blockchain.CostBlob{}, blockchain.CostBlob{}, time.Now().Unix(), 0, blob.Delay, blob.DelayInfo}
+func (handler *handler) verifyReceiveAmount(token blockchain.Token) error {
+	return handler.wallet.VerifyBalance(token, nil)
 }
 
 func (handler *handler) signDelayInfo(blob swap.SwapBlob) (swap.SwapBlob, error) {
