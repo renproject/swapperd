@@ -217,7 +217,7 @@ func (atom *erc20SwapContractBinder) AuditSecret() ([32]byte, error) {
 			break
 		}
 		if time.Now().Unix() > atom.swap.TimeLock {
-			return [32]byte{}, fmt.Errorf("timeout")
+			return [32]byte{}, swapper.ErrSwapExpired
 		}
 		time.Sleep(15 * time.Second)
 	}
@@ -239,6 +239,9 @@ func (atom *erc20SwapContractBinder) Audit() error {
 		}
 		if !initiatable {
 			break
+		}
+		if time.Now().Unix() > atom.swap.TimeLock {
+			return swapper.ErrSwapExpired
 		}
 		time.Sleep(15 * time.Second)
 	}

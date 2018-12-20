@@ -1,6 +1,7 @@
 package swapper
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
@@ -8,6 +9,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
 )
+
+var ErrSwapExpired = fmt.Errorf("swap expired")
 
 type Storage interface {
 	LoadCosts(id swap.SwapID) (blockchain.Cost, blockchain.Cost)
@@ -100,13 +103,16 @@ func (swapper *swapper) initiate(blob swap.SwapBlob, native, foreign Contract, u
 	swapStatus = swap.Initiated
 	if err := foreign.Audit(); err != nil {
 		swapStatus = swap.AuditFailed
+		if err != ErrSwapExpired {
+			swapper.handleResult(blob, true, updates)
+			swapStatus = swap.Refunded
+			return
+		}
 		if err := native.Refund(); err != nil {
 			logger.Error(err)
 			swapper.handleResult(blob, false, updates)
 			return
 		}
-		swapper.handleResult(blob, true, updates)
-		swapStatus = swap.Refunded
 		return
 	}
 
@@ -148,13 +154,16 @@ func (swapper *swapper) respond(blob swap.SwapBlob, native, foreign Contract, up
 	swapStatus = swap.Initiated
 	secret, err := native.AuditSecret()
 	if err != nil {
+		if err != ErrSwapExpired {
+			swapStatus = swap.Refunded
+			swapper.handleResult(blob, true, updates)
+			return
+		}
 		if err := native.Refund(); err != nil {
 			logger.Error(err)
 			swapper.handleResult(blob, false, updates)
 			return
 		}
-		swapStatus = swap.Refunded
-		swapper.handleResult(blob, true, updates)
 		return
 	}
 	if err := foreign.Redeem(secret); err != nil {

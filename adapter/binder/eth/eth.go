@@ -179,8 +179,8 @@ func (atom *ethSwapContractBinder) AuditSecret() ([32]byte, error) {
 			break
 		}
 		if time.Now().Unix() > atom.swap.TimeLock {
-			atom.logger.Error(fmt.Errorf("Timed Out"))
-			return [32]byte{}, fmt.Errorf("Timed Out")
+			atom.logger.Error(swapper.ErrSwapExpired)
+			return [32]byte{}, swapper.ErrSwapExpired
 		}
 		time.Sleep(15 * time.Second)
 	}
@@ -203,6 +203,10 @@ func (atom *ethSwapContractBinder) Audit() error {
 		}
 		if !initiatable {
 			break
+		}
+		if atom.swap.TimeLock > time.Now().Unix() {
+			atom.logger.Error(swapper.ErrSwapExpired)
+			return swapper.ErrSwapExpired
 		}
 		time.Sleep(15 * time.Second)
 	}
