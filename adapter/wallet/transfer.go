@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -53,7 +52,7 @@ func (wallet *wallet) transferERC20(password string, token blockchain.Token, to 
 	if err != nil {
 		return txHash, err
 	}
-	tokenAddress, err := account.ReadAddress(fmt.Sprintf("ERC20:%s", token.Name))
+	tokenAddress, err := account.ReadAddress(string(token.Name))
 	if err != nil {
 		return txHash, err
 	}
