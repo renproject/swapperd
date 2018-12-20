@@ -11,11 +11,12 @@ import (
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/libbtc-go"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
+	"github.com/republicprotocol/swapperd/core/wallet/balance"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
-func (wallet *wallet) Balances() (map[blockchain.TokenName]blockchain.Balance, error) {
-	balanceMap := map[blockchain.TokenName]blockchain.Balance{}
+func (wallet *wallet) Balances() (balance.BalanceMap, error) {
+	balanceMap := balance.BalanceMap{}
 	for _, token := range wallet.SupportedTokens() {
 		balance, err := wallet.balance(token.Name)
 		if err != nil {
