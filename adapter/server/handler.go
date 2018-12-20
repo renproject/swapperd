@@ -12,10 +12,12 @@ import (
 
 	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/adapter/wallet"
-	"github.com/republicprotocol/swapperd/core/balance"
 	"github.com/republicprotocol/swapperd/core/status"
+	"github.com/republicprotocol/swapperd/core/wallet/balance"
+	"github.com/republicprotocol/swapperd/core/wallet/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/republicprotocol/tau"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/sha3"
@@ -28,6 +30,7 @@ func NewErrBootloadRequired(msg string) error {
 type handler struct {
 	bootloaded   bool
 	passwordHash []byte
+	walletIO     tau.IO
 	wallet       wallet.Wallet
 	storage      Storage
 	logger       logrus.FieldLogger
@@ -38,8 +41,9 @@ type Handler interface {
 	GetID() GetIDResponse
 	GetInfo() GetInfoResponse
 	GetSwaps(chan<- status.ReceiptQuery) (GetSwapsResponse, error)
-	GetBalances(chan<- balance.BalanceQuery) GetBalancesResponse
+	GetBalances() GetBalancesResponse
 	GetAddresses() (GetAddressesResponse, error)
+	GetTransfers() GetTransfersResponse
 	GetJSONSignature(password string, message json.RawMessage) (GetSignatureResponseJSON, error)
 	GetBase64Signature(password string, message string) (GetSignatureResponseString, error)
 	GetHexSignature(password string, message string) (GetSignatureResponseString, error)
@@ -50,8 +54,8 @@ type Handler interface {
 	VerifyPassword(password string) bool
 }
 
-func NewHandler(passwordHash []byte, wallet wallet.Wallet, storage Storage, logger logrus.FieldLogger) Handler {
-	return &handler{false, passwordHash, wallet, storage, logger}
+func NewHandler(passwordHash []byte, walletIO tau.IO, wallet wallet.Wallet, storage Storage, logger logrus.FieldLogger) Handler {
+	return &handler{false, passwordHash, walletIO, wallet, storage, logger}
 }
 
 func (handler *handler) GetInfo() GetInfoResponse {
@@ -81,14 +85,24 @@ func (handler *handler) GetSwaps(statuses chan<- status.ReceiptQuery) (GetSwapsR
 	return resp, nil
 }
 
-func (handler *handler) GetBalances(balanceQueries chan<- balance.BalanceQuery) GetBalancesResponse {
-	response := make(chan map[blockchain.TokenName]blockchain.Balance)
-	query := balance.BalanceQuery{
-		Responder: response,
+func (handler *handler) GetBalances() GetBalancesResponse {
+	responder := make(chan balance.BalanceMap, 1)
+	balanceReq := balance.BalanceRequest{
+		Responder: responder,
 	}
-	balanceQueries <- query
-	resp := <-response
-	return resp
+	handler.walletIO.InputWriter() <- balanceReq
+	response := <-responder
+	return GetBalancesResponse(response)
+}
+
+func (handler *handler) GetTransfers() GetTransfersResponse {
+	responder := make(chan transfer.TransferReceiptMap, 1)
+	transferReq := transfer.TransferReceiptRequest{
+		Responder: responder,
+	}
+	handler.walletIO.InputWriter() <- transferReq
+	response := <-responder
+	return GetTransfersResponse(response)
 }
 
 func (handler *handler) PostSwaps(swapReq PostSwapRequest, receipts chan<- swap.SwapReceipt, swaps chan<- swap.SwapBlob) (PostSwapResponse, error) {
@@ -153,6 +167,7 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersRe
 		return response, err
 	}
 
+	responder := make(chan transfer.TransferReceipt, 1)
 	if err := handler.wallet.VerifyAddress(token.Blockchain, req.To); err != nil {
 		return response, err
 	}
@@ -166,13 +181,16 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersRe
 		return response, err
 	}
 
-	txHash, err := handler.wallet.Transfer(req.Password, token, req.To, amount)
+	fee, err := handler.wallet.DefaultFee(token.Blockchain)
 	if err != nil {
 		return response, err
 	}
 
-	response.TxHash = txHash
-	return response, nil
+	transferReq := transfer.NewTransferRequest(req.Password, token, req.To, amount, fee, responder)
+	handler.walletIO.InputWriter() <- transferReq
+
+	transferReceipt := <-responder
+	return PostTransfersResponse(transferReceipt), nil
 }
 
 func (handler *handler) PostBootload(password string, swaps, delayedSwaps chan<- swap.SwapBlob) error {

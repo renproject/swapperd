@@ -3,6 +3,8 @@ package server
 import (
 	"encoding/json"
 
+	"github.com/republicprotocol/swapperd/core/wallet/transfer"
+
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 )
@@ -40,9 +42,7 @@ type PostTransfersRequest struct {
 	Password string `json:"password"`
 }
 
-type PostTransfersResponse struct {
-	TxHash string `json:"txHash"`
-}
+type PostTransfersResponse transfer.TransferReceipt
 
 type GetSignatureResponseJSON struct {
 	Message   json.RawMessage `json:"message"`
@@ -53,3 +53,5 @@ type GetSignatureResponseString struct {
 	Message   string `json:"message"`
 	Signature string `json:"signature"`
 }
+
+type GetTransfersResponse transfer.TransferReceiptMap
