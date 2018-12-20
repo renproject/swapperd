@@ -7,6 +7,8 @@ const (
 	AuditFailed
 	Redeemed
 	Refunded
+	Cancelled
+	Expired
 )
 
 // StatusUpdate shows the status change of a swap.

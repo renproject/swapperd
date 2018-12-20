@@ -9,6 +9,7 @@ import (
 	"github.com/republicprotocol/swapperd/adapter/db"
 	"github.com/republicprotocol/swapperd/adapter/server"
 	"github.com/republicprotocol/swapperd/core/balance"
+	"github.com/republicprotocol/swapperd/core/delayed"
 	"github.com/republicprotocol/swapperd/core/status"
 	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/driver/keystore"
@@ -33,10 +34,11 @@ func New(homeDir, network, port string) Composer {
 
 func (composer *composer) Run(done <-chan struct{}) {
 	swaps := make(chan swap.SwapBlob)
+	delayedSwaps := make(chan swap.SwapBlob)
 	receipts := make(chan swap.SwapReceipt)
 
-	statusUpdates := make(chan swap.StatusUpdate)
-	receiptQueries := make(chan swap.ReceiptQuery)
+	receiptUpdates := make(chan swap.ReceiptUpdate)
+	receiptQueries := make(chan status.ReceiptQuery)
 	balanceQueries := make(chan balance.BalanceQuery)
 
 	wallet, err := keystore.Wallet(composer.homeDir, composer.network)
@@ -61,15 +63,19 @@ func (composer *composer) Run(done <-chan struct{}) {
 	co.ParBegin(
 		func() {
 			httpServer := server.NewHttpServer(wallet, storage, logger, passwordHash, composer.port)
-			httpServer.Run(done, swaps, receipts, receiptQueries, balanceQueries)
+			httpServer.Run(done, swaps, delayedSwaps, receipts, receiptQueries, balanceQueries)
 		},
 		func() {
-			swapper := swapper.New(callback.New(), binder.NewBuilder(wallet, logger), storage, logger)
-			swapper.Run(done, swaps, statusUpdates)
+			delayedCallback := delayed.New(callback.New(), storage, logger)
+			delayedCallback.Run(done, delayedSwaps, swaps, receiptUpdates)
 		},
 		func() {
-			statuses := status.New()
-			statuses.Run(done, receipts, statusUpdates, receiptQueries)
+			swapper := swapper.New(binder.NewBuilder(wallet, logger), storage, logger)
+			swapper.Run(done, swaps, receiptUpdates)
+		},
+		func() {
+			statuses := status.New(storage, logger)
+			statuses.Run(done, receipts, receiptUpdates, receiptQueries)
 		},
 		func() {
 			updateFrequency := 15 * time.Second

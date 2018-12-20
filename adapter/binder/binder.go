@@ -27,42 +27,42 @@ func NewBuilder(wallet wallet.Wallet, logger logrus.FieldLogger) swapper.Contrac
 	}
 }
 
-func (builder *builder) BuildSwapContracts(swap swap.SwapBlob) (swapper.Contract, swapper.Contract, error) {
+func (builder *builder) BuildSwapContracts(swap swap.SwapBlob, nativeCost, foreignCost blockchain.Cost) (swapper.Contract, swapper.Contract, error) {
 	native, foreign, err := builder.buildComplementarySwaps(swap)
 	if err != nil {
 		return nil, nil, err
 	}
-	nativeBinder, err := builder.buildBinder(native, swap.Password)
+	nativeBinder, err := builder.buildBinder(native, nativeCost, swap.Password)
 	if err != nil {
 		return nil, nil, err
 	}
-	foreignBinder, err := builder.buildBinder(foreign, swap.Password)
+	foreignBinder, err := builder.buildBinder(foreign, foreignCost, swap.Password)
 	if err != nil {
 		return nil, nil, err
 	}
 	return nativeBinder, foreignBinder, nil
 }
 
-func (builder *builder) buildBinder(swap swap.Swap, password string) (swapper.Contract, error) {
+func (builder *builder) buildBinder(swap swap.Swap, cost blockchain.Cost, password string) (swapper.Contract, error) {
 	switch swap.Token {
 	case blockchain.TokenBTC:
 		btcAccount, err := builder.BitcoinAccount(password)
 		if err != nil {
 			return nil, err
 		}
-		return btc.NewBTCSwapContractBinder(btcAccount, swap, builder.FieldLogger)
+		return btc.NewBTCSwapContractBinder(btcAccount, swap, cost, builder.FieldLogger)
 	case blockchain.TokenETH:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
 		}
-		return eth.NewETHSwapContractBinder(ethAccount, swap, builder.FieldLogger)
+		return eth.NewETHSwapContractBinder(ethAccount, swap, cost, builder.FieldLogger)
 	case blockchain.TokenWBTC:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
 		}
-		return erc20.NewERC20SwapContractBinder(ethAccount, swap, builder.FieldLogger)
+		return erc20.NewERC20SwapContractBinder(ethAccount, swap, cost, builder.FieldLogger)
 	default:
 		return nil, blockchain.NewErrUnsupportedToken(swap.Token.Name)
 	}
@@ -91,17 +91,26 @@ func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fund
 	if err != nil {
 		return swap.Swap{}, err
 	}
-	value, ok := big.NewInt(0).SetString(blob.SendAmount, 10)
+	value, ok := new(big.Int).SetString(blob.SendAmount, 10)
 	if !ok {
 		return swap.Swap{}, fmt.Errorf("corrupted send value: %v", blob.SendAmount)
 	}
 
-	fee, ok := big.NewInt(0).SetString(blob.SendFee, 10)
+	fee, ok := new(big.Int).SetString(blob.SendFee, 10)
 	if !ok {
-		return swap.Swap{}, fmt.Errorf("corrupted send fee: %v", blob.SendFee)
+		fee, err = builder.Wallet.DefaultFee(token.Blockchain)
+		if err != nil {
+			return swap.Swap{}, fmt.Errorf("failed to get default fee: %v", err)
+		}
 	}
 
-	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000))
+	brokerFee := big.NewInt(0)
+	if blob.BrokerFee != 0 {
+		if err := builder.Wallet.VerifyAddress(token.Blockchain, blob.BrokerSendTokenAddr); err != nil {
+			return swap.Swap{}, fmt.Errorf("corrupted send broker address: %v", blob.BrokerSendTokenAddr)
+		}
+		brokerFee = new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000-blob.BrokerFee))
+	}
 
 	secretHash, err := unmarshalSecretHash(blob.SecretHash)
 	if err != nil {
@@ -128,17 +137,26 @@ func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spe
 		return swap.Swap{}, err
 	}
 
-	value, ok := big.NewInt(0).SetString(blob.ReceiveAmount, 10)
+	value, ok := new(big.Int).SetString(blob.ReceiveAmount, 10)
 	if !ok {
 		return swap.Swap{}, fmt.Errorf("corrupted receive value: %v", blob.ReceiveAmount)
 	}
 
-	fee, ok := big.NewInt(0).SetString(blob.ReceiveFee, 10)
+	fee, ok := new(big.Int).SetString(blob.ReceiveFee, 10)
 	if !ok {
-		return swap.Swap{}, fmt.Errorf("corrupted receive fee: %v", blob.ReceiveFee)
+		fee, err = builder.Wallet.DefaultFee(token.Blockchain)
+		if err != nil {
+			return swap.Swap{}, fmt.Errorf("failed to get default fee: %v", err)
+		}
 	}
 
-	brokerFee := new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000))
+	brokerFee := big.NewInt(0)
+	if blob.BrokerFee != 0 {
+		if err := builder.Wallet.VerifyAddress(token.Blockchain, blob.BrokerReceiveTokenAddr); err != nil {
+			return swap.Swap{}, fmt.Errorf("corrupted receive broker address: %v", blob.BrokerReceiveTokenAddr)
+		}
+		brokerFee = new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000-blob.BrokerFee))
+	}
 
 	secretHash, err := unmarshalSecretHash(blob.SecretHash)
 	if err != nil {

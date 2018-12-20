@@ -1,5 +1,11 @@
 package blockchain
 
+import "fmt"
+
+func ErrUnsupportedBlockchain(blockchain BlockchainName) error {
+	return fmt.Errorf("unsupported blockchain: %s", blockchain)
+}
+
 type BlockchainName string
 
 var (

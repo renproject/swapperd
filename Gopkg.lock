@@ -14,11 +14,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:10ea6bfea96a0c89a53430c81ea90c950c611fffa0da1bcb045e305b5e97b969"
+  digest = "1:3639e0fa327a76bb39b5279696a7fd90584082785de52671de0cb5ae680cda0a"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
   pruneopts = "T"
-  revision = "e17947f884f63c85799a86637524c213d798c7ec"
+  revision = "aa2a42e13be68c4a95fe9e58003adaf63fe6476f"
 
 [[projects]]
   branch = "master"
@@ -64,7 +64,7 @@
   version = "v1.7.1"
 
 [[projects]]
-  digest = "1:8bf83050739ffd7f13bdc7dd281fccc40718d52eb2ce23fe7d980a3ac1f0a8b0"
+  digest = "1:87fa9f2d71fd2516e6c0d906b7eb58886c8b4fcc6ee8cada0553a0e50bfeef3a"
   name = "github.com/ethereum/go-ethereum"
   packages = [
     ".",
@@ -102,8 +102,8 @@
     "trie",
   ]
   pruneopts = "T"
-  revision = "dae82f098570e15d44584f0d7f350713f4774727"
-  version = "v1.8.19"
+  revision = "24d727b6d6e2c0cde222fa12155c4a6db5caaf2e"
+  version = "v1.8.20"
 
 [[projects]]
   digest = "1:586ea76dbd0374d6fb649a91d70d652b7fe0ccffb8910a77468e7702e7901f3d"
@@ -236,11 +236,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c2def95e441286c35a7b96b66525bc0e906a50000e91f2879d4d11a13154ea10"
+  digest = "1:66329657f9f5b307bba6d7d67e467d68c4c90b5c544c563c7e4c196690b952c1"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
   pruneopts = "T"
-  revision = "8967cde5bf604958a84764a6e07cc0502b64454c"
+  revision = "d28940a21052c614e84c9fa2f067e9d543bbbe75"
 
 [[projects]]
   branch = "master"
@@ -252,11 +252,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1f59b969ded19a97e2894a72e6b1b30002e640aa15a46d192231b3647335442a"
+  digest = "1:d8c5c93f34f610119f82ab9fe80dc0166920188a04c8ee8c9a04384e30067492"
   name = "github.com/republicprotocol/libbtc-go"
   packages = ["."]
   pruneopts = "T"
-  revision = "dc267506aefd8f9b392f26789b4a938170ce07cf"
+  revision = "2c0a1b2bd240029bcfbb586605b199187554f722"
 
 [[projects]]
   digest = "1:9787d2d3220cbfd444596afd03ab0abcf391df169b789fbe3eae27fa2e426cf6"
@@ -324,6 +324,7 @@
     "pbkdf2",
     "ripemd160",
     "scrypt",
+    "sha3",
     "ssh/terminal",
   ]
   pruneopts = "T"
@@ -331,7 +332,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9f65bf850da1e1c8f97187d98643b580734a3550f73b12dd751fc723d1cf4b2c"
+  digest = "1:31162299b46522ce13b7836d17341c88817e87874c15d9c755e22140feb2718b"
   name = "golang.org/x/net"
   packages = [
     "html",
@@ -340,11 +341,11 @@
     "websocket",
   ]
   pruneopts = "T"
-  revision = "351d144fa1fc0bd934e2408202be0c29f25e35a0"
+  revision = "e147a9138326bc0e9d4e179541ffd8af41cff8a9"
 
 [[projects]]
   branch = "master"
-  digest = "1:6cd7e4ff45767ec035a2593b3bd6297d04d31707250fafa0f1bb6d167994f149"
+  digest = "1:3631df9157a563b9b7efe8bedae459a2d6a8db709826e2c0e26cec4f40d7d7a7"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -357,7 +358,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "T"
-  revision = "a5c9d58dba9a56f97aaa86f55e638b718c5a6c42"
+  revision = "074acd46bca67915925527c07849494d115e7c43"
 
 [[projects]]
   digest = "1:6164911cb5e94e8d8d5131d646613ff82c14f5a8ce869de2f6d80d9889df8c5a"
@@ -447,6 +448,7 @@
     "github.com/tyler-smith/go-bip39",
     "golang.org/x/crypto/bcrypt",
     "golang.org/x/crypto/ripemd160",
+    "golang.org/x/crypto/sha3",
     "golang.org/x/crypto/ssh/terminal",
     "golang.org/x/sys/windows/svc",
     "golang.org/x/sys/windows/svc/debug",

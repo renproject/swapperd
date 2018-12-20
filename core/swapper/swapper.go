@@ -1,63 +1,58 @@
 package swapper
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
-
-	"github.com/republicprotocol/swapperd/foundation/swap"
 )
 
+var ErrSwapExpired = fmt.Errorf("swap expired")
+
 type Storage interface {
-	UpdateStatus(update swap.StatusUpdate) error
-
-	PendingSwap(swap.SwapID) (swap.SwapBlob, error)
-
+	LoadCosts(id swap.SwapID) (blockchain.Cost, blockchain.Cost)
 	DeletePendingSwap(swap.SwapID) error
 }
 
 type Swapper interface {
-	Run(done <-chan struct{}, swaps <-chan swap.SwapBlob, updates chan<- swap.StatusUpdate)
+	Run(done <-chan struct{}, swaps <-chan swap.SwapBlob, updates chan<- swap.ReceiptUpdate)
 }
 
 type Contract interface {
 	Initiate() error
-
 	Audit() error
-
 	Redeem([32]byte) error
-
 	AuditSecret() ([32]byte, error)
-
 	Refund() error
+	Cost() blockchain.Cost
 }
 
 type ContractBuilder interface {
-	BuildSwapContracts(swap swap.SwapBlob) (Contract, Contract, error)
-}
-
-type DelayCallback interface {
-	DelayCallback(swap.SwapBlob) (swap.SwapBlob, error)
+	BuildSwapContracts(swap swap.SwapBlob, sendCost, receiveCost blockchain.Cost) (Contract, Contract, error)
 }
 
 type swapper struct {
-	callback DelayCallback
-	builder  ContractBuilder
-	storage  Storage
-	logger   logrus.FieldLogger
+	builder ContractBuilder
+	storage Storage
+	logger  logrus.FieldLogger
 }
 
-func New(callback DelayCallback, builder ContractBuilder, storage Storage, logger logrus.FieldLogger) Swapper {
+func New(builder ContractBuilder, storage Storage, logger logrus.FieldLogger) Swapper {
 	return &swapper{
-		callback: callback,
-		builder:  builder,
-		storage:  storage,
-		logger:   logger,
+		builder: builder,
+		storage: storage,
+		logger:  logger,
 	}
 }
 
-func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan swap.SwapBlob, updates chan<- swap.StatusUpdate) {
+type Bootload struct {
+	Password string
+}
+
+func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan swap.SwapBlob, updates chan<- swap.ReceiptUpdate) {
 	for {
 		select {
 		case <-done:
@@ -71,98 +66,122 @@ func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan swap.SwapBlob, up
 	}
 }
 
-func (swapper *swapper) swap(blob swap.SwapBlob, updates chan<- swap.StatusUpdate) {
+func (swapper *swapper) swap(blob swap.SwapBlob, updates chan<- swap.ReceiptUpdate) {
 	logger := swapper.logger.WithField("SwapID", blob.ID)
-	native, foreign, err := swapper.builder.BuildSwapContracts(blob)
+
+	sendCost, receiveCost := swapper.storage.LoadCosts(blob.ID)
+	native, foreign, err := swapper.builder.BuildSwapContracts(blob, sendCost, receiveCost)
 	if err != nil {
 		logger.Error(err)
 		return
 	}
-
-	if blob.Delay {
-		password := blob.Password
-		blob.Password = ""
-		filledSwap, err := swapper.callback.DelayCallback(blob)
-		if err != nil {
-			logger.Error(err)
-			return
-		}
-		blob = filledSwap
-		blob.Password = password
-	}
-
 	if blob.ShouldInitiateFirst {
 		swapper.initiate(blob, native, foreign, updates)
-	} else {
-		swapper.respond(blob, native, foreign, updates)
-	}
-}
-
-func (swapper *swapper) initiate(blob swap.SwapBlob, native, foreign Contract, updates chan<- swap.StatusUpdate) {
-	secret := sha3.Sum256(append([]byte(blob.Password), []byte(blob.ID)...))
-	logger := swapper.logger.WithField("SwapID", blob.ID)
-	if err := native.Initiate(); err != nil {
-		swapper.handleResult(blob, false, updates, swap.Inactive, logger, err)
 		return
 	}
+	swapper.respond(blob, native, foreign, updates)
+}
+
+func (swapper *swapper) initiate(blob swap.SwapBlob, native, foreign Contract, updates chan<- swap.ReceiptUpdate) {
+	swapStatus := swap.Inactive
+	defer func() {
+		updates <- swap.NewReceiptUpdate(blob.ID, func(receipt *swap.SwapReceipt) {
+			receipt.Status = swapStatus
+			receipt.SendCost = blockchain.CostToCostBlob(native.Cost())
+			receipt.ReceiveCost = blockchain.CostToCostBlob(foreign.Cost())
+		})
+	}()
+	secret := sha3.Sum256(append([]byte(blob.Password), []byte(blob.ID)...))
+
+	logger := swapper.logger.WithField("SwapID", blob.ID)
+	if err := native.Initiate(); err != nil {
+		logger.Error(err)
+		swapper.handleResult(blob, false, updates)
+		return
+	}
+
+	swapStatus = swap.Initiated
 	if err := foreign.Audit(); err != nil {
-		if err := native.Refund(); err != nil {
-			swapper.handleResult(blob, false, updates, swap.AuditFailed, logger, err)
+		swapStatus = swap.AuditFailed
+		if err != ErrSwapExpired {
+			swapper.handleResult(blob, true, updates)
+			swapStatus = swap.Refunded
 			return
 		}
-		swapper.handleResult(blob, true, updates, swap.Refunded, logger, nil)
+		if err := native.Refund(); err != nil {
+			logger.Error(err)
+			swapper.handleResult(blob, false, updates)
+			return
+		}
 		return
 	}
+
+	swapStatus = swap.Audited
 	if err := foreign.Redeem(secret); err != nil {
-		swapper.handleResult(blob, false, updates, swap.Audited, logger, err)
+		logger.Error(err)
+		swapper.handleResult(blob, false, updates)
 		return
 	}
-	swapper.handleResult(blob, true, updates, swap.Redeemed, logger, nil)
+
+	swapStatus = swap.Redeemed
+	swapper.handleResult(blob, true, updates)
 }
 
-func (swapper *swapper) respond(blob swap.SwapBlob, native, foreign Contract, updates chan<- swap.StatusUpdate) {
+func (swapper *swapper) respond(blob swap.SwapBlob, native, foreign Contract, updates chan<- swap.ReceiptUpdate) {
+	swapStatus := swap.Inactive
+	defer func() {
+		updates <- swap.NewReceiptUpdate(blob.ID, func(receipt *swap.SwapReceipt) {
+			receipt.Status = swapStatus
+			receipt.SendCost = blockchain.CostToCostBlob(native.Cost())
+			receipt.ReceiveCost = blockchain.CostToCostBlob(foreign.Cost())
+		})
+	}()
+
 	logger := swapper.logger.WithField("SwapID", blob.ID)
 	if err := foreign.Audit(); err != nil {
-		swapper.handleResult(blob, true, updates, swap.AuditFailed, logger, nil)
-		return
-	}
-	if err := native.Initiate(); err != nil {
-		swapper.handleResult(blob, false, updates, swap.Audited, logger, err)
+		swapStatus = swap.AuditFailed
+		swapper.handleResult(blob, true, updates)
 		return
 	}
 
+	swapStatus = swap.Audited
+	if err := native.Initiate(); err != nil {
+		logger.Error(err)
+		swapper.handleResult(blob, false, updates)
+		return
+	}
+
+	swapStatus = swap.Initiated
 	secret, err := native.AuditSecret()
 	if err != nil {
-		if err := native.Refund(); err != nil {
-			swapper.handleResult(blob, false, updates, swap.Initiated, logger, err)
+		if err != ErrSwapExpired {
+			swapStatus = swap.Refunded
+			swapper.handleResult(blob, true, updates)
 			return
 		}
-		swapper.handleResult(blob, true, updates, swap.Refunded, logger, nil)
+		if err := native.Refund(); err != nil {
+			logger.Error(err)
+			swapper.handleResult(blob, false, updates)
+			return
+		}
 		return
 	}
 	if err := foreign.Redeem(secret); err != nil {
-		swapper.handleResult(blob, false, updates, swap.Initiated, logger, err)
+		logger.Error(err)
+		swapper.handleResult(blob, false, updates)
 		return
 	}
-	swapper.handleResult(blob, true, updates, swap.Redeemed, logger, nil)
+	swapStatus = swap.Redeemed
+	swapper.handleResult(blob, true, updates)
 }
 
-func (swapper *swapper) handleResult(blob swap.SwapBlob, remove bool, updates chan<- swap.StatusUpdate, status int, logger logrus.FieldLogger, err error) {
-	if err != nil {
-		logger.Error(err)
-	}
-	update := swap.NewStatusUpdate(blob.ID, status)
-	updates <- update
-	if err := swapper.storage.UpdateStatus(update); err != nil {
-		swapper.logger.Error(err)
-	}
-
+func (swapper *swapper) handleResult(blob swap.SwapBlob, remove bool, updates chan<- swap.ReceiptUpdate) {
 	if remove {
 		if err := swapper.storage.DeletePendingSwap(blob.ID); err != nil {
 			swapper.logger.Error(err)
 		}
-	} else {
-		time.Sleep(5 * time.Minute)
-		swapper.swap(blob, updates)
+		return
 	}
+	time.Sleep(5 * time.Minute)
+	swapper.swap(blob, updates)
 }

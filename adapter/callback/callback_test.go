@@ -14,7 +14,8 @@ import (
 	. "github.com/republicprotocol/swapperd/adapter/callback"
 
 	"github.com/gorilla/mux"
-	"github.com/republicprotocol/swapperd/foundation"
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/rs/cors"
 )
 
@@ -65,12 +66,12 @@ var _ = Describe("Server Adapter", func() {
 	tokenPairOptions := []struct {
 		sendToken, receiveToken string
 	}{
-		{blockchian.TokenBTC.String(), blockchian.TokenETH.String()},
-		{blockchian.TokenBTC.String(), blockchian.TokenWBTC.String()},
-		{blockchian.TokenETH.String(), blockchian.TokenBTC.String()},
-		{blockchian.TokenETH.String(), blockchian.TokenWBTC.String()},
-		{blockchian.TokenWBTC.String(), blockchian.TokenBTC.String()},
-		{blockchian.TokenWBTC.String(), blockchian.TokenETH.String()},
+		{blockchain.TokenBTC.String(), blockchain.TokenETH.String()},
+		{blockchain.TokenBTC.String(), blockchain.TokenWBTC.String()},
+		{blockchain.TokenETH.String(), blockchain.TokenBTC.String()},
+		{blockchain.TokenETH.String(), blockchain.TokenWBTC.String()},
+		{blockchain.TokenWBTC.String(), blockchain.TokenBTC.String()},
+		{blockchain.TokenWBTC.String(), blockchain.TokenETH.String()},
 	}
 
 	amountOptions := []struct {

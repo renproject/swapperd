@@ -24,18 +24,36 @@ func RandomID() SwapID {
 
 // The SwapReceipt contains the swap details and the status.
 type SwapReceipt struct {
-	ID            SwapID `json:"id"`
-	SendToken     string `json:"sendToken"`
-	ReceiveToken  string `json:"receiveToken"`
-	SendAmount    string `json:"sendAmount"`
-	ReceiveAmount string `json:"receiveAmount"`
-	Timestamp     int64  `json:"timestamp"`
-	Status        int    `json:"status"`
+	ID            SwapID              `json:"id"`
+	SendToken     string              `json:"sendToken"`
+	ReceiveToken  string              `json:"receiveToken"`
+	SendAmount    string              `json:"sendAmount"`
+	ReceiveAmount string              `json:"receiveAmount"`
+	SendCost      blockchain.CostBlob `json:"sendCost"`
+	ReceiveCost   blockchain.CostBlob `json:"receiveCost"`
+	Timestamp     int64               `json:"timestamp"`
+	TimeLock      int64               `json:"timeLock"`
+	Status        int                 `json:"status"`
+	Delay         bool                `json:"delay"`
+	DelayInfo     json.RawMessage     `json:"delayInfo,omitempty"`
 }
 
 // NewSwapReceipt returns a SwapReceipt from a swapBlob.
 func NewSwapReceipt(blob SwapBlob) SwapReceipt {
-	return SwapReceipt{blob.ID, blob.SendToken, blob.ReceiveToken, blob.SendAmount, blob.ReceiveAmount, time.Now().Unix(), 1}
+	return SwapReceipt{
+		ID:            blob.ID,
+		SendToken:     blob.SendToken,
+		ReceiveToken:  blob.ReceiveToken,
+		SendAmount:    blob.SendAmount,
+		ReceiveAmount: blob.ReceiveAmount,
+		SendCost:      blockchain.CostBlob{},
+		ReceiveCost:   blockchain.CostBlob{},
+		Timestamp:     time.Now().Unix(),
+		TimeLock:      blob.TimeLock,
+		Status:        0,
+		Delay:         blob.Delay,
+		DelayInfo:     blob.DelayInfo,
+	}
 }
 
 // A Swap stores all of the information required to execute an atomic swap.
@@ -54,14 +72,14 @@ type Swap struct {
 
 // A SwapBlob is used to encode a Swap for storage and transmission.
 type SwapBlob struct {
-	ID           SwapID `json:"id"`
+	ID           SwapID `json:"id,omitempty"`
 	SendToken    string `json:"sendToken"`
 	ReceiveToken string `json:"receiveToken"`
 
 	// SendAmount and ReceiveAmount are decimal strings.
-	SendFee              string `json:"sendFee"`
+	SendFee              string `json:"sendFee,omitempty"`
 	SendAmount           string `json:"sendAmount"`
-	ReceiveFee           string `json:"receiveFee"`
+	ReceiveFee           string `json:"receiveFee,omitempty"`
 	ReceiveAmount        string `json:"receiveAmount"`
 	MinimumReceiveAmount string `json:"minimumReceiveAmount,omitempty"`
 
@@ -71,17 +89,22 @@ type SwapBlob struct {
 	SecretHash          string `json:"secretHash"`
 	ShouldInitiateFirst bool   `json:"shouldInitiateFirst"`
 
-	Delay            bool            `json:"delayed,omitempty"`
+	Delay            bool            `json:"delay,omitempty"`
 	DelayInfo        json.RawMessage `json:"delayInfo,omitempty"`
 	DelayCallbackURL string          `json:"delayCallbackUrl,omitempty"`
 
-	BrokerFee              int64  `json:"brokerFee"` // should be between 0 and 100
-	BrokerSendTokenAddr    string `json:"brokerSendTokenAddr"`
-	BrokerReceiveTokenAddr string `json:"brokerReceiveTokenAddr"`
+	BrokerFee              int64  `json:"brokerFee,omitempty"` // in BIPs or (1/10000)
+	BrokerSendTokenAddr    string `json:"brokerSendTokenAddr,omitempty"`
+	BrokerReceiveTokenAddr string `json:"brokerReceiveTokenAddr,omitempty"`
 
 	Password string `json:"password,omitempty"`
 }
 
-type ReceiptQuery struct {
-	Responder chan<- map[SwapID]SwapReceipt
+type ReceiptUpdate struct {
+	ID     SwapID
+	Update func(receipt *SwapReceipt)
+}
+
+func NewReceiptUpdate(id SwapID, update func(receipt *SwapReceipt)) ReceiptUpdate {
+	return ReceiptUpdate{id, update}
 }

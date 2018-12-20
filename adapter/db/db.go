@@ -4,8 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
-	"github.com/republicprotocol/swapperd/adapter/server"
-	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -19,11 +18,23 @@ var (
 	TablePendingSwaps      = [8]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
 	TablePendingSwapsStart = [40]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
 	TablePendingSwapsLimit = [40]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+
+	TableSwapReceipts      = [8]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}
+	TableSwapReceiptsStart = [40]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	TableSwapReceiptsLimit = [40]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 )
 
 type Storage interface {
-	server.Storage
-	swapper.Storage
+	PutSwap(blob swap.SwapBlob) error
+	DeletePendingSwap(swapID swap.SwapID) error
+	PendingSwaps() ([]swap.SwapBlob, error)
+
+	PendingSwap(swapID swap.SwapID) (swap.SwapBlob, error)
+	PutReceipt(receipt swap.SwapReceipt) error
+	UpdateReceipt(receiptUpdate swap.ReceiptUpdate) error
+	Receipts() ([]swap.SwapReceipt, error)
+	Receipt(swapID swap.SwapID) (swap.SwapReceipt, error)
+	LoadCosts(swapID swap.SwapID) (blockchain.Cost, blockchain.Cost)
 }
 
 type dbStorage struct {
@@ -36,12 +47,8 @@ func New(db *leveldb.DB) Storage {
 	}
 }
 
-func (db *dbStorage) InsertSwap(blob swap.SwapBlob) error {
-	pendingSwapData, err := json.Marshal(blob)
-	if err != nil {
-		return err
-	}
-	swapData, err := json.Marshal(swap.NewSwapReceipt(blob))
+func (db *dbStorage) PutSwap(blob swap.SwapBlob) error {
+	swapData, err := json.Marshal(blob)
 	if err != nil {
 		return err
 	}
@@ -49,7 +56,7 @@ func (db *dbStorage) InsertSwap(blob swap.SwapBlob) error {
 	if err != nil {
 		return err
 	}
-	if err := db.db.Put(append(TablePendingSwaps[:], id...), pendingSwapData, nil); err != nil {
+	if err := db.db.Put(append(TablePendingSwaps[:], id...), swapData, nil); err != nil {
 		return err
 	}
 	return db.db.Put(append(TableSwaps[:], id...), swapData, nil)
@@ -79,21 +86,6 @@ func (db *dbStorage) PendingSwap(swapID swap.SwapID) (swap.SwapBlob, error) {
 	return blob, nil
 }
 
-func (db *dbStorage) Swaps() ([]swap.SwapReceipt, error) {
-	iterator := db.db.NewIterator(&util.Range{Start: TableSwapsStart[:], Limit: TableSwapsLimit[:]}, nil)
-	defer iterator.Release()
-	swaps := []swap.SwapReceipt{}
-	for iterator.Next() {
-		value := iterator.Value()
-		swap := swap.SwapReceipt{}
-		if err := json.Unmarshal(value, &swap); err != nil {
-			return swaps, err
-		}
-		swaps = append(swaps, swap)
-	}
-	return swaps, iterator.Error()
-}
-
 func (db *dbStorage) PendingSwaps() ([]swap.SwapBlob, error) {
 	iterator := db.db.NewIterator(&util.Range{Start: TablePendingSwapsStart[:], Limit: TablePendingSwapsLimit[:]}, nil)
 	defer iterator.Release()
@@ -107,25 +99,4 @@ func (db *dbStorage) PendingSwaps() ([]swap.SwapBlob, error) {
 		pendingSwaps = append(pendingSwaps, swap)
 	}
 	return pendingSwaps, iterator.Error()
-}
-
-func (db *dbStorage) UpdateStatus(update swap.StatusUpdate) error {
-	id, err := base64.StdEncoding.DecodeString(string(update.ID))
-	if err != nil {
-		return err
-	}
-	receiptBytes, err := db.db.Get(append(TableSwaps[:], id...), nil)
-	if err != nil {
-		return err
-	}
-	status := swap.SwapReceipt{}
-	if err := json.Unmarshal(receiptBytes, &status); err != nil {
-		return err
-	}
-	status.Status = update.Code
-	updatedReceiptBytes, err := json.Marshal(status)
-	if err != nil {
-		return err
-	}
-	return db.db.Put(append(TableSwaps[:], id...), updatedReceiptBytes, nil)
 }

@@ -14,7 +14,7 @@ type Blockchain interface {
 }
 
 type BalanceQuery struct {
-	Response chan<- map[blockchain.TokenName]blockchain.Balance
+	Responder chan<- map[blockchain.TokenName]blockchain.Balance
 }
 
 type Balances interface {
@@ -56,7 +56,7 @@ func (balances *balances) Run(done <-chan struct{}, queries <-chan BalanceQuery)
 			}
 			go func() {
 				select {
-				case query.Response <- balances.read():
+				case query.Responder <- balances.read():
 				case <-done:
 				}
 			}()
