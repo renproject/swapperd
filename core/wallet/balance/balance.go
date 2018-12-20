@@ -29,17 +29,18 @@ func New(cap int, bc Blockchain, logger logrus.FieldLogger) tau.Task {
 
 func (balances *balances) Reduce(msg tau.Message) tau.Message {
 	switch msg := msg.(type) {
+	case Bootload:
+		balances.update()
 	case tau.Tick:
 		go balances.update()
-		return nil
 	case BalanceRequest:
 		go func() {
 			msg.Responder <- balances.read()
 		}()
-		return nil
 	default:
 		return tau.NewError(fmt.Errorf("invalid message type in balances: %T", msg))
 	}
+	return nil
 }
 
 func (balances *balances) update() {
@@ -69,4 +70,10 @@ func (request BalanceRequest) IsMessage() {
 type BalanceMap map[blockchain.TokenName]blockchain.Balance
 
 func (request BalanceMap) IsMessage() {
+}
+
+type Bootload struct {
+}
+
+func (request Bootload) IsMessage() {
 }

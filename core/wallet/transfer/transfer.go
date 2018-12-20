@@ -19,7 +19,7 @@ type Storage interface {
 type Blockchain interface {
 	GetAddress(blockchain blockchain.BlockchainName) (string, error)
 	Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error)
-	// Confirmations(txHash string) (int64, error)
+	Lookup(token blockchain.Token, txHash string) (UpdateReceipt, error)
 }
 
 type transfers struct {
@@ -36,9 +36,21 @@ func New(cap int, bc Blockchain, storage Storage, logger logrus.FieldLogger) tau
 
 func (transfers *transfers) Reduce(msg tau.Message) tau.Message {
 	switch msg := msg.(type) {
-	// case tau.Tick:
-	// 	go transfers.update()
-	// 	return nil
+	case Bootload:
+		transferReceipts, err := transfers.storage.Transfers()
+		if err != nil {
+			return tau.NewError(err)
+		}
+		for _, transferReceipt := range transferReceipts {
+			transfers.write(transferReceipt)
+		}
+		transfers.update()
+	case tau.Tick:
+		go transfers.update()
+	case TransferReceiptRequest:
+		go func() {
+			msg.Responder <- transfers.read()
+		}()
 	case TransferRequest:
 		from, err := transfers.blockchain.GetAddress(msg.Token.Blockchain)
 		if err != nil {
@@ -50,11 +62,16 @@ func (transfers *transfers) Reduce(msg tau.Message) tau.Message {
 		}
 		receipt := buildReceipt(msg, from, txHash)
 		transfers.write(receipt)
-		msg.Responder <- receipt
-		return nil
+		go func() {
+			msg.Responder <- receipt
+		}()
+		if err := transfers.storage.PutTransfer(receipt); err != nil {
+			return tau.NewError(err)
+		}
 	default:
 		return tau.NewError(fmt.Errorf("invalid message type in transfers: %T", msg))
 	}
+	return nil
 }
 
 func buildReceipt(req TransferRequest, from, txHash string) TransferReceipt {
@@ -72,16 +89,21 @@ func buildReceipt(req TransferRequest, from, txHash string) TransferReceipt {
 	}
 }
 
-// func (transfers *transfers) update() {
-// 	balanceMap, err := transfers.blockchain.Balances()
-// 	if err != nil {
-// 		transfers.logger.Errorf("cannot update transfers: %v", err)
-// 		return
-// 	}
-// 	transfers.mu.Lock()
-// 	defer transfers.mu.Unlock()
-// 	transfers.balanceMap = balanceMap
-// }
+func (transfers *transfers) update() {
+	updatedTransferMap := TransferReceiptMap{}
+	for txHash, receipt := range transfers.transferMap {
+		update, err := transfers.blockchain.Lookup(receipt.Token, txHash)
+		if err != nil {
+			transfers.logger.Error(err)
+			continue
+		}
+		update.Update(&receipt)
+		updatedTransferMap[txHash] = receipt
+	}
+	transfers.mu.Lock()
+	defer transfers.mu.Unlock()
+	transfers.transferMap = updatedTransferMap
+}
 
 func (transfers *transfers) write(receipt TransferReceipt) {
 	transfers.mu.Lock()
@@ -105,6 +127,10 @@ type TransferRequest struct {
 	Responder chan<- TransferReceipt
 }
 
+func NewTransferRequest(password string, token blockchain.Token, to string, amount, fee *big.Int, responder chan<- TransferReceipt) TransferRequest {
+	return TransferRequest{password, token, to, amount, fee, responder}
+}
+
 func (request TransferRequest) IsMessage() {
 }
 
@@ -126,4 +152,26 @@ type TokenDetails struct {
 	Amount string           `json:"value"`
 	Fee    string           `json:"fee"`
 	TxHash string           `json:"txHash"`
+}
+
+type UpdateReceipt struct {
+	TxHash string
+	Update func(*TransferReceipt)
+}
+
+func NewUpdateReceipt(txHash string, update func(*TransferReceipt)) UpdateReceipt {
+	return UpdateReceipt{txHash, update}
+}
+
+type TransferReceiptRequest struct {
+	Responder chan<- TransferReceiptMap
+}
+
+func (request TransferReceiptRequest) IsMessage() {
+}
+
+type Bootload struct {
+}
+
+func (request Bootload) IsMessage() {
 }
