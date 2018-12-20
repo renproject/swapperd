@@ -202,7 +202,7 @@
   branch = "master"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "d28940a21052c614e84c9fa2f067e9d543bbbe75"
+  revision = "a23260dd9aff615ab76da131528cca1b5cee7bee"
 
 [[projects]]
   branch = "master"
@@ -214,7 +214,17 @@
   branch = "master"
   name = "github.com/republicprotocol/libbtc-go"
   packages = ["."]
-  revision = "39b9cd86dfb0b06c19c445befd88c612997b02c9"
+  revision = "4ee09737d4632793d09929af45155b55c74e5afd"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/republicprotocol/tau"
+  packages = [
+    ".",
+    "core/buffer",
+    "core/task"
+  ]
+  revision = "f1230e164daa4bfbebc780ddec4fe7ac9a0fdc00"
 
 [[projects]]
   name = "github.com/rjeczalik/notify"
@@ -354,6 +364,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "cbf1b0f3321c4272e4580b0f834b50754226e2bd3978e038011779bca8d30d3a"
+  inputs-digest = "7e3f5b063dbf16f1fd1551f65f512650a466cbd09ca5e497c708a1dccf7146fa"
   solver-name = "gps-cdcl"
   solver-version = 1
