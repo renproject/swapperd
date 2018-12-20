@@ -83,7 +83,7 @@ func (atom *ethSwapContractBinder) Initiate() error {
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
 			tops.GasPrice = atom.swap.Fee
-			tops.Value = atom.swap.Value.Add(atom.swap.Value, atom.swap.BrokerFee)
+			tops.Value = atom.swap.Value
 			var tx *types.Transaction
 			var err error
 			if atom.swap.BrokerFee.Cmp(big.NewInt(0)) > 0 {

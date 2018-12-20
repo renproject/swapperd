@@ -75,7 +75,6 @@ func (atom *btcSwapContractBinder) Initiate() error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	depositValue := atom.swap.Value.Int64() + atom.swap.BrokerFee.Int64()
 
 	// signing a transaction with the given private key
 	if err := atom.SendTransaction(
@@ -85,21 +84,21 @@ func (atom *btcSwapContractBinder) Initiate() error {
 		nil,
 		func(tx *wire.MsgTx) bool {
 			// checks whether the contract is funded, with given value
-			funded, value, err := atom.ScriptFunded(ctx, atom.scriptAddr, depositValue)
+			funded, value, err := atom.ScriptFunded(ctx, atom.scriptAddr, atom.swap.Value.Int64())
 			if err != nil {
 				return false
 			}
 			if funded {
-				atom.Info(fmt.Sprintf("Send value on Bitcoin blockchain = %d", depositValue))
+				atom.Info(fmt.Sprintf("Send value on Bitcoin blockchain = %d", atom.swap.Value.Int64()))
 				return false
 			}
 			// creating unsigned transaction and adding transaction outputs
-			tx.AddTxOut(wire.NewTxOut(depositValue-value, initiateScriptP2SHPKScript))
+			tx.AddTxOut(wire.NewTxOut(atom.swap.Value.Int64()-value, initiateScriptP2SHPKScript))
 			return !funded
 		},
 		nil,
 		func(tx *wire.MsgTx) bool {
-			funded, _, err := atom.ScriptFunded(ctx, atom.scriptAddr, depositValue)
+			funded, _, err := atom.ScriptFunded(ctx, atom.scriptAddr, atom.swap.Value.Int64())
 			if err != nil {
 				return false
 			}

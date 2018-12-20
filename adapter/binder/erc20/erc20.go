@@ -98,7 +98,6 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 		return nil
 	}
 	atom.logger.Info(fmt.Sprintf("Initiating on Ethereum blockchain"))
-	depositValue := new(big.Int).Add(atom.swap.Value, atom.swap.BrokerFee)
 
 	// Approve the contract to transfer tokens
 	if err := atom.account.Transact(
@@ -106,7 +105,7 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 		nil,
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
 			tops.GasPrice = atom.swap.Fee
-			tx, err := atom.tokenBinder.Approve(tops, atom.swapperAddress, depositValue)
+			tx, err := atom.tokenBinder.Approve(tops, atom.swapperAddress, atom.swap.Value)
 			if err != nil {
 				return tx, err
 			}
@@ -128,11 +127,10 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 		nil,
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
 			tops.GasPrice = atom.swap.Fee
-
 			var tx *types.Transaction
 			var err error
 			if atom.swap.BrokerFee.Cmp(big.NewInt(0)) > 0 {
-				tx, err = atom.swapperBinder.InitiateWithFees(tops, atom.id, common.HexToAddress(atom.swap.SpendingAddress), common.HexToAddress(atom.swap.BrokerAddress), atom.swap.BrokerFee, atom.swap.SecretHash, big.NewInt(atom.swap.TimeLock), atom.swap.Value)
+				tx, err = atom.swapperBinder.InitiateWithFees(tops, atom.id, common.HexToAddress(atom.swap.SpendingAddress), common.HexToAddress(atom.swap.BrokerAddress), atom.swap.BrokerFee, atom.swap.SecretHash, big.NewInt(atom.swap.TimeLock), new(big.Int).Sub(atom.swap.Value, atom.swap.BrokerFee))
 				if err != nil {
 					return tx, err
 				}
