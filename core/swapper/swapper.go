@@ -104,8 +104,7 @@ func (swapper *swapper) initiate(blob swap.SwapBlob, native, foreign Contract, u
 	if err := foreign.Audit(); err != nil {
 		swapStatus = swap.AuditFailed
 		if err != ErrSwapExpired {
-			swapper.handleResult(blob, true, updates)
-			swapStatus = swap.Refunded
+			swapper.handleResult(blob, false, updates)
 			return
 		}
 		if err := native.Refund(); err != nil {
@@ -113,6 +112,8 @@ func (swapper *swapper) initiate(blob swap.SwapBlob, native, foreign Contract, u
 			swapper.handleResult(blob, false, updates)
 			return
 		}
+		swapStatus = swap.Refunded
+		swapper.handleResult(blob, true, updates)
 		return
 	}
 
@@ -155,8 +156,7 @@ func (swapper *swapper) respond(blob swap.SwapBlob, native, foreign Contract, up
 	secret, err := native.AuditSecret()
 	if err != nil {
 		if err != ErrSwapExpired {
-			swapStatus = swap.Refunded
-			swapper.handleResult(blob, true, updates)
+			swapper.handleResult(blob, false, updates)
 			return
 		}
 		if err := native.Refund(); err != nil {
@@ -164,6 +164,8 @@ func (swapper *swapper) respond(blob swap.SwapBlob, native, foreign Contract, up
 			swapper.handleResult(blob, false, updates)
 			return
 		}
+		swapStatus = swap.Refunded
+		swapper.handleResult(blob, true, updates)
 		return
 	}
 	if err := foreign.Redeem(secret); err != nil {
