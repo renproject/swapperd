@@ -82,6 +82,7 @@ func (atom *btcSwapContractBinder) Initiate() error {
 		ctx,
 		nil,
 		atom.fee,
+		nil,
 		func(tx *wire.MsgTx) bool {
 			// checks whether the contract is funded, with given value
 			funded, value, err := atom.ScriptFunded(ctx, atom.scriptAddr, depositValue)
@@ -116,15 +117,12 @@ func (atom *btcSwapContractBinder) Initiate() error {
 
 func (atom *btcSwapContractBinder) Audit() error {
 	depositValue := atom.swap.Value.Int64() + atom.swap.BrokerFee.Int64()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Minute)
-	defer cancel()
 	for {
-		if funded, _, err := atom.ScriptFunded(ctx, atom.scriptAddr, depositValue); funded && err == nil {
+		if funded, _, err := atom.ScriptFunded(context.Background(), atom.scriptAddr, depositValue); funded && err == nil {
 			return nil
 		}
 		if time.Now().Unix() > atom.swap.TimeLock {
-			return NewErrAudit(ErrTimedOut)
+			return swapper.ErrSwapExpired
 		}
 		time.Sleep(15 * time.Second)
 	}
@@ -162,6 +160,7 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 		ctx,
 		atom.script,
 		atom.fee,
+		nil,
 		func(tx *wire.MsgTx) bool {
 			funded, val, err := atom.ScriptFunded(ctx, atom.scriptAddr, 0)
 			if err != nil {
@@ -197,20 +196,18 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 }
 
 func (atom *btcSwapContractBinder) AuditSecret() ([32]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
-	defer cancel()
 	for {
 		atom.Info("Auditing secret on Bitcoin blockchain")
-		if spent, err := atom.ScriptSpent(ctx, atom.scriptAddr); spent && err == nil {
+		if spent, err := atom.ScriptSpent(context.Background(), atom.scriptAddr); spent && err == nil {
 			break
 		}
 		if time.Now().Unix() > atom.swap.TimeLock {
-			return [32]byte{}, NewErrAuditSecret(ErrTimedOut)
+			return [32]byte{}, swapper.ErrSwapExpired
 		}
 		time.Sleep(time.Minute)
 	}
 
-	sigScript, err := atom.GetScriptFromSpentP2SH(ctx, atom.scriptAddr)
+	sigScript, err := atom.GetScriptFromSpentP2SH(context.Background(), atom.scriptAddr)
 	if err != nil {
 		return [32]byte{}, NewErrAuditSecret(err)
 	}
@@ -248,6 +245,9 @@ func (atom *btcSwapContractBinder) Refund() error {
 		ctx,
 		atom.script,
 		atom.fee,
+		func(txIn *wire.TxIn) {
+			txIn.Sequence = 0
+		},
 		func(tx *wire.MsgTx) bool {
 			funded, val, err := atom.ScriptFunded(ctx, atom.scriptAddr, 0)
 			if err != nil {
@@ -256,6 +256,7 @@ func (atom *btcSwapContractBinder) Refund() error {
 			if funded {
 				tx.AddTxOut(wire.NewTxOut(val-atom.fee, payToAddrScript))
 			}
+			tx.LockTime = uint32(atom.swap.TimeLock)
 			return funded
 		},
 		func(builder *txscript.ScriptBuilder) {

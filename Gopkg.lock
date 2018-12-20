@@ -214,7 +214,7 @@
   branch = "master"
   name = "github.com/republicprotocol/libbtc-go"
   packages = ["."]
-  revision = "dc267506aefd8f9b392f26789b4a938170ce07cf"
+  revision = "39b9cd86dfb0b06c19c445befd88c612997b02c9"
 
 [[projects]]
   name = "github.com/rjeczalik/notify"
