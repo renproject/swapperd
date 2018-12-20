@@ -5,6 +5,8 @@ import (
 
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/libbtc-go"
+	"github.com/republicprotocol/swapperd/core/wallet/balance"
+	"github.com/republicprotocol/swapperd/core/wallet/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
@@ -35,7 +37,8 @@ type Wallet interface {
 	ID() string
 	SupportedTokens() []blockchain.Token
 	SupportedBlockchains() []blockchain.Blockchain
-	Balances() (map[blockchain.TokenName]blockchain.Balance, error)
+	Balances() (balance.BalanceMap, error)
+	Lookup(token blockchain.Token, txHash string) (transfer.UpdateReceipt, error)
 	Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error)
 	GetAddress(blockchain blockchain.BlockchainName) (string, error)
 	Addresses() (map[blockchain.TokenName]string, error)

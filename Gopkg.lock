@@ -236,11 +236,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:66329657f9f5b307bba6d7d67e467d68c4c90b5c544c563c7e4c196690b952c1"
+  digest = "1:54bb241fcc65362b5a96eecb657ce51467aba6ace71e41cb5ad1fbee401de6af"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
   pruneopts = "T"
-  revision = "d28940a21052c614e84c9fa2f067e9d543bbbe75"
+  revision = "a23260dd9aff615ab76da131528cca1b5cee7bee"
 
 [[projects]]
   branch = "master"
@@ -252,11 +252,23 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d8c5c93f34f610119f82ab9fe80dc0166920188a04c8ee8c9a04384e30067492"
+  digest = "1:296f4a9f49b9a9c9e755f23aad21ff339f91148ca1793930e779edad9a4a8105"
   name = "github.com/republicprotocol/libbtc-go"
   packages = ["."]
   pruneopts = "T"
-  revision = "2c0a1b2bd240029bcfbb586605b199187554f722"
+  revision = "4ee09737d4632793d09929af45155b55c74e5afd"
+
+[[projects]]
+  branch = "master"
+  digest = "1:54db3c841ce7373d751210bcb98c03f1b4284461c86392bcc5b1dc225eb0f55b"
+  name = "github.com/republicprotocol/tau"
+  packages = [
+    ".",
+    "core/buffer",
+    "core/task",
+  ]
+  pruneopts = "T"
+  revision = "f1230e164daa4bfbebc780ddec4fe7ac9a0fdc00"
 
 [[projects]]
   digest = "1:9787d2d3220cbfd444596afd03ab0abcf391df169b789fbe3eae27fa2e426cf6"
@@ -332,7 +344,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:31162299b46522ce13b7836d17341c88817e87874c15d9c755e22140feb2718b"
+  digest = "1:6a668f89e7e121bf970a6dc37c729f05f5261ae64e27945326d896ad158e5a10"
   name = "golang.org/x/net"
   packages = [
     "html",
@@ -341,11 +353,11 @@
     "websocket",
   ]
   pruneopts = "T"
-  revision = "e147a9138326bc0e9d4e179541ffd8af41cff8a9"
+  revision = "927f97764cc334a6575f4b7a1584a147864d5723"
 
 [[projects]]
   branch = "master"
-  digest = "1:3631df9157a563b9b7efe8bedae459a2d6a8db709826e2c0e26cec4f40d7d7a7"
+  digest = "1:5cb7c0b8e33daa7c2b568292dc7276c35f3071c268919fa1521db7754176a843"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -358,7 +370,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "T"
-  revision = "074acd46bca67915925527c07849494d115e7c43"
+  revision = "b00e65af1da0681cde6c8227839a0ca53bbf16bb"
 
 [[projects]]
   digest = "1:6164911cb5e94e8d8d5131d646613ff82c14f5a8ce869de2f6d80d9889df8c5a"
@@ -441,6 +453,7 @@
     "github.com/republicprotocol/beth-go",
     "github.com/republicprotocol/co-go",
     "github.com/republicprotocol/libbtc-go",
+    "github.com/republicprotocol/tau",
     "github.com/rs/cors",
     "github.com/sirupsen/logrus",
     "github.com/syndtr/goleveldb/leveldb",

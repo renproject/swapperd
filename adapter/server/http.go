@@ -9,10 +9,11 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/republicprotocol/swapperd/adapter/wallet"
-	"github.com/republicprotocol/swapperd/core/balance"
 	"github.com/republicprotocol/swapperd/core/status"
+	walletTask "github.com/republicprotocol/swapperd/core/wallet"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/republicprotocol/tau"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 )
@@ -35,14 +36,16 @@ func NewHttpServer(wallet wallet.Wallet, storage Storage, logger logrus.FieldLog
 }
 
 // NewHttpListener creates a new http listener
-func (listener *httpServer) Run(doneCh <-chan struct{}, swaps, delayedSwaps chan<- swap.SwapBlob, receipts chan<- swap.SwapReceipt, statusQueries chan<- status.ReceiptQuery, balanceQueries chan<- balance.BalanceQuery) {
-	reqHandler := NewHandler(listener.passwordHash, listener.wallet, listener.storage, listener.logger)
+func (listener *httpServer) Run(doneCh <-chan struct{}, swaps, delayedSwaps chan<- swap.SwapBlob, receipts chan<- swap.SwapReceipt, statusQueries chan<- status.ReceiptQuery, walletIO tau.IO) {
+	walletIO.InputWriter() <- walletTask.Bootload{}
+	reqHandler := NewHandler(listener.passwordHash, walletIO, listener.wallet, listener.storage, listener.logger)
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", postSwapsHandler(reqHandler, receipts, swaps, delayedSwaps)).Methods("POST")
 	r.HandleFunc("/swaps", getSwapsHandler(reqHandler, statusQueries)).Methods("GET")
 	r.HandleFunc("/transfers", postTransfersHandler(reqHandler)).Methods("POST")
-	r.HandleFunc("/balances", getBalancesHandler(reqHandler, balanceQueries)).Methods("GET")
-	r.HandleFunc("/balances/{token}", getBalancesHandler(reqHandler, balanceQueries)).Methods("GET")
+	r.HandleFunc("/transfers", getTransfersHandler(reqHandler)).Methods("GET")
+	r.HandleFunc("/balances", getBalancesHandler(reqHandler)).Methods("GET")
+	r.HandleFunc("/balances/{token}", getBalancesHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/addresses", getAddressesHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/addresses/{token}", getAddressesHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/bootload", postBootloadHandler(reqHandler, swaps, delayedSwaps)).Methods("POST")
@@ -219,11 +222,11 @@ func postTransfersHandler(reqHandler Handler) http.HandlerFunc {
 
 // getBalancesHandler handles the get balances request, and returns the balances
 // of the accounts held by the swapper.
-func getBalancesHandler(reqHandler Handler, balancesQuery chan<- balance.BalanceQuery) http.HandlerFunc {
+func getBalancesHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		opts := mux.Vars(r)
 		tokenName := opts["token"]
-		balances := reqHandler.GetBalances(balancesQuery)
+		balances := reqHandler.GetBalances()
 
 		if tokenName == "" {
 			if err := json.NewEncoder(w).Encode(balances); err != nil {
@@ -239,6 +242,17 @@ func getBalancesHandler(reqHandler Handler, balancesQuery chan<- balance.Balance
 		}
 
 		if err := json.NewEncoder(w).Encode(balances[token.Name]); err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
+			return
+		}
+	}
+}
+
+// getTransfersHandler handles the get balances request, and returns the balances
+// of the accounts held by the swapper.
+func getTransfersHandler(reqHandler Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewEncoder(w).Encode(reqHandler.GetTransfers()); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
 			return
 		}

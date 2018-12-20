@@ -82,6 +82,7 @@ func (atom *btcSwapContractBinder) Initiate() error {
 		ctx,
 		nil,
 		atom.fee,
+		nil,
 		func(tx *wire.MsgTx) bool {
 			// checks whether the contract is funded, with given value
 			funded, value, err := atom.ScriptFunded(ctx, atom.scriptAddr, depositValue)
@@ -159,6 +160,7 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 		ctx,
 		atom.script,
 		atom.fee,
+		nil,
 		func(tx *wire.MsgTx) bool {
 			funded, val, err := atom.ScriptFunded(ctx, atom.scriptAddr, 0)
 			if err != nil {
@@ -243,6 +245,9 @@ func (atom *btcSwapContractBinder) Refund() error {
 		ctx,
 		atom.script,
 		atom.fee,
+		func(txIn *wire.TxIn) {
+			txIn.Sequence = 0
+		},
 		func(tx *wire.MsgTx) bool {
 			funded, val, err := atom.ScriptFunded(ctx, atom.scriptAddr, 0)
 			if err != nil {

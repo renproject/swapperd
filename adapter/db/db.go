@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/republicprotocol/swapperd/core/wallet/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -28,6 +29,10 @@ type Storage interface {
 	PutSwap(blob swap.SwapBlob) error
 	DeletePendingSwap(swapID swap.SwapID) error
 	PendingSwaps() ([]swap.SwapBlob, error)
+
+	PutTransfer(transfer transfer.TransferReceipt) error
+	Transfers() ([]transfer.TransferReceipt, error)
+	UpdateTransferReceipt(updateReceipt transfer.UpdateReceipt) error
 
 	PendingSwap(swapID swap.SwapID) (swap.SwapBlob, error)
 	PutReceipt(receipt swap.SwapReceipt) error

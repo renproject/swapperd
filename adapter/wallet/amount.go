@@ -60,7 +60,7 @@ func (wallet *wallet) verifyBitcoinBalance(amount *big.Int) error {
 
 	leftover := balanceAmount.Sub(balanceAmount, amount)
 	if leftover.Cmp(big.NewInt(10000)) < 0 {
-		return fmt.Errorf("You need at least %v BTC remaining in your wallet to cover transaction fees. You have: %v", amount, balanceAmount)
+		return fmt.Errorf("You need at least 10000 SAT (or 0.0001 BTC) remaining in your wallet to cover transaction fees. You have: %v", balanceAmount)
 	}
 	return nil
 }
