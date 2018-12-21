@@ -87,6 +87,7 @@ func (callback *callback) handleUpdateSwap(blob swap.SwapBlob, updates chan<- sw
 	update := swap.NewReceiptUpdate(blob.ID, func(receipt *swap.SwapReceipt) {
 		receipt.ReceiveAmount = blob.ReceiveAmount
 		receipt.SendAmount = blob.SendAmount
+		receipt.TimeLock = blob.TimeLock
 	})
 	updates <- update
 }
