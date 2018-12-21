@@ -55,7 +55,7 @@ type GetSignatureResponseString struct {
 }
 
 type GetTransfersResponse struct {
-	Transfers []transfer.TransferReceipt
+	Transfers []transfer.TransferReceipt `json:"transfers"`
 }
 
 func MarshalGetTransfersResponse(receiptMap transfer.TransferReceiptMap) GetTransfersResponse {
