@@ -4,10 +4,8 @@ import (
 	"sync"
 
 	"github.com/republicprotocol/co-go"
-
-	"github.com/sirupsen/logrus"
-
 	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/sirupsen/logrus"
 )
 
 type ReceiptQuery struct {
@@ -19,6 +17,7 @@ type Storage interface {
 	PutReceipt(receipt swap.SwapReceipt) error
 	UpdateReceipt(id swap.SwapID, update func(receipt *swap.SwapReceipt)) error
 }
+
 type Statuses interface {
 	Run(done <-chan struct{}, swaps <-chan swap.SwapReceipt, updates <-chan swap.ReceiptUpdate, queries <-chan ReceiptQuery)
 }
@@ -82,22 +81,26 @@ func (statuses *statuses) Run(done <-chan struct{}, receipts <-chan swap.SwapRec
 func (statuses *statuses) get() map[swap.SwapID]swap.SwapReceipt {
 	statuses.mu.RLock()
 	defer statuses.mu.RUnlock()
+
 	statusMap := make(map[swap.SwapID]swap.SwapReceipt, len(statuses.statuses))
 	for id, status := range statuses.statuses {
 		statusMap[id] = status
 	}
+
 	return statusMap
 }
 
 func (statuses *statuses) set(status swap.SwapReceipt) {
 	statuses.mu.Lock()
 	defer statuses.mu.Unlock()
+
 	statuses.statuses[status.ID] = status
 }
 
 func (statuses *statuses) update(update swap.ReceiptUpdate) {
 	statuses.mu.Lock()
 	defer statuses.mu.Unlock()
+
 	receipt := statuses.statuses[update.ID]
 	update.Update(&receipt)
 	statuses.statuses[update.ID] = receipt

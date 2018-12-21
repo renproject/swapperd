@@ -36,23 +36,20 @@ func (cb *cb) DelayCallback(partialSwap swap.SwapBlob) (swap.SwapBlob, error) {
 		return partialSwap, err
 	}
 
-	filledSwap := swap.SwapBlob{}
-	if resp.StatusCode == 200 {
+	switch resp.StatusCode {
+	case http.StatusOK:
+		filledSwap := swap.SwapBlob{}
 		if err := json.Unmarshal(respBytes, &filledSwap); err != nil {
 			return partialSwap, err
 		}
 		return verifyDelaySwap(partialSwap, filledSwap)
-	}
-
-	if resp.StatusCode == http.StatusNoContent {
+	case http.StatusNoContent:
 		return partialSwap, delayed.ErrSwapDetailsUnavailable
-	}
-
-	if resp.StatusCode == http.StatusGone {
+	case http.StatusGone:
 		return partialSwap, delayed.ErrSwapCancelled
+	default:
+		return partialSwap, fmt.Errorf("unexpected status code=%v: %v", resp.StatusCode, string(respBytes))
 	}
-
-	return partialSwap, fmt.Errorf("unexpected error %d: %s", resp.StatusCode, respBytes)
 }
 
 func verifyDelaySwap(partialSwap, filledSwap swap.SwapBlob) (swap.SwapBlob, error) {

@@ -87,3 +87,15 @@ func (store *MockStorage) Swaps() ([]swap.SwapReceipt, error) {
 
 	return receipts, nil
 }
+
+func (store *MockStorage) Receipts() ([]swap.SwapReceipt, error){
+	return []swap.SwapReceipt{}, nil
+}
+
+func (store *MockStorage) PutReceipt(receipt swap.SwapReceipt) error {
+	return nil
+}
+
+func (store *MockStorage)  UpdateReceipt(id swap.SwapID, update func(receipt *swap.SwapReceipt)) error {
+	return nil
+}
