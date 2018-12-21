@@ -204,7 +204,7 @@ func (atom *ethSwapContractBinder) Audit() error {
 		if !initiatable {
 			break
 		}
-		if atom.swap.TimeLock > time.Now().Unix() {
+		if time.Now().Unix() > atom.swap.TimeLock {
 			atom.logger.Error(swapper.ErrSwapExpired)
 			return swapper.ErrSwapExpired
 		}
