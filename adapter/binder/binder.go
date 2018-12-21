@@ -57,7 +57,8 @@ func (builder *builder) buildBinder(swap swap.Swap, cost blockchain.Cost, passwo
 			return nil, err
 		}
 		return eth.NewETHSwapContractBinder(ethAccount, swap, cost, builder.FieldLogger)
-	case blockchain.TokenWBTC:
+	case blockchain.TokenWBTC, blockchain.TokenDGX, blockchain.TokenREN,
+		blockchain.TokenTUSD, blockchain.TokenOMG, blockchain.TokenZRX:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
