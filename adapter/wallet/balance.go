@@ -33,7 +33,8 @@ func (wallet *wallet) balance(token blockchain.TokenName) (blockchain.Balance, e
 		return wallet.balanceBTC()
 	case blockchain.ETH:
 		return wallet.balanceETH()
-	case blockchain.WBTC:
+	case blockchain.WBTC, blockchain.REN, blockchain.TUSD,
+		blockchain.ZRX, blockchain.OMG, blockchain.DGX:
 		return wallet.balanceERC20(token)
 	}
 	return blockchain.Balance{}, blockchain.NewErrUnsupportedToken(token)
