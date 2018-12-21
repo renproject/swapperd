@@ -102,7 +102,7 @@ func (handler *handler) GetTransfers() GetTransfersResponse {
 	}
 	handler.walletIO.InputWriter() <- transferReq
 	response := <-responder
-	return GetTransfersResponse(response)
+	return MarshalGetTransfersResponse(response)
 }
 
 func (handler *handler) PostSwaps(swapReq PostSwapRequest, receipts chan<- swap.SwapReceipt, swaps chan<- swap.SwapBlob) (PostSwapResponse, error) {

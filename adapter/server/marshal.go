@@ -54,4 +54,16 @@ type GetSignatureResponseString struct {
 	Signature string `json:"signature"`
 }
 
-type GetTransfersResponse transfer.TransferReceiptMap
+type GetTransfersResponse struct {
+	Transfers []transfer.TransferReceipt
+}
+
+func MarshalGetTransfersResponse(receiptMap transfer.TransferReceiptMap) GetTransfersResponse {
+	transfers := []transfer.TransferReceipt{}
+	for _, receipt := range receiptMap {
+		transfers = append(transfers, receipt)
+	}
+	return GetTransfersResponse{
+		Transfers: transfers,
+	}
+}
