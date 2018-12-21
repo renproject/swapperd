@@ -215,7 +215,9 @@ func (atom *ethSwapContractBinder) Audit() error {
 		atom.logger.Error(err)
 		return err
 	}
-	if auditReport.Value.Cmp(atom.swap.Value) != 0 {
+
+	value := new(big.Int).Sub(atom.swap.Value, atom.swap.BrokerFee)
+	if auditReport.Value.Cmp(value) != 0 {
 		atom.logger.Error(fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.swap.Value, auditReport.Value))
 		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.swap.Value, auditReport.Value)
 	}

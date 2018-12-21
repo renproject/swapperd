@@ -247,7 +247,9 @@ func (atom *erc20SwapContractBinder) Audit() error {
 	if err != nil {
 		return err
 	}
-	if auditReport.Value.Cmp(atom.swap.Value) != 0 {
+
+	value := new(big.Int).Sub(atom.swap.Value, atom.swap.BrokerFee)
+	if auditReport.Value.Cmp(value) != 0 {
 		return fmt.Errorf("Receive value mismatch: expected %v, got %v", atom.swap.Value, auditReport.Value)
 	}
 	atom.logger.Info(fmt.Sprintf("Audit successful on Ethereum blockchain"))

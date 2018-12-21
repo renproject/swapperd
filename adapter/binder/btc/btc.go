@@ -115,9 +115,8 @@ func (atom *btcSwapContractBinder) Initiate() error {
 }
 
 func (atom *btcSwapContractBinder) Audit() error {
-	depositValue := atom.swap.Value.Int64() + atom.swap.BrokerFee.Int64()
 	for {
-		if funded, _, err := atom.ScriptFunded(context.Background(), atom.scriptAddr, depositValue); funded && err == nil {
+		if funded, _, err := atom.ScriptFunded(context.Background(), atom.scriptAddr, atom.swap.Value.Int64()); funded && err == nil {
 			return nil
 		}
 		if time.Now().Unix() > atom.swap.TimeLock {
