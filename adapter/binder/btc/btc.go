@@ -111,13 +111,13 @@ func (atom *btcSwapContractBinder) Initiate() error {
 		return err
 	}
 	atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(atom.fee), atom.cost[blockchain.BTC])
+	atom.cost[blockchain.BTC] = new(big.Int).Add(atom.swap.BrokerFee, atom.cost[blockchain.BTC])
 	return nil
 }
 
 func (atom *btcSwapContractBinder) Audit() error {
-	depositValue := atom.swap.Value.Int64() + atom.swap.BrokerFee.Int64()
 	for {
-		if funded, _, err := atom.ScriptFunded(context.Background(), atom.scriptAddr, depositValue); funded && err == nil {
+		if funded, _, err := atom.ScriptFunded(context.Background(), atom.scriptAddr, atom.swap.Value.Int64()); funded && err == nil {
 			return nil
 		}
 		if time.Now().Unix() > atom.swap.TimeLock {
@@ -275,6 +275,7 @@ func (atom *btcSwapContractBinder) Refund() error {
 		return err
 	}
 	atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(atom.fee), atom.cost[blockchain.BTC])
+	atom.cost[blockchain.BTC] = new(big.Int).Sub(atom.cost[blockchain.BTC], atom.swap.BrokerFee)
 	return nil
 }
 
