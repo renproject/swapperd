@@ -111,6 +111,7 @@ func (atom *btcSwapContractBinder) Initiate() error {
 		return err
 	}
 	atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(atom.fee), atom.cost[blockchain.BTC])
+	atom.cost[blockchain.BTC] = new(big.Int).Add(atom.swap.BrokerFee, atom.cost[blockchain.BTC])
 	return nil
 }
 
@@ -274,6 +275,7 @@ func (atom *btcSwapContractBinder) Refund() error {
 		return err
 	}
 	atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(atom.fee), atom.cost[blockchain.BTC])
+	atom.cost[blockchain.BTC] = new(big.Int).Sub(atom.cost[blockchain.BTC], atom.swap.BrokerFee)
 	return nil
 }
 
