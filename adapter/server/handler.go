@@ -1,13 +1,16 @@
 package server
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"net/http"
 	"time"
 
 	"github.com/republicprotocol/co-go"
@@ -450,6 +453,30 @@ func (handler *handler) BuildSwapResponse(blob swap.SwapBlob) (PostSwapResponse,
 
 	swapResponse.Swap = responseBlob
 	swapResponse.Signature = base64.StdEncoding.EncodeToString(blobSig)
+
+	if blob.ResponseURL != "" {
+		data, err := json.MarshalIndent(swapResponse, "", "  ")
+		if err != nil {
+			return swapResponse, err
+		}
+		buf := bytes.NewBuffer(data)
+
+		resp, err := http.Post(blob.ResponseURL, "application/json", buf)
+		if err != nil {
+			return swapResponse, err
+		}
+
+		if resp.StatusCode != 200 {
+			respBytes, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return swapResponse, err
+			}
+
+			handler.logger.Errorf("unexpected response", string(respBytes))
+			return swapResponse, fmt.Errorf("unexpected status code while"+
+				"posting to the response url: %d", resp.StatusCode)
+		}
+	}
 	return swapResponse, nil
 }
 
