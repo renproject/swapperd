@@ -50,9 +50,10 @@ func (wallet *wallet) verifyEthereumAddress(address string) error {
 	}
 
 	address = strings.ToLower(address)
-	if address[:2] == "0x" {
+	if len(address) > 2 && address[:2] == "0x" {
 		address = address[2:]
 	}
+
 	addrBytes, err := hex.DecodeString(address)
 	if err != nil || len(addrBytes) != 20 {
 		return fmt.Errorf("Invalid ethereum address: %s", address)
