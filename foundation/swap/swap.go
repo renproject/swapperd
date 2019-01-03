@@ -95,7 +95,8 @@ type SwapBlob struct {
 	BrokerSendTokenAddr    string `json:"brokerSendTokenAddr,omitempty"`
 	BrokerReceiveTokenAddr string `json:"brokerReceiveTokenAddr,omitempty"`
 
-	Password string `json:"password,omitempty"`
+	ResponseURL string `json:"responseURL,omitempty"`
+	Password    string `json:"password,omitempty"`
 }
 
 type ReceiptUpdate struct {
