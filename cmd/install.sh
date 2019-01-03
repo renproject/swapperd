@@ -43,6 +43,8 @@ KillSignal=SIGHUP
 [Install]
 WantedBy=default.target" > swapperd.service
 mv swapperd.service $HOME/.config/systemd/user/swapperd.service
+user="$(whoami)"
+loginctl enable-linger $user
 }
 
 timestamp() {
