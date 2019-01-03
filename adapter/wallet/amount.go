@@ -11,7 +11,8 @@ func (wallet *wallet) VerifyBalance(token blockchain.Token, amount *big.Int) err
 	switch token.Name {
 	case blockchain.ETH:
 		return wallet.verifyEthereumBalance(amount)
-	case blockchain.WBTC:
+	case blockchain.REN, blockchain.DGX, blockchain.TUSD, blockchain.OMG,
+		blockchain.ZRX, blockchain.WBTC:
 		return wallet.verifyERC20Balance(token.Name, amount)
 	case blockchain.BTC:
 		return wallet.verifyBitcoinBalance(amount)
