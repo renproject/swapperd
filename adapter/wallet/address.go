@@ -22,6 +22,18 @@ func (wallet *wallet) Addresses() (map[blockchain.TokenName]string, error) {
 	return addresses, nil
 }
 
+func (wallet *wallet) AddressesWithPassword(password string) (map[blockchain.TokenName]string, error) {
+	addresses := map[blockchain.TokenName]string{}
+	for _, token := range wallet.SupportedTokens() {
+		addr, err := wallet.GetAddressWithPassword(token.Blockchain, password)
+		if err != nil {
+			return nil, err
+		}
+		addresses[token.Name] = addr
+	}
+	return addresses, nil
+}
+
 func (wallet *wallet) GetAddress(blockchainName blockchain.BlockchainName) (string, error) {
 	switch blockchainName {
 	case blockchain.Ethereum:
@@ -31,6 +43,37 @@ func (wallet *wallet) GetAddress(blockchainName blockchain.BlockchainName) (stri
 	default:
 		return "", blockchain.NewErrUnsupportedToken("unsupported blockchain")
 	}
+}
+
+func (wallet *wallet) GetAddressWithPassword(blockchainName blockchain.BlockchainName, password string) (string, error) {
+	switch blockchainName {
+	case blockchain.Ethereum:
+		return wallet.getEthereumAddressWithPassword(password)
+	case blockchain.Bitcoin:
+		return wallet.getBitcoinAddressWithPassword(password)
+	default:
+		return "", blockchain.NewErrUnsupportedToken("unsupported blockchain")
+	}
+}
+
+func (wallet *wallet) getEthereumAddressWithPassword(password string) (string, error) {
+	ethAccount, err := wallet.EthereumAccount(password)
+	if err != nil {
+		return "", err
+	}
+	return ethAccount.Address().String(), nil
+}
+
+func (wallet *wallet) getBitcoinAddressWithPassword(password string) (string, error) {
+	btcAccount, err := wallet.BitcoinAccount(password)
+	if err != nil {
+		return "", err
+	}
+	btcAddr, err := btcAccount.Address()
+	if err != nil {
+		return "", err
+	}
+	return btcAddr.String(), nil
 }
 
 func (wallet *wallet) VerifyAddress(blockchainName blockchain.BlockchainName, address string) error {
