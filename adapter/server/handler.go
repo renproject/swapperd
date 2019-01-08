@@ -45,7 +45,9 @@ type Handler interface {
 	GetInfo() GetInfoResponse
 	GetSwaps(chan<- status.ReceiptQuery) (GetSwapsResponse, error)
 	GetBalances() GetBalancesResponse
+	GetBalancesWithPassword(password string) (GetBalancesResponse, error)
 	GetAddresses() (GetAddressesResponse, error)
+	GetAddressesWithPassword(password string) (GetAddressesResponse, error)
 	GetTransfers() GetTransfersResponse
 	GetJSONSignature(password string, message json.RawMessage) (GetSignatureResponseJSON, error)
 	GetBase64Signature(password string, message string) (GetSignatureResponseString, error)
@@ -74,6 +76,10 @@ func (handler *handler) GetAddresses() (GetAddressesResponse, error) {
 	return handler.wallet.Addresses()
 }
 
+func (handler *handler) GetAddressesWithPassword(password string) (GetAddressesResponse, error) {
+	return handler.wallet.AddressesWithPassword(password)
+}
+
 func (handler *handler) GetSwaps(statuses chan<- status.ReceiptQuery) (GetSwapsResponse, error) {
 	resp := GetSwapsResponse{}
 	if !handler.bootloaded {
@@ -96,6 +102,11 @@ func (handler *handler) GetBalances() GetBalancesResponse {
 	handler.walletIO.InputWriter() <- balanceReq
 	response := <-responder
 	return GetBalancesResponse(response)
+}
+
+func (handler *handler) GetBalancesWithPassword(password string) (GetBalancesResponse, error) {
+	balanceMap, err := handler.wallet.BalancesWithPassword(password)
+	return GetBalancesResponse(balanceMap), err
 }
 
 func (handler *handler) GetTransfers() GetTransfersResponse {
@@ -210,6 +221,17 @@ func (handler *handler) PostBootload(password string, swaps, delayedSwaps chan<-
 
 	co.ParForAll(pendingSwaps, func(i int) {
 		swap := pendingSwaps[i]
+
+		passwordHash, err := base64.StdEncoding.DecodeString(swap.PasswordHash)
+		if swap.PasswordHash != "" && err != nil {
+			handler.logger.Error("corrupted password")
+			return
+		}
+
+		if swap.PasswordHash != "" && bcrypt.CompareHashAndPassword(passwordHash, []byte(password)) != nil {
+			return
+		}
+
 		swap.Password = password
 		if swap.Delay {
 			delayedSwaps <- swap
@@ -422,12 +444,12 @@ func (handler *handler) BuildSwapResponse(blob swap.SwapBlob) (PostSwapResponse,
 		return swapResponse, err
 	}
 
-	sendTo, err := handler.wallet.GetAddress(sendToken.Blockchain)
+	sendTo, err := handler.wallet.GetAddressWithPassword(sendToken.Blockchain, blob.Password)
 	if err != nil {
 		return swapResponse, err
 	}
 
-	receiveFrom, err := handler.wallet.GetAddress(receiveToken.Blockchain)
+	receiveFrom, err := handler.wallet.GetAddressWithPassword(receiveToken.Blockchain, blob.Password)
 	if err != nil {
 		return swapResponse, err
 	}

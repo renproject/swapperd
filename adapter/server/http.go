@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -16,6 +17,7 @@ import (
 	"github.com/republicprotocol/tau"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Storage interface {
@@ -102,11 +104,6 @@ func postBootloadHandler(reqHandler Handler, swaps, delayedSwaps chan<- swap.Swa
 			return
 		}
 
-		if !reqHandler.VerifyPassword(password) {
-			writeError(w, http.StatusUnauthorized, "incorrect password")
-			return
-		}
-
 		if err := reqHandler.PostBootload(password, swaps, delayedSwaps); err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
@@ -155,17 +152,19 @@ func postSwapsHandler(reqHandler Handler, receipts chan<- swap.SwapReceipt, swap
 			return
 		}
 
-		if !reqHandler.VerifyPassword(password) {
-			writeError(w, http.StatusUnauthorized, "incorrect password")
-			return
-		}
-
 		swapReq := PostSwapRequest{}
 		if err := json.NewDecoder(r.Body).Decode(&swapReq); err != nil {
 			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode swap request: %v", err))
 			return
 		}
 		swapReq.Password = password
+
+		passwordHashBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode swap request: %v", err))
+			return
+		}
+		swapReq.PasswordHash = base64.StdEncoding.EncodeToString(passwordHashBytes)
 
 		if swapReq.Delay {
 			if err := reqHandler.PostDelayedSwaps(swapReq, receipts, delayedSwaps); err != nil {
@@ -226,7 +225,19 @@ func getBalancesHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		opts := mux.Vars(r)
 		tokenName := opts["token"]
-		balances := reqHandler.GetBalances()
+
+		var balances GetBalancesResponse
+		_, password, ok := r.BasicAuth()
+		if !ok {
+			balances = reqHandler.GetBalances()
+		} else {
+			var err error
+			balances, err = reqHandler.GetBalancesWithPassword(password)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get balances: %v", err))
+				return
+			}
+		}
 
 		if tokenName == "" {
 			if err := json.NewEncoder(w).Encode(balances); err != nil {
@@ -265,7 +276,16 @@ func getAddressesHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		opts := mux.Vars(r)
 		tokenName := opts["token"]
-		addresses, err := reqHandler.GetAddresses()
+
+		var addresses GetAddressesResponse
+		var err error
+
+		_, password, ok := r.BasicAuth()
+		if !ok {
+			addresses, err = reqHandler.GetAddresses()
+		} else {
+			addresses, err = reqHandler.GetAddressesWithPassword(password)
+		}
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get addresses: %v", err))
 			return
