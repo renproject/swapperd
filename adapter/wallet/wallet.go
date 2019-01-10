@@ -5,21 +5,18 @@ import (
 
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/libbtc-go"
-	"github.com/republicprotocol/swapperd/core/wallet/balance"
-	"github.com/republicprotocol/swapperd/core/wallet/transfer"
+	"github.com/republicprotocol/swapperd/core/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
 type Config struct {
-	Mnemonic    string           `json:"mnemonic"`
-	IDPublicKey string           `json:"idPublicKey"`
-	Ethereum    BlockchainConfig `json:"ethereum"`
-	Bitcoin     BlockchainConfig `json:"bitcoin"`
+	Mnemonic string           `json:"mnemonic"`
+	Ethereum BlockchainConfig `json:"ethereum"`
+	Bitcoin  BlockchainConfig `json:"bitcoin"`
 }
 
 type BlockchainConfig struct {
 	Network Network  `json:"network"`
-	Address string   `json:"address"`
 	Tokens  []string `json:"tokens"`
 }
 
@@ -34,16 +31,15 @@ type Balance struct {
 }
 
 type Wallet interface {
-	ID() string
+	ID(password string) (string, error)
 	SupportedTokens() []blockchain.Token
-	SupportedBlockchains() []blockchain.Blockchain
-	Balances() (balance.BalanceMap, error)
+	Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error)
 	Lookup(token blockchain.Token, txHash string) (transfer.UpdateReceipt, error)
 	Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error)
-	GetAddress(blockchain blockchain.BlockchainName) (string, error)
-	Addresses() (map[blockchain.TokenName]string, error)
+	GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error)
+	Addresses(password string) (map[blockchain.TokenName]string, error)
 	VerifyAddress(blockchain blockchain.BlockchainName, address string) error
-	VerifyBalance(token blockchain.Token, balance *big.Int) error
+	VerifyBalance(password string, token blockchain.Token, balance *big.Int) error
 	DefaultFee(blockchainName blockchain.BlockchainName) (*big.Int, error)
 
 	EthereumAccount(password string) (beth.Account, error)

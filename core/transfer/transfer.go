@@ -1,10 +1,13 @@
 package transfer
 
 import (
+	"encoding/base64"
 	"fmt"
 	"math/big"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/tau"
@@ -17,7 +20,7 @@ type Storage interface {
 }
 
 type Blockchain interface {
-	GetAddress(blockchain blockchain.BlockchainName) (string, error)
+	GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error)
 	Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error)
 	Lookup(token blockchain.Token, txHash string) (UpdateReceipt, error)
 }
@@ -35,6 +38,7 @@ func New(cap int, bc Blockchain, storage Storage, logger logrus.FieldLogger) tau
 }
 
 func (transfers *transfers) Reduce(msg tau.Message) tau.Message {
+	fmt.Printf("new message: %T", msg)
 	switch msg := msg.(type) {
 	case Bootload:
 		transferReceipts, err := transfers.storage.Transfers()
@@ -52,7 +56,7 @@ func (transfers *transfers) Reduce(msg tau.Message) tau.Message {
 			msg.Responder <- transfers.read()
 		}()
 	case TransferRequest:
-		from, err := transfers.blockchain.GetAddress(msg.Token.Blockchain)
+		from, err := transfers.blockchain.GetAddress(msg.Password, msg.Token.Blockchain)
 		if err != nil {
 			return tau.NewError(err)
 		}
@@ -75,9 +79,11 @@ func (transfers *transfers) Reduce(msg tau.Message) tau.Message {
 }
 
 func buildReceipt(req TransferRequest, from, txHash string) TransferReceipt {
+	passwordHash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	return TransferReceipt{
 		Confirmations: 0,
 		Timestamp:     time.Now().Unix(),
+		PasswordHash:  base64.StdEncoding.EncodeToString(passwordHash),
 		TokenDetails: TokenDetails{
 			To:     req.To,
 			From:   from,
@@ -140,8 +146,9 @@ func (request TransferReceiptMap) IsMessage() {
 }
 
 type TransferReceipt struct {
-	Confirmations int64 `json:"confirmations"`
-	Timestamp     int64 `json:"timestamp"`
+	Confirmations int64  `json:"confirmations"`
+	Timestamp     int64  `json:"timestamp"`
+	PasswordHash  string `json:"passwordHash,omitempty"`
 	TokenDetails
 }
 

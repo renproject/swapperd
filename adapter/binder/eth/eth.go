@@ -168,22 +168,20 @@ func (atom *ethSwapContractBinder) Refund() error {
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
 func (atom *ethSwapContractBinder) AuditSecret() ([32]byte, error) {
-	for {
-		atom.logger.Info("Auditing secret on ethereum blockchain")
-		redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
-		if err != nil {
-			atom.logger.Error(err)
-			return [32]byte{}, err
-		}
-		if !redeemable {
-			break
-		}
+	atom.logger.Info("Auditing secret on ethereum blockchain")
+	redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
+	if err != nil {
+		atom.logger.Error(err)
+		return [32]byte{}, err
+	}
+	if redeemable {
 		if time.Now().Unix() > atom.swap.TimeLock {
 			atom.logger.Error(swapper.ErrSwapExpired)
 			return [32]byte{}, swapper.ErrSwapExpired
 		}
-		time.Sleep(15 * time.Second)
+		return [32]byte{}, swapper.ErrAuditPending
 	}
+
 	secret, err := atom.binder.AuditSecret(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return [32]byte{}, err
@@ -195,20 +193,18 @@ func (atom *ethSwapContractBinder) AuditSecret() ([32]byte, error) {
 // Audit an Atom swap by calling a function on ethereum
 func (atom *ethSwapContractBinder) Audit() error {
 	atom.logger.Info(fmt.Sprintf("Waiting for initiation on ethereum blockchain"))
-	for {
-		initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
-		if err != nil {
-			atom.logger.Error(err)
-			return err
-		}
-		if !initiatable {
-			break
-		}
+	initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
+	if err != nil {
+		atom.logger.Error(err)
+		return err
+	}
+
+	if initiatable {
 		if time.Now().Unix() > atom.swap.TimeLock {
 			atom.logger.Error(swapper.ErrSwapExpired)
 			return swapper.ErrSwapExpired
 		}
-		time.Sleep(15 * time.Second)
+		return swapper.ErrAuditPending
 	}
 	auditReport, err := atom.binder.Audit(&bind.CallOpts{}, atom.id)
 	if err != nil {

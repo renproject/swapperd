@@ -3,8 +3,7 @@ package server
 import (
 	"encoding/json"
 
-	"github.com/republicprotocol/swapperd/core/wallet/transfer"
-
+	"github.com/republicprotocol/swapperd/core/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 )
@@ -20,6 +19,8 @@ type GetSwapsResponse struct {
 	Swaps []swap.SwapReceipt `json:"swaps"`
 }
 
+type GetSwapResponse swap.SwapReceipt
+
 type GetBalancesResponse map[blockchain.TokenName]blockchain.Balance
 
 type GetAddressesResponse map[blockchain.TokenName]string
@@ -31,6 +32,7 @@ type GetIDResponse struct {
 }
 
 type PostSwapResponse struct {
+	ID        swap.SwapID   `json:"id"`
 	Swap      swap.SwapBlob `json:"swap"`
 	Signature string        `json:"signature"`
 }
@@ -61,6 +63,7 @@ type GetTransfersResponse struct {
 func MarshalGetTransfersResponse(receiptMap transfer.TransferReceiptMap) GetTransfersResponse {
 	transfers := []transfer.TransferReceipt{}
 	for _, receipt := range receiptMap {
+		receipt.PasswordHash = ""
 		transfers = append(transfers, receipt)
 	}
 	return GetTransfersResponse{

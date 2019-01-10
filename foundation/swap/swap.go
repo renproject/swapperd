@@ -35,6 +35,8 @@ type SwapReceipt struct {
 	Status        int                 `json:"status"`
 	Delay         bool                `json:"delay"`
 	DelayInfo     json.RawMessage     `json:"delayInfo,omitempty"`
+	Active        bool                `json:"active"`
+	PasswordHash  string              `json:"passwordHash,omitempty"`
 }
 
 func NewSwapReceipt(blob SwapBlob) SwapReceipt {
@@ -51,6 +53,8 @@ func NewSwapReceipt(blob SwapBlob) SwapReceipt {
 		Status:        0,
 		Delay:         blob.Delay,
 		DelayInfo:     blob.DelayInfo,
+		Active:        true,
+		PasswordHash:  blob.PasswordHash,
 	}
 }
 
@@ -95,7 +99,9 @@ type SwapBlob struct {
 	BrokerSendTokenAddr    string `json:"brokerSendTokenAddr,omitempty"`
 	BrokerReceiveTokenAddr string `json:"brokerReceiveTokenAddr,omitempty"`
 
-	Password string `json:"password,omitempty"`
+	ResponseURL  string `json:"responseURL,omitempty"`
+	Password     string `json:"password,omitempty"`
+	PasswordHash string `json:"passwordHash,omitempty"`
 }
 
 type ReceiptUpdate struct {

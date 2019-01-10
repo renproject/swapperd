@@ -116,15 +116,13 @@ func (atom *btcSwapContractBinder) Initiate() error {
 }
 
 func (atom *btcSwapContractBinder) Audit() error {
-	for {
-		if funded, _, err := atom.ScriptFunded(context.Background(), atom.scriptAddr, atom.swap.Value.Int64()); funded && err == nil {
-			return nil
-		}
-		if time.Now().Unix() > atom.swap.TimeLock {
-			return swapper.ErrSwapExpired
-		}
-		time.Sleep(15 * time.Second)
+	if funded, _, err := atom.ScriptFunded(context.Background(), atom.scriptAddr, atom.swap.Value.Int64()); funded && err == nil {
+		return nil
 	}
+	if time.Now().Unix() > atom.swap.TimeLock {
+		return swapper.ErrSwapExpired
+	}
+	return swapper.ErrAuditPending
 }
 
 // Redeem the Atomic Swap by revealing the secret and withdrawing funds from the
@@ -195,15 +193,12 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 }
 
 func (atom *btcSwapContractBinder) AuditSecret() ([32]byte, error) {
-	for {
-		atom.Info("Auditing secret on Bitcoin blockchain")
-		if spent, err := atom.ScriptSpent(context.Background(), atom.scriptAddr); spent && err == nil {
-			break
-		}
+	atom.Info("Auditing secret on Bitcoin blockchain")
+	if spent, err := atom.ScriptSpent(context.Background(), atom.scriptAddr); !spent || err != nil {
 		if time.Now().Unix() > atom.swap.TimeLock {
 			return [32]byte{}, swapper.ErrSwapExpired
 		}
-		time.Sleep(time.Minute)
+		return [32]byte{}, swapper.ErrAuditPending
 	}
 
 	sigScript, err := atom.GetScriptFromSpentP2SH(context.Background(), atom.scriptAddr)

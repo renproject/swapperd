@@ -11,14 +11,13 @@ import (
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/libbtc-go"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
-	"github.com/republicprotocol/swapperd/core/wallet/balance"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
-func (wallet *wallet) Balances() (balance.BalanceMap, error) {
-	balanceMap := balance.BalanceMap{}
+func (wallet *wallet) Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error) {
+	balanceMap := map[blockchain.TokenName]blockchain.Balance{}
 	for _, token := range wallet.SupportedTokens() {
-		balance, err := wallet.balance(token.Name)
+		balance, err := wallet.balance(password, token)
 		if err != nil {
 			return balanceMap, err
 		}
@@ -27,20 +26,26 @@ func (wallet *wallet) Balances() (balance.BalanceMap, error) {
 	return balanceMap, nil
 }
 
-func (wallet *wallet) balance(token blockchain.TokenName) (blockchain.Balance, error) {
-	switch token {
+func (wallet *wallet) balance(password string, token blockchain.Token) (blockchain.Balance, error) {
+	address, err := wallet.GetAddress(password, token.Blockchain)
+	if err != nil {
+		return blockchain.Balance{}, err
+	}
+
+	switch token.Name {
 	case blockchain.BTC:
-		return wallet.balanceBTC()
+		return wallet.balanceBTC(address)
 	case blockchain.ETH:
-		return wallet.balanceETH()
+		return wallet.balanceETH(address)
 	case blockchain.WBTC, blockchain.REN, blockchain.TUSD,
 		blockchain.ZRX, blockchain.OMG, blockchain.DGX:
-		return wallet.balanceERC20(token)
+		return wallet.balanceERC20(token.Name, address)
+	default:
+		return blockchain.Balance{}, blockchain.NewErrUnsupportedToken(token.Name)
 	}
-	return blockchain.Balance{}, blockchain.NewErrUnsupportedToken(token)
 }
 
-func (wallet *wallet) balanceBTC() (blockchain.Balance, error) {
+func (wallet *wallet) balanceBTC(address string) (blockchain.Balance, error) {
 	randomKey, err := crypto.GenerateKey()
 	if err != nil {
 		return blockchain.Balance{}, err
@@ -49,7 +54,6 @@ func (wallet *wallet) balanceBTC() (blockchain.Balance, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	address := wallet.config.Bitcoin.Address
 	balance, err := btcAccount.Balance(ctx, address, 0)
 	if err != nil {
 		return blockchain.Balance{}, err
@@ -61,12 +65,11 @@ func (wallet *wallet) balanceBTC() (blockchain.Balance, error) {
 	}, nil
 }
 
-func (wallet *wallet) balanceETH() (blockchain.Balance, error) {
+func (wallet *wallet) balanceETH(address string) (blockchain.Balance, error) {
 	client, err := beth.Connect(wallet.config.Ethereum.Network.URL)
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
-	address := wallet.config.Ethereum.Address
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
@@ -82,12 +85,11 @@ func (wallet *wallet) balanceETH() (blockchain.Balance, error) {
 	}, nil
 }
 
-func (wallet *wallet) balanceERC20(token blockchain.TokenName) (blockchain.Balance, error) {
+func (wallet *wallet) balanceERC20(token blockchain.TokenName, address string) (blockchain.Balance, error) {
 	client, err := beth.Connect(wallet.config.Ethereum.Network.URL)
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
-	address := wallet.config.Ethereum.Address
 	tokenAddr, err := client.ReadAddress(string(token))
 	if err != nil {
 		return blockchain.Balance{}, err

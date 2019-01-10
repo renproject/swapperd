@@ -27,16 +27,16 @@ func NewBuilder(wallet wallet.Wallet, logger logrus.FieldLogger) swapper.Contrac
 	}
 }
 
-func (builder *builder) BuildSwapContracts(swap swap.SwapBlob, nativeCost, foreignCost blockchain.Cost) (swapper.Contract, swapper.Contract, error) {
-	native, foreign, err := builder.buildComplementarySwaps(swap)
+func (builder *builder) BuildSwapContracts(req swapper.SwapRequest) (swapper.Contract, swapper.Contract, error) {
+	native, foreign, err := builder.buildComplementarySwaps(req.Blob)
 	if err != nil {
 		return nil, nil, err
 	}
-	nativeBinder, err := builder.buildBinder(native, nativeCost, swap.Password)
+	nativeBinder, err := builder.buildBinder(native, req.SendCost, req.Blob.Password)
 	if err != nil {
 		return nil, nil, err
 	}
-	foreignBinder, err := builder.buildBinder(foreign, foreignCost, swap.Password)
+	foreignBinder, err := builder.buildBinder(foreign, req.ReceiveCost, req.Blob.Password)
 	if err != nil {
 		return nil, nil, err
 	}
