@@ -3,9 +3,8 @@ package delayed
 import (
 	"fmt"
 
-	"github.com/republicprotocol/tau"
-
 	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/republicprotocol/tau"
 )
 
 var ErrSwapDetailsUnavailable = fmt.Errorf("swap details unavailable")
