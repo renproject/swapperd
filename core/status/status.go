@@ -1,81 +1,37 @@
 package status
 
 import (
+	"fmt"
 	"sync"
 
-	"github.com/republicprotocol/co-go"
-
-	"github.com/sirupsen/logrus"
-
 	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/republicprotocol/tau"
 )
-
-type ReceiptQuery struct {
-	Responder chan<- map[swap.SwapID]swap.SwapReceipt
-}
-
-type Storage interface {
-	Receipts() ([]swap.SwapReceipt, error)
-	PutReceipt(receipt swap.SwapReceipt) error
-	UpdateReceipt(receiptUpdate swap.ReceiptUpdate) error
-}
-type Statuses interface {
-	Run(done <-chan struct{}, swaps <-chan swap.SwapReceipt, updates <-chan swap.ReceiptUpdate, queries <-chan ReceiptQuery)
-}
 
 type statuses struct {
 	mu       *sync.RWMutex
 	statuses map[swap.SwapID]swap.SwapReceipt
-	storage  Storage
-	logger   logrus.FieldLogger
 }
 
-func New(storage Storage, logger logrus.FieldLogger) Statuses {
-	return &statuses{new(sync.RWMutex), map[swap.SwapID]swap.SwapReceipt{}, storage, logger}
+func New(cap int) tau.Task {
+	return tau.New(tau.NewIO(cap), &statuses{new(sync.RWMutex), map[swap.SwapID]swap.SwapReceipt{}})
 }
 
-func (statuses *statuses) Run(done <-chan struct{}, receipts <-chan swap.SwapReceipt, updates <-chan swap.ReceiptUpdate, queries <-chan ReceiptQuery) {
-	// Loading historical swap receipts
-	historicalReceipts, err := statuses.storage.Receipts()
-	if err != nil {
-		statuses.logger.Error(err)
-	}
-	co.ParForAll(historicalReceipts, func(i int) {
-		statuses.set(historicalReceipts[i])
-	})
-
-	for {
-		select {
-		case <-done:
-			return
-		case receipt, ok := <-receipts:
-			if !ok {
-				return
-			}
-			statuses.set(receipt)
-			go func() {
-				if err := statuses.storage.PutReceipt(receipt); err != nil {
-					statuses.logger.Error(err)
-				}
-			}()
-		case update, ok := <-updates:
-			if !ok {
-				return
-			}
-			statuses.update(update)
-			go func() {
-				if err := statuses.storage.UpdateReceipt(update); err != nil {
-					statuses.logger.Error(err)
-				}
-			}()
-		case query, ok := <-queries:
-			if !ok {
-				return
-			}
-			go func() {
-				query.Responder <- statuses.get()
-			}()
-		}
+func (statuses *statuses) Reduce(msg tau.Message) tau.Message {
+	switch msg := msg.(type) {
+	case Receipt:
+		statuses.set(swap.SwapReceipt(msg))
+		return nil
+	case ReceiptUpdate:
+		statuses.update(swap.ReceiptUpdate(msg))
+		return nil
+	case ReceiptQuery:
+		go func() {
+			msg.Responder <- statuses.get()
+		}()
+		return nil
+	default:
+		return tau.NewError(fmt.Errorf("invalid message type in transfers: %T", msg))
 	}
 }
 
@@ -101,4 +57,27 @@ func (statuses *statuses) update(update swap.ReceiptUpdate) {
 	receipt := statuses.statuses[update.ID]
 	update.Update(&receipt)
 	statuses.statuses[update.ID] = receipt
+}
+
+type Bootload struct {
+}
+
+func (msg Bootload) IsMessage() {
+}
+
+type Receipt swap.SwapReceipt
+
+func (msg Receipt) IsMessage() {
+}
+
+type ReceiptUpdate swap.ReceiptUpdate
+
+func (msg ReceiptUpdate) IsMessage() {
+}
+
+type ReceiptQuery struct {
+	Responder chan<- map[swap.SwapID]swap.SwapReceipt
+}
+
+func (msg ReceiptQuery) IsMessage() {
 }
