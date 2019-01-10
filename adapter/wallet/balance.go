@@ -11,14 +11,13 @@ import (
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/libbtc-go"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
-	"github.com/republicprotocol/swapperd/core/wallet/balance"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
-func (wallet *wallet) Balances() (balance.BalanceMap, error) {
-	balanceMap := balance.BalanceMap{}
+func (wallet *wallet) Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error) {
+	balanceMap := map[blockchain.TokenName]blockchain.Balance{}
 	for _, token := range wallet.SupportedTokens() {
-		balance, err := wallet.balance(token.Name)
+		balance, err := wallet.balance(password, token)
 		if err != nil {
 			return balanceMap, err
 		}
@@ -27,33 +26,8 @@ func (wallet *wallet) Balances() (balance.BalanceMap, error) {
 	return balanceMap, nil
 }
 
-func (wallet *wallet) balance(token blockchain.TokenName) (blockchain.Balance, error) {
-	switch token {
-	case blockchain.BTC:
-		return wallet.balanceBTC(wallet.config.Bitcoin.Address)
-	case blockchain.ETH:
-		return wallet.balanceETH(wallet.config.Ethereum.Address)
-	case blockchain.WBTC:
-		return wallet.balanceERC20(token, wallet.config.Ethereum.Address)
-	default:
-		return blockchain.Balance{}, blockchain.NewErrUnsupportedToken(token)
-	}
-}
-
-func (wallet *wallet) BalancesWithPassword(password string) (balance.BalanceMap, error) {
-	balanceMap := balance.BalanceMap{}
-	for _, token := range wallet.SupportedTokens() {
-		balance, err := wallet.balanceWithPassword(token, password)
-		if err != nil {
-			return balanceMap, err
-		}
-		balanceMap[token.Name] = balance
-	}
-	return balanceMap, nil
-}
-
-func (wallet *wallet) balanceWithPassword(token blockchain.Token, password string) (blockchain.Balance, error) {
-	address, err := wallet.GetAddressWithPassword(token.Blockchain, password)
+func (wallet *wallet) balance(password string, token blockchain.Token) (blockchain.Balance, error) {
+	address, err := wallet.GetAddress(password, token.Blockchain)
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
