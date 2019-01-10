@@ -10,15 +10,13 @@ import (
 )
 
 type Config struct {
-	Mnemonic    string           `json:"mnemonic"`
-	IDPublicKey string           `json:"idPublicKey"`
-	Ethereum    BlockchainConfig `json:"ethereum"`
-	Bitcoin     BlockchainConfig `json:"bitcoin"`
+	Mnemonic string           `json:"mnemonic"`
+	Ethereum BlockchainConfig `json:"ethereum"`
+	Bitcoin  BlockchainConfig `json:"bitcoin"`
 }
 
 type BlockchainConfig struct {
 	Network Network  `json:"network"`
-	Address string   `json:"address"`
 	Tokens  []string `json:"tokens"`
 }
 
@@ -35,7 +33,6 @@ type Balance struct {
 type Wallet interface {
 	ID(password string) (string, error)
 	SupportedTokens() []blockchain.Token
-	SupportedBlockchains() []blockchain.Blockchain
 	Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error)
 	Lookup(token blockchain.Token, txHash string) (transfer.UpdateReceipt, error)
 	Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error)
