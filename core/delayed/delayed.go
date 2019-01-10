@@ -2,9 +2,8 @@ package delayed
 
 import (
 	"fmt"
-	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/republicprotocol/tau"
 
 	"github.com/republicprotocol/swapperd/foundation/swap"
 )
@@ -14,80 +13,70 @@ var ErrSwapCancelled = fmt.Errorf("swap cancelled")
 
 type callback struct {
 	delayCallback DelayCallback
-	storage       Storage
-	logger        logrus.FieldLogger
-}
-
-type Callback interface {
-	Run(done <-chan struct{}, delayedSwaps <-chan swap.SwapBlob, swaps chan<- swap.SwapBlob, updates chan<- swap.ReceiptUpdate)
-}
-
-type Storage interface {
-	UpdateReceipt(update swap.ReceiptUpdate) error
-	DeletePendingSwap(swap.SwapID) error
+	swapMap       map[swap.SwapID]DelayedSwapRequest
 }
 
 type DelayCallback interface {
 	DelayCallback(swap.SwapBlob) (swap.SwapBlob, error)
 }
 
-func New(delayCallback DelayCallback, storage Storage, logger logrus.FieldLogger) Callback {
-	return &callback{delayCallback, storage, logger}
+func New(cap int, delayCallback DelayCallback) tau.Task {
+	return tau.New(tau.NewIO(cap), &callback{delayCallback, map[swap.SwapID]DelayedSwapRequest{}})
 }
 
-func (callback *callback) Run(done <-chan struct{}, delayedSwaps <-chan swap.SwapBlob, swaps chan<- swap.SwapBlob, updates chan<- swap.ReceiptUpdate) {
-	for {
-		select {
-		case <-done:
-			return
-		case blob, ok := <-delayedSwaps:
-			if !ok {
-				return
-			}
-			go callback.fill(blob, swaps, updates)
-		}
+func (callback *callback) Reduce(msg tau.Message) tau.Message {
+	switch msg := msg.(type) {
+	case DelayedSwapRequest:
+		return callback.tryFill(msg)
+	case tau.Tick:
+		return callback.checkAgain()
+	default:
+		return tau.NewError(fmt.Errorf("invalid message type in delayed swapper: %T", msg))
 	}
 }
 
-func (callback *callback) fill(blob swap.SwapBlob, swaps chan<- swap.SwapBlob, updates chan<- swap.ReceiptUpdate) {
+func (callback *callback) checkAgain() tau.Message {
+	messages := []tau.Message{}
+	for _, swap := range callback.swapMap {
+		if msg := callback.tryFill(swap); msg != nil {
+			messages = append(messages, msg)
+		}
+	}
+	return tau.NewMessageBatch(messages)
+}
+
+func (callback *callback) tryFill(blob DelayedSwapRequest) tau.Message {
 	password := blob.Password
 	blob.Password = ""
-	for {
-		filledBlob, err := callback.delayCallback.DelayCallback(blob)
-		if err == nil {
-			filledBlob.Password = password
-			callback.handleUpdateSwap(filledBlob, updates)
-			swaps <- filledBlob
-			return
-		}
-		if err == ErrSwapCancelled {
-			callback.handleCancelSwap(blob.ID, updates)
-			break
-		}
-		if err != ErrSwapDetailsUnavailable {
-			callback.logger.Error(err)
-		}
-		time.Sleep(30 * time.Second)
+	filledBlob, err := callback.delayCallback.DelayCallback(swap.SwapBlob(blob))
+	if err == nil {
+		filledBlob.Password = password
+		return callback.handleUpdateSwap(SwapRequest(filledBlob))
 	}
+	if err == ErrSwapCancelled {
+		return callback.handleCancelSwap(blob.ID)
+	}
+	blob.Password = password
+	callback.swapMap[blob.ID] = blob
+	if err != ErrSwapDetailsUnavailable {
+		return tau.NewError(err)
+	}
+	return nil
 }
 
-func (callback *callback) handleCancelSwap(id swap.SwapID, updates chan<- swap.ReceiptUpdate) {
-	callback.logger.Infof("cancelled delayed swap (%s)", id)
-	update := swap.NewReceiptUpdate(id, func(receipt *swap.SwapReceipt) {
+func (callback *callback) handleCancelSwap(id swap.SwapID) tau.Message {
+	update := ReceiptUpdate(swap.NewReceiptUpdate(id, func(receipt *swap.SwapReceipt) {
 		receipt.ID = id
 		receipt.Status = swap.Cancelled
-	})
-	updates <- update
-	if err := callback.storage.DeletePendingSwap(id); err != nil {
-		callback.logger.Error(err)
-	}
+	}))
+	return tau.NewMessageBatch([]tau.Message{update, DeleteSwap{id}})
 }
 
-func (callback *callback) handleUpdateSwap(blob swap.SwapBlob, updates chan<- swap.ReceiptUpdate) {
-	update := swap.NewReceiptUpdate(blob.ID, func(receipt *swap.SwapReceipt) {
-		receipt.ReceiveAmount = blob.ReceiveAmount
-		receipt.SendAmount = blob.SendAmount
-		receipt.TimeLock = blob.TimeLock
-	})
-	updates <- update
+func (callback *callback) handleUpdateSwap(req SwapRequest) tau.Message {
+	update := ReceiptUpdate(swap.NewReceiptUpdate(req.ID, func(receipt *swap.SwapReceipt) {
+		receipt.ReceiveAmount = req.ReceiveAmount
+		receipt.SendAmount = req.SendAmount
+		receipt.TimeLock = req.TimeLock
+	}))
+	return tau.NewMessageBatch([]tau.Message{update, req})
 }
