@@ -53,6 +53,7 @@ func New(db *leveldb.DB) Storage {
 }
 
 func (db *dbStorage) PutSwap(blob swap.SwapBlob) error {
+	blob.Password = ""
 	swapData, err := json.Marshal(blob)
 	if err != nil {
 		return err
