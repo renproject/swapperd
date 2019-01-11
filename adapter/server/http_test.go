@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -28,10 +29,10 @@ var _ = Describe("Server Adapter", func() {
 	done := make(chan struct{})
 
 	startServer := func() {
-		Expect(keystore.Generate("./swapperd", "testnet", "weird")).Should(BeNil())
-		blockchain, err := keystore.Wallet("./swapperd", "testnet")
+		Expect(keystore.Generate("../../secrets", "testnet", "weird")).Should(BeNil())
+		blockchain, err := keystore.Wallet("../../secrets", "testnet")
 		Expect(err).Should(BeNil())
-		ldb, err := leveldb.NewStore("./swapperd", "testnet")
+		ldb, err := leveldb.NewStore("../../secrets", "testnet")
 		Expect(err).Should(BeNil())
 		storage := db.New(ldb)
 		logger := logger.NewStdOut()
@@ -44,7 +45,7 @@ var _ = Describe("Server Adapter", func() {
 	}
 
 	buildSwap := func(password string) swap.SwapBlob {
-		wallet, err := keystore.Wallet("./swapperd", "testnet")
+		wallet, err := keystore.Wallet("../../secrets", "testnet")
 		Expect(err).Should(BeNil())
 		ethAddr, err := wallet.GetAddress(password, blockchain.Ethereum)
 		Expect(err).Should(BeNil())
@@ -93,7 +94,7 @@ var _ = Describe("Server Adapter", func() {
 
 	waitForSwap := func(responderPassword string, id swap.SwapID) {
 		for {
-			req, err := http.NewRequest("GET", "http://localhost:27927/swaps", nil)
+			req, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:27927/swaps?id=%s", url.QueryEscape(string(id))), nil)
 			if err != nil {
 				panic(err)
 			}
@@ -104,20 +105,15 @@ var _ = Describe("Server Adapter", func() {
 			}
 			Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 
-			swapResp := GetSwapsResponse{}
+			swapResp := GetSwapResponse{}
 			respBytes, err := ioutil.ReadAll(resp.Body)
 			json.Unmarshal(respBytes, &swapResp)
 
-			for _, swap := range swapResp.Swaps {
-				fmt.Println(id)
-				fmt.Printf("swap status of %s is %d\n", swap.ID, swap.Status)
-				if swap.ID == id {
-					if swap.Status != 5 {
-						break
-					}
-					return
-				}
+			swap := swap.SwapReceipt(swapResp)
+			if swap.Status == 5 {
+				break
 			}
+
 			time.Sleep(10 * time.Second)
 		}
 	}
