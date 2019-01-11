@@ -14,6 +14,7 @@ import (
 	"github.com/republicprotocol/swapperd/core"
 	"github.com/republicprotocol/swapperd/core/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
@@ -45,8 +46,7 @@ func (listener *httpServer) Run(done <-chan struct{}) {
 	reqHandler := NewHandler(listener.swapperdTask, listener.walletTask, listener.wallet, listener.logger)
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", postSwapsHandler(reqHandler)).Methods("POST")
-	r.HandleFunc("/swaps", getSwapsHandler(reqHandler)).Methods("GET")
-	r.HandleFunc("/swaps/{swapID}", getSwapsHandler(reqHandler)).Methods("GET")
+	r.HandleFunc("/swaps", getSwapsHandler(reqHandler)).Queries("id", "{id}").Methods("GET")
 	r.HandleFunc("/transfers", postTransfersHandler(reqHandler)).Methods("POST")
 	r.HandleFunc("/transfers", getTransfersHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/balances", getBalancesHandler(reqHandler)).Methods("GET")
@@ -148,8 +148,31 @@ func getInfoHandler(reqHandler Handler) http.HandlerFunc {
 	}
 }
 
-// getSwapsHandler handles the get swaps request, it returns the status of all
-// the existing swaps on the swapper.
+// // getSwapsHandler handles the get swaps request, it returns the status of all
+// // the existing swaps on the swapper.
+// func getSwapsHandler(reqHandler Handler) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		_, password, ok := r.BasicAuth()
+// 		if !ok {
+// 			writeError(w, http.StatusUnauthorized, "authentication required")
+// 			return
+// 		}
+
+// 		resp, err := reqHandler.GetSwaps(password)
+// 		if err != nil {
+// 			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot get swaps: %v", err))
+// 			return
+// 		}
+
+// 		if err := json.NewEncoder(w).Encode(resp); err != nil {
+// 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
+// 			return
+// 		}
+// 	}
+// }
+
+// getSwapHandler handles the get swaps request, it returns the status of the
+// existing swap with given a swap id on the swapper.
 func getSwapsHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, password, ok := r.BasicAuth()
@@ -158,14 +181,28 @@ func getSwapsHandler(reqHandler Handler) http.HandlerFunc {
 			return
 		}
 
-		resp, err := reqHandler.GetSwaps(password)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot get swaps: %v", err))
+		swapID := r.FormValue("id")
+		if swapID == "" {
+			resp, err := reqHandler.GetSwaps(password)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot get swaps: %v", err))
+				return
+			}
+
+			if err := json.NewEncoder(w).Encode(resp); err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
+				return
+			}
 			return
 		}
 
+		resp, err := reqHandler.GetSwap(password, swap.SwapID(swapID))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot get swap with id (%s): %v", swapID, err))
+			return
+		}
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode get swap response: %v", err))
 			return
 		}
 	}
