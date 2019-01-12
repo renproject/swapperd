@@ -442,8 +442,10 @@ func (handler *handler) buildSwapResponse(blob swap.SwapBlob) (PostSwapResponse,
 		return swapResponse, err
 	}
 
-	swapResponse.Swap = responseBlob
-	swapResponse.Signature = base64.StdEncoding.EncodeToString(blobSig)
+	if blob.ShouldInitiateFirst {
+		swapResponse.Swap = responseBlob
+		swapResponse.Signature = base64.StdEncoding.EncodeToString(blobSig)
+	}
 
 	if blob.ResponseURL != "" {
 		data, err := json.MarshalIndent(swapResponse, "", "  ")

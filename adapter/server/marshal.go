@@ -33,8 +33,12 @@ type GetIDResponse struct {
 
 type PostSwapResponse struct {
 	ID        swap.SwapID   `json:"id"`
-	Swap      swap.SwapBlob `json:"swap"`
-	Signature string        `json:"signature"`
+	Swap      swap.SwapBlob `json:"swap,omitempty"`
+	Signature string        `json:"signature,omitempty"`
+}
+
+type PostRedeemSwapResponse struct {
+	ID swap.SwapID `json:"id"`
 }
 
 type PostTransfersRequest struct {
