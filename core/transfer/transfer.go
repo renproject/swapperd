@@ -38,7 +38,6 @@ func New(cap int, bc Blockchain, storage Storage, logger logrus.FieldLogger) tau
 }
 
 func (transfers *transfers) Reduce(msg tau.Message) tau.Message {
-	fmt.Printf("new message: %T", msg)
 	switch msg := msg.(type) {
 	case Bootload:
 		transferReceipts, err := transfers.storage.Transfers()
