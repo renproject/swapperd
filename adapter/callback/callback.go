@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"net/http"
 
-	"github.com/republicprotocol/swapperd/core/delayed"
+	"github.com/republicprotocol/swapperd/core/swapper/delayed"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 )
 
