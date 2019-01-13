@@ -31,10 +31,13 @@ var (
 	ETH  = TokenName("ETH")
 	WBTC = TokenName("WBTC")
 	REN  = TokenName("REN")
-	TUSD = TokenName("TUSD")
 	DGX  = TokenName("DGX")
 	ZRX  = TokenName("ZRX")
 	OMG  = TokenName("OMG")
+	DAI  = TokenName("DAI")
+	USDC = TokenName("USDC")
+	GUSD = TokenName("GUSD")
+	TUSD = TokenName("TUSD")
 )
 
 var (
@@ -42,10 +45,13 @@ var (
 	TokenETH  = Token{TokenName("ETH"), Ethereum}
 	TokenWBTC = Token{TokenName("WBTC"), Ethereum}
 	TokenREN  = Token{TokenName("REN"), Ethereum}
-	TokenTUSD = Token{TokenName("TUSD"), Ethereum}
 	TokenDGX  = Token{TokenName("DGX"), Ethereum}
 	TokenZRX  = Token{TokenName("ZRX"), Ethereum}
 	TokenOMG  = Token{TokenName("OMG"), Ethereum}
+	TokenTUSD = Token{TokenName("TUSD"), Ethereum}
+	TokenDAI  = Token{TokenName("DAI"), Ethereum}
+	TokenUSDC = Token{TokenName("USDC"), Ethereum}
+	TokenGUSD = Token{TokenName("GUSD"), Ethereum}
 )
 
 func PatchToken(token string) (Token, error) {
@@ -67,6 +73,12 @@ func PatchToken(token string) (Token, error) {
 		return TokenZRX, nil
 	case "omisego", "omg", "omise go":
 		return TokenOMG, nil
+	case "usdc", "usd coin", "usdcoin":
+		return TokenUSDC, nil
+	case "dai", "maker dai", "makerdai":
+		return TokenDAI, nil
+	case "gusd", "gemini usd", "geminiusd":
+		return TokenGUSD, nil
 	default:
 		return Token{}, fmt.Errorf("unsupported token: %s", token)
 	}
