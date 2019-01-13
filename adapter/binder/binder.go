@@ -9,7 +9,7 @@ import (
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
 	"github.com/republicprotocol/swapperd/adapter/binder/eth"
 	"github.com/republicprotocol/swapperd/adapter/wallet"
-	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/core/swapper/immediate"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
@@ -20,14 +20,14 @@ type builder struct {
 	logrus.FieldLogger
 }
 
-func NewBuilder(wallet wallet.Wallet, logger logrus.FieldLogger) swapper.ContractBuilder {
+func NewBuilder(wallet wallet.Wallet, logger logrus.FieldLogger) immediate.ContractBuilder {
 	return &builder{
 		wallet,
 		logger,
 	}
 }
 
-func (builder *builder) BuildSwapContracts(req swapper.SwapRequest) (swapper.Contract, swapper.Contract, error) {
+func (builder *builder) BuildSwapContracts(req immediate.SwapRequest) (immediate.Contract, immediate.Contract, error) {
 	native, foreign, err := builder.buildComplementarySwaps(req.Blob)
 	if err != nil {
 		return nil, nil, err
@@ -43,7 +43,7 @@ func (builder *builder) BuildSwapContracts(req swapper.SwapRequest) (swapper.Con
 	return nativeBinder, foreignBinder, nil
 }
 
-func (builder *builder) buildBinder(swap swap.Swap, cost blockchain.Cost, password string) (swapper.Contract, error) {
+func (builder *builder) buildBinder(swap swap.Swap, cost blockchain.Cost, password string) (immediate.Contract, error) {
 	switch swap.Token {
 	case blockchain.TokenBTC:
 		btcAccount, err := builder.BitcoinAccount(password)
@@ -58,7 +58,8 @@ func (builder *builder) buildBinder(swap swap.Swap, cost blockchain.Cost, passwo
 		}
 		return eth.NewETHSwapContractBinder(ethAccount, swap, cost, builder.FieldLogger)
 	case blockchain.TokenWBTC, blockchain.TokenDGX, blockchain.TokenREN,
-		blockchain.TokenTUSD, blockchain.TokenOMG, blockchain.TokenZRX:
+		blockchain.TokenTUSD, blockchain.TokenOMG, blockchain.TokenZRX,
+		blockchain.TokenGUSD, blockchain.TokenDAI, blockchain.TokenUSDC:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err

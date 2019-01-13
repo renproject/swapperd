@@ -12,7 +12,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/republicprotocol/libbtc-go"
-	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/core/swapper/immediate"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
@@ -31,7 +31,7 @@ type btcSwapContractBinder struct {
 }
 
 // NewBTCSwapContractBinder returns a new Bitcoin Atom instance
-func NewBTCSwapContractBinder(account libbtc.Account, swap swap.Swap, cost blockchain.Cost, logger logrus.FieldLogger) (swapper.Contract, error) {
+func NewBTCSwapContractBinder(account libbtc.Account, swap swap.Swap, cost blockchain.Cost, logger logrus.FieldLogger) (immediate.Contract, error) {
 	script, scriptAddr, err := buildInitiateScript(swap, account.NetworkParams())
 	if err != nil {
 		return nil, err
@@ -120,9 +120,9 @@ func (atom *btcSwapContractBinder) Audit() error {
 		return nil
 	}
 	if time.Now().Unix() > atom.swap.TimeLock {
-		return swapper.ErrSwapExpired
+		return immediate.ErrSwapExpired
 	}
-	return swapper.ErrAuditPending
+	return immediate.ErrAuditPending
 }
 
 // Redeem the Atomic Swap by revealing the secret and withdrawing funds from the
@@ -196,9 +196,9 @@ func (atom *btcSwapContractBinder) AuditSecret() ([32]byte, error) {
 	atom.Info("Auditing secret on Bitcoin blockchain")
 	if spent, err := atom.ScriptSpent(context.Background(), atom.scriptAddr); !spent || err != nil {
 		if time.Now().Unix() > atom.swap.TimeLock {
-			return [32]byte{}, swapper.ErrSwapExpired
+			return [32]byte{}, immediate.ErrSwapExpired
 		}
-		return [32]byte{}, swapper.ErrAuditPending
+		return [32]byte{}, immediate.ErrAuditPending
 	}
 
 	sigScript, err := atom.GetScriptFromSpentP2SH(context.Background(), atom.scriptAddr)

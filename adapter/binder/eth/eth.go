@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/republicprotocol/beth-go"
-	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/core/swapper/immediate"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
@@ -27,7 +27,7 @@ type ethSwapContractBinder struct {
 }
 
 // NewETHSwapContractBinder returns a new Ethereum RequestAtom instance
-func NewETHSwapContractBinder(account beth.Account, swap swap.Swap, cost blockchain.Cost, logger logrus.FieldLogger) (swapper.Contract, error) {
+func NewETHSwapContractBinder(account beth.Account, swap swap.Swap, cost blockchain.Cost, logger logrus.FieldLogger) (immediate.Contract, error) {
 	swapperAddr, err := account.ReadAddress("SwapperdETH")
 	if err != nil {
 		return nil, err
@@ -176,10 +176,10 @@ func (atom *ethSwapContractBinder) AuditSecret() ([32]byte, error) {
 	}
 	if redeemable {
 		if time.Now().Unix() > atom.swap.TimeLock {
-			atom.logger.Error(swapper.ErrSwapExpired)
-			return [32]byte{}, swapper.ErrSwapExpired
+			atom.logger.Error(immediate.ErrSwapExpired)
+			return [32]byte{}, immediate.ErrSwapExpired
 		}
-		return [32]byte{}, swapper.ErrAuditPending
+		return [32]byte{}, immediate.ErrAuditPending
 	}
 
 	secret, err := atom.binder.AuditSecret(&bind.CallOpts{}, atom.id)
@@ -201,10 +201,10 @@ func (atom *ethSwapContractBinder) Audit() error {
 
 	if initiatable {
 		if time.Now().Unix() > atom.swap.TimeLock {
-			atom.logger.Error(swapper.ErrSwapExpired)
-			return swapper.ErrSwapExpired
+			atom.logger.Error(immediate.ErrSwapExpired)
+			return immediate.ErrSwapExpired
 		}
-		return swapper.ErrAuditPending
+		return immediate.ErrAuditPending
 	}
 	auditReport, err := atom.binder.Audit(&bind.CallOpts{}, atom.id)
 	if err != nil {
