@@ -86,7 +86,6 @@ func (listener *httpServer) ticker(done <-chan struct{}) {
 		case <-done:
 			return
 		case <-ticker.C:
-			fmt.Println("Tick")
 			listener.walletTask.IO().InputWriter() <- tau.NewTick(time.Now())
 			listener.swapperdTask.IO().InputWriter() <- tau.NewTick(time.Now())
 		}
@@ -247,6 +246,14 @@ func postSwapsHandler(reqHandler Handler) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusCreated)
+		if patchedSwap.Signature == "" {
+			if err := json.NewEncoder(w).Encode(PostRedeemSwapResponse{patchedSwap.ID}); err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swap response: %v", err))
+				return
+			}
+			return
+		}
+
 		if err := json.NewEncoder(w).Encode(patchedSwap); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swap response: %v", err))
 			return
