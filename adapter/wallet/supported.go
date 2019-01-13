@@ -12,5 +12,8 @@ func (wallet *wallet) SupportedTokens() []blockchain.Token {
 		blockchain.TokenOMG,
 		blockchain.TokenTUSD,
 		blockchain.TokenDGX,
+		blockchain.TokenGUSD,
+		blockchain.TokenDAI,
+		blockchain.TokenUSDC,
 	}
 }

@@ -22,7 +22,8 @@ func (wallet *wallet) Transfer(password string, token blockchain.Token, to strin
 	case blockchain.TokenETH:
 		return wallet.transferETH(password, to, amount)
 	case blockchain.TokenWBTC, blockchain.TokenDGX, blockchain.TokenREN,
-		blockchain.TokenTUSD, blockchain.TokenZRX, blockchain.TokenOMG:
+		blockchain.TokenTUSD, blockchain.TokenZRX, blockchain.TokenOMG,
+		blockchain.TokenGUSD, blockchain.TokenDAI, blockchain.TokenUSDC:
 		return wallet.transferERC20(password, token, to, amount)
 	default:
 		return "", blockchain.NewErrUnsupportedToken(token.Name)

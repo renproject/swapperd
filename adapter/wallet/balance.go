@@ -37,8 +37,9 @@ func (wallet *wallet) balance(password string, token blockchain.Token) (blockcha
 		return wallet.balanceBTC(address)
 	case blockchain.ETH:
 		return wallet.balanceETH(address)
-	case blockchain.WBTC, blockchain.REN, blockchain.TUSD,
-		blockchain.ZRX, blockchain.OMG, blockchain.DGX:
+	case blockchain.REN, blockchain.DGX, blockchain.TUSD, blockchain.OMG,
+		blockchain.ZRX, blockchain.WBTC, blockchain.GUSD,
+		blockchain.DAI, blockchain.USDC:
 		return wallet.balanceERC20(token.Name, address)
 	default:
 		return blockchain.Balance{}, blockchain.NewErrUnsupportedToken(token.Name)
