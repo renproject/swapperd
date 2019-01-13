@@ -2,61 +2,47 @@ package status
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
 )
 
 type statuses struct {
-	mu       *sync.RWMutex
 	statuses map[swap.SwapID]swap.SwapReceipt
 }
 
 func New(cap int) tau.Task {
-	return tau.New(tau.NewIO(cap), &statuses{new(sync.RWMutex), map[swap.SwapID]swap.SwapReceipt{}})
+	return tau.New(tau.NewIO(cap), &statuses{map[swap.SwapID]swap.SwapReceipt{}})
 }
 
 func (statuses *statuses) Reduce(msg tau.Message) tau.Message {
 	switch msg := msg.(type) {
 	case Receipt:
-		statuses.set(swap.SwapReceipt(msg))
-		return nil
+		return statuses.handleReceipt(msg)
 	case ReceiptUpdate:
-		statuses.update(swap.ReceiptUpdate(msg))
-		return nil
+		return statuses.handleReceiptUpdate(msg)
 	case ReceiptQuery:
-		go func() {
-			msg.Responder <- statuses.get()
-		}()
-		return nil
+		return statuses.handleReceiptQuery(msg)
 	default:
 		return tau.NewError(fmt.Errorf("invalid message type in transfers: %T", msg))
 	}
 }
 
-func (statuses *statuses) get() map[swap.SwapID]swap.SwapReceipt {
-	statuses.mu.RLock()
-	defer statuses.mu.RUnlock()
-	statusMap := make(map[swap.SwapID]swap.SwapReceipt, len(statuses.statuses))
-	for id, status := range statuses.statuses {
-		statusMap[id] = status
-	}
-	return statusMap
+func (statuses *statuses) handleReceiptQuery(msg ReceiptQuery) tau.Message {
+	msg.Responder <- statuses.statuses
+	return nil
 }
 
-func (statuses *statuses) set(status swap.SwapReceipt) {
-	statuses.mu.Lock()
-	defer statuses.mu.Unlock()
-	statuses.statuses[status.ID] = status
+func (statuses *statuses) handleReceipt(receipt Receipt) tau.Message {
+	statuses.statuses[receipt.ID] = swap.SwapReceipt(receipt)
+	return nil
 }
 
-func (statuses *statuses) update(update swap.ReceiptUpdate) {
-	statuses.mu.Lock()
-	defer statuses.mu.Unlock()
+func (statuses *statuses) handleReceiptUpdate(update ReceiptUpdate) tau.Message {
 	receipt := statuses.statuses[update.ID]
 	update.Update(&receipt)
 	statuses.statuses[update.ID] = receipt
+	return nil
 }
 
 type Bootload struct {
