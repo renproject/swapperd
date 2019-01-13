@@ -1,17 +1,18 @@
 package composer
 
 import (
-	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/adapter/binder"
 	"github.com/republicprotocol/swapperd/adapter/callback"
 	"github.com/republicprotocol/swapperd/adapter/db"
 	"github.com/republicprotocol/swapperd/adapter/server"
-	"github.com/republicprotocol/swapperd/core"
+	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/core/transfer"
 	"github.com/republicprotocol/swapperd/driver/keystore"
 	"github.com/republicprotocol/swapperd/driver/leveldb"
 	"github.com/republicprotocol/swapperd/driver/logger"
 )
+
+const BufferCapacity = 128
 
 type composer struct {
 	homeDir string
@@ -41,13 +42,9 @@ func (composer *composer) Run(done <-chan struct{}) {
 	storage := db.New(ldb)
 	logger := logger.NewStdOut()
 
-	swapperdTask := core.New(128, storage, binder.NewBuilder(blockchain, logger), callback.New())
-	walletTask := transfer.New(128, blockchain, storage, logger)
+	swapperTask := swapper.New(BufferCapacity, storage, binder.NewBuilder(blockchain, logger), callback.New())
+	walletTask := transfer.New(BufferCapacity, blockchain, storage, logger)
 
-	co.ParBegin(
-		func() {
-			httpServer := server.NewHttpServer(blockchain, logger, swapperdTask, walletTask, composer.port)
-			httpServer.Run(done)
-		},
-	)
+	httpServer := server.NewHttpServer(blockchain, logger, swapperTask, walletTask, composer.port)
+	httpServer.Run(done)
 }

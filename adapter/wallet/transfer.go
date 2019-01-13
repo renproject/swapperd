@@ -21,10 +21,13 @@ func (wallet *wallet) Transfer(password string, token blockchain.Token, to strin
 		return wallet.transferBTC(password, to, amount)
 	case blockchain.TokenETH:
 		return wallet.transferETH(password, to, amount)
-	case blockchain.TokenWBTC:
+	case blockchain.TokenWBTC, blockchain.TokenDGX, blockchain.TokenREN,
+		blockchain.TokenTUSD, blockchain.TokenZRX, blockchain.TokenOMG,
+		blockchain.TokenGUSD, blockchain.TokenDAI, blockchain.TokenUSDC:
 		return wallet.transferERC20(password, token, to, amount)
+	default:
+		return "", blockchain.NewErrUnsupportedToken(token.Name)
 	}
-	return "", blockchain.NewErrUnsupportedToken(token.Name)
 }
 
 func (wallet *wallet) transferBTC(password, to string, amount *big.Int) (string, error) {

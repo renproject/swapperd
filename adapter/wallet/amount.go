@@ -13,7 +13,9 @@ func (wallet *wallet) VerifyBalance(password string, token blockchain.Token, amo
 	switch token.Name {
 	case blockchain.ETH:
 		return wallet.verifyEthereumBalance(password, amount)
-	case blockchain.WBTC:
+	case blockchain.REN, blockchain.DGX, blockchain.TUSD, blockchain.OMG,
+		blockchain.ZRX, blockchain.WBTC, blockchain.GUSD,
+		blockchain.DAI, blockchain.USDC:
 		return wallet.verifyERC20Balance(password, token, amount)
 	case blockchain.BTC:
 		return wallet.verifyBitcoinBalance(password, amount)

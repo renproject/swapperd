@@ -11,7 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/republicprotocol/swapperd/adapter/wallet"
-	"github.com/republicprotocol/swapperd/core"
+	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/core/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
@@ -22,28 +22,28 @@ import (
 )
 
 type Storage interface {
-	core.Storage
+	swapper.Storage
 	transfer.Storage
 }
 type httpServer struct {
-	wallet       wallet.Wallet
-	logger       logrus.FieldLogger
-	port         string
-	loggedin     bool
-	swapperdTask tau.Task
-	walletTask   tau.Task
+	wallet      wallet.Wallet
+	logger      logrus.FieldLogger
+	port        string
+	loggedin    bool
+	swapperTask tau.Task
+	walletTask  tau.Task
 }
 
-func NewHttpServer(wallet wallet.Wallet, logger logrus.FieldLogger, swapperdTask, walletTask tau.Task, port string) Server {
-	return &httpServer{wallet, logger, port, false, swapperdTask, walletTask}
+func NewHttpServer(wallet wallet.Wallet, logger logrus.FieldLogger, swapperTask, walletTask tau.Task, port string) Server {
+	return &httpServer{wallet, logger, port, false, swapperTask, walletTask}
 }
 
 // NewHttpListener creates a new http listener
 func (listener *httpServer) Run(done <-chan struct{}) {
-	go listener.swapperdTask.Run(done)
+	go listener.swapperTask.Run(done)
 	go listener.walletTask.Run(done)
 
-	reqHandler := NewHandler(listener.swapperdTask, listener.walletTask, listener.wallet, listener.logger)
+	reqHandler := NewHandler(listener.swapperTask, listener.walletTask, listener.wallet, listener.logger)
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", postSwapsHandler(reqHandler)).Methods("POST")
 	r.HandleFunc("/swaps", getSwapsHandler(reqHandler)).Queries("id", "{id}").Methods("GET")
@@ -87,7 +87,7 @@ func (listener *httpServer) ticker(done <-chan struct{}) {
 			return
 		case <-ticker.C:
 			listener.walletTask.IO().InputWriter() <- tau.NewTick(time.Now())
-			listener.swapperdTask.IO().InputWriter() <- tau.NewTick(time.Now())
+			listener.swapperTask.IO().InputWriter() <- tau.NewTick(time.Now())
 		}
 	}
 }

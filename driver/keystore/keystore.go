@@ -24,7 +24,7 @@ var Testnet = wallet.Config{
 			Name: "kovan",
 			URL:  "https://kovan.infura.io",
 		},
-		Tokens: []string{"ETH", "WBTC"},
+		Tokens: []string{"ETH", "WBTC", "REN", "DGX", "TUSD", "OMG", "ZRX", "USDC", "GUSD", "DAI"},
 	},
 }
 
@@ -41,7 +41,7 @@ var Mainnet = wallet.Config{
 			Name: "mainnet",
 			URL:  "https://mainnet.infura.io",
 		},
-		Tokens: []string{"ETH", "WBTC"},
+		Tokens: []string{"ETH", "WBTC", "REN", "DGX", "TUSD", "OMG", "ZRX", "USDC", "GUSD", "DAI"},
 	},
 }
 
