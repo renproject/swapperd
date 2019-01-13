@@ -1,13 +1,13 @@
-package core
+package swapper
 
 import (
 	"encoding/base64"
 	"fmt"
 
 	"github.com/republicprotocol/co-go"
-	"github.com/republicprotocol/swapperd/core/delayed"
-	"github.com/republicprotocol/swapperd/core/status"
-	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/core/swapper/delayed"
+	"github.com/republicprotocol/swapperd/core/swapper/immediate"
+	"github.com/republicprotocol/swapperd/core/swapper/status"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
@@ -25,17 +25,17 @@ type Storage interface {
 }
 
 type core struct {
-	delayedSwapper tau.Task
-	swapper        tau.Task
-	status         tau.Task
-	storage        Storage
+	delayedSwapper   tau.Task
+	immediateSwapper tau.Task
+	status           tau.Task
+	storage          Storage
 }
 
-func New(cap int, storage Storage, builder swapper.ContractBuilder, callback delayed.DelayCallback) tau.Task {
+func New(cap int, storage Storage, builder immediate.ContractBuilder, callback delayed.DelayCallback) tau.Task {
 	delayedSwapperTask := delayed.New(cap, callback)
-	swapperTask := swapper.New(cap, builder)
+	immediateSwapperTask := immediate.New(cap, builder)
 	statusTask := status.New(cap)
-	return tau.New(tau.NewIO(cap), &core{delayedSwapperTask, swapperTask, statusTask, storage}, delayedSwapperTask, swapperTask, statusTask)
+	return tau.New(tau.NewIO(cap), &core{delayedSwapperTask, immediateSwapperTask, statusTask, storage}, delayedSwapperTask, immediateSwapperTask, statusTask)
 }
 
 func (core *core) Reduce(msg tau.Message) tau.Message {
@@ -44,9 +44,9 @@ func (core *core) Reduce(msg tau.Message) tau.Message {
 		return core.handleBootload(msg)
 	case SwapRequest:
 		return core.handleSwapRequest(msg)
-	case swapper.ReceiptUpdate:
+	case immediate.ReceiptUpdate:
 		return core.handleReceiptUpdate(swap.ReceiptUpdate(msg))
-	case swapper.DeleteSwap:
+	case immediate.DeleteSwap:
 		return core.handleDeleteSwap(msg.ID)
 	case delayed.SwapRequest:
 		return core.handleSwapRequest(SwapRequest(msg))
@@ -72,7 +72,7 @@ func (core *core) handleReceiptQuery(msg tau.Message) tau.Message {
 
 func (core *core) handleTick(msg tau.Message) tau.Message {
 	core.status.Send(msg)
-	core.swapper.Send(msg)
+	core.immediateSwapper.Send(msg)
 	core.delayedSwapper.Send(msg)
 	return nil
 }
@@ -102,7 +102,7 @@ func (core *core) handleSwapRequest(msg SwapRequest) tau.Message {
 	}
 
 	sendCost, receiveCost := core.storage.LoadCosts(msg.ID)
-	core.swapper.Send(swapper.NewSwapRequest(swap.SwapBlob(msg), sendCost, receiveCost))
+	core.immediateSwapper.Send(immediate.NewSwapRequest(swap.SwapBlob(msg), sendCost, receiveCost))
 	return nil
 }
 
@@ -151,7 +151,7 @@ func (core *core) handleSwapperBootload(msg Bootload) tau.Message {
 		}
 
 		sendCost, receiveCost := core.storage.LoadCosts(pendingSwap.ID)
-		core.swapper.Send(swapper.NewSwapRequest(pendingSwap, sendCost, receiveCost))
+		core.immediateSwapper.Send(immediate.NewSwapRequest(pendingSwap, sendCost, receiveCost))
 	}
 
 	return nil
