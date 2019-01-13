@@ -26,25 +26,25 @@ func New(cap int, delayCallback DelayCallback) tau.Task {
 func (callback *callback) Reduce(msg tau.Message) tau.Message {
 	switch msg := msg.(type) {
 	case DelayedSwapRequest:
-		return callback.tryFill(msg)
+		return callback.handleDelayedSwapRequest(msg)
 	case tau.Tick:
-		return callback.checkAgain()
+		return callback.handleTick()
 	default:
 		return tau.NewError(fmt.Errorf("invalid message type in delayed swapper: %T", msg))
 	}
 }
 
-func (callback *callback) checkAgain() tau.Message {
+func (callback *callback) handleTick() tau.Message {
 	messages := []tau.Message{}
 	for _, swap := range callback.swapMap {
-		if msg := callback.tryFill(swap); msg != nil {
+		if msg := callback.handleDelayedSwapRequest(swap); msg != nil {
 			messages = append(messages, msg)
 		}
 	}
 	return tau.NewMessageBatch(messages)
 }
 
-func (callback *callback) tryFill(blob DelayedSwapRequest) tau.Message {
+func (callback *callback) handleDelayedSwapRequest(blob DelayedSwapRequest) tau.Message {
 	password := blob.Password
 	blob.Password = ""
 	filledBlob, err := callback.delayCallback.DelayCallback(swap.SwapBlob(blob))
@@ -78,4 +78,26 @@ func (callback *callback) handleUpdateSwap(req SwapRequest) tau.Message {
 		receipt.TimeLock = req.TimeLock
 	}))
 	return tau.NewMessageBatch([]tau.Message{update, req})
+}
+
+type DelayedSwapRequest swap.SwapBlob
+
+func (msg DelayedSwapRequest) IsMessage() {
+}
+
+type SwapRequest swap.SwapBlob
+
+func (msg SwapRequest) IsMessage() {
+}
+
+type ReceiptUpdate swap.ReceiptUpdate
+
+func (msg ReceiptUpdate) IsMessage() {
+}
+
+type DeleteSwap struct {
+	ID swap.SwapID
+}
+
+func (msg DeleteSwap) IsMessage() {
 }
