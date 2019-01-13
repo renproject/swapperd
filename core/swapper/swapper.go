@@ -1,178 +1,177 @@
-package swapper
+package core
 
 import (
-	"time"
+	"encoding/base64"
+	"fmt"
 
+	"github.com/republicprotocol/co-go"
+	"github.com/republicprotocol/swapperd/core/delayed"
+	"github.com/republicprotocol/swapperd/core/status"
+	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/sha3"
+	"github.com/republicprotocol/tau"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Storage interface {
 	LoadCosts(id swap.SwapID) (blockchain.Cost, blockchain.Cost)
 	DeletePendingSwap(swap.SwapID) error
+	Receipts() ([]swap.SwapReceipt, error)
+	PutReceipt(receipt swap.SwapReceipt) error
+	UpdateReceipt(receiptUpdate swap.ReceiptUpdate) error
+	PutSwap(blob swap.SwapBlob) error
+	PendingSwaps() ([]swap.SwapBlob, error)
 }
 
-type Swapper interface {
-	Run(done <-chan struct{}, swaps <-chan swap.SwapBlob, updates chan<- swap.ReceiptUpdate)
+type core struct {
+	delayedSwapper tau.Task
+	swapper        tau.Task
+	status         tau.Task
+	storage        Storage
 }
 
-type Contract interface {
-	Initiate() error
-	Audit() error
-	Redeem([32]byte) error
-	AuditSecret() ([32]byte, error)
-	Refund() error
-	Cost() blockchain.Cost
+func New(cap int, storage Storage, builder swapper.ContractBuilder, callback delayed.DelayCallback) tau.Task {
+	delayedSwapperTask := delayed.New(cap, callback)
+	swapperTask := swapper.New(cap, builder)
+	statusTask := status.New(cap)
+	return tau.New(tau.NewIO(cap), &core{delayedSwapperTask, swapperTask, statusTask, storage}, delayedSwapperTask, swapperTask, statusTask)
 }
 
-type ContractBuilder interface {
-	BuildSwapContracts(swap swap.SwapBlob, sendCost, receiveCost blockchain.Cost) (Contract, Contract, error)
-}
-
-type swapper struct {
-	builder ContractBuilder
-	storage Storage
-	logger  logrus.FieldLogger
-}
-
-func New(builder ContractBuilder, storage Storage, logger logrus.FieldLogger) Swapper {
-	return &swapper{
-		builder: builder,
-		storage: storage,
-		logger:  logger,
+func (core *core) Reduce(msg tau.Message) tau.Message {
+	switch msg := msg.(type) {
+	case Bootload:
+		return core.handleBootload(msg)
+	case SwapRequest:
+		return core.handleSwapRequest(msg)
+	case swapper.ReceiptUpdate:
+		return core.handleReceiptUpdate(swap.ReceiptUpdate(msg))
+	case swapper.DeleteSwap:
+		return core.handleDeleteSwap(msg.ID)
+	case delayed.SwapRequest:
+		return core.handleSwapRequest(SwapRequest(msg))
+	case delayed.ReceiptUpdate:
+		return core.handleReceiptUpdate(swap.ReceiptUpdate(msg))
+	case delayed.DeleteSwap:
+		return core.handleDeleteSwap(msg.ID)
+	case status.ReceiptQuery:
+		return core.handleReceiptQuery(msg)
+	case tau.Error:
+		return msg
+	case tau.Tick:
+		return core.handleTick(msg)
+	default:
+		return tau.NewError(fmt.Errorf("invalid message type in core: %T", msg))
 	}
+}
+
+func (core *core) handleReceiptQuery(msg tau.Message) tau.Message {
+	core.status.Send(msg)
+	return nil
+}
+
+func (core *core) handleTick(msg tau.Message) tau.Message {
+	core.status.Send(msg)
+	core.swapper.Send(msg)
+	core.delayedSwapper.Send(msg)
+	return nil
+}
+
+func (core *core) handleReceiptUpdate(update swap.ReceiptUpdate) tau.Message {
+	core.status.Send(status.ReceiptUpdate(update))
+	if err := core.storage.UpdateReceipt(swap.ReceiptUpdate(update)); err != nil {
+		return tau.NewError(err)
+	}
+	return nil
+}
+
+func (core *core) handleSwapRequest(msg SwapRequest) tau.Message {
+	if err := core.storage.PutSwap(swap.SwapBlob(msg)); err != nil {
+		return tau.NewError(err)
+	}
+
+	receipt := swap.NewSwapReceipt(swap.SwapBlob(msg))
+	core.status.Send(status.Receipt(receipt))
+	if err := core.storage.PutReceipt(receipt); err != nil {
+		return tau.NewError(err)
+	}
+
+	if msg.Delay {
+		core.delayedSwapper.Send(delayed.SwapRequest(msg))
+		return nil
+	}
+
+	sendCost, receiveCost := core.storage.LoadCosts(msg.ID)
+	core.swapper.Send(swapper.NewSwapRequest(swap.SwapBlob(msg), sendCost, receiveCost))
+	return nil
+}
+
+func (core *core) handleBootload(msg Bootload) tau.Message {
+	return tau.NewMessageBatch([]tau.Message{core.handleSwapperBootload(msg), core.handleStatusBootload(msg)})
+}
+
+func (core *core) handleStatusBootload(msg Bootload) tau.Message {
+	// Loading historical swap receipts
+	historicalReceipts, err := core.storage.Receipts()
+	if err != nil {
+		return tau.NewError(err)
+	}
+
+	co.ParForAll(historicalReceipts, func(i int) {
+		core.status.Send(status.Receipt(historicalReceipts[i]))
+	})
+
+	return nil
+}
+
+func (core *core) handleSwapperBootload(msg Bootload) tau.Message {
+	pendingSwaps, err := core.storage.PendingSwaps()
+	if err != nil {
+		return tau.NewError(err)
+	}
+
+	for _, pendingSwap := range pendingSwaps {
+		hash, err := base64.StdEncoding.DecodeString(pendingSwap.PasswordHash)
+		if pendingSwap.PasswordHash != "" && err != nil {
+			continue
+		}
+
+		if pendingSwap.PasswordHash != "" && bcrypt.CompareHashAndPassword(hash, []byte(msg.Password)) != nil {
+			continue
+		}
+
+		core.status.Send(status.ReceiptUpdate(swap.NewReceiptUpdate(pendingSwap.ID, func(receipt *swap.SwapReceipt) {
+			receipt.Active = true
+		})))
+
+		pendingSwap.Password = msg.Password
+		if pendingSwap.Delay {
+			core.delayedSwapper.Send(delayed.DelayedSwapRequest(pendingSwap))
+			continue
+		}
+
+		sendCost, receiveCost := core.storage.LoadCosts(pendingSwap.ID)
+		core.swapper.Send(swapper.NewSwapRequest(pendingSwap, sendCost, receiveCost))
+	}
+
+	return nil
+}
+
+func (core *core) handleDeleteSwap(id swap.SwapID) tau.Message {
+	if err := core.storage.DeletePendingSwap(id); err != nil {
+		return tau.NewError(err)
+	}
+	return nil
+}
+
+type SwapRequest swap.SwapBlob
+
+func (msg SwapRequest) IsMessage() {
 }
 
 type Bootload struct {
 	Password string
 }
 
-func (swapper *swapper) Run(done <-chan struct{}, swaps <-chan swap.SwapBlob, updates chan<- swap.ReceiptUpdate) {
-	for {
-		select {
-		case <-done:
-			return
-		case blob, ok := <-swaps:
-			if !ok {
-				return
-			}
-			go swapper.swap(blob, updates)
-		}
-	}
-}
-
-func (swapper *swapper) swap(blob swap.SwapBlob, updates chan<- swap.ReceiptUpdate) {
-	logger := swapper.logger.WithField("SwapID", blob.ID)
-
-	sendCost, receiveCost := swapper.storage.LoadCosts(blob.ID)
-	native, foreign, err := swapper.builder.BuildSwapContracts(blob, sendCost, receiveCost)
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-	if blob.ShouldInitiateFirst {
-		swapper.initiate(blob, native, foreign, updates)
-		return
-	}
-	swapper.respond(blob, native, foreign, updates)
-}
-
-func (swapper *swapper) initiate(blob swap.SwapBlob, native, foreign Contract, updates chan<- swap.ReceiptUpdate) {
-	swapStatus := swap.Inactive
-	defer func() {
-		updates <- swap.NewReceiptUpdate(blob.ID, func(receipt *swap.SwapReceipt) {
-			receipt.Status = swapStatus
-			receipt.SendCost = native.Cost()
-			receipt.ReceiveCost = foreign.Cost()
-		})
-	}()
-	secret := sha3.Sum256(append([]byte(blob.ID), []byte(blob.Password)...))
-
-	logger := swapper.logger.WithField("SwapID", blob.ID)
-	if err := native.Initiate(); err != nil {
-		logger.Error(err)
-		swapper.handleResult(blob, false, updates)
-		return
-	}
-
-	swapStatus = swap.Initiated
-	if err := foreign.Audit(); err != nil {
-		swapStatus = swap.AuditFailed
-		if err := native.Refund(); err != nil {
-			logger.Error(err)
-			swapper.handleResult(blob, false, updates)
-			return
-		}
-		swapper.handleResult(blob, true, updates)
-		swapStatus = swap.Refunded
-		return
-	}
-
-	swapStatus = swap.Audited
-	if err := foreign.Redeem(secret); err != nil {
-		logger.Error(err)
-		swapper.handleResult(blob, false, updates)
-		return
-	}
-
-	swapStatus = swap.Redeemed
-	swapper.handleResult(blob, true, updates)
-}
-
-func (swapper *swapper) respond(blob swap.SwapBlob, native, foreign Contract, updates chan<- swap.ReceiptUpdate) {
-	swapStatus := swap.Inactive
-	defer func() {
-		updates <- swap.NewReceiptUpdate(blob.ID, func(receipt *swap.SwapReceipt) {
-			receipt.Status = swapStatus
-			receipt.SendCost = native.Cost()
-			receipt.ReceiveCost = foreign.Cost()
-		})
-	}()
-
-	logger := swapper.logger.WithField("SwapID", blob.ID)
-	if err := foreign.Audit(); err != nil {
-		swapStatus = swap.AuditFailed
-		swapper.handleResult(blob, true, updates)
-		return
-	}
-
-	swapStatus = swap.Audited
-	if err := native.Initiate(); err != nil {
-		logger.Error(err)
-		swapper.handleResult(blob, false, updates)
-		return
-	}
-
-	swapStatus = swap.Initiated
-	secret, err := native.AuditSecret()
-	if err != nil {
-		if err := native.Refund(); err != nil {
-			logger.Error(err)
-			swapper.handleResult(blob, false, updates)
-			return
-		}
-		swapStatus = swap.Refunded
-		swapper.handleResult(blob, true, updates)
-		return
-	}
-	if err := foreign.Redeem(secret); err != nil {
-		logger.Error(err)
-		swapper.handleResult(blob, false, updates)
-		return
-	}
-	swapStatus = swap.Redeemed
-	swapper.handleResult(blob, true, updates)
-}
-
-func (swapper *swapper) handleResult(blob swap.SwapBlob, remove bool, updates chan<- swap.ReceiptUpdate) {
-	if remove {
-		if err := swapper.storage.DeletePendingSwap(blob.ID); err != nil {
-			swapper.logger.Error(err)
-		}
-		return
-	}
-	time.Sleep(5 * time.Minute)
-	swapper.swap(blob, updates)
+func (msg Bootload) IsMessage() {
 }

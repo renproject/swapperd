@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/republicprotocol/swapperd/core/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -29,9 +30,13 @@ type Storage interface {
 	DeletePendingSwap(swapID swap.SwapID) error
 	PendingSwaps() ([]swap.SwapBlob, error)
 
+	PutTransfer(transfer transfer.TransferReceipt) error
+	Transfers() ([]transfer.TransferReceipt, error)
+	UpdateTransferReceipt(updateReceipt transfer.UpdateReceipt) error
+
 	PendingSwap(swapID swap.SwapID) (swap.SwapBlob, error)
 	PutReceipt(receipt swap.SwapReceipt) error
-	UpdateReceipt(swapID swap.SwapID, update func(receipt *swap.SwapReceipt)) error
+	UpdateReceipt(receiptUpdate swap.ReceiptUpdate) error
 	Receipts() ([]swap.SwapReceipt, error)
 	Receipt(swapID swap.SwapID) (swap.SwapReceipt, error)
 	LoadCosts(swapID swap.SwapID) (blockchain.Cost, blockchain.Cost)
@@ -48,6 +53,7 @@ func New(db *leveldb.DB) Storage {
 }
 
 func (db *dbStorage) PutSwap(blob swap.SwapBlob) error {
+	blob.Password = ""
 	swapData, err := json.Marshal(blob)
 	if err != nil {
 		return err

@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"math/big"
+	"time"
 
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
@@ -22,17 +23,39 @@ const ExpiryUnit = int64(2 * 60 * 60)
 
 // The SwapReceipt contains the swap details and the status.
 type SwapReceipt struct {
-	ID            SwapID          `json:"id"`
-	SendToken     string          `json:"sendToken"`
-	ReceiveToken  string          `json:"receiveToken"`
-	SendAmount    string          `json:"sendAmount"`
-	ReceiveAmount string          `json:"receiveAmount"`
-	SendCost      blockchain.Cost `json:"sendCost"`
-	ReceiveCost   blockchain.Cost `json:"receiveCost"`
-	Timestamp     int64           `json:"timestamp"`
-	Status        int             `json:"status"`
-	Delay         bool            `json:"delay"`
-	DelayInfo     json.RawMessage `json:"delayInfo,omitempty"`
+	ID            SwapID              `json:"id"`
+	SendToken     string              `json:"sendToken"`
+	ReceiveToken  string              `json:"receiveToken"`
+	SendAmount    string              `json:"sendAmount"`
+	ReceiveAmount string              `json:"receiveAmount"`
+	SendCost      blockchain.CostBlob `json:"sendCost"`
+	ReceiveCost   blockchain.CostBlob `json:"receiveCost"`
+	Timestamp     int64               `json:"timestamp"`
+	TimeLock      int64               `json:"timeLock"`
+	Status        int                 `json:"status"`
+	Delay         bool                `json:"delay"`
+	DelayInfo     json.RawMessage     `json:"delayInfo,omitempty"`
+	Active        bool                `json:"active"`
+	PasswordHash  string              `json:"passwordHash,omitempty"`
+}
+
+func NewSwapReceipt(blob SwapBlob) SwapReceipt {
+	return SwapReceipt{
+		ID:            blob.ID,
+		SendToken:     blob.SendToken,
+		ReceiveToken:  blob.ReceiveToken,
+		SendAmount:    blob.SendAmount,
+		ReceiveAmount: blob.ReceiveAmount,
+		SendCost:      blockchain.CostBlob{},
+		ReceiveCost:   blockchain.CostBlob{},
+		Timestamp:     time.Now().Unix(),
+		TimeLock:      blob.TimeLock,
+		Status:        0,
+		Delay:         blob.Delay,
+		DelayInfo:     blob.DelayInfo,
+		Active:        true,
+		PasswordHash:  blob.PasswordHash,
+	}
 }
 
 // A Swap stores all of the information required to execute an atomic swap.
@@ -51,14 +74,14 @@ type Swap struct {
 
 // A SwapBlob is used to encode a Swap for storage and transmission.
 type SwapBlob struct {
-	ID           SwapID `json:"id"`
+	ID           SwapID `json:"id,omitempty"`
 	SendToken    string `json:"sendToken"`
 	ReceiveToken string `json:"receiveToken"`
 
 	// SendAmount and ReceiveAmount are decimal strings.
-	SendFee              string `json:"sendFee"`
+	SendFee              string `json:"sendFee,omitempty"`
 	SendAmount           string `json:"sendAmount"`
-	ReceiveFee           string `json:"receiveFee"`
+	ReceiveFee           string `json:"receiveFee,omitempty"`
 	ReceiveAmount        string `json:"receiveAmount"`
 	MinimumReceiveAmount string `json:"minimumReceiveAmount,omitempty"`
 
@@ -72,11 +95,13 @@ type SwapBlob struct {
 	DelayInfo        json.RawMessage `json:"delayInfo,omitempty"`
 	DelayCallbackURL string          `json:"delayCallbackUrl,omitempty"`
 
-	BrokerFee              int64  `json:"brokerFee"` // in BIPs or (1/10000)
-	BrokerSendTokenAddr    string `json:"brokerSendTokenAddr"`
-	BrokerReceiveTokenAddr string `json:"brokerReceiveTokenAddr"`
+	BrokerFee              int64  `json:"brokerFee,omitempty"` // in BIPs or (1/10000)
+	BrokerSendTokenAddr    string `json:"brokerSendTokenAddr,omitempty"`
+	BrokerReceiveTokenAddr string `json:"brokerReceiveTokenAddr,omitempty"`
 
-	Password string `json:"password,omitempty"`
+	ResponseURL  string `json:"responseURL,omitempty"`
+	Password     string `json:"password,omitempty"`
+	PasswordHash string `json:"passwordHash,omitempty"`
 }
 
 type ReceiptUpdate struct {

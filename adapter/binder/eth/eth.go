@@ -83,12 +83,26 @@ func (atom *ethSwapContractBinder) Initiate() error {
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
 			tops.GasPrice = atom.swap.Fee
-			tops.Value = atom.swap.Value.Add(atom.swap.Value, atom.swap.BrokerFee)
-			tx, err := atom.binder.Initiate(tops, atom.id, common.HexToAddress(atom.swap.SpendingAddress), common.HexToAddress(atom.swap.BrokerAddress), atom.swap.BrokerFee, atom.swap.SecretHash, big.NewInt(atom.swap.TimeLock))
-			if err != nil {
-				return tx, err
+			tops.Value = atom.swap.Value
+			var tx *types.Transaction
+			var err error
+			if atom.swap.BrokerFee.Cmp(big.NewInt(0)) > 0 {
+				tx, err = atom.binder.InitiateWithFees(tops, atom.id, common.HexToAddress(atom.swap.SpendingAddress), common.HexToAddress(atom.swap.BrokerAddress), atom.swap.BrokerFee, atom.swap.SecretHash, big.NewInt(atom.swap.TimeLock), atom.swap.Value)
+				if err != nil {
+					return tx, err
+				}
+
+				atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], atom.swap.BrokerFee)
+			} else {
+				tx, err = atom.binder.Initiate(tops, atom.id, common.HexToAddress(atom.swap.SpendingAddress), atom.swap.SecretHash, big.NewInt(atom.swap.TimeLock), atom.swap.Value)
+				if err != nil {
+					return tx, err
+				}
 			}
-			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], tx.Cost())
+
+			txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
+			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], txFee)
+
 			tops.Value = big.NewInt(0)
 			msg, _ := atom.account.FormatTransactionView("Initiated the atomic swap", tx.Hash().String())
 			atom.logger.Info(msg)
@@ -130,7 +144,10 @@ func (atom *ethSwapContractBinder) Refund() error {
 			if err != nil {
 				return nil, err
 			}
-			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], tx.Cost())
+
+			txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
+			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], txFee)
+
 			msg, _ := atom.account.FormatTransactionView("Refunded the atomic swap", tx.Hash().String())
 			atom.logger.Info(msg)
 			return tx, nil
@@ -151,22 +168,20 @@ func (atom *ethSwapContractBinder) Refund() error {
 
 // AuditSecret audits the secret of an Atom swap by calling a function on ethereum
 func (atom *ethSwapContractBinder) AuditSecret() ([32]byte, error) {
-	for {
-		atom.logger.Info("Auditing secret on ethereum blockchain")
-		redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
-		if err != nil {
-			atom.logger.Error(err)
-			return [32]byte{}, err
-		}
-		if !redeemable {
-			break
-		}
-		if time.Now().Unix() > atom.swap.TimeLock {
-			atom.logger.Error(fmt.Errorf("Timed Out"))
-			return [32]byte{}, fmt.Errorf("Timed Out")
-		}
-		time.Sleep(15 * time.Second)
+	atom.logger.Info("Auditing secret on ethereum blockchain")
+	redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
+	if err != nil {
+		atom.logger.Error(err)
+		return [32]byte{}, err
 	}
+	if redeemable {
+		if time.Now().Unix() > atom.swap.TimeLock {
+			atom.logger.Error(swapper.ErrSwapExpired)
+			return [32]byte{}, swapper.ErrSwapExpired
+		}
+		return [32]byte{}, swapper.ErrAuditPending
+	}
+
 	secret, err := atom.binder.AuditSecret(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		return [32]byte{}, err
@@ -178,23 +193,27 @@ func (atom *ethSwapContractBinder) AuditSecret() ([32]byte, error) {
 // Audit an Atom swap by calling a function on ethereum
 func (atom *ethSwapContractBinder) Audit() error {
 	atom.logger.Info(fmt.Sprintf("Waiting for initiation on ethereum blockchain"))
-	for {
-		initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
-		if err != nil {
-			atom.logger.Error(err)
-			return err
+	initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
+	if err != nil {
+		atom.logger.Error(err)
+		return err
+	}
+
+	if initiatable {
+		if time.Now().Unix() > atom.swap.TimeLock {
+			atom.logger.Error(swapper.ErrSwapExpired)
+			return swapper.ErrSwapExpired
 		}
-		if !initiatable {
-			break
-		}
-		time.Sleep(15 * time.Second)
+		return swapper.ErrAuditPending
 	}
 	auditReport, err := atom.binder.Audit(&bind.CallOpts{}, atom.id)
 	if err != nil {
 		atom.logger.Error(err)
 		return err
 	}
-	if auditReport.Value.Cmp(atom.swap.Value) != 0 {
+
+	value := new(big.Int).Sub(atom.swap.Value, atom.swap.BrokerFee)
+	if auditReport.Value.Cmp(value) != 0 {
 		atom.logger.Error(fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.swap.Value, auditReport.Value))
 		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.swap.Value, auditReport.Value)
 	}
@@ -224,8 +243,11 @@ func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 			if err != nil {
 				return nil, err
 			}
-			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], tx.Cost())
-			msg, _ := atom.account.FormatTransactionView("Redeemed the atomic swap on ERC20 blockchain", tx.Hash().String())
+
+			txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
+			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], txFee)
+
+			msg, _ := atom.account.FormatTransactionView("Redeemed the atomic swap on Ethereum blockchain", tx.Hash().String())
 			atom.logger.Info(msg)
 			return tx, nil
 		},

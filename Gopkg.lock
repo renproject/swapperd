@@ -2,6 +2,18 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/FactomProject/basen"
+  packages = ["."]
+  revision = "fe3947df716ebfda9847eb1b9a48f9592e06478c"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/FactomProject/btcutilecc"
+  packages = ["."]
+  revision = "d3a63a5752ecf3fbc06bd97365da752111c263df"
+
+[[projects]]
   name = "github.com/allegro/bigcache"
   packages = [
     ".",
@@ -14,7 +26,7 @@
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "e17947f884f63c85799a86637524c213d798c7ec"
+  revision = "0ca71131d8f76e0739563d97cc9f95c021825a2b"
 
 [[projects]]
   branch = "master"
@@ -40,8 +52,7 @@
   packages = [
     ".",
     "base58",
-    "bech32",
-    "hdkeychain"
+    "bech32"
   ]
   revision = "ab6388e0c60ae4834a1f57511e20c17b5f78be4b"
 
@@ -88,8 +99,8 @@
     "rpc",
     "trie"
   ]
-  revision = "dae82f098570e15d44584f0d7f350713f4774727"
-  version = "v1.8.19"
+  revision = "24d727b6d6e2c0cde222fa12155c4a6db5caaf2e"
+  version = "v1.8.20"
 
 [[projects]]
   name = "github.com/go-stack/stack"
@@ -202,7 +213,7 @@
   branch = "master"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "8967cde5bf604958a84764a6e07cc0502b64454c"
+  revision = "9bb22d81263720fb3d98472c38e4e2ed66248522"
 
 [[projects]]
   branch = "master"
@@ -214,7 +225,17 @@
   branch = "master"
   name = "github.com/republicprotocol/libbtc-go"
   packages = ["."]
-  revision = "dc267506aefd8f9b392f26789b4a938170ce07cf"
+  revision = "4ee09737d4632793d09929af45155b55c74e5afd"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/republicprotocol/tau"
+  packages = [
+    ".",
+    "core/buffer",
+    "core/task"
+  ]
+  revision = "f1230e164daa4bfbebc780ddec4fe7ac9a0fdc00"
 
 [[projects]]
   name = "github.com/rjeczalik/notify"
@@ -254,6 +275,12 @@
   revision = "b001fa50d6b27f3f0bb175a87d0cb55426d0a0ae"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/tyler-smith/go-bip32"
+  packages = ["."]
+  revision = "2c9cfd17756470a0b7c3e4b7954bae7d11035504"
+
+[[projects]]
   name = "github.com/tyler-smith/go-bip39"
   packages = [
     ".",
@@ -271,9 +298,10 @@
     "pbkdf2",
     "ripemd160",
     "scrypt",
+    "sha3",
     "ssh/terminal"
   ]
-  revision = "505ab145d0a99da450461ae2c1a9f6cd10d1f447"
+  revision = "8d7daa0c54b357f3071e11eaef7efc4e19a417e2"
 
 [[projects]]
   branch = "master"
@@ -284,7 +312,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "351d144fa1fc0bd934e2408202be0c29f25e35a0"
+  revision = "927f97764cc334a6575f4b7a1584a147864d5723"
 
 [[projects]]
   branch = "master"
@@ -299,7 +327,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "a5c9d58dba9a56f97aaa86f55e638b718c5a6c42"
+  revision = "82a175fd1598e8a172e58ebdf5ed262bb29129e5"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -353,6 +381,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "561926fa5df078550a70679d81f4442a4722e22baddc7a0300c011bef5bf3dae"
+  inputs-digest = "0774a93657935a2192d99afcee6b011d53b189bcc92574c9d36c27226c4f2490"
   solver-name = "gps-cdcl"
   solver-version = 1

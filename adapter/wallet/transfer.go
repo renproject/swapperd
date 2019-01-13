@@ -2,14 +2,16 @@ package wallet
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/republicprotocol/beth-go"
+	"github.com/republicprotocol/libbtc-go"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
+	"github.com/republicprotocol/swapperd/core/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
@@ -32,7 +34,7 @@ func (wallet *wallet) transferBTC(password, to string, amount *big.Int) (string,
 	if err != nil {
 		return "", err
 	}
-	return "", account.Transfer(ctx, to, amount.Int64())
+	return account.Transfer(ctx, to, amount.Int64())
 }
 
 func (wallet *wallet) transferETH(password, to string, amount *big.Int) (string, error) {
@@ -42,7 +44,7 @@ func (wallet *wallet) transferETH(password, to string, amount *big.Int) (string,
 	if err != nil {
 		return "", err
 	}
-	return "", account.Transfer(ctx, common.HexToAddress(to), amount, 1)
+	return account.Transfer(ctx, common.HexToAddress(to), amount, 0)
 }
 
 func (wallet *wallet) transferERC20(password string, token blockchain.Token, to string, amount *big.Int) (string, error) {
@@ -53,7 +55,7 @@ func (wallet *wallet) transferERC20(password string, token blockchain.Token, to 
 	if err != nil {
 		return txHash, err
 	}
-	tokenAddress, err := account.ReadAddress(fmt.Sprintf("ERC20:%s", token.Name))
+	tokenAddress, err := account.ReadAddress(string(token.Name))
 	if err != nil {
 		return txHash, err
 	}
@@ -81,4 +83,56 @@ func (wallet *wallet) transferERC20(password string, token blockchain.Token, to 
 	}
 
 	return txHash, nil
+}
+
+func (wallet *wallet) Lookup(token blockchain.Token, txHash string) (transfer.UpdateReceipt, error) {
+	switch token.Blockchain {
+	case blockchain.Bitcoin:
+		return wallet.bitcoinLookup(txHash)
+	case blockchain.Ethereum:
+		return wallet.ethereumLookup(txHash)
+	default:
+		return transfer.UpdateReceipt{}, blockchain.NewErrUnsupportedBlockchain(token.Blockchain)
+	}
+}
+
+func (wallet *wallet) ethereumLookup(txHash string) (transfer.UpdateReceipt, error) {
+	client, err := beth.Connect(wallet.config.Ethereum.Network.URL)
+	if err != nil {
+		return transfer.UpdateReceipt{}, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	txBlockNumber, err := client.TxBlockNumber(ctx, txHash)
+	if err != nil {
+		return transfer.UpdateReceipt{}, err
+	}
+
+	currBlockNumber, err := client.CurrentBlockNumber(ctx)
+	if err != nil {
+		return transfer.UpdateReceipt{}, err
+	}
+
+	confirmations := new(big.Int).Sub(currBlockNumber, txBlockNumber)
+	return transfer.NewUpdateReceipt(txHash, func(receipt *transfer.TransferReceipt) {
+		receipt.Confirmations = confirmations.Int64()
+	}), nil
+}
+
+func (wallet *wallet) bitcoinLookup(txHash string) (transfer.UpdateReceipt, error) {
+	client := libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	confirmations, err := client.Confirmations(ctx, txHash)
+	if err != nil {
+		return transfer.UpdateReceipt{}, err
+	}
+
+	return transfer.NewUpdateReceipt(txHash, func(receipt *transfer.TransferReceipt) {
+		receipt.Confirmations = confirmations
+	}), nil
 }

@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/republicprotocol/swapperd/adapter/wallet"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // Testnet is the Swapperd's testnet config object
@@ -46,68 +45,34 @@ var Mainnet = wallet.Config{
 	},
 }
 
-type Keystore struct {
-	Username     string        `json:"username"`
-	PasswordHash string        `json:"passwordHash"`
-	Config       wallet.Config `json:"config"`
-}
-
-type Address struct {
-	Blockchain string `json:"token"`
-	Address    string `json:"address"`
-}
-
 func Wallet(homeDir, network string) (wallet.Wallet, error) {
 	path := keystorePath(homeDir, network)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	keystore := Keystore{}
-	if err := json.Unmarshal(data, &keystore); err != nil {
+	config := wallet.Config{}
+	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, err
 	}
-	return wallet.New(keystore.Config), nil
+	return wallet.New(config), nil
 }
 
-func LoadPasswordHash(homeDir, network string) ([]byte, error) {
-	path := keystorePath(homeDir, network)
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	keystore := Keystore{}
-	if err := json.Unmarshal(data, &keystore); err != nil {
-		return nil, err
-	}
-	return base64.StdEncoding.DecodeString(keystore.PasswordHash)
-}
-
-func Generate(homeDir, network, username, password, mnemonic string) error {
+func Generate(homeDir, network, mnemonic string) error {
 	network = strings.ToLower(network)
 	path := keystorePath(homeDir, network)
-	keystore := Keystore{}
-	keystore.Username = username
-
-	passwordHashBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	config, err := generateConfig(network, mnemonic)
 	if err != nil {
 		return err
 	}
-
-	keystore.PasswordHash = base64.StdEncoding.EncodeToString(passwordHashBytes)
-	config, err := generateConfig(network, password, mnemonic)
-	if err != nil {
-		return err
-	}
-	keystore.Config = config
-	data, err := json.Marshal(keystore)
+	data, err := json.Marshal(config)
 	if err != nil {
 		return err
 	}
 	return ioutil.WriteFile(path, data, 0644)
 }
 
-func generateConfig(network, password, mnemonic string) (wallet.Config, error) {
+func generateConfig(network, mnemonic string) (wallet.Config, error) {
 	var config wallet.Config
 	switch network {
 	case "testnet":
@@ -118,21 +83,6 @@ func generateConfig(network, password, mnemonic string) (wallet.Config, error) {
 		return wallet.Config{}, fmt.Errorf("Invalid Network %s", network)
 	}
 	config.Mnemonic = mnemonic
-	w := wallet.New(config)
-	ethAccount, err := w.EthereumAccount(password)
-	if err != nil {
-		return wallet.Config{}, err
-	}
-	config.Ethereum.Address = ethAccount.Address().String()
-	btcAccount, err := w.BitcoinAccount(password)
-	if err != nil {
-		return wallet.Config{}, err
-	}
-	btcAddress, err := btcAccount.Address()
-	if err != nil {
-		return wallet.Config{}, err
-	}
-	config.Bitcoin.Address = btcAddress.String()
 	return config, nil
 }
 

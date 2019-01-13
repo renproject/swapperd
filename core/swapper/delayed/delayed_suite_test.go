@@ -1,4 +1,4 @@
-package swapper_test
+package delayed_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSwapper(t *testing.T) {
+func TestDelayed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Swapper Suite")
+	RunSpecs(t, "Delayed Suite")
 }
