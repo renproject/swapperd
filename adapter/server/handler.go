@@ -13,10 +13,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/republicprotocol/swapperd/core"
-
 	"github.com/republicprotocol/swapperd/adapter/wallet"
-	"github.com/republicprotocol/swapperd/core/status"
+	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/core/swapper/status"
 	"github.com/republicprotocol/swapperd/core/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
@@ -31,11 +30,11 @@ func NewErrBootloadRequired(msg string) error {
 }
 
 type handler struct {
-	bootloaded   map[string]bool
-	swapperdTask tau.Task
-	walletTask   tau.Task
-	wallet       wallet.Wallet
-	logger       logrus.FieldLogger
+	bootloaded  map[string]bool
+	swapperTask tau.Task
+	walletTask  tau.Task
+	wallet      wallet.Wallet
+	logger      logrus.FieldLogger
 }
 
 // The Handler for swapperd requests
@@ -56,8 +55,8 @@ type Handler interface {
 	PostBootload(password string) error
 }
 
-func NewHandler(swapperdTask, walletTask tau.Task, wallet wallet.Wallet, logger logrus.FieldLogger) Handler {
-	return &handler{map[string]bool{}, swapperdTask, walletTask, wallet, logger}
+func NewHandler(swapperTask, walletTask tau.Task, wallet wallet.Wallet, logger logrus.FieldLogger) Handler {
+	return &handler{map[string]bool{}, swapperTask, walletTask, wallet, logger}
 }
 
 func (handler *handler) GetInfo(password string) GetInfoResponse {
@@ -79,7 +78,7 @@ func (handler *handler) GetSwaps(password string) (GetSwapsResponse, error) {
 	}
 
 	responder := make(chan map[swap.SwapID]swap.SwapReceipt)
-	handler.swapperdTask.IO().InputWriter() <- status.ReceiptQuery{Responder: responder}
+	handler.swapperTask.IO().InputWriter() <- status.ReceiptQuery{Responder: responder}
 	swapReceipts := <-responder
 
 	for _, receipt := range swapReceipts {
@@ -116,7 +115,7 @@ func (handler *handler) getSwapReceipts(password string) (map[swap.SwapID]swap.S
 		return nil, NewErrBootloadRequired("get swaps")
 	}
 	responder := make(chan map[swap.SwapID]swap.SwapReceipt)
-	handler.swapperdTask.IO().InputWriter() <- status.ReceiptQuery{Responder: responder}
+	handler.swapperTask.IO().InputWriter() <- status.ReceiptQuery{Responder: responder}
 	swapReceipts := <-responder
 	return swapReceipts, nil
 }
@@ -159,7 +158,7 @@ func (handler *handler) PostSwaps(swapReq PostSwapRequest) (PostSwapResponse, er
 		return PostSwapResponse{}, err
 	}
 
-	handler.swapperdTask.IO().InputWriter() <- core.SwapRequest(blob)
+	handler.swapperTask.IO().InputWriter() <- swapper.SwapRequest(blob)
 	return handler.buildSwapResponse(blob)
 }
 
@@ -178,7 +177,7 @@ func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest) error {
 		return err
 	}
 
-	handler.swapperdTask.IO().InputWriter() <- core.SwapRequest(swapReq)
+	handler.swapperTask.IO().InputWriter() <- swapper.SwapRequest(swapReq)
 	return nil
 }
 
@@ -217,7 +216,7 @@ func (handler *handler) PostBootload(password string) error {
 	if handler.bootloaded[passwordHash(password)] {
 		return fmt.Errorf("already bootloaded")
 	}
-	handler.swapperdTask.IO().InputWriter() <- core.Bootload{password}
+	handler.swapperTask.IO().InputWriter() <- swapper.Bootload{password}
 	handler.bootloaded[passwordHash(password)] = true
 	return nil
 }

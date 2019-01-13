@@ -18,7 +18,7 @@ import (
 	"github.com/republicprotocol/swapperd/adapter/binder"
 	"github.com/republicprotocol/swapperd/adapter/callback"
 	"github.com/republicprotocol/swapperd/adapter/db"
-	"github.com/republicprotocol/swapperd/core"
+	"github.com/republicprotocol/swapperd/core/swapper"
 	"github.com/republicprotocol/swapperd/core/transfer"
 	"github.com/republicprotocol/swapperd/driver/keystore"
 	"github.com/republicprotocol/swapperd/driver/leveldb"
@@ -36,7 +36,7 @@ var _ = Describe("Server Adapter", func() {
 		Expect(err).Should(BeNil())
 		storage := db.New(ldb)
 		logger := logger.NewStdOut()
-		swapperdTask := core.New(128, storage, binder.NewBuilder(blockchain, logger), callback.New())
+		swapperdTask := swapper.New(128, storage, binder.NewBuilder(blockchain, logger), callback.New())
 		walletTask := transfer.New(128, blockchain, storage, logger)
 		go func() {
 			httpServer := NewHttpServer(blockchain, logger, swapperdTask, walletTask, "27927")
