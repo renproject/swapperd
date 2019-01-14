@@ -68,6 +68,7 @@ type Swap struct {
 	SecretHash      [32]byte
 	TimeLock        int64
 	SpendingAddress string
+	WithdrawAddress string
 	FundingAddress  string
 	BrokerAddress   string
 }
@@ -99,9 +100,10 @@ type SwapBlob struct {
 	BrokerSendTokenAddr    string `json:"brokerSendTokenAddr,omitempty"`
 	BrokerReceiveTokenAddr string `json:"brokerReceiveTokenAddr,omitempty"`
 
-	ResponseURL  string `json:"responseURL,omitempty"`
-	Password     string `json:"password,omitempty"`
-	PasswordHash string `json:"passwordHash,omitempty"`
+	WithdrawAddress string `json:"withdrawAddress,omitempty"`
+	ResponseURL     string `json:"responseURL,omitempty"`
+	Password        string `json:"password,omitempty"`
+	PasswordHash    string `json:"passwordHash,omitempty"`
 }
 
 type ReceiptUpdate struct {
