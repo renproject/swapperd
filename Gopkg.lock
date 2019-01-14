@@ -26,7 +26,7 @@
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "0ca71131d8f76e0739563d97cc9f95c021825a2b"
+  revision = "23a91eb493c6734b762ab29037be0dc3c4f5d105"
 
 [[projects]]
   branch = "master"
@@ -38,7 +38,7 @@
     "txscript",
     "wire"
   ]
-  revision = "7d2daa5bfef28c5e282571bc06416516936115ee"
+  revision = "5bda5314ca9549a589e63d7b2e6104492a0d5328"
 
 [[projects]]
   branch = "master"
@@ -54,7 +54,7 @@
     "base58",
     "bech32"
   ]
-  revision = "ab6388e0c60ae4834a1f57511e20c17b5f78be4b"
+  revision = "bf1e1be935893b7c8ac9f020195f6b0dfd1f14e0"
 
 [[projects]]
   name = "github.com/deckarep/golang-set"
@@ -213,7 +213,7 @@
   branch = "master"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "9bb22d81263720fb3d98472c38e4e2ed66248522"
+  revision = "b9522231b5db2fe42d2f73e47393b587d0ab6ee4"
 
 [[projects]]
   branch = "master"
@@ -252,8 +252,8 @@
 [[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  revision = "bcd833dfe83d3cebad139e4a29ed79cb2318bf95"
-  version = "v1.2.0"
+  revision = "e1e72e9de974bd926e5c56f83753fba2df402ce5"
+  version = "v1.3.0"
 
 [[projects]]
   branch = "master"
@@ -290,6 +290,12 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/urfave/cli"
+  packages = ["."]
+  revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
+  version = "v1.20.0"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
@@ -301,7 +307,7 @@
     "sha3",
     "ssh/terminal"
   ]
-  revision = "8d7daa0c54b357f3071e11eaef7efc4e19a417e2"
+  revision = "ff983b9c42bc9fbf91556e191cc8efb585c16908"
 
 [[projects]]
   branch = "master"
@@ -312,7 +318,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "927f97764cc334a6575f4b7a1584a147864d5723"
+  revision = "915654e7eabcea33ae277abbecf52f0d8b7a9fdc"
 
 [[projects]]
   branch = "master"
@@ -327,7 +333,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "82a175fd1598e8a172e58ebdf5ed262bb29129e5"
+  revision = "48ac38b7c8cbedd50b1613c0fccacfc7d88dfcdf"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -381,6 +387,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0774a93657935a2192d99afcee6b011d53b189bcc92574c9d36c27226c4f2490"
+  inputs-digest = "948cede605d8d4ceb7301bf0eaea75be6c2f082435514c3818d6f62d64f898cf"
   solver-name = "gps-cdcl"
   solver-version = 1
