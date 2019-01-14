@@ -77,7 +77,7 @@ func PatchToken(token string) (Token, error) {
 		return TokenUSDC, nil
 	case "dai", "maker dai", "makerdai":
 		return TokenDAI, nil
-	case "gusd", "gemini usd", "geminiusd":
+	case "gusd", "gemini dollar", "geminidollar":
 		return TokenGUSD, nil
 	default:
 		return Token{}, fmt.Errorf("unsupported token: %s", token)
