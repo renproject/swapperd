@@ -22,7 +22,7 @@ type ethSwapContractBinder struct {
 	account beth.Account
 	swap    swap.Swap
 	logger  logrus.FieldLogger
-	binder  *SwapperdEth
+	binder  *EthSwapContract
 	cost    blockchain.Cost
 }
 
@@ -33,7 +33,7 @@ func NewETHSwapContractBinder(account beth.Account, swap swap.Swap, cost blockch
 		return nil, err
 	}
 
-	contract, err := NewSwapperdEth(swapperAddr, bind.ContractBackend(account.EthClient()))
+	contract, err := NewEthSwapContract(swapperAddr, bind.ContractBackend(account.EthClient()))
 	if err != nil {
 		return nil, err
 	}
@@ -212,6 +212,12 @@ func (atom *ethSwapContractBinder) Audit() error {
 		return err
 	}
 
+	if auditReport.To.String() != atom.swap.SpendingAddress {
+		err := fmt.Errorf("Receiver Address Mismatch Expected: %v Actual: %v", atom.swap.SpendingAddress, auditReport.To.String())
+		atom.logger.Error(err)
+		return err
+	}
+
 	value := new(big.Int).Sub(atom.swap.Value, atom.swap.BrokerFee)
 	if auditReport.Value.Cmp(value) != 0 {
 		atom.logger.Error(fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.swap.Value, auditReport.Value))
@@ -239,7 +245,7 @@ func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
 			tops.GasPrice = atom.swap.Fee
-			tx, err := atom.binder.Redeem(tops, atom.id, secret)
+			tx, err := atom.binder.Redeem(tops, atom.id, common.HexToAddress(atom.swap.WithdrawAddress), secret)
 			if err != nil {
 				return nil, err
 			}

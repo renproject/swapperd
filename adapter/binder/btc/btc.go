@@ -131,10 +131,12 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 	atom.Info("Redeeming on Bitcoin blockchain")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	address, err := atom.Address()
+
+	address, err := btcutil.DecodeAddress(atom.swap.WithdrawAddress, atom.Account.NetworkParams())
 	if err != nil {
 		return NewErrRedeem(err)
 	}
+
 	payToAddrScript, err := txscript.PayToAddrScript(address)
 	if err != nil {
 		return NewErrRedeem(err)

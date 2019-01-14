@@ -165,6 +165,11 @@ func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spe
 		return swap.Swap{}, err
 	}
 
+	withdrawAddress := spendingAddress
+	if blob.WithdrawAddress != "" {
+		withdrawAddress = blob.WithdrawAddress
+	}
+
 	return swap.Swap{
 		ID:              blob.ID,
 		Token:           token,
@@ -174,6 +179,7 @@ func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spe
 		TimeLock:        blob.TimeLock,
 		SpendingAddress: spendingAddress,
 		FundingAddress:  blob.ReceiveFrom,
+		WithdrawAddress: withdrawAddress,
 		BrokerAddress:   blob.BrokerReceiveTokenAddr,
 		BrokerFee:       brokerFee,
 	}, nil
