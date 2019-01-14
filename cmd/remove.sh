@@ -29,4 +29,5 @@ fi
 
 mkdir -p $HOME/.swapperd_backup
 mv $HOME/.swapperd/testnet.json $HOME/.swapperd_backup/testnet-$(timestamp).json
+mv $HOME/.swapperd/mainnet.json $HOME/.swapperd_backup/mainnet-$(timestamp).json
 rm -rf $HOME/.swapperd

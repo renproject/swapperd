@@ -43,6 +43,8 @@ KillSignal=SIGHUP
 [Install]
 WantedBy=default.target" > swapperd.service
 mv swapperd.service $HOME/.config/systemd/user/swapperd.service
+user="$(whoami)"
+loginctl enable-linger $user
 }
 
 timestamp() {
@@ -65,33 +67,15 @@ cputype="$(uname -m)"
 
 # download swapperd binary depending on the system and architecture
 if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
-  curl -s 'https://releases.republicprotocol.com/swapperd/0.2.0/swapper_linux_amd64.zip' > swapper.zip
+  curl -s 'https://releases.republicprotocol.com/swapperd/swapper_linux_amd64.zip' > swapper.zip
 elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
-  curl -s 'https://releases.republicprotocol.com/swapperd/0.2.0/swapper_darwin_amd64.zip' > swapper.zip
+  curl -s 'https://releases.republicprotocol.com/swapperd/swapper_darwin_amd64.zip' > swapper.zip
 else
   echo 'unsupported OS type or architecture'
   cd ..
   rm -rf .swapperd
   exit 1
 fi
-
-# choose which network to use
-while :
-do
-  echo "Please enter the network you want to use (1/2)"
-  echo ""
-  echo "1. Testnet (default)" # testnet by default
-  echo "2. Mainnet"
-  read choice </dev/tty
-  if [ "$choice" = "" ] || [ "$choice" = "1" ]; then 
-    NETWORK="testnet"
-    break
-  elif [ "$choice" = "2" ]; then
-   NETWORK="mainnet"
-    break
-  fi
-  echo "The network entered is invalid. Please try again."
-done
 
 unzip -o swapper.zip
 chmod +x bin/swapperd
@@ -115,7 +99,11 @@ if ls "$HOME"/.swapperd/*.json 1> /dev/null 2>&1; then
   exit 0
 fi
 
-./bin/installer --network $NETWORK < /dev/tty
+if [ "$1" = '' ]; then
+  ./bin/installer
+else 
+  ./bin/installer --mnemonic "$1"
+fi
 
 # make sure the swapper service is started when booted
 if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
@@ -136,12 +124,12 @@ else
   exit 1
 fi
 
+mkdir -p $HOME/.swapperd_backup
+cp $HOME/.swapperd/testnet.json $HOME/.swapperd_backup/testnet-$(timestamp).json
+cp $HOME/.swapperd/mainnet.json $HOME/.swapperd_backup/mainnet-$(timestamp).json
+
 # clean up
 rm swapper.zip
 rm bin/installer
-
-mkdir -p $HOME/.swapperd_backup
-timestamp=$(date +%s)
-cp $HOME/.swapperd/testnet.json $HOME/.swapperd_backup/testnet-$(timestamp).json
 
 echo "Swapperd is installed now. Great!"

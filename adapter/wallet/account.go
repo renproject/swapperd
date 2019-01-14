@@ -5,10 +5,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/libbtc-go"
+	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -49,21 +49,17 @@ func (wallet *wallet) BitcoinAccount(password string) (libbtc.Account, error) {
 
 func (wallet *wallet) loadECDSAKey(password string, path []uint32) (*ecdsa.PrivateKey, error) {
 	seed := bip39.NewSeed(wallet.config.Mnemonic, password)
-	key, err := hdkeychain.NewMaster(seed, &chaincfg.MainNetParams)
+	key, err := bip32.NewMasterKey(seed)
 	if err != nil {
 		return nil, err
 	}
 	for _, val := range path {
-		key, err = key.Child(val)
+		key, err = key.NewChildKey(val)
 		if err != nil {
 			return nil, err
 		}
 	}
-	privKey, err := key.ECPrivKey()
-	if err != nil {
-		return nil, err
-	}
-	return privKey.ToECDSA(), nil
+	return crypto.ToECDSA(key.Key)
 }
 
 func (wallet *wallet) ECDSASigner(password string) (ECDSASigner, error) {

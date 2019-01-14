@@ -9,7 +9,7 @@ import (
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
 	"github.com/republicprotocol/swapperd/adapter/binder/eth"
 	"github.com/republicprotocol/swapperd/adapter/wallet"
-	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/core/swapper/immediate"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
@@ -20,30 +20,30 @@ type builder struct {
 	logrus.FieldLogger
 }
 
-func NewBuilder(wallet wallet.Wallet, logger logrus.FieldLogger) swapper.ContractBuilder {
+func NewBuilder(wallet wallet.Wallet, logger logrus.FieldLogger) immediate.ContractBuilder {
 	return &builder{
 		wallet,
 		logger,
 	}
 }
 
-func (builder *builder) BuildSwapContracts(swap swap.SwapBlob, nativeCost, foreignCost blockchain.Cost) (swapper.Contract, swapper.Contract, error) {
-	native, foreign, err := builder.buildComplementarySwaps(swap)
+func (builder *builder) BuildSwapContracts(req immediate.SwapRequest) (immediate.Contract, immediate.Contract, error) {
+	native, foreign, err := builder.buildComplementarySwaps(req.Blob)
 	if err != nil {
 		return nil, nil, err
 	}
-	nativeBinder, err := builder.buildBinder(native, nativeCost, swap.Password)
+	nativeBinder, err := builder.buildBinder(native, req.SendCost, req.Blob.Password)
 	if err != nil {
 		return nil, nil, err
 	}
-	foreignBinder, err := builder.buildBinder(foreign, foreignCost, swap.Password)
+	foreignBinder, err := builder.buildBinder(foreign, req.ReceiveCost, req.Blob.Password)
 	if err != nil {
 		return nil, nil, err
 	}
 	return nativeBinder, foreignBinder, nil
 }
 
-func (builder *builder) buildBinder(swap swap.Swap, cost blockchain.Cost, password string) (swapper.Contract, error) {
+func (builder *builder) buildBinder(swap swap.Swap, cost blockchain.Cost, password string) (immediate.Contract, error) {
 	switch swap.Token {
 	case blockchain.TokenBTC:
 		btcAccount, err := builder.BitcoinAccount(password)
@@ -57,7 +57,9 @@ func (builder *builder) buildBinder(swap swap.Swap, cost blockchain.Cost, passwo
 			return nil, err
 		}
 		return eth.NewETHSwapContractBinder(ethAccount, swap, cost, builder.FieldLogger)
-	case blockchain.TokenWBTC:
+	case blockchain.TokenWBTC, blockchain.TokenDGX, blockchain.TokenREN,
+		blockchain.TokenTUSD, blockchain.TokenOMG, blockchain.TokenZRX,
+		blockchain.TokenGUSD, blockchain.TokenDAI, blockchain.TokenUSDC:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
@@ -109,7 +111,7 @@ func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fund
 		if err := builder.Wallet.VerifyAddress(token.Blockchain, blob.BrokerSendTokenAddr); err != nil {
 			return swap.Swap{}, fmt.Errorf("corrupted send broker address: %v", blob.BrokerSendTokenAddr)
 		}
-		brokerFee = new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000-blob.BrokerFee))
+		brokerFee = new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000))
 	}
 
 	secretHash, err := unmarshalSecretHash(blob.SecretHash)
@@ -155,12 +157,17 @@ func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spe
 		if err := builder.Wallet.VerifyAddress(token.Blockchain, blob.BrokerReceiveTokenAddr); err != nil {
 			return swap.Swap{}, fmt.Errorf("corrupted receive broker address: %v", blob.BrokerReceiveTokenAddr)
 		}
-		brokerFee = new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000-blob.BrokerFee))
+		brokerFee = new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(blob.BrokerFee)), big.NewInt(10000))
 	}
 
 	secretHash, err := unmarshalSecretHash(blob.SecretHash)
 	if err != nil {
 		return swap.Swap{}, err
+	}
+
+	withdrawAddress := spendingAddress
+	if blob.WithdrawAddress != "" {
+		withdrawAddress = blob.WithdrawAddress
 	}
 
 	return swap.Swap{
@@ -172,6 +179,7 @@ func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spe
 		TimeLock:        blob.TimeLock,
 		SpendingAddress: spendingAddress,
 		FundingAddress:  blob.ReceiveFrom,
+		WithdrawAddress: withdrawAddress,
 		BrokerAddress:   blob.BrokerReceiveTokenAddr,
 		BrokerFee:       brokerFee,
 	}, nil

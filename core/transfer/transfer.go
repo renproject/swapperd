@@ -1,6 +1,7 @@
 package transfer
 
 import (
+	"encoding/base64"
 	"fmt"
 	"math/big"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/tau"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Storage interface {
@@ -17,7 +19,7 @@ type Storage interface {
 }
 
 type Blockchain interface {
-	GetAddress(blockchain blockchain.BlockchainName) (string, error)
+	GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error)
 	Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error)
 	Lookup(token blockchain.Token, txHash string) (UpdateReceipt, error)
 }
@@ -37,56 +39,56 @@ func New(cap int, bc Blockchain, storage Storage, logger logrus.FieldLogger) tau
 func (transfers *transfers) Reduce(msg tau.Message) tau.Message {
 	switch msg := msg.(type) {
 	case Bootload:
-		transferReceipts, err := transfers.storage.Transfers()
-		if err != nil {
-			return tau.NewError(err)
-		}
-		for _, transferReceipt := range transferReceipts {
-			transfers.write(transferReceipt)
-		}
-		transfers.update()
-	case tau.Tick:
-		go transfers.update()
+		return transfers.handleBootload()
 	case TransferReceiptRequest:
-		go func() {
-			msg.Responder <- transfers.read()
-		}()
+		return transfers.handleTransferReceiptRequest(msg)
 	case TransferRequest:
-		from, err := transfers.blockchain.GetAddress(msg.Token.Blockchain)
-		if err != nil {
-			return tau.NewError(err)
-		}
-		txHash, err := transfers.blockchain.Transfer(msg.Password, msg.Token, msg.To, msg.Amount)
-		if err != nil {
-			return tau.NewError(err)
-		}
-		receipt := buildReceipt(msg, from, txHash)
-		transfers.write(receipt)
-		go func() {
-			msg.Responder <- receipt
-		}()
-		if err := transfers.storage.PutTransfer(receipt); err != nil {
-			return tau.NewError(err)
-		}
+		return transfers.handleTransferRequest(msg)
+	case tau.Tick:
+		return transfers.handleTick()
 	default:
 		return tau.NewError(fmt.Errorf("invalid message type in transfers: %T", msg))
 	}
+}
+
+func (transfers *transfers) handleTick() tau.Message {
+	transfers.update()
 	return nil
 }
 
-func buildReceipt(req TransferRequest, from, txHash string) TransferReceipt {
-	return TransferReceipt{
-		Confirmations: 0,
-		Timestamp:     time.Now().Unix(),
-		TokenDetails: TokenDetails{
-			To:     req.To,
-			From:   from,
-			Token:  req.Token,
-			Amount: req.Amount.String(),
-			Fee:    req.Fee.String(),
-			TxHash: txHash,
-		},
+func (transfers *transfers) handleBootload() tau.Message {
+	transferReceipts, err := transfers.storage.Transfers()
+	if err != nil {
+		return tau.NewError(err)
 	}
+	for _, transferReceipt := range transferReceipts {
+		transfers.write(transferReceipt)
+	}
+	transfers.update()
+	return nil
+}
+
+func (transfers *transfers) handleTransferReceiptRequest(msg TransferReceiptRequest) tau.Message {
+	msg.Responder <- transfers.read()
+	return nil
+}
+
+func (transfers *transfers) handleTransferRequest(msg TransferRequest) tau.Message {
+	from, err := transfers.blockchain.GetAddress(msg.Password, msg.Token.Blockchain)
+	if err != nil {
+		return tau.NewError(err)
+	}
+	txHash, err := transfers.blockchain.Transfer(msg.Password, msg.Token, msg.To, msg.Amount)
+	if err != nil {
+		return tau.NewError(err)
+	}
+	receipt := buildReceipt(msg, from, txHash)
+	transfers.write(receipt)
+	msg.Responder <- receipt
+	if err := transfers.storage.PutTransfer(receipt); err != nil {
+		return tau.NewError(err)
+	}
+	return nil
 }
 
 func (transfers *transfers) update() {
@@ -117,6 +119,23 @@ func (transfers *transfers) read() TransferReceiptMap {
 	return transfers.transferMap
 }
 
+func buildReceipt(req TransferRequest, from, txHash string) TransferReceipt {
+	passwordHash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	return TransferReceipt{
+		Confirmations: 0,
+		Timestamp:     time.Now().Unix(),
+		PasswordHash:  base64.StdEncoding.EncodeToString(passwordHash),
+		TokenDetails: TokenDetails{
+			To:     req.To,
+			From:   from,
+			Token:  req.Token,
+			Amount: req.Amount.String(),
+			Fee:    req.Fee.String(),
+			TxHash: txHash,
+		},
+	}
+}
+
 type TransferRequest struct {
 	Password string
 	Token    blockchain.Token
@@ -140,8 +159,9 @@ func (request TransferReceiptMap) IsMessage() {
 }
 
 type TransferReceipt struct {
-	Confirmations int64 `json:"confirmations"`
-	Timestamp     int64 `json:"timestamp"`
+	Confirmations int64  `json:"confirmations"`
+	Timestamp     int64  `json:"timestamp"`
+	PasswordHash  string `json:"passwordHash,omitempty"`
 	TokenDetails
 }
 

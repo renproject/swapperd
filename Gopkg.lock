@@ -2,7 +2,18 @@
 
 
 [[projects]]
-  digest = "1:777f1f0fc92c6fb838ff214ef3b05160b513c262beb88fa342d7a50e797b9539"
+  branch = "master"
+  name = "github.com/FactomProject/basen"
+  packages = ["."]
+  revision = "fe3947df716ebfda9847eb1b9a48f9592e06478c"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/FactomProject/btcutilecc"
+  packages = ["."]
+  revision = "d3a63a5752ecf3fbc06bd97365da752111c263df"
+
+[[projects]]
   name = "github.com/allegro/bigcache"
   packages = [
     ".",
@@ -17,8 +28,7 @@
   digest = "1:3639e0fa327a76bb39b5279696a7fd90584082785de52671de0cb5ae680cda0a"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  pruneopts = "T"
-  revision = "aa2a42e13be68c4a95fe9e58003adaf63fe6476f"
+  revision = "23a91eb493c6734b762ab29037be0dc3c4f5d105"
 
 [[projects]]
   branch = "master"
@@ -31,8 +41,7 @@
     "txscript",
     "wire",
   ]
-  pruneopts = "T"
-  revision = "7d2daa5bfef28c5e282571bc06416516936115ee"
+  revision = "5bda5314ca9549a589e63d7b2e6104492a0d5328"
 
 [[projects]]
   branch = "master"
@@ -49,11 +58,9 @@
   packages = [
     ".",
     "base58",
-    "bech32",
-    "hdkeychain",
+    "bech32"
   ]
-  pruneopts = "T"
-  revision = "ab6388e0c60ae4834a1f57511e20c17b5f78be4b"
+  revision = "bf1e1be935893b7c8ac9f020195f6b0dfd1f14e0"
 
 [[projects]]
   digest = "1:e47d51dab652d26c3fba6f8cba403f922d02757a82abdc77e90df7948daf296e"
@@ -239,8 +246,7 @@
   digest = "1:54bb241fcc65362b5a96eecb657ce51467aba6ace71e41cb5ad1fbee401de6af"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  pruneopts = "T"
-  revision = "a23260dd9aff615ab76da131528cca1b5cee7bee"
+  revision = "b9522231b5db2fe42d2f73e47393b587d0ab6ee4"
 
 [[projects]]
   branch = "master"
@@ -290,9 +296,8 @@
   digest = "1:a204f9aa04d3305be0d4d8f69f42aee6c649a8f9f9a8dbbbaff54bdad5ce50c7"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  pruneopts = "T"
-  revision = "bcd833dfe83d3cebad139e4a29ed79cb2318bf95"
-  version = "v1.2.0"
+  revision = "e1e72e9de974bd926e5c56f83753fba2df402ce5"
+  version = "v1.3.0"
 
 [[projects]]
   branch = "master"
@@ -316,7 +321,12 @@
   revision = "b001fa50d6b27f3f0bb175a87d0cb55426d0a0ae"
 
 [[projects]]
-  digest = "1:73e0d2644cf33beeafbfb79804143ac9738bed3c28a12fd5e61bd3b13ac95407"
+  branch = "master"
+  name = "github.com/tyler-smith/go-bip32"
+  packages = ["."]
+  revision = "2c9cfd17756470a0b7c3e4b7954bae7d11035504"
+
+[[projects]]
   name = "github.com/tyler-smith/go-bip39"
   packages = [
     ".",
@@ -325,6 +335,12 @@
   pruneopts = "T"
   revision = "2af0a847066a4f2669040ccd44a79c8eca10806a"
   version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/urfave/cli"
+  packages = ["."]
+  revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
+  version = "v1.20.0"
 
 [[projects]]
   branch = "master"
@@ -339,8 +355,7 @@
     "sha3",
     "ssh/terminal",
   ]
-  pruneopts = "T"
-  revision = "505ab145d0a99da450461ae2c1a9f6cd10d1f447"
+  revision = "ff983b9c42bc9fbf91556e191cc8efb585c16908"
 
 [[projects]]
   branch = "master"
@@ -352,8 +367,7 @@
     "html/charset",
     "websocket",
   ]
-  pruneopts = "T"
-  revision = "927f97764cc334a6575f4b7a1584a147864d5723"
+  revision = "915654e7eabcea33ae277abbecf52f0d8b7a9fdc"
 
 [[projects]]
   branch = "master"
@@ -369,8 +383,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr",
   ]
-  pruneopts = "T"
-  revision = "b00e65af1da0681cde6c8227839a0ca53bbf16bb"
+  revision = "48ac38b7c8cbedd50b1613c0fccacfc7d88dfcdf"
 
 [[projects]]
   digest = "1:6164911cb5e94e8d8d5131d646613ff82c14f5a8ce869de2f6d80d9889df8c5a"
@@ -434,39 +447,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = [
-    "github.com/btcsuite/btcd/chaincfg",
-    "github.com/btcsuite/btcd/txscript",
-    "github.com/btcsuite/btcd/wire",
-    "github.com/btcsuite/btcutil",
-    "github.com/btcsuite/btcutil/hdkeychain",
-    "github.com/ethereum/go-ethereum",
-    "github.com/ethereum/go-ethereum/accounts/abi",
-    "github.com/ethereum/go-ethereum/accounts/abi/bind",
-    "github.com/ethereum/go-ethereum/common",
-    "github.com/ethereum/go-ethereum/core/types",
-    "github.com/ethereum/go-ethereum/crypto",
-    "github.com/ethereum/go-ethereum/event",
-    "github.com/gorilla/mux",
-    "github.com/onsi/ginkgo",
-    "github.com/onsi/gomega",
-    "github.com/republicprotocol/beth-go",
-    "github.com/republicprotocol/co-go",
-    "github.com/republicprotocol/libbtc-go",
-    "github.com/republicprotocol/tau",
-    "github.com/rs/cors",
-    "github.com/sirupsen/logrus",
-    "github.com/syndtr/goleveldb/leveldb",
-    "github.com/syndtr/goleveldb/leveldb/util",
-    "github.com/tyler-smith/go-bip39",
-    "golang.org/x/crypto/bcrypt",
-    "golang.org/x/crypto/ripemd160",
-    "golang.org/x/crypto/sha3",
-    "golang.org/x/crypto/ssh/terminal",
-    "golang.org/x/sys/windows/svc",
-    "golang.org/x/sys/windows/svc/debug",
-    "golang.org/x/sys/windows/svc/eventlog",
-    "golang.org/x/sys/windows/svc/mgr",
-  ]
+  inputs-digest = "948cede605d8d4ceb7301bf0eaea75be6c2f082435514c3818d6f62d64f898cf"
   solver-name = "gps-cdcl"
   solver-version = 1

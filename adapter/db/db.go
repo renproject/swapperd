@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
-	"github.com/republicprotocol/swapperd/core/wallet/transfer"
+	"github.com/republicprotocol/swapperd/core/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -53,6 +53,7 @@ func New(db *leveldb.DB) Storage {
 }
 
 func (db *dbStorage) PutSwap(blob swap.SwapBlob) error {
+	blob.Password = ""
 	swapData, err := json.Marshal(blob)
 	if err != nil {
 		return err

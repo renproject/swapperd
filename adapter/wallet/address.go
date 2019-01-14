@@ -10,10 +10,10 @@ import (
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
-func (wallet *wallet) Addresses() (map[blockchain.TokenName]string, error) {
+func (wallet *wallet) Addresses(password string) (map[blockchain.TokenName]string, error) {
 	addresses := map[blockchain.TokenName]string{}
 	for _, token := range wallet.SupportedTokens() {
-		addr, err := wallet.GetAddress(token.Blockchain)
+		addr, err := wallet.GetAddress(password, token.Blockchain)
 		if err != nil {
 			return nil, err
 		}
@@ -22,15 +22,35 @@ func (wallet *wallet) Addresses() (map[blockchain.TokenName]string, error) {
 	return addresses, nil
 }
 
-func (wallet *wallet) GetAddress(blockchainName blockchain.BlockchainName) (string, error) {
+func (wallet *wallet) GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error) {
 	switch blockchainName {
 	case blockchain.Ethereum:
-		return wallet.config.Ethereum.Address, nil
+		return wallet.getEthereumAddress(password)
 	case blockchain.Bitcoin:
-		return wallet.config.Bitcoin.Address, nil
+		return wallet.getBitcoinAddress(password)
 	default:
 		return "", blockchain.NewErrUnsupportedToken("unsupported blockchain")
 	}
+}
+
+func (wallet *wallet) getEthereumAddress(password string) (string, error) {
+	ethAccount, err := wallet.EthereumAccount(password)
+	if err != nil {
+		return "", err
+	}
+	return ethAccount.Address().String(), nil
+}
+
+func (wallet *wallet) getBitcoinAddress(password string) (string, error) {
+	btcAccount, err := wallet.BitcoinAccount(password)
+	if err != nil {
+		return "", err
+	}
+	btcAddr, err := btcAccount.Address()
+	if err != nil {
+		return "", err
+	}
+	return btcAddr.String(), nil
 }
 
 func (wallet *wallet) VerifyAddress(blockchainName blockchain.BlockchainName, address string) error {
@@ -50,9 +70,10 @@ func (wallet *wallet) verifyEthereumAddress(address string) error {
 	}
 
 	address = strings.ToLower(address)
-	if address[:2] == "0x" {
+	if len(address) > 2 && address[:2] == "0x" {
 		address = address[2:]
 	}
+
 	addrBytes, err := hex.DecodeString(address)
 	if err != nil || len(addrBytes) != 20 {
 		return fmt.Errorf("Invalid ethereum address: %s", address)
