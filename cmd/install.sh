@@ -99,14 +99,10 @@ if ls "$HOME"/.swapperd/*.json 1> /dev/null 2>&1; then
   exit 0
 fi
 
-if [ "$1" = '' -o "$2" = '' ]; then 
+if [ "$1" = '' ]; then
   ./bin/installer
 else 
-  if [ "$3" = '' ]; then
-    ./bin/installer --username $1 --password $2
-  else 
-    ./bin/installer --username $1 --password $2 --mnemonic "$3"
-  fi
+  ./bin/installer --mnemonic "$1"
 fi
 
 # make sure the swapper service is started when booted
