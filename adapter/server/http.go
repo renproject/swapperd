@@ -46,7 +46,8 @@ func (listener *httpServer) Run(done <-chan struct{}) {
 	reqHandler := NewHandler(listener.swapperTask, listener.walletTask, listener.wallet, listener.logger)
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", postSwapsHandler(reqHandler)).Methods("POST")
-	r.HandleFunc("/swaps", getSwapsHandler(reqHandler)).Queries("id", "{id}").Methods("GET")
+	r.HandleFunc("/swaps", getSwapsHandler(reqHandler)).Methods("GET")
+	r.HandleFunc("/swap", getSwapsHandler(reqHandler)).Queries("id", "{id}").Methods("GET")
 	r.HandleFunc("/transfers", postTransfersHandler(reqHandler)).Methods("POST")
 	r.HandleFunc("/transfers", getTransfersHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/balances", getBalancesHandler(reqHandler)).Methods("GET")
@@ -383,7 +384,7 @@ func getAddressesHandler(reqHandler Handler) http.HandlerFunc {
 			return
 		}
 
-		if err := json.NewEncoder(w).Encode(addresses[token.Name]); err != nil {
+		if _, err := w.Write([]byte(addresses[token.Name])); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
 			return
 		}
