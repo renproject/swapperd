@@ -1,14 +1,14 @@
 package testutils
 
 import (
-	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/core/swapper/immediate"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 )
 
 type MockContractBuilder struct {
 }
 
-func (builder MockContractBuilder) BuildSwapContracts(swapblob swap.SwapBlob) (swapper.Contract, swapper.Contract, error) {
+func (builder MockContractBuilder) BuildSwapContracts(swapblob swap.SwapBlob) (immediate.Contract, immediate.Contract, error) {
 	// cool, which means I can pick cherrys if I got fired by RP
 	return nil, nil, nil
 }
