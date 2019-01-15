@@ -2,6 +2,8 @@ package blockchain
 
 import (
 	"fmt"
+	"math/rand"
+	"reflect"
 	"strings"
 )
 
@@ -32,25 +34,34 @@ var (
 // Token represents the token we are trading.
 type Token struct {
 	Name       TokenName      `json:"name"`
+	Decimals   int            `json:"decimals"`
 	Blockchain BlockchainName `json:"blockchain"`
 }
 
 var (
-	TokenBTC  = Token{BTC, Bitcoin}
-	TokenETH  = Token{ETH, Ethereum}
-	TokenWBTC = Token{WBTC, Ethereum}
-	TokenREN  = Token{REN, Ethereum}
-	TokenDGX  = Token{DGX, Ethereum}
-	TokenZRX  = Token{ZRX, Ethereum}
-	TokenOMG  = Token{OMG, Ethereum}
-	TokenTUSD = Token{DAI, Ethereum}
-	TokenDAI  = Token{USDC, Ethereum}
-	TokenUSDC = Token{GUSD, Ethereum}
-	TokenGUSD = Token{TUSD, Ethereum}
+	TokenBTC  = Token{BTC, 8, Bitcoin}
+	TokenETH  = Token{ETH, 18, Ethereum}
+	TokenWBTC = Token{WBTC, 8, Ethereum}
+	TokenREN  = Token{REN, 18, Ethereum}
+	TokenDGX  = Token{DGX, 9, Ethereum}
+	TokenZRX  = Token{ZRX, 18, Ethereum}
+	TokenOMG  = Token{OMG, 18, Ethereum}
+	TokenTUSD = Token{DAI, 18, Ethereum}
+	TokenDAI  = Token{USDC, 18, Ethereum}
+	TokenUSDC = Token{GUSD, 6, Ethereum}
+	TokenGUSD = Token{TUSD, 2, Ethereum}
 )
+
+var SupportedTokens = []TokenName{
+	BTC, ETH, WBTC, REN, DGX, ZRX, OMG, TUSD, DAI, USDC, GUSD,
+}
 
 func (token Token) String() string {
 	return string(token.Name)
+}
+
+func (token Token) Generate(rand *rand.Rand, size int) reflect.Value {
+	return reflect.ValueOf(SupportedTokens[rand.Int()%len(SupportedTokens)])
 }
 
 func PatchToken(token string) (Token, error) {
