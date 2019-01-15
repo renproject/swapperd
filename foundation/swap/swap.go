@@ -1,10 +1,11 @@
 package swap
 
 import (
-	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"math/big"
+	"math/rand"
+	"reflect"
 	"time"
 
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
@@ -15,29 +16,11 @@ const ExpiryUnit = int64(2 * 60 * 60)
 // A SwapID uniquely identifies a Swap that is being executed.
 type SwapID string
 
-// RandomID create a random SwapID.
-func RandomID() SwapID {
+// Generate is used to create random values for testing
+func (ID SwapID) Generate(rand *rand.Rand, size int) reflect.Value {
 	id := [32]byte{}
 	rand.Read(id[:])
-	return SwapID(base64.StdEncoding.EncodeToString(id[:]))
-}
-
-// The SwapReceipt contains the swap details and the status.
-type SwapReceipt struct {
-	ID            SwapID              `json:"id"`
-	SendToken     string              `json:"sendToken"`
-	ReceiveToken  string              `json:"receiveToken"`
-	SendAmount    string              `json:"sendAmount"`
-	ReceiveAmount string              `json:"receiveAmount"`
-	SendCost      blockchain.CostBlob `json:"sendCost"`
-	ReceiveCost   blockchain.CostBlob `json:"receiveCost"`
-	Timestamp     int64               `json:"timestamp"`
-	TimeLock      int64               `json:"timeLock"`
-	Status        int                 `json:"status"`
-	Delay         bool                `json:"delay"`
-	DelayInfo     json.RawMessage     `json:"delayInfo,omitempty"`
-	Active        bool                `json:"active"`
-	PasswordHash  string              `json:"passwordHash,omitempty"`
+	return reflect.ValueOf(SwapID(base64.StdEncoding.EncodeToString(id[:])))
 }
 
 // NewSwapReceipt returns a SwapReceipt from a swapBlob.
@@ -77,9 +60,9 @@ type Swap struct {
 
 // A SwapBlob is used to encode a Swap for storage and transmission.
 type SwapBlob struct {
-	ID           SwapID `json:"id,omitempty"`
-	SendToken    string `json:"sendToken"`
-	ReceiveToken string `json:"receiveToken"`
+	ID           SwapID               `json:"id,omitempty"`
+	SendToken    blockchain.TokenName `json:"sendToken"`
+	ReceiveToken blockchain.TokenName `json:"receiveToken"`
 
 	// SendAmount and ReceiveAmount are decimal strings.
 	SendFee              string `json:"sendFee,omitempty"`
