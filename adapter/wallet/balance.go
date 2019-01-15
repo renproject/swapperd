@@ -40,7 +40,7 @@ func (wallet *wallet) balance(password string, token blockchain.Token) (blockcha
 	case blockchain.REN, blockchain.DGX, blockchain.TUSD, blockchain.OMG,
 		blockchain.ZRX, blockchain.WBTC, blockchain.GUSD,
 		blockchain.DAI, blockchain.USDC:
-		return wallet.balanceERC20(token.Name, address)
+		return wallet.balanceERC20(token, address)
 	default:
 		return blockchain.Balance{}, blockchain.NewErrUnsupportedToken(token.Name)
 	}
@@ -61,8 +61,9 @@ func (wallet *wallet) balanceBTC(address string) (blockchain.Balance, error) {
 	}
 
 	return blockchain.Balance{
-		Address: address,
-		Amount:  big.NewInt(balance).String(),
+		Address:  address,
+		Decimals: blockchain.TokenBTC.Decimals,
+		Amount:   big.NewInt(balance).String(),
 	}, nil
 }
 
@@ -81,17 +82,18 @@ func (wallet *wallet) balanceETH(address string) (blockchain.Balance, error) {
 	}
 
 	return blockchain.Balance{
-		Address: address,
-		Amount:  balance.String(),
+		Address:  address,
+		Decimals: blockchain.TokenETH.Decimals,
+		Amount:   balance.String(),
 	}, nil
 }
 
-func (wallet *wallet) balanceERC20(token blockchain.TokenName, address string) (blockchain.Balance, error) {
+func (wallet *wallet) balanceERC20(token blockchain.Token, address string) (blockchain.Balance, error) {
 	client, err := beth.Connect(wallet.config.Ethereum.Network.URL)
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
-	tokenAddr, err := client.ReadAddress(string(token))
+	tokenAddr, err := client.ReadAddress(string(token.Name))
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
@@ -115,7 +117,8 @@ func (wallet *wallet) balanceERC20(token blockchain.TokenName, address string) (
 	}
 
 	return blockchain.Balance{
-		Address: address,
-		Amount:  balance.String(),
+		Address:  address,
+		Decimals: token.Decimals,
+		Amount:   balance.String(),
 	}, nil
 }
