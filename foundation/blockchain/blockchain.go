@@ -2,7 +2,7 @@ package blockchain
 
 import "fmt"
 
-func ErrUnsupportedBlockchain(blockchain BlockchainName) error {
+func NewErrUnsupportedBlockchain(blockchain BlockchainName) error {
 	return fmt.Errorf("unsupported blockchain: %s", blockchain)
 }
 
@@ -19,6 +19,7 @@ type Blockchain struct {
 }
 
 type Balance struct {
-	Address string `json:"address"`
-	Amount  string `json:"balance"`
+	Address  string `json:"address"`
+	Decimals int    `json:"decimals"`
+	Amount   string `json:"balance"`
 }
