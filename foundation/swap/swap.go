@@ -17,7 +17,7 @@ const ExpiryUnit = int64(2 * 60 * 60)
 type SwapID string
 
 // Generate is used to create random values for testing
-func (ID SwapID) Generate(rand *rand.Rand, size int) reflect.Value {
+func (SwapID) Generate(rand *rand.Rand, size int) reflect.Value {
 	id := [32]byte{}
 	rand.Read(id[:])
 	return reflect.ValueOf(SwapID(base64.StdEncoding.EncodeToString(id[:])))
@@ -89,13 +89,4 @@ type SwapBlob struct {
 	ResponseURL     string `json:"responseURL,omitempty"`
 	Password        string `json:"password,omitempty"`
 	PasswordHash    string `json:"passwordHash,omitempty"`
-}
-
-type ReceiptUpdate struct {
-	ID     SwapID
-	Update func(receipt *SwapReceipt)
-}
-
-func NewReceiptUpdate(id SwapID, update func(receipt *SwapReceipt)) ReceiptUpdate {
-	return ReceiptUpdate{id, update}
 }

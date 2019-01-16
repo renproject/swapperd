@@ -23,3 +23,12 @@ type SwapReceipt struct {
 	Active        bool                 `json:"active"`
 	PasswordHash  string               `json:"passwordHash,omitempty"`
 }
+
+type ReceiptUpdate struct {
+	ID     SwapID
+	Update func(receipt *SwapReceipt)
+}
+
+func NewReceiptUpdate(id SwapID, update func(receipt *SwapReceipt)) ReceiptUpdate {
+	return ReceiptUpdate{id, update}
+}
