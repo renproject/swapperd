@@ -7,6 +7,6 @@ import (
 )
 
 var DefaultQuickCheckConfig = &quick.Config{
-	MaxCount: 256,
+	MaxCount: 1024,
 	Rand:     rand.New(rand.NewSource(time.Now().Unix())),
 }
