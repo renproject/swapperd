@@ -212,7 +212,7 @@
   branch = "master"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "c9c6d188360930ebd9fa0ccfa5b749e99ed48668"
+  revision = "95209fdb00ee6e8bdcb302834d0bc954410a99c1"
 
 [[projects]]
   branch = "master"
