@@ -7,10 +7,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
-
 	. "github.com/republicprotocol/swapperd/core/swapper"
+
 	"github.com/republicprotocol/swapperd/testutils"
+	"github.com/sirupsen/logrus"
 )
 
 var Random *rand.Rand
