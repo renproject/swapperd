@@ -20,7 +20,7 @@ var _ = Describe("Delayed Swap Task", func() {
 
 	init := func(err error) (tau.Task, chan struct{}) {
 		callback := testutils.NewMockCallback(err)
-		return New(256, callback), make(chan struct{})
+		return New(testutils.DefaultQuickCheckConfig.MaxCount, callback), make(chan struct{})
 	}
 
 	Context("when receiving new delayed swap request", func() {

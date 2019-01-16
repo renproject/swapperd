@@ -17,7 +17,7 @@ var _ = Describe("Immediate Swap Task", func() {
 
 	init := func() (tau.Task, chan struct{}) {
 		contractBuilder := NewMockContractBuilder()
-		return New(1024, contractBuilder), make(chan struct{})
+		return New(testutils.DefaultQuickCheckConfig.MaxCount, contractBuilder), make(chan struct{})
 	}
 
 	handleSwapResponse := func(msg tau.Message, blob swap.SwapBlob) bool {

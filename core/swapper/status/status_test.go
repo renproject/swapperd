@@ -26,7 +26,7 @@ func init() {
 var _ = Describe("Status Task", func() {
 
 	init := func() (tau.Task, chan struct{}) {
-		return New(128), make(chan struct{})
+		return New(testutils.DefaultQuickCheckConfig.MaxCount), make(chan struct{})
 	}
 
 	Context("when receiving new receipt", func() {
