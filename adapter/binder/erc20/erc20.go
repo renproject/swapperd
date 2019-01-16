@@ -36,7 +36,7 @@ func NewERC20SwapContractBinder(account beth.Account, swap swap.Swap, cost block
 		return nil, err
 	}
 
-	swapperAddress, err := account.ReadAddress(fmt.Sprintf("Swapperd%s", swap.Token.Name))
+	swapperAddress, err := account.ReadAddress(fmt.Sprintf("%sSwapContract", swap.Token.Name))
 	if err != nil {
 		return nil, err
 	}

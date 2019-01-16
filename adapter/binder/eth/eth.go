@@ -28,7 +28,7 @@ type ethSwapContractBinder struct {
 
 // NewETHSwapContractBinder returns a new Ethereum RequestAtom instance
 func NewETHSwapContractBinder(account beth.Account, swap swap.Swap, cost blockchain.Cost, logger logrus.FieldLogger) (immediate.Contract, error) {
-	swapperAddr, err := account.ReadAddress("SwapperdETH")
+	swapperAddr, err := account.ReadAddress("ETHSwapContract")
 	if err != nil {
 		return nil, err
 	}
