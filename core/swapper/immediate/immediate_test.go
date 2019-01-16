@@ -109,8 +109,8 @@ var _ = Describe("Immediate Swap Task", func() {
 					request := NewSwapRequest(blob, blockchain.Cost{}, blockchain.Cost{})
 					immediateTask.IO().InputWriter() <- request
 					<-immediateTask.IO().OutputReader()
-
 					immediateTask.IO().InputWriter() <- tau.Tick{}
+					<-immediateTask.IO().OutputReader()
 					return true
 				}
 
