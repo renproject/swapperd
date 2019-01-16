@@ -89,7 +89,7 @@ func (builder *builder) buildComplementarySwaps(blob swap.SwapBlob) (swap.Swap, 
 }
 
 func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fundingAddress string) (swap.Swap, error) {
-	token, err := blockchain.PatchToken(blob.SendToken)
+	token, err := blockchain.PatchToken(string(blob.SendToken))
 	if err != nil {
 		return swap.Swap{}, err
 	}
@@ -134,7 +134,7 @@ func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fund
 }
 
 func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spendingAddress string) (swap.Swap, error) {
-	token, err := blockchain.PatchToken(blob.ReceiveToken)
+	token, err := blockchain.PatchToken(string(blob.ReceiveToken))
 	if err != nil {
 		return swap.Swap{}, err
 	}
@@ -197,12 +197,12 @@ func (builder *builder) calculateTimeLocks(swap swap.SwapBlob) (native, foreign 
 }
 
 func (builder *builder) calculateAddresses(swap swap.SwapBlob) (string, string, error) {
-	sendToken, err := blockchain.PatchToken(swap.SendToken)
+	sendToken, err := blockchain.PatchToken(string(swap.SendToken))
 	if err != nil {
 		return "", "", err
 	}
 
-	receiveToken, err := blockchain.PatchToken(swap.ReceiveToken)
+	receiveToken, err := blockchain.PatchToken(string(swap.ReceiveToken))
 	if err != nil {
 		return "", "", err
 	}
