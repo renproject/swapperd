@@ -45,6 +45,7 @@ type Handler interface {
 	GetSwaps(password string) (GetSwapsResponse, error)
 	GetBalances(password string) (GetBalancesResponse, error)
 	GetAddresses(password string) (GetAddressesResponse, error)
+	GetAddress(password string, token blockchain.Token) (GetAddressResponse, error)
 	GetTransfers(password string) (GetTransfersResponse, error)
 	GetJSONSignature(password string, message json.RawMessage) (GetSignatureResponseJSON, error)
 	GetBase64Signature(password string, message string) (GetSignatureResponseString, error)
@@ -69,6 +70,11 @@ func (handler *handler) GetInfo(password string) GetInfoResponse {
 
 func (handler *handler) GetAddresses(password string) (GetAddressesResponse, error) {
 	return handler.wallet.Addresses(password)
+}
+
+func (handler *handler) GetAddress(password string, token blockchain.Token) (GetAddressResponse, error) {
+	address, err := handler.wallet.GetAddress(password, token.Blockchain)
+	return GetAddressResponse(address), err
 }
 
 func (handler *handler) GetSwaps(password string) (GetSwapsResponse, error) {
