@@ -21,9 +21,11 @@ type GetSwapsResponse struct {
 
 type GetSwapResponse swap.SwapReceipt
 
+type GetBalanceResponse blockchain.Balance
 type GetBalancesResponse map[blockchain.TokenName]blockchain.Balance
 
 type GetAddressesResponse map[blockchain.TokenName]string
+type GetAddressResponse string
 
 type PostSwapRequest swap.SwapBlob
 

@@ -306,8 +306,13 @@ func getBalancesHandler(reqHandler Handler) http.HandlerFunc {
 			return
 		}
 
-		balances, err := reqHandler.GetBalances(password)
 		if tokenName == "" {
+			balances, err := reqHandler.GetBalances(password)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot retrieve balances: %v", err))
+				return
+			}
+
 			if err := json.NewEncoder(w).Encode(balances); err != nil {
 				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
 				return
@@ -320,7 +325,13 @@ func getBalancesHandler(reqHandler Handler) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid token name: %s", tokenName))
 		}
 
-		if err := json.NewEncoder(w).Encode(balances[token.Name]); err != nil {
+		balance, err := reqHandler.GetBalance(password, token)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("unable to retrieve balance for token: %s", tokenName))
+			return
+		}
+
+		if err := json.NewEncoder(w).Encode(balance); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
 			return
 		}
@@ -364,29 +375,33 @@ func getAddressesHandler(reqHandler Handler) http.HandlerFunc {
 			return
 		}
 
-		addresses, err := reqHandler.GetAddresses(password)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get addresses: %v", err))
-			return
-		}
-
 		if tokenName == "" {
+			addresses, err := reqHandler.GetAddresses(password)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get addresses: %v", err))
+				return
+			}
 			if err := json.NewEncoder(w).Encode(addresses); err != nil {
 				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
 				return
 			}
 			return
-		}
+		} else {
+			token, err := blockchain.PatchToken(tokenName)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid token name: %s", tokenName))
+				return
+			}
+			addresses, err := reqHandler.GetAddress(password, token)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, fmt.Sprintf("unable to retrieve address for token: %s", tokenName))
+				return
+			}
 
-		token, err := blockchain.PatchToken(tokenName)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid token name: %s", tokenName))
-			return
-		}
-
-		if _, err := w.Write([]byte(addresses[token.Name])); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
-			return
+			if _, err := w.Write([]byte(addresses)); err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
+				return
+			}
 		}
 	}
 }

@@ -3,7 +3,10 @@ package wallet
 import (
 	"context"
 	"math/big"
+	"sync"
 	"time"
+
+	"github.com/republicprotocol/co-go"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -16,17 +19,22 @@ import (
 
 func (wallet *wallet) Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error) {
 	balanceMap := map[blockchain.TokenName]blockchain.Balance{}
-	for _, token := range wallet.SupportedTokens() {
-		balance, err := wallet.balance(password, token)
+	mu := new(sync.RWMutex)
+	tokens := wallet.SupportedTokens()
+	co.ParForAll(tokens, func(i int) {
+		token := tokens[i]
+		balance, err := wallet.Balance(password, token)
 		if err != nil {
-			return balanceMap, err
+			return
 		}
+		mu.Lock()
+		defer mu.Unlock()
 		balanceMap[token.Name] = balance
-	}
+	})
 	return balanceMap, nil
 }
 
-func (wallet *wallet) balance(password string, token blockchain.Token) (blockchain.Balance, error) {
+func (wallet *wallet) Balance(password string, token blockchain.Token) (blockchain.Balance, error) {
 	address, err := wallet.GetAddress(password, token.Blockchain)
 	if err != nil {
 		return blockchain.Balance{}, err

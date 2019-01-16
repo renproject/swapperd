@@ -4,6 +4,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"sync"
+
+	"github.com/republicprotocol/co-go"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
@@ -12,13 +15,18 @@ import (
 
 func (wallet *wallet) Addresses(password string) (map[blockchain.TokenName]string, error) {
 	addresses := map[blockchain.TokenName]string{}
-	for _, token := range wallet.SupportedTokens() {
+	mu := new(sync.RWMutex)
+	tokens := wallet.SupportedTokens()
+	co.ParForAll(tokens, func(i int) {
+		token := tokens[i]
 		addr, err := wallet.GetAddress(password, token.Blockchain)
 		if err != nil {
-			return nil, err
+			return
 		}
+		mu.Lock()
+		defer mu.Unlock()
 		addresses[token.Name] = addr
-	}
+	})
 	return addresses, nil
 }
 
