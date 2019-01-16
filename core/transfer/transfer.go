@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/big"
-	"sync"
 	"time"
 
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
@@ -25,7 +24,6 @@ type Blockchain interface {
 }
 
 type transfers struct {
-	mu          *sync.RWMutex
 	transferMap TransferReceiptMap
 	logger      logrus.FieldLogger
 	blockchain  Blockchain
@@ -33,7 +31,7 @@ type transfers struct {
 }
 
 func New(cap int, bc Blockchain, storage Storage, logger logrus.FieldLogger) tau.Task {
-	return tau.New(tau.NewIO(cap), &transfers{new(sync.RWMutex), TransferReceiptMap{}, logger, bc, storage})
+	return tau.New(tau.NewIO(cap), &transfers{TransferReceiptMap{}, logger, bc, storage})
 }
 
 func (transfers *transfers) Reduce(msg tau.Message) tau.Message {
@@ -102,20 +100,14 @@ func (transfers *transfers) update() {
 		update.Update(&receipt)
 		updatedTransferMap[txHash] = receipt
 	}
-	transfers.mu.Lock()
-	defer transfers.mu.Unlock()
 	transfers.transferMap = updatedTransferMap
 }
 
 func (transfers *transfers) write(receipt TransferReceipt) {
-	transfers.mu.Lock()
-	defer transfers.mu.Unlock()
 	transfers.transferMap[receipt.TxHash] = receipt
 }
 
 func (transfers *transfers) read() TransferReceiptMap {
-	transfers.mu.RLock()
-	defer transfers.mu.RUnlock()
 	return transfers.transferMap
 }
 
