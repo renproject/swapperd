@@ -281,7 +281,7 @@ func (handler *handler) GetHexSignature(password string, message string) (GetSig
 }
 
 func (handler *handler) patchSwap(swapBlob swap.SwapBlob) (swap.SwapBlob, error) {
-	sendToken, err := blockchain.PatchToken(swapBlob.SendToken)
+	sendToken, err := blockchain.PatchToken(string(swapBlob.SendToken))
 	if err != nil {
 		return swapBlob, err
 	}
@@ -290,7 +290,7 @@ func (handler *handler) patchSwap(swapBlob swap.SwapBlob) (swap.SwapBlob, error)
 		return swapBlob, err
 	}
 
-	receiveToken, err := blockchain.PatchToken(swapBlob.ReceiveToken)
+	receiveToken, err := blockchain.PatchToken(string(swapBlob.ReceiveToken))
 	if err != nil {
 		return swapBlob, err
 	}
@@ -338,7 +338,7 @@ func (handler *handler) patchDelayedSwap(blob swap.SwapBlob) (swap.SwapBlob, err
 	rand.Read(swapID[:])
 	blob.ID = swap.SwapID(base64.StdEncoding.EncodeToString(swapID[:]))
 
-	sendToken, err := blockchain.PatchToken(blob.SendToken)
+	sendToken, err := blockchain.PatchToken(string(blob.SendToken))
 	if err != nil {
 		return blob, err
 	}
@@ -346,7 +346,7 @@ func (handler *handler) patchDelayedSwap(blob swap.SwapBlob) (swap.SwapBlob, err
 		return blob, err
 	}
 
-	receiveToken, err := blockchain.PatchToken(blob.ReceiveToken)
+	receiveToken, err := blockchain.PatchToken(string(blob.ReceiveToken))
 	if err != nil {
 		return blob, err
 	}
@@ -402,12 +402,12 @@ func (handler *handler) buildSwapResponse(blob swap.SwapBlob) (PostSwapResponse,
 	responseBlob.ReceiveAmount = blob.SendAmount
 	swapResponse := PostSwapResponse{}
 
-	sendToken, err := blockchain.PatchToken(responseBlob.SendToken)
+	sendToken, err := blockchain.PatchToken(string(responseBlob.SendToken))
 	if err != nil {
 		return swapResponse, err
 	}
 
-	receiveToken, err := blockchain.PatchToken(responseBlob.ReceiveToken)
+	receiveToken, err := blockchain.PatchToken(string(responseBlob.ReceiveToken))
 	if err != nil {
 		return swapResponse, err
 	}
