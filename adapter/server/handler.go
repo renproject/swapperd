@@ -44,6 +44,7 @@ type Handler interface {
 	GetSwap(password string, id swap.SwapID) (GetSwapResponse, error)
 	GetSwaps(password string) (GetSwapsResponse, error)
 	GetBalances(password string) (GetBalancesResponse, error)
+	GetBalance(password string, token blockchain.Token) (GetBalanceResponse, error)
 	GetAddresses(password string) (GetAddressesResponse, error)
 	GetAddress(password string, token blockchain.Token) (GetAddressResponse, error)
 	GetTransfers(password string) (GetTransfersResponse, error)
@@ -129,6 +130,11 @@ func (handler *handler) getSwapReceipts(password string) (map[swap.SwapID]swap.S
 func (handler *handler) GetBalances(password string) (GetBalancesResponse, error) {
 	balanceMap, err := handler.wallet.Balances(password)
 	return GetBalancesResponse(balanceMap), err
+}
+
+func (handler *handler) GetBalance(password string, token blockchain.Token) (GetBalanceResponse, error) {
+	balance, err := handler.wallet.Balance(password, token)
+	return GetBalanceResponse(balance), err
 }
 
 func (handler *handler) GetTransfers(password string) (GetTransfersResponse, error) {

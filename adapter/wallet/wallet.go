@@ -34,6 +34,7 @@ type Wallet interface {
 	ID(password string) (string, error)
 	SupportedTokens() []blockchain.Token
 	Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error)
+	Balance(password string, token blockchain.Token) (blockchain.Balance, error)
 	Lookup(token blockchain.Token, txHash string) (transfer.UpdateReceipt, error)
 	Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error)
 	GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error)

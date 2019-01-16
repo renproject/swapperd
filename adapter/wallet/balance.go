@@ -17,7 +17,7 @@ import (
 func (wallet *wallet) Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error) {
 	balanceMap := map[blockchain.TokenName]blockchain.Balance{}
 	for _, token := range wallet.SupportedTokens() {
-		balance, err := wallet.balance(password, token)
+		balance, err := wallet.Balance(password, token)
 		if err != nil {
 			return balanceMap, err
 		}
@@ -26,7 +26,7 @@ func (wallet *wallet) Balances(password string) (map[blockchain.TokenName]blockc
 	return balanceMap, nil
 }
 
-func (wallet *wallet) balance(password string, token blockchain.Token) (blockchain.Balance, error) {
+func (wallet *wallet) Balance(password string, token blockchain.Token) (blockchain.Balance, error) {
 	address, err := wallet.GetAddress(password, token.Blockchain)
 	if err != nil {
 		return blockchain.Balance{}, err
