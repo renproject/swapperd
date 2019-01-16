@@ -46,10 +46,10 @@ var (
 	TokenDGX  = Token{DGX, 9, Ethereum}
 	TokenZRX  = Token{ZRX, 18, Ethereum}
 	TokenOMG  = Token{OMG, 18, Ethereum}
-	TokenTUSD = Token{DAI, 18, Ethereum}
-	TokenDAI  = Token{USDC, 18, Ethereum}
-	TokenUSDC = Token{GUSD, 6, Ethereum}
-	TokenGUSD = Token{TUSD, 2, Ethereum}
+	TokenTUSD = Token{TUSD, 18, Ethereum}
+	TokenDAI  = Token{DAI, 18, Ethereum}
+	TokenUSDC = Token{USDC, 6, Ethereum}
+	TokenGUSD = Token{GUSD, 2, Ethereum}
 )
 
 var SupportedTokens = []TokenName{
