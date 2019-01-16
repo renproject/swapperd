@@ -25,7 +25,7 @@ func (wallet *wallet) VerifyBalance(password string, token blockchain.Token, amo
 }
 
 func (wallet *wallet) verifyEthereumBalance(password string, amount *big.Int) error {
-	balance, err := wallet.balance(password, blockchain.TokenETH)
+	balance, err := wallet.Balance(password, blockchain.TokenETH)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func (wallet *wallet) verifyEthereumBalance(password string, amount *big.Int) er
 }
 
 func (wallet *wallet) verifyERC20Balance(password string, token blockchain.Token, amount *big.Int) error {
-	ethBalance, err := wallet.balance(password, blockchain.TokenETH)
+	ethBalance, err := wallet.Balance(password, blockchain.TokenETH)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (wallet *wallet) verifyERC20Balance(password string, token blockchain.Token
 	}
 
 	if amount != nil {
-		erc20Balance, err := wallet.balance(password, token)
+		erc20Balance, err := wallet.Balance(password, token)
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func (wallet *wallet) verifyBitcoinBalance(password string, amount *big.Int) err
 		return nil
 	}
 
-	balance, err := wallet.balance(password, blockchain.TokenBTC)
+	balance, err := wallet.Balance(password, blockchain.TokenBTC)
 	if err != nil {
 		return err
 	}

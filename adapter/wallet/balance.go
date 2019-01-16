@@ -23,7 +23,7 @@ func (wallet *wallet) Balances(password string) (map[blockchain.TokenName]blockc
 	tokens := wallet.SupportedTokens()
 	co.ParForAll(tokens, func(i int) {
 		token := tokens[i]
-		balance, err := wallet.balance(password, token)
+		balance, err := wallet.Balance(password, token)
 		if err != nil {
 			return
 		}
@@ -34,7 +34,7 @@ func (wallet *wallet) Balances(password string) (map[blockchain.TokenName]blockc
 	return balanceMap, nil
 }
 
-func (wallet *wallet) balance(password string, token blockchain.Token) (blockchain.Balance, error) {
+func (wallet *wallet) Balance(password string, token blockchain.Token) (blockchain.Balance, error) {
 	address, err := wallet.GetAddress(password, token.Blockchain)
 	if err != nil {
 		return blockchain.Balance{}, err
