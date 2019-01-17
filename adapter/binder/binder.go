@@ -44,22 +44,20 @@ func (builder *builder) BuildSwapContracts(req immediate.SwapRequest) (immediate
 }
 
 func (builder *builder) buildBinder(swap swap.Swap, cost blockchain.Cost, password string) (immediate.Contract, error) {
-	switch swap.Token {
-	case blockchain.TokenBTC:
+	switch swap.Token.Blockchain {
+	case blockchain.Bitcoin:
 		btcAccount, err := builder.BitcoinAccount(password)
 		if err != nil {
 			return nil, err
 		}
 		return btc.NewBTCSwapContractBinder(btcAccount, swap, cost, builder.FieldLogger)
-	case blockchain.TokenETH:
+	case blockchain.Ethereum:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
 		}
 		return eth.NewETHSwapContractBinder(ethAccount, swap, cost, builder.FieldLogger)
-	case blockchain.TokenWBTC, blockchain.TokenDGX, blockchain.TokenREN,
-		blockchain.TokenTUSD, blockchain.TokenOMG, blockchain.TokenZRX,
-		blockchain.TokenGUSD, blockchain.TokenDAI, blockchain.TokenUSDC:
+	case blockchain.ERC20:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
@@ -201,41 +199,19 @@ func (builder *builder) calculateAddresses(swap swap.SwapBlob) (string, string, 
 	if err != nil {
 		return "", "", err
 	}
-
+	sendAddress, err := builder.Wallet.GetAddress(swap.Password, sendToken.Blockchain)
+	if err != nil {
+		return "", "", err
+	}
 	receiveToken, err := blockchain.PatchToken(string(swap.ReceiveToken))
 	if err != nil {
 		return "", "", err
 	}
-
-	ethAccount, err := builder.EthereumAccount(swap.Password)
+	receiveAddress, err := builder.Wallet.GetAddress(swap.Password, receiveToken.Blockchain)
 	if err != nil {
 		return "", "", err
 	}
-
-	btcAccount, err := builder.BitcoinAccount(swap.Password)
-	if err != nil {
-		return "", "", err
-	}
-
-	ethAddress := ethAccount.Address()
-	btcAddress, err := btcAccount.Address()
-	if err != nil {
-		return "", "", err
-	}
-
-	if sendToken.Blockchain == blockchain.Ethereum && receiveToken.Blockchain == blockchain.Bitcoin {
-		return ethAddress.String(), btcAddress.EncodeAddress(), nil
-	}
-
-	if sendToken.Blockchain == blockchain.Bitcoin && receiveToken.Blockchain == blockchain.Ethereum {
-		return btcAddress.EncodeAddress(), ethAddress.String(), nil
-	}
-
-	if sendToken.Blockchain == blockchain.Ethereum && receiveToken.Blockchain == blockchain.Ethereum {
-		return ethAddress.String(), ethAddress.String(), nil
-	}
-
-	return "", "", fmt.Errorf("unsupported blockchain pairing: %s <=> %s", sendToken.Blockchain, receiveToken.Blockchain)
+	return sendAddress, receiveAddress, nil
 }
 
 func unmarshalSecretHash(secretHash string) ([32]byte, error) {
