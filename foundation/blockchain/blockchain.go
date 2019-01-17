@@ -11,6 +11,7 @@ type BlockchainName string
 var (
 	Bitcoin  = BlockchainName("bitcoin")
 	Ethereum = BlockchainName("ethereum")
+	ERC20    = BlockchainName("erc20")
 )
 
 type Blockchain struct {
