@@ -26,6 +26,7 @@ var (
 	ZRX  = TokenName("ZRX")
 	OMG  = TokenName("OMG")
 	DAI  = TokenName("DAI")
+	PAX  = TokenName("PAX")
 	USDC = TokenName("USDC")
 	GUSD = TokenName("GUSD")
 	TUSD = TokenName("TUSD")
@@ -41,19 +42,20 @@ type Token struct {
 var (
 	TokenBTC  = Token{BTC, 8, Bitcoin}
 	TokenETH  = Token{ETH, 18, Ethereum}
-	TokenWBTC = Token{WBTC, 8, Ethereum}
-	TokenREN  = Token{REN, 18, Ethereum}
-	TokenDGX  = Token{DGX, 9, Ethereum}
-	TokenZRX  = Token{ZRX, 18, Ethereum}
-	TokenOMG  = Token{OMG, 18, Ethereum}
-	TokenTUSD = Token{TUSD, 18, Ethereum}
-	TokenDAI  = Token{DAI, 18, Ethereum}
-	TokenUSDC = Token{USDC, 6, Ethereum}
-	TokenGUSD = Token{GUSD, 2, Ethereum}
+	TokenWBTC = Token{WBTC, 8, ERC20}
+	TokenREN  = Token{REN, 18, ERC20}
+	TokenDGX  = Token{DGX, 9, ERC20}
+	TokenZRX  = Token{ZRX, 18, ERC20}
+	TokenOMG  = Token{OMG, 18, ERC20}
+	TokenTUSD = Token{TUSD, 18, ERC20}
+	TokenDAI  = Token{DAI, 18, ERC20}
+	TokenPAX  = Token{PAX, 18, ERC20}
+	TokenUSDC = Token{USDC, 6, ERC20}
+	TokenGUSD = Token{GUSD, 2, ERC20}
 )
 
-var SupportedTokens = []TokenName{
-	BTC, ETH, WBTC, REN, DGX, ZRX, OMG, TUSD, DAI, USDC, GUSD,
+var SupportedTokens = []Token{
+	TokenBTC, TokenETH, TokenWBTC, TokenREN, TokenDGX, TokenZRX, TokenOMG, TokenTUSD, TokenDAI, TokenUSDC, TokenGUSD, TokenPAX,
 }
 
 func (token Token) String() string {
@@ -75,20 +77,22 @@ func PatchToken(token string) (Token, error) {
 		return TokenETH, nil
 	case "ren", "republictoken", "republic token":
 		return TokenREN, nil
-	case "tusd", "trueusd", "true usd":
+	case "tusd", "trueusd", "true-usd":
 		return TokenTUSD, nil
-	case "digix gold token", "dgx", "dgt":
+	case "digix-gold-token", "dgx", "dgt":
 		return TokenDGX, nil
 	case "zerox", "zrx", "0x":
 		return TokenZRX, nil
-	case "omisego", "omg", "omise go":
+	case "omisego", "omg", "omise-go":
 		return TokenOMG, nil
-	case "usdc", "usd coin", "usdcoin":
+	case "usdc", "usd-coin", "usdcoin":
 		return TokenUSDC, nil
-	case "dai", "maker dai", "makerdai":
+	case "dai", "maker-dai", "makerdai":
 		return TokenDAI, nil
-	case "gusd", "gemini dollar", "geminidollar":
+	case "gusd", "gemini-dollar", "geminidollar":
 		return TokenGUSD, nil
+	case "pax", "paxos-standard-token", "paxosstandardtoken":
+		return TokenPAX, nil
 	default:
 		return Token{}, NewErrUnsupportedToken(TokenName(token))
 	}
