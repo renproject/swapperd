@@ -311,3 +311,17 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 func (atom *erc20SwapContractBinder) Cost() blockchain.Cost {
 	return atom.cost
 }
+
+func (atom *erc20SwapContractBinder) expectedValue() *big.Int {
+	switch atom.swap.Token {
+	case blockchain.TokenTUSD:
+		fee := calculateFeesFromBips(atom.swap.Value, 7)
+		return new(big.Int).Sub(atom.swap.Value, fee)
+	default:
+		return atom.swap.Value
+	}
+}
+
+func calculateFeesFromBips(value *big.Int, bips int64) *big.Int {
+	return new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(bips)), big.NewInt(10000))
+}
