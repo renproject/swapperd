@@ -212,7 +212,7 @@
   branch = "master"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "95209fdb00ee6e8bdcb302834d0bc954410a99c1"
+  revision = "b1902e411de1bd0c6bfdd85bd3d22349eb708e3d"
 
 [[projects]]
   branch = "master"
@@ -332,7 +332,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "a457fd036447854c0c02e89ea439481bdcf941a2"
+  revision = "11f53e03133963fb11ae0588e08b5e0b85be8be5"
 
 [[projects]]
   name = "golang.org/x/text"
