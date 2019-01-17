@@ -116,9 +116,13 @@ func (atom *btcSwapContractBinder) Initiate() error {
 }
 
 func (atom *btcSwapContractBinder) Audit() error {
-	if funded, _, err := atom.ScriptFunded(context.Background(), atom.scriptAddr, atom.swap.Value.Int64()); funded && err == nil {
+	if funded, amount, err := atom.ScriptFunded(context.Background(), atom.scriptAddr, atom.swap.Value.Int64()); funded && err == nil {
+		if amount < atom.swap.Value.Int64() {
+			return fmt.Errorf("Audit Failed")
+		}
 		return nil
 	}
+
 	if time.Now().Unix() > atom.swap.TimeLock {
 		return immediate.ErrSwapExpired
 	}
