@@ -10,14 +10,12 @@ import (
 )
 
 func (wallet *wallet) VerifyBalance(password string, token blockchain.Token, amount *big.Int) error {
-	switch token.Name {
-	case blockchain.ETH:
+	switch token.Blockchain {
+	case blockchain.Ethereum:
 		return wallet.verifyEthereumBalance(password, amount)
-	case blockchain.REN, blockchain.DGX, blockchain.TUSD, blockchain.OMG,
-		blockchain.ZRX, blockchain.WBTC, blockchain.GUSD,
-		blockchain.DAI, blockchain.USDC:
+	case blockchain.ERC20:
 		return wallet.verifyERC20Balance(password, token, amount)
-	case blockchain.BTC:
+	case blockchain.Bitcoin:
 		return wallet.verifyBitcoinBalance(password, amount)
 	default:
 		return blockchain.NewErrUnsupportedToken("unsupported blockchain")

@@ -32,7 +32,7 @@ func (wallet *wallet) Addresses(password string) (map[blockchain.TokenName]strin
 
 func (wallet *wallet) GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error) {
 	switch blockchainName {
-	case blockchain.Ethereum:
+	case blockchain.Ethereum, blockchain.ERC20:
 		return wallet.getEthereumAddress(password)
 	case blockchain.Bitcoin:
 		return wallet.getBitcoinAddress(password)

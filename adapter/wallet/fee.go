@@ -8,7 +8,7 @@ import (
 
 func (wallet *wallet) DefaultFee(blockchainName blockchain.BlockchainName) (*big.Int, error) {
 	switch blockchainName {
-	case blockchain.Ethereum:
+	case blockchain.Ethereum, blockchain.ERC20:
 		return big.NewInt(12000000000), nil
 	case blockchain.Bitcoin:
 		return big.NewInt(10000), nil

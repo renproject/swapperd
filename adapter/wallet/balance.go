@@ -40,14 +40,12 @@ func (wallet *wallet) Balance(password string, token blockchain.Token) (blockcha
 		return blockchain.Balance{}, err
 	}
 
-	switch token.Name {
-	case blockchain.BTC:
+	switch token.Blockchain {
+	case blockchain.Bitcoin:
 		return wallet.balanceBTC(address)
-	case blockchain.ETH:
+	case blockchain.Ethereum:
 		return wallet.balanceETH(address)
-	case blockchain.REN, blockchain.DGX, blockchain.TUSD, blockchain.OMG,
-		blockchain.ZRX, blockchain.WBTC, blockchain.GUSD,
-		blockchain.DAI, blockchain.USDC:
+	case blockchain.ERC20:
 		return wallet.balanceERC20(token, address)
 	default:
 		return blockchain.Balance{}, blockchain.NewErrUnsupportedToken(token.Name)
