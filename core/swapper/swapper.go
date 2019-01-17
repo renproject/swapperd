@@ -97,7 +97,7 @@ func (core *core) handleSwapRequest(msg SwapRequest) tau.Message {
 	}
 
 	if msg.Delay {
-		core.delayedSwapper.Send(delayed.SwapRequest(msg))
+		core.delayedSwapper.Send(delayed.DelayedSwapRequest(msg))
 		return nil
 	}
 
