@@ -57,6 +57,7 @@ func NewHandler(swapperTask, walletTask tau.Task, wallet wallet.Wallet, logger l
 }
 
 func (handler *handler) GetInfo(password string) GetInfoResponse {
+	handler.bootload(password)
 	return GetInfoResponse{
 		Version:         "0.3.0",
 		Bootloaded:      handler.bootloaded[passwordHash(password)],
@@ -65,22 +66,19 @@ func (handler *handler) GetInfo(password string) GetInfoResponse {
 }
 
 func (handler *handler) GetAddresses(password string) (GetAddressesResponse, error) {
+	handler.bootload(password)
 	return handler.wallet.Addresses(password)
 }
 
 func (handler *handler) GetAddress(password string, token blockchain.Token) (GetAddressResponse, error) {
+	handler.bootload(password)
 	address, err := handler.wallet.GetAddress(password, token.Blockchain)
 	return GetAddressResponse(address), err
 }
 
 func (handler *handler) GetSwaps(password string) (GetSwapsResponse, error) {
+	handler.bootload(password)
 	resp := GetSwapsResponse{}
-	if !handler.bootloaded[passwordHash(password)] {
-		if err := handler.postBootload(password); err != nil {
-			return resp, err
-		}
-	}
-
 	responder := make(chan map[swap.SwapID]swap.SwapReceipt)
 	handler.swapperTask.IO().InputWriter() <- status.ReceiptQuery{Responder: responder}
 	swapReceipts := <-responder
@@ -101,6 +99,7 @@ func (handler *handler) GetSwaps(password string) (GetSwapsResponse, error) {
 }
 
 func (handler *handler) GetSwap(password string, id swap.SwapID) (GetSwapResponse, error) {
+	handler.bootload(password)
 	swapReceipts, err := handler.getSwapReceipts(password)
 	if err != nil {
 		return GetSwapResponse{}, err
@@ -115,11 +114,7 @@ func (handler *handler) GetSwap(password string, id swap.SwapID) (GetSwapRespons
 }
 
 func (handler *handler) getSwapReceipts(password string) (map[swap.SwapID]swap.SwapReceipt, error) {
-	if !handler.bootloaded[passwordHash(password)] {
-		if err := handler.postBootload(password); err != nil {
-			return nil, err
-		}
-	}
+	handler.bootload(password)
 	responder := make(chan map[swap.SwapID]swap.SwapReceipt)
 	handler.swapperTask.IO().InputWriter() <- status.ReceiptQuery{Responder: responder}
 	swapReceipts := <-responder
@@ -127,16 +122,19 @@ func (handler *handler) getSwapReceipts(password string) (map[swap.SwapID]swap.S
 }
 
 func (handler *handler) GetBalances(password string) (GetBalancesResponse, error) {
+	handler.bootload(password)
 	balanceMap, err := handler.wallet.Balances(password)
 	return GetBalancesResponse(balanceMap), err
 }
 
 func (handler *handler) GetBalance(password string, token blockchain.Token) (GetBalanceResponse, error) {
+	handler.bootload(password)
 	balance, err := handler.wallet.Balance(password, token)
 	return GetBalanceResponse(balance), err
 }
 
 func (handler *handler) GetTransfers(password string) (GetTransfersResponse, error) {
+	handler.bootload(password)
 	responder := make(chan transfer.TransferReceiptMap, 1)
 	handler.walletTask.IO().InputWriter() <- transfer.TransferReceiptRequest{
 		Responder: responder,
@@ -160,11 +158,7 @@ func (handler *handler) GetTransfers(password string) (GetTransfersResponse, err
 }
 
 func (handler *handler) PostSwaps(swapReq PostSwapRequest) (PostSwapResponse, error) {
-	if !handler.bootloaded[passwordHash(swapReq.Password)] {
-		if err := handler.postBootload(swapReq.Password); err != nil {
-			return PostSwapResponse{}, err
-		}
-	}
+	handler.bootload(swapReq.Password)
 
 	blob, err := handler.patchSwap(swap.SwapBlob(swapReq))
 	if err != nil {
@@ -176,11 +170,7 @@ func (handler *handler) PostSwaps(swapReq PostSwapRequest) (PostSwapResponse, er
 }
 
 func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest) error {
-	if !handler.bootloaded[passwordHash(swapReq.Password)] {
-		if err := handler.postBootload(swapReq.Password); err != nil {
-			return err
-		}
-	}
+	handler.bootload(swapReq.Password)
 
 	blob, err := handler.patchDelayedSwap(swap.SwapBlob(swapReq))
 	if err != nil {
@@ -197,6 +187,7 @@ func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest) error {
 }
 
 func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersResponse, error) {
+	handler.bootload(req.Password)
 	response := PostTransfersResponse{}
 	token, err := blockchain.PatchToken(req.Token)
 	if err != nil {
@@ -227,16 +218,8 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersRe
 	return PostTransfersResponse(transferReceipt), nil
 }
 
-func (handler *handler) postBootload(password string) error {
-	if handler.bootloaded[passwordHash(password)] {
-		return fmt.Errorf("already bootloaded")
-	}
-	handler.swapperTask.IO().InputWriter() <- swapper.Bootload{password}
-	handler.bootloaded[passwordHash(password)] = true
-	return nil
-}
-
 func (handler *handler) GetID(password string) (GetIDResponse, error) {
+	handler.bootload(password)
 	id, err := handler.wallet.ID(password)
 	if err != nil {
 		return GetIDResponse{}, err
@@ -248,6 +231,7 @@ func (handler *handler) GetID(password string) (GetIDResponse, error) {
 }
 
 func (handler *handler) GetJSONSignature(password string, message json.RawMessage) (GetSignatureResponseJSON, error) {
+	handler.bootload(password)
 	sig, err := handler.sign(password, message)
 	if err != nil {
 		return GetSignatureResponseJSON{}, err
@@ -259,6 +243,7 @@ func (handler *handler) GetJSONSignature(password string, message json.RawMessag
 }
 
 func (handler *handler) GetBase64Signature(password string, message string) (GetSignatureResponseString, error) {
+	handler.bootload(password)
 	msg, err := base64.StdEncoding.DecodeString(message)
 	if err != nil {
 		return GetSignatureResponseString{}, err
@@ -276,6 +261,7 @@ func (handler *handler) GetBase64Signature(password string, message string) (Get
 }
 
 func (handler *handler) GetHexSignature(password string, message string) (GetSignatureResponseString, error) {
+	handler.bootload(password)
 	if len(message) > 2 && message[:2] == "0x" {
 		message = message[2:]
 	}
@@ -293,6 +279,13 @@ func (handler *handler) GetHexSignature(password string, message string) (GetSig
 		Message:   message,
 		Signature: hex.EncodeToString(sig),
 	}, nil
+}
+
+func (handler *handler) bootload(password string) {
+	if !handler.bootloaded[passwordHash(password)] {
+		handler.swapperTask.IO().InputWriter() <- swapper.Bootload{password}
+		handler.bootloaded[passwordHash(password)] = true
+	}
 }
 
 func (handler *handler) patchSwap(swapBlob swap.SwapBlob) (swap.SwapBlob, error) {
