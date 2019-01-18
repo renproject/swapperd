@@ -189,7 +189,7 @@ func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest) error {
 		return err
 	}
 
-	handler.swapperTask.IO().InputWriter() <- swapper.SwapRequest(swapReq)
+	handler.swapperTask.IO().InputWriter() <- swapper.SwapRequest(blob)
 	return nil
 }
 
