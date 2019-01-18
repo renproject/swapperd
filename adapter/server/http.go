@@ -54,7 +54,6 @@ func (listener *httpServer) Run(done <-chan struct{}) {
 	r.HandleFunc("/balances/{token}", getBalancesHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/addresses", getAddressesHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/addresses/{token}", getAddressesHandler(reqHandler)).Methods("GET")
-	r.HandleFunc("/bootload", postBootloadHandler(reqHandler)).Methods("POST")
 	r.HandleFunc("/info", getInfoHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/id", getIDHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/sign/{type}", postSignatureHandler(reqHandler)).Methods("POST")
@@ -110,26 +109,6 @@ func recoveryHandler(h http.Handler) http.Handler {
 		}()
 		h.ServeHTTP(w, r)
 	})
-}
-
-// postBootloadHandler handles the post login request, it loads pending swaps and
-// historical swap receipts into memory.
-func postBootloadHandler(reqHandler Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		_, password, ok := r.BasicAuth()
-		if !ok {
-			writeError(w, http.StatusUnauthorized, "authentication required")
-			return
-		}
-
-		if err := reqHandler.PostBootload(password); err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte{})
-	}
 }
 
 // getInfoHandler handles the get info request, it returns the basic information

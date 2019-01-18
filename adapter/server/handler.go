@@ -25,10 +25,6 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func NewErrBootloadRequired(msg string) error {
-	return fmt.Errorf("please bootload before calling %s", msg)
-}
-
 type handler struct {
 	bootloaded  map[string]bool
 	swapperTask tau.Task
@@ -54,7 +50,6 @@ type Handler interface {
 	PostTransfers(PostTransfersRequest) (PostTransfersResponse, error)
 	PostSwaps(PostSwapRequest) (PostSwapResponse, error)
 	PostDelayedSwaps(PostSwapRequest) error
-	PostBootload(password string) error
 }
 
 func NewHandler(swapperTask, walletTask tau.Task, wallet wallet.Wallet, logger logrus.FieldLogger) Handler {
@@ -81,7 +76,9 @@ func (handler *handler) GetAddress(password string, token blockchain.Token) (Get
 func (handler *handler) GetSwaps(password string) (GetSwapsResponse, error) {
 	resp := GetSwapsResponse{}
 	if !handler.bootloaded[passwordHash(password)] {
-		return resp, NewErrBootloadRequired("get swaps")
+		if err := handler.postBootload(password); err != nil {
+			return resp, err
+		}
 	}
 
 	responder := make(chan map[swap.SwapID]swap.SwapReceipt)
@@ -119,7 +116,9 @@ func (handler *handler) GetSwap(password string, id swap.SwapID) (GetSwapRespons
 
 func (handler *handler) getSwapReceipts(password string) (map[swap.SwapID]swap.SwapReceipt, error) {
 	if !handler.bootloaded[passwordHash(password)] {
-		return nil, NewErrBootloadRequired("get swaps")
+		if err := handler.postBootload(password); err != nil {
+			return nil, err
+		}
 	}
 	responder := make(chan map[swap.SwapID]swap.SwapReceipt)
 	handler.swapperTask.IO().InputWriter() <- status.ReceiptQuery{Responder: responder}
@@ -162,7 +161,9 @@ func (handler *handler) GetTransfers(password string) (GetTransfersResponse, err
 
 func (handler *handler) PostSwaps(swapReq PostSwapRequest) (PostSwapResponse, error) {
 	if !handler.bootloaded[passwordHash(swapReq.Password)] {
-		return PostSwapResponse{}, NewErrBootloadRequired("post swaps")
+		if err := handler.postBootload(swapReq.Password); err != nil {
+			return PostSwapResponse{}, err
+		}
 	}
 
 	blob, err := handler.patchSwap(swap.SwapBlob(swapReq))
@@ -176,7 +177,9 @@ func (handler *handler) PostSwaps(swapReq PostSwapRequest) (PostSwapResponse, er
 
 func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest) error {
 	if !handler.bootloaded[passwordHash(swapReq.Password)] {
-		return NewErrBootloadRequired("post swaps")
+		if err := handler.postBootload(swapReq.Password); err != nil {
+			return err
+		}
 	}
 
 	blob, err := handler.patchDelayedSwap(swap.SwapBlob(swapReq))
@@ -224,7 +227,7 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersRe
 	return PostTransfersResponse(transferReceipt), nil
 }
 
-func (handler *handler) PostBootload(password string) error {
+func (handler *handler) postBootload(password string) error {
 	if handler.bootloaded[passwordHash(password)] {
 		return fmt.Errorf("already bootloaded")
 	}
