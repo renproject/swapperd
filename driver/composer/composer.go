@@ -6,6 +6,9 @@ import (
 	"github.com/republicprotocol/swapperd/adapter/db"
 	"github.com/republicprotocol/swapperd/adapter/server"
 	"github.com/republicprotocol/swapperd/core/swapper"
+	"github.com/republicprotocol/swapperd/core/swapper/delayed"
+	"github.com/republicprotocol/swapperd/core/swapper/immediate"
+	"github.com/republicprotocol/swapperd/core/swapper/status"
 	"github.com/republicprotocol/swapperd/core/transfer"
 	"github.com/republicprotocol/swapperd/driver/keystore"
 	"github.com/republicprotocol/swapperd/driver/leveldb"
@@ -42,7 +45,11 @@ func (composer *composer) Run(done <-chan struct{}) {
 	storage := db.New(ldb)
 	logger := logger.NewStdOut()
 
-	swapperTask := swapper.New(BufferCapacity, storage, binder.NewBuilder(blockchain, logger), callback.New())
+	delayedSwapperTask := delayed.New(BufferCapacity, callback.New())
+	immediateSwapperTask := immediate.New(BufferCapacity, binder.NewBuilder(blockchain, logger))
+	swapStatusTask := status.New(BufferCapacity)
+
+	swapperTask := swapper.New(BufferCapacity, storage, delayedSwapperTask, immediateSwapperTask, swapStatusTask)
 	walletTask := transfer.New(BufferCapacity, blockchain, storage, logger)
 
 	httpServer := server.NewHttpServer(blockchain, logger, swapperTask, walletTask, composer.port)
