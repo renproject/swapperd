@@ -62,7 +62,7 @@ func (token Token) String() string {
 	return string(token.Name)
 }
 
-func (token Token) Generate(rand *rand.Rand, size int) reflect.Value {
+func (Token) Generate(rand *rand.Rand, size int) reflect.Value {
 	return reflect.ValueOf(SupportedTokens[rand.Int()%len(SupportedTokens)])
 }
 

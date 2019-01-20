@@ -16,12 +16,13 @@ import (
 
 type Storage interface {
 	LoadCosts(id swap.SwapID) (blockchain.Cost, blockchain.Cost)
-	DeletePendingSwap(swap.SwapID) error
 	Receipts() ([]swap.SwapReceipt, error)
 	PutReceipt(receipt swap.SwapReceipt) error
-	UpdateReceipt(receiptUpdate swap.ReceiptUpdate) error
+
 	PutSwap(blob swap.SwapBlob) error
+	DeletePendingSwap(swap.SwapID) error
 	PendingSwaps() ([]swap.SwapBlob, error)
+	UpdateReceipt(receiptUpdate swap.ReceiptUpdate) error
 }
 
 type core struct {
@@ -31,10 +32,7 @@ type core struct {
 	storage          Storage
 }
 
-func New(cap int, storage Storage, builder immediate.ContractBuilder, callback delayed.DelayCallback) tau.Task {
-	delayedSwapperTask := delayed.New(cap, callback)
-	immediateSwapperTask := immediate.New(cap, builder)
-	statusTask := status.New(cap)
+func New(cap int, storage Storage, delayedSwapperTask, immediateSwapperTask, statusTask tau.Task) tau.Task {
 	return tau.New(tau.NewIO(cap), &core{delayedSwapperTask, immediateSwapperTask, statusTask, storage}, delayedSwapperTask, immediateSwapperTask, statusTask)
 }
 
@@ -97,7 +95,7 @@ func (core *core) handleSwapRequest(msg SwapRequest) tau.Message {
 	}
 
 	if msg.Delay {
-		core.delayedSwapper.Send(delayed.SwapRequest(msg))
+		core.delayedSwapper.Send(delayed.DelayedSwapRequest(msg))
 		return nil
 	}
 

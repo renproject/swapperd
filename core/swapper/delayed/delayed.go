@@ -68,6 +68,7 @@ func (callback *callback) handleCancelSwap(id swap.SwapID) tau.Message {
 		receipt.ID = id
 		receipt.Status = swap.Cancelled
 	}))
+	delete(callback.swapMap, id)
 	return tau.NewMessageBatch([]tau.Message{update, DeleteSwap{id}})
 }
 
@@ -77,6 +78,7 @@ func (callback *callback) handleUpdateSwap(req SwapRequest) tau.Message {
 		receipt.SendAmount = req.SendAmount
 		receipt.TimeLock = req.TimeLock
 	}))
+	delete(callback.swapMap, req.ID)
 	return tau.NewMessageBatch([]tau.Message{update, req})
 }
 

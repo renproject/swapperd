@@ -45,12 +45,6 @@ func (statuses *statuses) handleReceiptUpdate(update ReceiptUpdate) tau.Message 
 	return nil
 }
 
-type Bootload struct {
-}
-
-func (msg Bootload) IsMessage() {
-}
-
 type Receipt swap.SwapReceipt
 
 func (msg Receipt) IsMessage() {
