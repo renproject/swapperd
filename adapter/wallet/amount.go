@@ -37,12 +37,13 @@ func (wallet *wallet) verifyEthereumBalance(password string, amount *big.Int) er
 		balanceAmount = new(big.Int).Sub(balanceAmount, amount)
 	}
 
-	minVal, ok := big.NewInt(0).SetString("5000000000000000", 10) // 0.005 eth
-	if !ok {
-		return fmt.Errorf("Invalid minimum value")
+	fee, err := blockchain.TokenETH.TransactionCost(amount)
+	if err != nil {
+		return err
 	}
-	if balanceAmount.Cmp(minVal) < 0 {
-		return fmt.Errorf("You must have at least 0.005 ETH remaining in your wallet to cover transaction fees. You have %v ETH", balanceAmount)
+
+	if balanceAmount.Cmp(fee[blockchain.ETH]) < 0 {
+		return fmt.Errorf("You must have at least %d WEI remaining in your wallet to cover transaction fees. You have %v WEI", fee[blockchain.ETH], balanceAmount)
 	}
 	return nil
 }
@@ -58,6 +59,11 @@ func (wallet *wallet) verifyERC20Balance(password string, token blockchain.Token
 		return fmt.Errorf("Invalid balance amount: %s", ethBalance.Amount)
 	}
 
+	fee, err := blockchain.TokenETH.TransactionCost(amount)
+	if err != nil {
+		return err
+	}
+
 	if amount != nil {
 		erc20Balance, err := wallet.Balance(password, token)
 		if err != nil {
@@ -69,18 +75,19 @@ func (wallet *wallet) verifyERC20Balance(password string, token blockchain.Token
 			return fmt.Errorf("Invalid balance amount: %s", erc20Balance.Amount)
 		}
 
-		if erc20Amount.Cmp(amount) < 0 {
-			return fmt.Errorf("You must have at least %s %s remaining in your wallet to execute the swap. You have %s %s", amount, token.Name, erc20Amount, token.Name)
+		feeValue, ok := fee[token.Name]
+		if !ok {
+			feeValue = big.NewInt(0)
+		}
+
+		expectedAmount := new(big.Int).Add(amount, feeValue)
+		if erc20Amount.Cmp(expectedAmount) < 0 {
+			return fmt.Errorf("You must have at least %s %s remaining in your wallet to execute the swap. You have %s %s", expectedAmount, token.Name, erc20Amount, token.Name)
 		}
 	}
 
-	minVal, ok := big.NewInt(0).SetString("5000000000000000", 10) // 0.005 eth
-	if !ok {
-		return fmt.Errorf("Invalid minimum value")
-	}
-
-	if ethAmount.Cmp(minVal) < 0 {
-		return fmt.Errorf("You must have at least 0.005 ETH remaining in your wallet to cover transaction fees. You have %v ETH", ethAmount)
+	if ethAmount.Cmp(fee[blockchain.ETH]) < 0 {
+		return fmt.Errorf("You must have at least %d WEI remaining in your wallet to cover transaction fees. You have %v WEI", fee[blockchain.ETH], ethAmount)
 	}
 
 	return nil
@@ -89,6 +96,11 @@ func (wallet *wallet) verifyERC20Balance(password string, token blockchain.Token
 func (wallet *wallet) verifyBitcoinBalance(password string, amount *big.Int) error {
 	if amount == nil {
 		return nil
+	}
+
+	fee, err := blockchain.TokenBTC.TransactionCost(amount)
+	if err != nil {
+		return err
 	}
 
 	balance, err := wallet.Balance(password, blockchain.TokenBTC)
@@ -102,7 +114,7 @@ func (wallet *wallet) verifyBitcoinBalance(password string, amount *big.Int) err
 	}
 
 	leftover := balanceAmount.Sub(balanceAmount, amount)
-	if leftover.Cmp(big.NewInt(10000)) < 0 {
+	if leftover.Cmp(fee[blockchain.BTC]) < 0 {
 		return fmt.Errorf("You need at least 10000 SAT (or 0.0001 BTC) remaining in your wallet to cover transaction fees. You have: %v", balanceAmount)
 	}
 	return nil
