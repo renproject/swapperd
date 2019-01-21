@@ -63,7 +63,7 @@ func (wallet *wallet) getBitcoinAddress(password string) (string, error) {
 
 func (wallet *wallet) VerifyAddress(blockchainName blockchain.BlockchainName, address string) error {
 	switch blockchainName {
-	case blockchain.Ethereum:
+	case blockchain.Ethereum, blockchain.ERC20:
 		return wallet.verifyEthereumAddress(address)
 	case blockchain.Bitcoin:
 		return wallet.verifyBitcoinAddress(address)
