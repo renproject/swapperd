@@ -256,7 +256,7 @@ func (atom *erc20SwapContractBinder) Audit() error {
 		return err
 	}
 
-	value := new(big.Int).Sub(atom.swap.Value, atom.swap.BrokerFee)
+	value := new(big.Int).Sub(atom.expectedValue(), atom.swap.BrokerFee)
 	if auditReport.Value.Cmp(value) < 0 {
 		return fmt.Errorf("Receive value mismatch: expected %v, got %v", atom.swap.Value, auditReport.Value)
 	}
@@ -315,13 +315,9 @@ func (atom *erc20SwapContractBinder) Cost() blockchain.Cost {
 func (atom *erc20SwapContractBinder) expectedValue() *big.Int {
 	switch atom.swap.Token {
 	case blockchain.TokenTUSD:
-		fee := calculateFeesFromBips(atom.swap.Value, 7)
-		return new(big.Int).Sub(atom.swap.Value, fee)
+		cost, _ := atom.swap.Token.TransactionCost(atom.swap.Value)
+		return new(big.Int).Sub(atom.swap.Value, cost[atom.swap.Token.Name])
 	default:
 		return atom.swap.Value
 	}
-}
-
-func calculateFeesFromBips(value *big.Int, bips int64) *big.Int {
-	return new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(bips)), big.NewInt(10000))
 }
