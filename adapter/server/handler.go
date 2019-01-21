@@ -208,12 +208,12 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersRe
 		return response, err
 	}
 
-	fee, err := handler.wallet.DefaultFee(token.Blockchain)
+	txCost, err := token.TransactionCost(amount)
 	if err != nil {
 		return response, err
 	}
 
-	handler.walletTask.IO().InputWriter() <- transfer.NewTransferRequest(req.Password, token, req.To, amount, fee, responder)
+	handler.walletTask.IO().InputWriter() <- transfer.NewTransferRequest(req.Password, token, req.To, amount, txCost, responder)
 	transferReceipt := <-responder
 	return PostTransfersResponse(transferReceipt), nil
 }
