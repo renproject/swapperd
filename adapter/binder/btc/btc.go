@@ -103,6 +103,8 @@ func (atom *btcSwapContractBinder) Initiate() error {
 				return false
 			}
 			if funded {
+				atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(atom.fee), atom.cost[blockchain.BTC])
+				atom.cost[blockchain.BTC] = new(big.Int).Add(atom.swap.BrokerFee, atom.cost[blockchain.BTC])
 				atom.Info(atom.FormatTransactionView("Initiated on Bitcoin blockchain", tx.TxHash().String()))
 			}
 			return funded
@@ -110,8 +112,7 @@ func (atom *btcSwapContractBinder) Initiate() error {
 	); err != nil && err != libbtc.ErrPreConditionCheckFailed {
 		return err
 	}
-	atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(atom.fee), atom.cost[blockchain.BTC])
-	atom.cost[blockchain.BTC] = new(big.Int).Add(atom.swap.BrokerFee, atom.cost[blockchain.BTC])
+
 	return nil
 }
 
@@ -183,18 +184,18 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 		},
 		func(tx *wire.MsgTx) bool {
 			spent, err := atom.ScriptSpent(ctx, atom.scriptAddr)
-			if spent {
-				atom.Info(atom.FormatTransactionView("Redeemed on Bitcoin blockchain", tx.TxHash().String()))
-			}
 			if err != nil {
 				return false
+			}
+			if spent {
+				atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(atom.fee), atom.cost[blockchain.BTC])
+				atom.Info(atom.FormatTransactionView("Redeemed on Bitcoin blockchain", tx.TxHash().String()))
 			}
 			return spent
 		},
 	); err != nil && err != libbtc.ErrPreConditionCheckFailed {
 		return err
 	}
-	atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(atom.fee), atom.cost[blockchain.BTC])
 	return nil
 }
 
@@ -268,6 +269,8 @@ func (atom *btcSwapContractBinder) Refund() error {
 				return false
 			}
 			if spent {
+				atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(atom.fee), atom.cost[blockchain.BTC])
+				atom.cost[blockchain.BTC] = new(big.Int).Sub(atom.cost[blockchain.BTC], atom.swap.BrokerFee)
 				atom.Info(atom.FormatTransactionView("Refunded on Bitcoin blockchain", tx.TxHash().String()))
 			}
 			return spent
@@ -275,8 +278,6 @@ func (atom *btcSwapContractBinder) Refund() error {
 	); err != nil && err != libbtc.ErrPreConditionCheckFailed {
 		return err
 	}
-	atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(atom.fee), atom.cost[blockchain.BTC])
-	atom.cost[blockchain.BTC] = new(big.Int).Sub(atom.cost[blockchain.BTC], atom.swap.BrokerFee)
 	return nil
 }
 
