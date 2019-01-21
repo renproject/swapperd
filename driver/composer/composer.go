@@ -50,7 +50,7 @@ func (composer *composer) Run(done <-chan struct{}) {
 	swapStatusTask := status.New(BufferCapacity)
 
 	swapperTask := swapper.New(BufferCapacity, storage, delayedSwapperTask, immediateSwapperTask, swapStatusTask)
-	walletTask := transfer.New(BufferCapacity, blockchain, storage, logger)
+	walletTask := transfer.New(BufferCapacity, blockchain, storage)
 
 	httpServer := server.NewHttpServer(blockchain, logger, swapperTask, walletTask, composer.port)
 	httpServer.Run(done)
