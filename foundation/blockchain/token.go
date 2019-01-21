@@ -49,13 +49,12 @@ var (
 	TokenOMG  = Token{OMG, 18, ERC20}
 	TokenTUSD = Token{TUSD, 18, ERC20}
 	TokenDAI  = Token{DAI, 18, ERC20}
-	TokenPAX  = Token{PAX, 18, ERC20}
 	TokenUSDC = Token{USDC, 6, ERC20}
 	TokenGUSD = Token{GUSD, 2, ERC20}
 )
 
 var SupportedTokens = []Token{
-	TokenBTC, TokenETH, TokenWBTC, TokenREN, TokenDGX, TokenZRX, TokenOMG, TokenTUSD, TokenDAI, TokenUSDC, TokenGUSD, TokenPAX,
+	TokenBTC, TokenETH, TokenWBTC, TokenREN, TokenDGX, TokenZRX, TokenOMG, TokenTUSD, TokenDAI, TokenUSDC, TokenGUSD,
 }
 
 func (token Token) String() string {
@@ -91,8 +90,6 @@ func PatchToken(token string) (Token, error) {
 		return TokenDAI, nil
 	case "gusd", "gemini-dollar", "geminidollar":
 		return TokenGUSD, nil
-	case "pax", "paxos-standard-token", "paxosstandardtoken":
-		return TokenPAX, nil
 	default:
 		return Token{}, NewErrUnsupportedToken(TokenName(token))
 	}
