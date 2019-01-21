@@ -8,7 +8,6 @@ import (
 
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/tau"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -25,13 +24,12 @@ type Blockchain interface {
 
 type transfers struct {
 	transferMap TransferReceiptMap
-	logger      logrus.FieldLogger
 	blockchain  Blockchain
 	storage     Storage
 }
 
-func New(cap int, bc Blockchain, storage Storage, logger logrus.FieldLogger) tau.Task {
-	return tau.New(tau.NewIO(cap), &transfers{TransferReceiptMap{}, logger, bc, storage})
+func New(cap int, bc Blockchain, storage Storage) tau.Task {
+	return tau.New(tau.NewIO(cap), &transfers{TransferReceiptMap{}, bc, storage})
 }
 
 func (transfers *transfers) Reduce(msg tau.Message) tau.Message {
@@ -94,7 +92,6 @@ func (transfers *transfers) update() {
 	for txHash, receipt := range transfers.transferMap {
 		update, err := transfers.blockchain.Lookup(receipt.Token, txHash)
 		if err != nil {
-			transfers.logger.Error(err)
 			continue
 		}
 		update.Update(&receipt)
@@ -122,7 +119,7 @@ func buildReceipt(req TransferRequest, from, txHash string) TransferReceipt {
 			From:   from,
 			Token:  req.Token,
 			Amount: req.Amount.String(),
-			Fee:    req.Fee.String(),
+			TxCost: blockchain.CostToCostBlob(req.TxCost),
 			TxHash: txHash,
 		},
 	}
@@ -133,13 +130,13 @@ type TransferRequest struct {
 	Token    blockchain.Token
 	To       string
 	Amount   *big.Int
-	Fee      *big.Int
+	TxCost   blockchain.Cost
 
 	Responder chan<- TransferReceipt
 }
 
-func NewTransferRequest(password string, token blockchain.Token, to string, amount, fee *big.Int, responder chan<- TransferReceipt) TransferRequest {
-	return TransferRequest{password, token, to, amount, fee, responder}
+func NewTransferRequest(password string, token blockchain.Token, to string, amount *big.Int, txCost blockchain.Cost, responder chan<- TransferReceipt) TransferRequest {
+	return TransferRequest{password, token, to, amount, txCost, responder}
 }
 
 func (request TransferRequest) IsMessage() {
@@ -158,12 +155,12 @@ type TransferReceipt struct {
 }
 
 type TokenDetails struct {
-	To     string           `json:"to"`
-	From   string           `json:"from"`
-	Token  blockchain.Token `json:"token"`
-	Amount string           `json:"value"`
-	Fee    string           `json:"fee"`
-	TxHash string           `json:"txHash"`
+	To     string              `json:"to"`
+	From   string              `json:"from"`
+	Token  blockchain.Token    `json:"token"`
+	Amount string              `json:"value"`
+	TxCost blockchain.CostBlob `json:"txCost"`
+	TxHash string              `json:"txHash"`
 }
 
 type UpdateReceipt struct {
