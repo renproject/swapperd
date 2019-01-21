@@ -98,7 +98,7 @@ func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fund
 
 	fee, ok := new(big.Int).SetString(blob.SendFee, 10)
 	if !ok {
-		fee, err = builder.Wallet.DefaultFee(token.Blockchain)
+		fee, err = token.TransactionCost(value)
 		if err != nil {
 			return swap.Swap{}, fmt.Errorf("failed to get default fee: %v", err)
 		}
@@ -144,7 +144,7 @@ func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spe
 
 	fee, ok := new(big.Int).SetString(blob.ReceiveFee, 10)
 	if !ok {
-		fee, err = builder.Wallet.DefaultFee(token.Blockchain)
+		fee, err = token.TransactionCost(value)
 		if err != nil {
 			return swap.Swap{}, fmt.Errorf("failed to get default fee: %v", err)
 		}
