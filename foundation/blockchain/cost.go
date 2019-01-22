@@ -28,7 +28,7 @@ func CostBlobToCost(costBlob CostBlob) Cost {
 
 var (
 	EthereumTransactionCost = map[TokenName]*big.Int{
-		ETH: big.NewInt(12000000000),
+		ETH: big.NewInt(12000000000000000),
 	}
 
 	BitcoinTransactionCost = map[TokenName]*big.Int{
@@ -62,9 +62,9 @@ func (token Token) BlockchainTxFees() (*big.Int, error) {
 
 func erc20TransactionCost(token Token, amount *big.Int) Cost {
 	switch token {
-	case TokenTUSD:
+	case TokenDGX:
 		cost := EthereumTransactionCost
-		cost[TUSD] = calculateFeesFromBips(amount, 7)
+		cost[DGX] = calculateFeesFromBips(amount, 13)
 		return cost
 	default:
 		return EthereumTransactionCost
@@ -72,5 +72,5 @@ func erc20TransactionCost(token Token, amount *big.Int) Cost {
 }
 
 func calculateFeesFromBips(value *big.Int, bips int64) *big.Int {
-	return new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(bips)), big.NewInt(10000))
+	return new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(bips)), new(big.Int).Sub(big.NewInt(10000), big.NewInt(bips)))
 }
