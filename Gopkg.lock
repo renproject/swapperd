@@ -26,7 +26,7 @@
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "b7a59f2ffb2369336aaa78fc9a555e4fd277616b"
+  revision = "8f049bdb8feb7d7d5f1a9b9cd854396112fb0c0e"
 
 [[projects]]
   branch = "master"
@@ -212,7 +212,7 @@
   branch = "master"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "b1902e411de1bd0c6bfdd85bd3d22349eb708e3d"
+  revision = "d0eb57bbf3e99a610a80c1d24591c16aecd06406"
 
 [[projects]]
   branch = "master"
@@ -306,7 +306,7 @@
     "sha3",
     "ssh/terminal"
   ]
-  revision = "ff983b9c42bc9fbf91556e191cc8efb585c16908"
+  revision = "64072686203f69e3fd20143576b27200f18ab0fa"
 
 [[projects]]
   branch = "master"
@@ -317,7 +317,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "915654e7eabcea33ae277abbecf52f0d8b7a9fdc"
+  revision = "ed066c81e75eba56dd9bd2139ade88125b855585"
 
 [[projects]]
   branch = "master"
@@ -332,7 +332,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "11f53e03133963fb11ae0588e08b5e0b85be8be5"
+  revision = "770c60269bf0ef965e9e7ac8bedcb6bca2a1cefd"
 
 [[projects]]
   name = "golang.org/x/text"
