@@ -307,6 +307,12 @@ func (handler *handler) patchSwap(swapBlob swap.SwapBlob) (swap.SwapBlob, error)
 		return swapBlob, err
 	}
 
+	if swapBlob.WithdrawAddress != "" {
+		if err := handler.wallet.VerifyAddress(receiveToken.Blockchain, swapBlob.WithdrawAddress); err != nil {
+			return swapBlob, err
+		}
+	}
+
 	if err := handler.verifySendAmount(swapBlob.Password, sendToken, swapBlob.SendAmount); err != nil {
 		return swapBlob, err
 	}
