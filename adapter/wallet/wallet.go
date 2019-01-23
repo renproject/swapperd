@@ -31,7 +31,7 @@ type Balance struct {
 }
 
 type Wallet interface {
-	ID(password string) (string, error)
+	ID(password, idType string) (string, error)
 	SupportedTokens() []blockchain.Token
 	Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error)
 	Balance(password string, token blockchain.Token) (blockchain.Balance, error)

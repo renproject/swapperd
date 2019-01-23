@@ -1,11 +1,9 @@
 package wallet
 
 import (
-	"encoding/base64"
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
@@ -118,14 +116,4 @@ func (wallet *wallet) verifyBitcoinBalance(password string, amount *big.Int) err
 		return fmt.Errorf("You need at least 10000 SAT (or 0.0001 BTC) remaining in your wallet to cover transaction fees. You have: %v", balanceAmount)
 	}
 	return nil
-}
-
-func (wallet *wallet) ID(password string) (string, error) {
-	signer, err := wallet.ECDSASigner(password)
-	if err != nil {
-		return "", nil
-	}
-	pubKey := signer.PublicKey()
-	pubKeyBytes := crypto.FromECDSAPub(&pubKey)
-	return base64.StdEncoding.EncodeToString(pubKeyBytes), nil
 }
