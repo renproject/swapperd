@@ -29,10 +29,6 @@ type GetAddressResponse string
 
 type PostSwapRequest swap.SwapBlob
 
-type GetIDResponse struct {
-	PublicKey string `json:"publicKey"`
-}
-
 type PostSwapResponse struct {
 	ID        swap.SwapID   `json:"id"`
 	Swap      swap.SwapBlob `json:"swap,omitempty"`
