@@ -89,6 +89,7 @@ func (transfers *transfers) handleTransferRequest(msg TransferRequest) tau.Messa
 
 func (transfers *transfers) update() {
 	updatedTransferMap := TransferReceiptMap{}
+	// TODO: try using concurrency
 	for txHash, receipt := range transfers.transferMap {
 		update, err := transfers.blockchain.Lookup(receipt.Token, txHash)
 		if err != nil {
@@ -105,6 +106,7 @@ func (transfers *transfers) write(receipt TransferReceipt) {
 }
 
 func (transfers *transfers) read() TransferReceiptMap {
+	// TODO: create a shallow copy and return it.
 	return transfers.transferMap
 }
 

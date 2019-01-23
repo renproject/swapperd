@@ -29,6 +29,7 @@ func (statuses *statuses) Reduce(msg tau.Message) tau.Message {
 }
 
 func (statuses *statuses) handleReceiptQuery(msg ReceiptQuery) tau.Message {
+	// TODO: update to use shallow copy
 	msg.Responder <- statuses.statuses
 	return nil
 }
