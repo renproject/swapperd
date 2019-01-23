@@ -3,7 +3,6 @@ package wallet
 import (
 	"crypto/ecdsa"
 	"encoding/base64"
-	"fmt"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -35,7 +34,6 @@ func (wallet *wallet) ID(password, idType string) (string, error) {
 	idType = strings.ToLower(idType)
 	switch idType {
 	case "ethereum", "eth":
-		fmt.Println(crypto.PubkeyToAddress(pubKey).Hex())
 		return crypto.PubkeyToAddress(pubKey).Hex(), nil
 	default:
 		return base64.StdEncoding.EncodeToString(crypto.FromECDSAPub(&pubKey)), nil
