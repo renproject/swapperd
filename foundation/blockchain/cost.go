@@ -5,6 +5,7 @@ import "math/big"
 // Cost of an atomic swap
 type Cost map[TokenName]*big.Int
 
+// TODO: Why this is in foundation?
 // CostBlob is the json representation of cost.
 type CostBlob map[TokenName]string
 
