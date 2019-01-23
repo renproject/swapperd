@@ -35,7 +35,7 @@ type handler struct {
 
 // The Handler for swapperd requests
 type Handler interface {
-	GetID(password string) (GetIDResponse, error)
+	GetID(password string, idType string) (string, error)
 	GetInfo(password string) GetInfoResponse
 	GetSwap(password string, id swap.SwapID) (GetSwapResponse, error)
 	GetSwaps(password string) (GetSwapsResponse, error)
@@ -218,16 +218,13 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersRe
 	return PostTransfersResponse(transferReceipt), nil
 }
 
-func (handler *handler) GetID(password string) (GetIDResponse, error) {
+func (handler *handler) GetID(password, idType string) (string, error) {
 	handler.bootload(password)
-	id, err := handler.wallet.ID(password)
+	id, err := handler.wallet.ID(password, idType)
 	if err != nil {
-		return GetIDResponse{}, err
+		return "", err
 	}
-
-	return GetIDResponse{
-		PublicKey: id,
-	}, nil
+	return id, nil
 }
 
 func (handler *handler) GetJSONSignature(password string, message json.RawMessage) (GetSignatureResponseJSON, error) {
@@ -445,19 +442,19 @@ func (handler *handler) buildSwapResponse(blob swap.SwapBlob) (PostSwapResponse,
 	responseBlob.BrokerSendTokenAddr = blob.BrokerReceiveTokenAddr
 	responseBlob.BrokerReceiveTokenAddr = blob.BrokerSendTokenAddr
 
-	blobBytes, err := json.Marshal(blob)
+	responseBlobBytes, err := json.Marshal(responseBlob)
 	if err != nil {
 		return swapResponse, err
 	}
 
-	blobSig, err := handler.sign(blob.Password, blobBytes)
+	responseBlobSig, err := handler.sign(blob.Password, responseBlobBytes)
 	if err != nil {
 		return swapResponse, err
 	}
 
 	if blob.ShouldInitiateFirst {
 		swapResponse.Swap = responseBlob
-		swapResponse.Signature = base64.StdEncoding.EncodeToString(blobSig)
+		swapResponse.Signature = base64.StdEncoding.EncodeToString(responseBlobSig)
 	}
 
 	if blob.ResponseURL != "" {
@@ -492,13 +489,11 @@ func (handler *handler) sign(password string, message []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to load ecdsa signer: %v", err)
 	}
-
 	hash := sha3.Sum256(message)
 	sig, err := signer.Sign(hash[:])
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign swap response: %v", err)
 	}
-
 	return sig, nil
 }
 
