@@ -283,7 +283,6 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
 			tops.GasPrice = atom.swap.Fee
-			tops.GasLimit = 1000000
 			tx, err := atom.swapperBinder.Redeem(tops, atom.id, common.HexToAddress(atom.swap.WithdrawAddress), secret)
 			if err != nil {
 				return nil, err
