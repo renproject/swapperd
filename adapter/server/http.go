@@ -55,6 +55,7 @@ func (listener *httpServer) Run(done <-chan struct{}) {
 	r.HandleFunc("/addresses", getAddressesHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/addresses/{token}", getAddressesHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/info", getInfoHandler(reqHandler)).Methods("GET")
+	r.HandleFunc("/id", getIDHandler(reqHandler)).Queries("type", "{type}").Methods("GET")
 	r.HandleFunc("/id", getIDHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/sign/{type}", postSignatureHandler(reqHandler)).Methods("POST")
 	r.Use(recoveryHandler)
@@ -387,20 +388,20 @@ func getAddressesHandler(reqHandler Handler) http.HandlerFunc {
 
 func getIDHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var resp GetIDResponse
 		_, password, ok := r.BasicAuth()
 		if !ok {
 			writeError(w, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
-		resp, err := reqHandler.GetID(password)
+		idType := r.FormValue("type")
+		resp, err := reqHandler.GetID(password, idType)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get id: %v", err))
 			return
 		}
 
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
+		if _, err := w.Write([]byte(resp)); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode get id response: %v", err))
 			return
 		}
