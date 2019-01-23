@@ -55,7 +55,7 @@ func (listener *httpServer) Run(done <-chan struct{}) {
 	r.HandleFunc("/addresses", getAddressesHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/addresses/{token}", getAddressesHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/info", getInfoHandler(reqHandler)).Methods("GET")
-	r.HandleFunc("/id", getIDHandler(reqHandler)).Queries("type", "{type}").Methods("GET")
+	r.HandleFunc("/id/{type}", getIDHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/id", getIDHandler(reqHandler)).Methods("GET")
 	r.HandleFunc("/sign/{type}", postSignatureHandler(reqHandler)).Methods("POST")
 	r.Use(recoveryHandler)
@@ -394,7 +394,8 @@ func getIDHandler(reqHandler Handler) http.HandlerFunc {
 			return
 		}
 
-		idType := r.FormValue("type")
+		vars := mux.Vars(r)
+		idType := vars["type"]
 		resp, err := reqHandler.GetID(password, idType)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get id: %v", err))
