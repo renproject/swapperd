@@ -47,6 +47,10 @@ func NewBTCSwapContractBinder(account libbtc.Account, swap swap.Swap, cost block
 		cost[blockchain.BTC] = big.NewInt(0)
 	}
 
+	if swap.BrokerFee.Int64() != 0 && swap.BrokerFee.Int64() < 600 {
+		swap.BrokerFee = big.NewInt(600)
+	}
+
 	logger.Info(swap.ID, fmt.Sprintf("BTC atomic swap = %s", scriptAddr))
 	return &btcSwapContractBinder{
 		scriptAddr:  scriptAddr,
@@ -92,6 +96,7 @@ func (atom *btcSwapContractBinder) Initiate() error {
 				atom.Info(fmt.Sprintf("Send value on Bitcoin blockchain = %d", atom.swap.Value.Int64()))
 				return false
 			}
+
 			// creating unsigned transaction and adding transaction outputs
 			tx.AddTxOut(wire.NewTxOut(atom.swap.Value.Int64()-value, initiateScriptP2SHPKScript))
 			return !funded
