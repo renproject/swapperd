@@ -304,10 +304,10 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 		},
 		1,
 	); err != nil {
-		if err == beth.ErrPreConditionCheckFailed {
-			atom.logger.Info("Skipping redeem on Ethereum Blockchain")
+		if err != beth.ErrPreConditionCheckFailed {
+			return err
 		}
-		return err
+		atom.logger.Info("Skipping redeem on Ethereum Blockchain")
 	}
 	return nil
 }

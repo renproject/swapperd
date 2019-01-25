@@ -269,8 +269,11 @@ func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 			return !refundable
 		},
 		1,
-	); err != nil && err != beth.ErrPreConditionCheckFailed {
-		return err
+	); err != nil {
+		if err != beth.ErrPreConditionCheckFailed {
+			return err
+		}
+		atom.logger.Info("Skipping redeem on Ethereum blockchain")
 	}
 	return nil
 }
