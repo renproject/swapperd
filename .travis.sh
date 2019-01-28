@@ -7,8 +7,8 @@
 #golint -set_exit_status `go list ./... | grep -Ev "(vendor)"` && \
 
 # Test and generate cover profiles
-ginkgo --cover core/status                  \
-               core/swapper                 \
+ginkgo --cover core/wallet/status                  \
+               core/wallet/swapper                 \
                adapter/binder/btc           \
                adapter/binder/erc20         \
                adapter/binder/eth           \
@@ -23,8 +23,8 @@ ginkgo --cover core/status                  \
                driver/swapperd            &&\
 
 # Merge cover profiles into one root cover profile
-covermerge core/status/status.coverprofile               \
-           core/swapper/swapper.coverprofile             \
+covermerge core/wallet/status/status.coverprofile               \
+           core/wallet/swapper/swapper.coverprofile             \
            adapter/binder/btc/btc.coverprofile           \
            adapter/binder/erc20/erc20.coverprofile       \
            adapter/binder/eth/eth.coverprofile           \
