@@ -24,7 +24,7 @@ func (statuses *statuses) Reduce(msg tau.Message) tau.Message {
 	case ReceiptQuery:
 		return statuses.handleReceiptQuery(msg)
 	default:
-		return tau.NewError(fmt.Errorf("invalid message type in transfers: %T", msg))
+		return tau.NewError(fmt.Errorf("invalid message type in statuses: %T", msg))
 	}
 }
 

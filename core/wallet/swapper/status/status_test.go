@@ -12,7 +12,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/swapperd/core/swapper/status"
+	. "github.com/republicprotocol/swapperd/core/wallet/swapper/status"
 
 	"github.com/republicprotocol/swapperd/foundation/swap"
 )

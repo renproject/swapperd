@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/republicprotocol/co-go"
-	"github.com/republicprotocol/swapperd/core/swapper/delayed"
-	"github.com/republicprotocol/swapperd/core/swapper/immediate"
-	"github.com/republicprotocol/swapperd/core/swapper/status"
+	"github.com/republicprotocol/swapperd/core/wallet/swapper/delayed"
+	"github.com/republicprotocol/swapperd/core/wallet/swapper/immediate"
+	"github.com/republicprotocol/swapperd/core/wallet/swapper/status"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
@@ -32,8 +32,15 @@ type core struct {
 	storage          Storage
 }
 
-func New(cap int, storage Storage, delayedSwapperTask, immediateSwapperTask, statusTask tau.Task) tau.Task {
-	return tau.New(tau.NewIO(cap), &core{delayedSwapperTask, immediateSwapperTask, statusTask, storage}, delayedSwapperTask, immediateSwapperTask, statusTask)
+func New(cap int, storage Storage, builder immediate.ContractBuilder, callback delayed.DelayCallback) tau.Task {
+	delayedSwapperTask := delayed.New(cap, callback)
+	immediateSwapperTask := immediate.New(cap, builder)
+	swapStatusTask := status.New(cap)
+	return tau.New(tau.NewIO(cap), NewSwapper(delayedSwapperTask, immediateSwapperTask, swapStatusTask, storage), delayedSwapperTask, immediateSwapperTask, swapStatusTask)
+}
+
+func NewSwapper(delayedSwapperTask, immediateSwapperTask, statusTask tau.Task, storage Storage) tau.Reducer {
+	return &core{delayedSwapperTask, immediateSwapperTask, statusTask, storage}
 }
 
 func (core *core) Reduce(msg tau.Message) tau.Message {
@@ -69,7 +76,6 @@ func (core *core) handleReceiptQuery(msg tau.Message) tau.Message {
 }
 
 func (core *core) handleTick(msg tau.Message) tau.Message {
-	core.status.Send(msg)
 	core.immediateSwapper.Send(msg)
 	core.delayedSwapper.Send(msg)
 	return nil
@@ -164,12 +170,12 @@ func (core *core) handleDeleteSwap(id swap.SwapID) tau.Message {
 
 type SwapRequest swap.SwapBlob
 
-func (msg SwapRequest) IsMessage() {
+func (SwapRequest) IsMessage() {
 }
 
 type Bootload struct {
 	Password string
 }
 
-func (msg Bootload) IsMessage() {
+func (Bootload) IsMessage() {
 }

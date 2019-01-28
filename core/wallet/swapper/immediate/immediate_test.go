@@ -10,7 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/swapperd/core/swapper/immediate"
+	. "github.com/republicprotocol/swapperd/core/wallet/swapper/immediate"
 )
 
 var _ = Describe("Immediate Swap Task", func() {

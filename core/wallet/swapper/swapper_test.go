@@ -7,14 +7,14 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/republicprotocol/swapperd/core/swapper/delayed"
-	"github.com/republicprotocol/swapperd/core/swapper/immediate"
+	"github.com/republicprotocol/swapperd/core/wallet/swapper/delayed"
+	"github.com/republicprotocol/swapperd/core/wallet/swapper/immediate"
 
-	"github.com/republicprotocol/swapperd/core/swapper/status"
+	"github.com/republicprotocol/swapperd/core/wallet/swapper/status"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/swapperd/core/swapper"
+	. "github.com/republicprotocol/swapperd/core/wallet/swapper"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 
 	"github.com/republicprotocol/tau"

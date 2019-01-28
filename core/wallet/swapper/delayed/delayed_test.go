@@ -11,7 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/swapperd/core/swapper/delayed"
+	. "github.com/republicprotocol/swapperd/core/wallet/swapper/delayed"
 
 	"github.com/republicprotocol/swapperd/foundation/swap"
 )
