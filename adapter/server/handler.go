@@ -14,23 +14,24 @@ import (
 	"time"
 
 	"github.com/republicprotocol/swapperd/adapter/wallet"
-	"github.com/republicprotocol/swapperd/core/swapper"
-	"github.com/republicprotocol/swapperd/core/swapper/status"
-	"github.com/republicprotocol/swapperd/core/transfer"
+	coreWallet "github.com/republicprotocol/swapperd/core/wallet"
+	"github.com/republicprotocol/swapperd/core/wallet/swapper"
+	"github.com/republicprotocol/swapperd/core/wallet/swapper/status"
+	"github.com/republicprotocol/swapperd/core/wallet/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/sha3"
 )
 
+var ErrHandlerIsShuttingDown = fmt.Errorf("Http handler is shutting down")
+
 type handler struct {
-	bootloaded  map[string]bool
-	swapperTask tau.Task
-	walletTask  tau.Task
-	wallet      wallet.Wallet
-	logger      logrus.FieldLogger
+	bootloaded map[string]bool
+	wallet     wallet.Wallet
+	buffer     chan tau.Message
+	done       chan struct{}
 }
 
 // The Handler for swapperd requests
@@ -50,10 +51,19 @@ type Handler interface {
 	PostTransfers(PostTransfersRequest) (PostTransfersResponse, error)
 	PostSwaps(PostSwapRequest) (PostSwapResponse, error)
 	PostDelayedSwaps(PostSwapRequest) error
+
+	Receive() (tau.Message, error)
+	Write(msg tau.Message)
+	ShutDown()
 }
 
-func NewHandler(swapperTask, walletTask tau.Task, wallet wallet.Wallet, logger logrus.FieldLogger) Handler {
-	return &handler{map[string]bool{}, swapperTask, walletTask, wallet, logger}
+func NewHandler(cap int, wallet wallet.Wallet) Handler {
+	return &handler{
+		bootloaded: map[string]bool{},
+		wallet:     wallet,
+		buffer:     make(chan tau.Message, cap),
+		done:       make(chan struct{}),
+	}
 }
 
 func (handler *handler) GetInfo(password string) GetInfoResponse {
@@ -79,10 +89,7 @@ func (handler *handler) GetAddress(password string, token blockchain.Token) (Get
 func (handler *handler) GetSwaps(password string) (GetSwapsResponse, error) {
 	handler.bootload(password)
 	resp := GetSwapsResponse{}
-	responder := make(chan map[swap.SwapID]swap.SwapReceipt)
-	handler.swapperTask.IO().InputWriter() <- status.ReceiptQuery{Responder: responder}
-	swapReceipts := <-responder
-
+	swapReceipts := handler.getSwapReceipts(password)
 	for _, receipt := range swapReceipts {
 		passwordHash, err := base64.StdEncoding.DecodeString(receipt.PasswordHash)
 		if receipt.PasswordHash != "" && err != nil {
@@ -100,25 +107,20 @@ func (handler *handler) GetSwaps(password string) (GetSwapsResponse, error) {
 
 func (handler *handler) GetSwap(password string, id swap.SwapID) (GetSwapResponse, error) {
 	handler.bootload(password)
-	swapReceipts, err := handler.getSwapReceipts(password)
-	if err != nil {
-		return GetSwapResponse{}, err
-	}
-
+	swapReceipts := handler.getSwapReceipts(password)
 	receipt, ok := swapReceipts[id]
 	if !ok {
 		return GetSwapResponse{}, fmt.Errorf("swap receipt not found")
 	}
-
 	return GetSwapResponse(receipt), nil
 }
 
-func (handler *handler) getSwapReceipts(password string) (map[swap.SwapID]swap.SwapReceipt, error) {
+func (handler *handler) getSwapReceipts(password string) map[swap.SwapID]swap.SwapReceipt {
 	handler.bootload(password)
 	responder := make(chan map[swap.SwapID]swap.SwapReceipt)
-	handler.swapperTask.IO().InputWriter() <- status.ReceiptQuery{Responder: responder}
+	handler.Write(coreWallet.NewSwapperRequest(status.ReceiptQuery{Responder: responder}))
 	swapReceipts := <-responder
-	return swapReceipts, nil
+	return swapReceipts
 }
 
 func (handler *handler) GetBalances(password string) (GetBalancesResponse, error) {
@@ -136,9 +138,7 @@ func (handler *handler) GetBalance(password string, token blockchain.Token) (Get
 func (handler *handler) GetTransfers(password string) (GetTransfersResponse, error) {
 	handler.bootload(password)
 	responder := make(chan transfer.TransferReceiptMap, 1)
-	handler.walletTask.IO().InputWriter() <- transfer.TransferReceiptRequest{
-		Responder: responder,
-	}
+	handler.Write(coreWallet.NewTransferRequest(transfer.TransferReceiptRequest{responder}))
 	response := <-responder
 
 	receiptMap := transfer.TransferReceiptMap{}
@@ -165,7 +165,7 @@ func (handler *handler) PostSwaps(swapReq PostSwapRequest) (PostSwapResponse, er
 		return PostSwapResponse{}, err
 	}
 
-	handler.swapperTask.IO().InputWriter() <- swapper.SwapRequest(blob)
+	handler.Write(coreWallet.NewSwapperRequest(swapper.SwapRequest(blob)))
 	return handler.buildSwapResponse(blob)
 }
 
@@ -182,7 +182,7 @@ func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest) error {
 		return err
 	}
 
-	handler.swapperTask.IO().InputWriter() <- swapper.SwapRequest(blob)
+	handler.Write(coreWallet.NewSwapperRequest(swapper.SwapRequest(blob)))
 	return nil
 }
 
@@ -213,7 +213,7 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) (PostTransfersRe
 		return response, err
 	}
 
-	handler.walletTask.IO().InputWriter() <- transfer.NewTransferRequest(req.Password, token, req.To, amount, txCost, responder)
+	handler.Write(coreWallet.NewTransferRequest(transfer.NewTransferRequest(req.Password, token, req.To, amount, txCost, responder)))
 	transferReceipt := <-responder
 	return PostTransfersResponse(transferReceipt), nil
 }
@@ -278,9 +278,27 @@ func (handler *handler) GetHexSignature(password string, message string) (GetSig
 	}, nil
 }
 
+func (handler *handler) Receive() (tau.Message, error) {
+	select {
+	case <-handler.done:
+		return nil, ErrHandlerIsShuttingDown
+	case message := <-handler.buffer:
+		return message, nil
+	}
+}
+
+func (handler *handler) Write(msg tau.Message) {
+	handler.buffer <- msg
+}
+
+func (handler *handler) ShutDown() {
+	close(handler.done)
+}
+
 func (handler *handler) bootload(password string) {
 	if !handler.bootloaded[passwordHash(password)] {
-		handler.swapperTask.IO().InputWriter() <- swapper.Bootload{password}
+		handler.Write(coreWallet.NewSwapperRequest(swapper.Bootload{password}))
+		handler.Write(coreWallet.NewTransferRequest(transfer.Bootload{}))
 		handler.bootloaded[passwordHash(password)] = true
 	}
 }
@@ -475,9 +493,8 @@ func (handler *handler) buildSwapResponse(blob swap.SwapBlob) (PostSwapResponse,
 				return swapResponse, err
 			}
 
-			handler.logger.Errorf("unexpected response", string(respBytes))
-			return swapResponse, fmt.Errorf("unexpected status code while"+
-				"posting to the response url: %d", resp.StatusCode)
+			return swapResponse, fmt.Errorf("unexpected status code (%d) while"+
+				"posting to the response url: %s", resp.StatusCode, respBytes)
 		}
 	}
 	swapResponse.ID = blob.ID
