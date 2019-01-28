@@ -373,12 +373,7 @@ func (server *httpServer) getAddressesHandler(reqHandler Handler) http.HandlerFu
 				return
 			}
 
-			respBytes, err := json.MarshalIndent(address, "\t", "")
-			if err != nil {
-				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
-				return
-			}
-			server.writeResponse(w, r, http.StatusOK, respBytes)
+			server.writeResponse(w, r, http.StatusOK, []byte(address))
 		}
 	}
 }
