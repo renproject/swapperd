@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
-	"github.com/republicprotocol/swapperd/core/transfer"
+	"github.com/republicprotocol/swapperd/core/wallet/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/syndtr/goleveldb/leveldb"
