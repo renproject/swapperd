@@ -12,7 +12,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/republicprotocol/libbtc-go"
-	"github.com/republicprotocol/swapperd/core/swapper/immediate"
+	"github.com/republicprotocol/swapperd/core/wallet/swapper/immediate"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
@@ -171,17 +171,17 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 		atom.fee,
 		nil,
 		func(tx *wire.MsgTx) bool {
-			funded, val, err := atom.ScriptFunded(ctx, atom.scriptAddr, 0)
+			redeemed, val, err := atom.ScriptRedeemed(ctx, atom.scriptAddr, 0)
 			if err != nil {
 				return false
 			}
-			if funded {
+			if !redeemed {
 				if atom.swap.BrokerFee.Int64() != 0 {
 					tx.AddTxOut(wire.NewTxOut(atom.swap.BrokerFee.Int64(), feeAddrScript))
 				}
 				tx.AddTxOut(wire.NewTxOut(val-atom.swap.BrokerFee.Int64()-atom.fee, payToAddrScript))
 			}
-			return funded
+			return !redeemed
 		},
 		func(builder *txscript.ScriptBuilder) {
 			builder.AddData(secret[:])
