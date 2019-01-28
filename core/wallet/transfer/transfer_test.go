@@ -10,7 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/swapperd/core/transfer"
+	. "github.com/republicprotocol/swapperd/core/wallet/transfer"
 )
 
 const BufferLimit = 1024
