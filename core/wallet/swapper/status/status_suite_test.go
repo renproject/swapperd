@@ -1,13 +1,13 @@
-package swapper_test
+package status_test
 
 import (
-	"testing"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"testing"
 )
 
-func TestSwapper(t *testing.T) {
+func TestStatus(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Swapper Suite")
+	RunSpecs(t, "Status Suite")
 }

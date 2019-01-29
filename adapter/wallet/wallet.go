@@ -5,7 +5,7 @@ import (
 
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/libbtc-go"
-	"github.com/republicprotocol/swapperd/core/transfer"
+	"github.com/republicprotocol/swapperd/core/wallet/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
@@ -31,16 +31,16 @@ type Balance struct {
 }
 
 type Wallet interface {
-	ID(password string) (string, error)
+	ID(password, idType string) (string, error)
 	SupportedTokens() []blockchain.Token
 	Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error)
+	Balance(password string, token blockchain.Token) (blockchain.Balance, error)
 	Lookup(token blockchain.Token, txHash string) (transfer.UpdateReceipt, error)
 	Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error)
 	GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error)
 	Addresses(password string) (map[blockchain.TokenName]string, error)
 	VerifyAddress(blockchain blockchain.BlockchainName, address string) error
 	VerifyBalance(password string, token blockchain.Token, balance *big.Int) error
-	DefaultFee(blockchainName blockchain.BlockchainName) (*big.Int, error)
 
 	EthereumAccount(password string) (beth.Account, error)
 	BitcoinAccount(password string) (libbtc.Account, error)

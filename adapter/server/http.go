@@ -9,15 +9,16 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/gorilla/mux"
 	"github.com/republicprotocol/swapperd/adapter/wallet"
-	"github.com/republicprotocol/swapperd/core/swapper"
-	"github.com/republicprotocol/swapperd/core/transfer"
+	"github.com/republicprotocol/swapperd/core/wallet/swapper"
+	"github.com/republicprotocol/swapperd/core/wallet/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
 	"github.com/rs/cors"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -26,57 +27,53 @@ type Storage interface {
 	transfer.Storage
 }
 type httpServer struct {
-	wallet      wallet.Wallet
-	logger      logrus.FieldLogger
-	port        string
-	loggedin    bool
-	swapperTask tau.Task
-	walletTask  tau.Task
+	port    string
+	handler Handler
+	logger  logrus.FieldLogger
 }
 
-func NewHttpServer(wallet wallet.Wallet, logger logrus.FieldLogger, swapperTask, walletTask tau.Task, port string) Server {
-	return &httpServer{wallet, logger, port, false, swapperTask, walletTask}
+func NewHttpServer(cap int, port string, wallet wallet.Wallet, logger logrus.FieldLogger) Server {
+	return &httpServer{port, NewHandler(cap, wallet), logger}
 }
 
 // NewHttpListener creates a new http listener
-func (listener *httpServer) Run(done <-chan struct{}) {
-	go listener.swapperTask.Run(done)
-	go listener.walletTask.Run(done)
-
-	reqHandler := NewHandler(listener.swapperTask, listener.walletTask, listener.wallet, listener.logger)
+func (server *httpServer) Run(done <-chan struct{}) {
 	r := mux.NewRouter()
-	r.HandleFunc("/swaps", postSwapsHandler(reqHandler)).Methods("POST")
-	r.HandleFunc("/swaps", getSwapsHandler(reqHandler)).Queries("id", "{id}").Methods("GET")
-	r.HandleFunc("/transfers", postTransfersHandler(reqHandler)).Methods("POST")
-	r.HandleFunc("/transfers", getTransfersHandler(reqHandler)).Methods("GET")
-	r.HandleFunc("/balances", getBalancesHandler(reqHandler)).Methods("GET")
-	r.HandleFunc("/balances/{token}", getBalancesHandler(reqHandler)).Methods("GET")
-	r.HandleFunc("/addresses", getAddressesHandler(reqHandler)).Methods("GET")
-	r.HandleFunc("/addresses/{token}", getAddressesHandler(reqHandler)).Methods("GET")
-	r.HandleFunc("/bootload", postBootloadHandler(reqHandler)).Methods("POST")
-	r.HandleFunc("/info", getInfoHandler(reqHandler)).Methods("GET")
-	r.HandleFunc("/id", getIDHandler(reqHandler)).Methods("GET")
-	r.HandleFunc("/sign/{type}", postSignatureHandler(reqHandler)).Methods("POST")
+	r.HandleFunc("/swaps", server.postSwapsHandler(server.handler)).Methods("POST")
+	r.HandleFunc("/swaps", server.getSwapsHandler(server.handler)).Methods("GET")
+	r.HandleFunc("/swap", server.getSwapsHandler(server.handler)).Queries("id", "{id}").Methods("GET")
+	r.HandleFunc("/transfers", server.postTransfersHandler(server.handler)).Methods("POST")
+	r.HandleFunc("/transfers", server.getTransfersHandler(server.handler)).Methods("GET")
+	r.HandleFunc("/balances", server.getBalancesHandler(server.handler)).Methods("GET")
+	r.HandleFunc("/balances/{token}", server.getBalancesHandler(server.handler)).Methods("GET")
+	r.HandleFunc("/addresses", server.getAddressesHandler(server.handler)).Methods("GET")
+	r.HandleFunc("/addresses/{token}", server.getAddressesHandler(server.handler)).Methods("GET")
+	r.HandleFunc("/info", server.getInfoHandler(server.handler)).Methods("GET")
+	r.HandleFunc("/id/{type}", server.getIDHandler(server.handler)).Methods("GET")
+	r.HandleFunc("/id", server.getIDHandler(server.handler)).Methods("GET")
+	r.HandleFunc("/sign/{type}", server.postSignatureHandler(server.handler)).Methods("POST")
 	r.Use(recoveryHandler)
-	httpHandler := cors.New(cors.Options{
+	handler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowCredentials: true,
 		AllowedMethods:   []string{"GET", "POST"},
 	}).Handler(r)
 
-	httpListener, err := net.Listen("tcp", fmt.Sprintf(":%s", listener.port))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", server.port))
 	if err != nil {
 		panic(err)
 	}
 	go func() {
-		if err := http.Serve(httpListener, httpHandler); err != nil {
+		if err := http.Serve(listener, handler); err != nil {
 			panic(err)
 		}
 	}()
-	go listener.ticker(done)
-	listener.logger.Info(fmt.Sprintf("listening for swaps on http://127.0.0.1:%s", listener.port))
+	go server.ticker(done)
+	server.logger.Infof("swapperd started listening on http://127.0.0.1:%s", server.port)
 	<-done
-	httpListener.Close()
+	server.logger.Infof("swapperd stopped listening on http://127.0.0.1:%s", server.port)
+	listener.Close()
+	server.handler.ShutDown()
 }
 
 func (listener *httpServer) ticker(done <-chan struct{}) {
@@ -86,10 +83,13 @@ func (listener *httpServer) ticker(done <-chan struct{}) {
 		case <-done:
 			return
 		case <-ticker.C:
-			listener.walletTask.IO().InputWriter() <- tau.NewTick(time.Now())
-			listener.swapperTask.IO().InputWriter() <- tau.NewTick(time.Now())
+			listener.handler.Write(tau.NewTick(time.Now()))
 		}
 	}
+}
+
+func (listener *httpServer) Receive() (tau.Message, error) {
+	return listener.handler.Receive()
 }
 
 // writeError response.
@@ -111,72 +111,31 @@ func recoveryHandler(h http.Handler) http.Handler {
 	})
 }
 
-// postBootloadHandler handles the post login request, it loads pending swaps and
-// historical swap receipts into memory.
-func postBootloadHandler(reqHandler Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		_, password, ok := r.BasicAuth()
-		if !ok {
-			writeError(w, http.StatusUnauthorized, "authentication required")
-			return
-		}
-
-		if err := reqHandler.PostBootload(password); err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte{})
-	}
-}
-
 // getInfoHandler handles the get info request, it returns the basic information
 // of the swapper such as the version, supported tokens addresses.
-func getInfoHandler(reqHandler Handler) http.HandlerFunc {
+func (server *httpServer) getInfoHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, password, ok := r.BasicAuth()
 		if !ok {
-			writeError(w, http.StatusUnauthorized, "authentication required")
+			server.writeError(w, r, http.StatusUnauthorized, "authentication required")
 			return
 		}
-		if err := json.NewEncoder(w).Encode(reqHandler.GetInfo(password)); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode info response: %v", err))
+		respBytes, err := json.MarshalIndent(reqHandler.GetInfo(password), "\t", "")
+		if err != nil {
+			server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode info response: %v", err))
 			return
 		}
+		server.writeResponse(w, r, http.StatusOK, respBytes)
 	}
 }
-
-// // getSwapsHandler handles the get swaps request, it returns the status of all
-// // the existing swaps on the swapper.
-// func getSwapsHandler(reqHandler Handler) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		_, password, ok := r.BasicAuth()
-// 		if !ok {
-// 			writeError(w, http.StatusUnauthorized, "authentication required")
-// 			return
-// 		}
-
-// 		resp, err := reqHandler.GetSwaps(password)
-// 		if err != nil {
-// 			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot get swaps: %v", err))
-// 			return
-// 		}
-
-// 		if err := json.NewEncoder(w).Encode(resp); err != nil {
-// 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
-// 			return
-// 		}
-// 	}
-// }
 
 // getSwapHandler handles the get swaps request, it returns the status of the
 // existing swap with given a swap id on the swapper.
-func getSwapsHandler(reqHandler Handler) http.HandlerFunc {
+func (server *httpServer) getSwapsHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, password, ok := r.BasicAuth()
 		if !ok {
-			writeError(w, http.StatusUnauthorized, "authentication required")
+			server.writeError(w, r, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -184,245 +143,272 @@ func getSwapsHandler(reqHandler Handler) http.HandlerFunc {
 		if swapID == "" {
 			resp, err := reqHandler.GetSwaps(password)
 			if err != nil {
-				writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot get swaps: %v", err))
+				server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("cannot get swaps: %v", err))
 				return
 			}
 
-			if err := json.NewEncoder(w).Encode(resp); err != nil {
-				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
+			respBytes, err := json.MarshalIndent(resp, "\t", "")
+			if err != nil {
+				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
 				return
 			}
+			server.writeResponse(w, r, http.StatusOK, respBytes)
 			return
 		}
 
 		resp, err := reqHandler.GetSwap(password, swap.SwapID(swapID))
 		if err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot get swap with id (%s): %v", swapID, err))
+			server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("cannot get swap with id (%s): %v", swapID, err))
 			return
 		}
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode get swap response: %v", err))
+
+		respBytes, err := json.MarshalIndent(resp, "\t", "")
+		if err != nil {
+			server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode get swap response: %v", err))
 			return
 		}
+		server.writeResponse(w, r, http.StatusOK, respBytes)
 	}
 }
 
 // postSwapsHandler handles the post swaps request, it fills incomplete
 // information and starts the Atomic Swap.
-func postSwapsHandler(reqHandler Handler) http.HandlerFunc {
+func (server *httpServer) postSwapsHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, password, ok := r.BasicAuth()
 		if !ok {
-			writeError(w, http.StatusUnauthorized, "authentication required")
+			server.writeError(w, r, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
 		swapReq := PostSwapRequest{}
 		if err := json.NewDecoder(r.Body).Decode(&swapReq); err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode swap request: %v", err))
+			server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("cannot decode swap request: %v", err))
 			return
 		}
 		swapReq.Password = password
 
 		passwordHashBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode swap request: %v", err))
+			server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("cannot decode swap request: %v", err))
 			return
 		}
 		swapReq.PasswordHash = base64.StdEncoding.EncodeToString(passwordHashBytes)
 
 		if swapReq.Delay {
 			if err := reqHandler.PostDelayedSwaps(swapReq); err != nil {
-				writeError(w, http.StatusBadRequest, err.Error())
+				server.writeError(w, r, http.StatusBadRequest, err.Error())
 				return
 			}
-			w.WriteHeader(http.StatusCreated)
+			server.writeResponse(w, r, http.StatusCreated, []byte{})
 			return
 		}
 		patchedSwap, err := reqHandler.PostSwaps(swapReq)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
+			server.writeError(w, r, http.StatusBadRequest, err.Error())
 			return
 		}
 
-		w.WriteHeader(http.StatusCreated)
 		if patchedSwap.Signature == "" {
-			if err := json.NewEncoder(w).Encode(PostRedeemSwapResponse{patchedSwap.ID}); err != nil {
-				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swap response: %v", err))
+			respBytes, err := json.MarshalIndent(PostRedeemSwapResponse{patchedSwap.ID}, "\t", "")
+			if err != nil {
+				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode swap response: %v", err))
 				return
 			}
+			server.writeResponse(w, r, http.StatusCreated, respBytes)
 			return
 		}
 
-		if err := json.NewEncoder(w).Encode(patchedSwap); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode swap response: %v", err))
+		respBytes, err := json.MarshalIndent(patchedSwap, "\t", "")
+		if err != nil {
+			server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode swap response: %v", err))
 			return
 		}
+		server.writeResponse(w, r, http.StatusCreated, respBytes)
+		return
 	}
 }
 
 // postTransferHandler handles the post withdrawal
-func postTransfersHandler(reqHandler Handler) http.HandlerFunc {
+func (server *httpServer) postTransfersHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, password, ok := r.BasicAuth()
 		if !ok {
-			writeError(w, http.StatusUnauthorized, "authentication required")
+			server.writeError(w, r, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
 		transferReq := PostTransfersRequest{}
 		if err := json.NewDecoder(r.Body).Decode(&transferReq); err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode transfers request: %v", err))
+			server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("cannot decode transfers request: %v", err))
 			return
 		}
 		transferReq.Password = password
 
 		transferResp, err := reqHandler.PostTransfers(transferReq)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("cannot decode transfers request: %v", err))
+			server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("cannot decode transfers request: %v", err))
 			return
 		}
 		transferResp.PasswordHash = ""
 
-		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(transferResp); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode transfers response: %v", err))
+		respBytes, err := json.MarshalIndent(transferResp, "\t", "")
+		if err != nil {
+			server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode transfers response: %v", err))
 			return
 		}
+		server.writeResponse(w, r, http.StatusCreated, respBytes)
 	}
 }
 
 // getBalancesHandler handles the get balances request, and returns the balances
 // of the accounts held by the swapper.
-func getBalancesHandler(reqHandler Handler) http.HandlerFunc {
+func (server *httpServer) getBalancesHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		opts := mux.Vars(r)
 		tokenName := opts["token"]
 
 		_, password, ok := r.BasicAuth()
 		if !ok {
-			writeError(w, http.StatusUnauthorized, "authentication required")
+			server.writeError(w, r, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
-		balances, err := reqHandler.GetBalances(password)
 		if tokenName == "" {
-			if err := json.NewEncoder(w).Encode(balances); err != nil {
-				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
+			balances, err := reqHandler.GetBalances(password)
+			if err != nil {
+				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot retrieve balances: %v", err))
 				return
 			}
+
+			respBytes, err := json.MarshalIndent(balances, "\t", "")
+			if err != nil {
+				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
+				return
+			}
+			server.writeResponse(w, r, http.StatusOK, respBytes)
 			return
 		}
 
 		token, err := blockchain.PatchToken(tokenName)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid token name: %s", tokenName))
+			server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("invalid token name: %s", tokenName))
 		}
 
-		if err := json.NewEncoder(w).Encode(balances[token.Name]); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
+		balance, err := reqHandler.GetBalance(password, token)
+		if err != nil {
+			server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("unable to retrieve balance for token: %s", tokenName))
 			return
 		}
+
+		respBytes, err := json.MarshalIndent(balance, "", "\t")
+		if err != nil {
+			server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
+			return
+		}
+		server.writeResponse(w, r, http.StatusOK, respBytes)
 	}
 }
 
 // getTransfersHandler handles the get balances request, and returns the balances
 // of the accounts held by the swapper.
-func getTransfersHandler(reqHandler Handler) http.HandlerFunc {
+func (server *httpServer) getTransfersHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var transfers GetTransfersResponse
 		_, password, ok := r.BasicAuth()
 		if !ok {
-			writeError(w, http.StatusUnauthorized, "authentication required")
+			server.writeError(w, r, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
 		transfers, err := reqHandler.GetTransfers(password)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get transfers: %v", err))
+			server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot get transfers: %v", err))
 			return
 		}
 
-		if err := json.NewEncoder(w).Encode(transfers); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
+		respBytes, err := json.MarshalIndent(transfers, "\t", "")
+		if err != nil {
+			server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
 			return
 		}
+		server.writeResponse(w, r, http.StatusOK, respBytes)
 	}
 }
 
 // getAddressesHandler handles the get addresses request, and returns the addresses
 // of the accounts held by the swapper.
-func getAddressesHandler(reqHandler Handler) http.HandlerFunc {
+func (server *httpServer) getAddressesHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		opts := mux.Vars(r)
 		tokenName := opts["token"]
 
 		_, password, ok := r.BasicAuth()
 		if !ok {
-			writeError(w, http.StatusUnauthorized, "authentication required")
-			return
-		}
-
-		addresses, err := reqHandler.GetAddresses(password)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get addresses: %v", err))
+			server.writeError(w, r, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
 		if tokenName == "" {
-			if err := json.NewEncoder(w).Encode(addresses); err != nil {
-				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
+			addresses, err := reqHandler.GetAddresses(password)
+			if err != nil {
+				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot get addresses: %v", err))
 				return
 			}
-			return
-		}
+			respBytes, err := json.MarshalIndent(addresses, "\t", "")
+			if err != nil {
+				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
+				return
+			}
+			server.writeResponse(w, r, http.StatusOK, respBytes)
+		} else {
+			token, err := blockchain.PatchToken(tokenName)
+			if err != nil {
+				server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("invalid token name: %s", tokenName))
+				return
+			}
+			address, err := reqHandler.GetAddress(password, token)
+			if err != nil {
+				server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("unable to retrieve address for token: %s", tokenName))
+				return
+			}
 
-		token, err := blockchain.PatchToken(tokenName)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid token name: %s", tokenName))
-			return
-		}
-
-		if err := json.NewEncoder(w).Encode(addresses[token.Name]); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode balances response: %v", err))
-			return
-		}
-	}
-}
-
-func getIDHandler(reqHandler Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var resp GetIDResponse
-		_, password, ok := r.BasicAuth()
-		if !ok {
-			writeError(w, http.StatusUnauthorized, "authentication required")
-			return
-		}
-
-		resp, err := reqHandler.GetID(password)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot get id: %v", err))
-			return
-		}
-
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode get id response: %v", err))
-			return
+			server.writeResponse(w, r, http.StatusOK, []byte(address))
 		}
 	}
 }
 
-func postSignatureHandler(reqHandler Handler) http.HandlerFunc {
+func (server *httpServer) getIDHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, password, ok := r.BasicAuth()
 		if !ok {
-			writeError(w, http.StatusUnauthorized, "authentication required")
+			server.writeError(w, r, http.StatusUnauthorized, "authentication required")
+			return
+		}
+
+		vars := mux.Vars(r)
+		idType := vars["type"]
+		resp, err := reqHandler.GetID(password, idType)
+		if err != nil {
+			server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot get id: %v", err))
+			return
+		}
+
+		server.writeResponse(w, r, http.StatusOK, []byte(resp))
+	}
+}
+
+func (server *httpServer) postSignatureHandler(reqHandler Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, password, ok := r.BasicAuth()
+		if !ok {
+			server.writeError(w, r, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
 		msg, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
+			server.writeError(w, r, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -431,36 +417,64 @@ func postSignatureHandler(reqHandler Handler) http.HandlerFunc {
 		case "json":
 			resp, err := reqHandler.GetJSONSignature(password, msg)
 			if err != nil {
-				writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to sign the message: %v", err))
+				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("failed to sign the message: %v", err))
 				return
 			}
-			if err := json.NewEncoder(w).Encode(resp); err != nil {
-				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode signature response: %v", err))
+			respBytes, err := json.MarshalIndent(resp, "\t", "")
+			if err != nil {
+				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode signature response: %v", err))
 				return
 			}
+			server.writeResponse(w, r, http.StatusCreated, respBytes)
 		case "base64":
 			resp, err := reqHandler.GetBase64Signature(password, string(msg))
 			if err != nil {
-				writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to sign the message: %v", err))
+				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("failed to sign the message: %v", err))
 				return
 			}
-			if err := json.NewEncoder(w).Encode(resp); err != nil {
-				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode signature response: %v", err))
+			respBytes, err := json.MarshalIndent(resp, "\t", "")
+			if err != nil {
+				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode signature response: %v", err))
 				return
 			}
+			server.writeResponse(w, r, http.StatusCreated, respBytes)
 		case "hex":
 			resp, err := reqHandler.GetHexSignature(password, string(msg))
 			if err != nil {
-				writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to sign the message: %v", err))
+				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("failed to sign the message: %v", err))
 				return
 			}
-			if err := json.NewEncoder(w).Encode(resp); err != nil {
-				writeError(w, http.StatusInternalServerError, fmt.Sprintf("cannot encode signature response: %v", err))
+			respBytes, err := json.MarshalIndent(resp, "\t", "")
+			if err != nil {
+				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode signature response: %v", err))
 				return
 			}
+			server.writeResponse(w, r, http.StatusCreated, respBytes)
 		default:
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("unknown message type: %s", vars["type"]))
+			server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("unknown message type: %s", vars["type"]))
 			return
 		}
 	}
+}
+
+func (server *httpServer) writeResponse(w http.ResponseWriter, r *http.Request, statusCode int, resp []byte) {
+	logger := server.logger
+	logger = logger.WithField("method", r.Method)
+	logger = logger.WithField("url", r.URL.String())
+	logger = logger.WithField("port", server.port)
+	logger = logger.WithField("status", statusCode)
+	logger.Info("successfully responded to a http request")
+	w.WriteHeader(statusCode)
+	w.Write(resp)
+}
+
+func (server *httpServer) writeError(w http.ResponseWriter, r *http.Request, statusCode int, err string) {
+	logger := server.logger
+	logger = logger.WithField("method", r.Method)
+	logger = logger.WithField("url", r.URL)
+	logger = logger.WithField("port", server.port)
+	logger = logger.WithField("status", statusCode)
+	logger = logger.WithError(fmt.Errorf(err))
+	logger.Warnf("failed to respond to a http request")
+	writeError(w, statusCode, err)
 }

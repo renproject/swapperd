@@ -26,7 +26,7 @@
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "0ca71131d8f76e0739563d97cc9f95c021825a2b"
+  revision = "8f049bdb8feb7d7d5f1a9b9cd854396112fb0c0e"
 
 [[projects]]
   branch = "master"
@@ -38,7 +38,7 @@
     "txscript",
     "wire"
   ]
-  revision = "7d2daa5bfef28c5e282571bc06416516936115ee"
+  revision = "ed77733ec07dfc8a513741138419b8d9d3de9d2d"
 
 [[projects]]
   branch = "master"
@@ -54,7 +54,7 @@
     "base58",
     "bech32"
   ]
-  revision = "ab6388e0c60ae4834a1f57511e20c17b5f78be4b"
+  revision = "bf1e1be935893b7c8ac9f020195f6b0dfd1f14e0"
 
 [[projects]]
   name = "github.com/deckarep/golang-set"
@@ -87,7 +87,6 @@
     "crypto/bn256/cloudflare",
     "crypto/bn256/google",
     "crypto/secp256k1",
-    "crypto/sha3",
     "ethclient",
     "ethdb",
     "event",
@@ -99,8 +98,8 @@
     "rpc",
     "trie"
   ]
-  revision = "24d727b6d6e2c0cde222fa12155c4a6db5caaf2e"
-  version = "v1.8.20"
+  revision = "9dc5d1a915ac0e0bd8429d6ac41df50eec91de5f"
+  version = "v1.8.21"
 
 [[projects]]
   name = "github.com/go-stack/stack"
@@ -121,16 +120,10 @@
   version = "v1.1.0"
 
 [[projects]]
-  name = "github.com/gorilla/context"
-  packages = ["."]
-  revision = "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
-  version = "v1.1.1"
-
-[[projects]]
   name = "github.com/gorilla/mux"
   packages = ["."]
-  revision = "e3702bed27f0d39777b0b37b664b6280e8ef8fbf"
-  version = "v1.6.2"
+  revision = "a7962380ca08b5a188038c69871b8d3fbdf31e89"
+  version = "v1.7"
 
 [[projects]]
   name = "github.com/hashicorp/golang-lru"
@@ -213,7 +206,7 @@
   branch = "master"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "9bb22d81263720fb3d98472c38e4e2ed66248522"
+  revision = "414f16695daa04180b3d4a926523b61c92c2f724"
 
 [[projects]]
   branch = "master"
@@ -225,7 +218,7 @@
   branch = "master"
   name = "github.com/republicprotocol/libbtc-go"
   packages = ["."]
-  revision = "4ee09737d4632793d09929af45155b55c74e5afd"
+  revision = "a2e81f03246c9eb12a6b09810312b1c4f6575003"
 
 [[projects]]
   branch = "master"
@@ -235,7 +228,7 @@
     "core/buffer",
     "core/task"
   ]
-  revision = "f1230e164daa4bfbebc780ddec4fe7ac9a0fdc00"
+  revision = "54c2ea27fbc3fbc7106b945b2f582e065944e2ce"
 
 [[projects]]
   name = "github.com/rjeczalik/notify"
@@ -252,8 +245,8 @@
 [[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  revision = "bcd833dfe83d3cebad139e4a29ed79cb2318bf95"
-  version = "v1.2.0"
+  revision = "e1e72e9de974bd926e5c56f83753fba2df402ce5"
+  version = "v1.3.0"
 
 [[projects]]
   branch = "master"
@@ -290,6 +283,12 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/urfave/cli"
+  packages = ["."]
+  revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
+  version = "v1.20.0"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
@@ -301,7 +300,7 @@
     "sha3",
     "ssh/terminal"
   ]
-  revision = "8d7daa0c54b357f3071e11eaef7efc4e19a417e2"
+  revision = "057139ce5d2bdbe6fe73c53679e24e9cf007f637"
 
 [[projects]]
   branch = "master"
@@ -312,7 +311,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "927f97764cc334a6575f4b7a1584a147864d5723"
+  revision = "d26f9f9a57f3fab6a695bec0d84433c2c50f8bbf"
 
 [[projects]]
   branch = "master"
@@ -327,7 +326,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "82a175fd1598e8a172e58ebdf5ed262bb29129e5"
+  revision = "b90733256f2e882e81d52f9126de08df5615afd9"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -381,6 +380,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0774a93657935a2192d99afcee6b011d53b189bcc92574c9d36c27226c4f2490"
+  inputs-digest = "948cede605d8d4ceb7301bf0eaea75be6c2f082435514c3818d6f62d64f898cf"
   solver-name = "gps-cdcl"
   solver-version = 1

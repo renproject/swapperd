@@ -2,11 +2,16 @@ package blockchain
 
 import "fmt"
 
+func NewErrUnsupportedBlockchain(blockchain BlockchainName) error {
+	return fmt.Errorf("unsupported blockchain: %s", blockchain)
+}
+
 type BlockchainName string
 
 var (
 	Bitcoin  = BlockchainName("bitcoin")
 	Ethereum = BlockchainName("ethereum")
+	ERC20    = BlockchainName("erc20")
 )
 
 type Blockchain struct {
@@ -14,12 +19,8 @@ type Blockchain struct {
 	Address string         `json:"address"`
 }
 
-type ErrUnsupportedBlockchain string
-
-func NewErrUnsupportedBlockchain(blockchain BlockchainName) error {
-	return ErrUnsupportedBlockchain(fmt.Sprintf("unsupported blockchain: %s", blockchain))
-}
-
-func (err ErrUnsupportedBlockchain) Error() string {
-	return string(err)
+type Balance struct {
+	Address  string `json:"address"`
+	Decimals int    `json:"decimals"`
+	Amount   string `json:"balance"`
 }

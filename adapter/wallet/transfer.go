@@ -11,19 +11,17 @@ import (
 	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/libbtc-go"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
-	"github.com/republicprotocol/swapperd/core/transfer"
+	"github.com/republicprotocol/swapperd/core/wallet/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 )
 
 func (wallet *wallet) Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error) {
-	switch token {
-	case blockchain.TokenBTC:
+	switch token.Blockchain {
+	case blockchain.Bitcoin:
 		return wallet.transferBTC(password, to, amount)
-	case blockchain.TokenETH:
+	case blockchain.Ethereum:
 		return wallet.transferETH(password, to, amount)
-	case blockchain.TokenWBTC, blockchain.TokenDGX, blockchain.TokenREN,
-		blockchain.TokenTUSD, blockchain.TokenZRX, blockchain.TokenOMG,
-		blockchain.TokenGUSD, blockchain.TokenDAI, blockchain.TokenUSDC:
+	case blockchain.ERC20:
 		return wallet.transferERC20(password, token, to, amount)
 	default:
 		return "", blockchain.NewErrUnsupportedToken(token.Name)

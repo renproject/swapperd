@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/republicprotocol/beth-go"
-	"github.com/republicprotocol/swapperd/core/swapper/immediate"
+	"github.com/republicprotocol/swapperd/core/wallet/swapper/immediate"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
@@ -22,18 +22,18 @@ type ethSwapContractBinder struct {
 	account beth.Account
 	swap    swap.Swap
 	logger  logrus.FieldLogger
-	binder  *SwapperdEth
+	binder  *EthSwapContract
 	cost    blockchain.Cost
 }
 
 // NewETHSwapContractBinder returns a new Ethereum RequestAtom instance
 func NewETHSwapContractBinder(account beth.Account, swap swap.Swap, cost blockchain.Cost, logger logrus.FieldLogger) (immediate.Contract, error) {
-	swapperAddr, err := account.ReadAddress("SwapperdETH")
+	swapperAddr, err := account.ReadAddress("ETHSwapContract")
 	if err != nil {
 		return nil, err
 	}
 
-	contract, err := NewSwapperdEth(swapperAddr, bind.ContractBackend(account.EthClient()))
+	contract, err := NewEthSwapContract(swapperAddr, bind.ContractBackend(account.EthClient()))
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (atom *ethSwapContractBinder) Initiate() error {
 			}
 			return !initiatable
 		},
-		1,
+		0,
 	); err != nil && err != beth.ErrPreConditionCheckFailed {
 		return err
 	}
@@ -148,6 +148,10 @@ func (atom *ethSwapContractBinder) Refund() error {
 			txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
 			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], txFee)
 
+			if _, ok := atom.cost[atom.swap.Token.Name]; ok {
+				atom.cost[atom.swap.Token.Name] = new(big.Int).Sub(atom.cost[atom.swap.Token.Name], atom.swap.BrokerFee)
+			}
+
 			msg, _ := atom.account.FormatTransactionView("Refunded the atomic swap", tx.Hash().String())
 			atom.logger.Info(msg)
 			return tx, nil
@@ -159,7 +163,7 @@ func (atom *ethSwapContractBinder) Refund() error {
 			}
 			return !refundable
 		},
-		1,
+		0,
 	); err != nil && err != beth.ErrPreConditionCheckFailed {
 		return err
 	}
@@ -212,8 +216,14 @@ func (atom *ethSwapContractBinder) Audit() error {
 		return err
 	}
 
+	if auditReport.To.String() != atom.swap.SpendingAddress {
+		err := fmt.Errorf("Receiver Address Mismatch Expected: %v Actual: %v", atom.swap.SpendingAddress, auditReport.To.String())
+		atom.logger.Error(err)
+		return err
+	}
+
 	value := new(big.Int).Sub(atom.swap.Value, atom.swap.BrokerFee)
-	if auditReport.Value.Cmp(value) != 0 {
+	if auditReport.Value.Cmp(value) < 0 {
 		atom.logger.Error(fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.swap.Value, auditReport.Value))
 		return fmt.Errorf("Receive Value Mismatch Expected: %v Actual: %v", atom.swap.Value, auditReport.Value)
 	}
@@ -239,7 +249,7 @@ func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
 			tops.GasPrice = atom.swap.Fee
-			tx, err := atom.binder.Redeem(tops, atom.id, secret)
+			tx, err := atom.binder.Redeem(tops, atom.id, common.HexToAddress(atom.swap.WithdrawAddress), secret)
 			if err != nil {
 				return nil, err
 			}
@@ -258,9 +268,12 @@ func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 			}
 			return !refundable
 		},
-		1,
-	); err != nil && err != beth.ErrPreConditionCheckFailed {
-		return err
+		0,
+	); err != nil {
+		if err != beth.ErrPreConditionCheckFailed {
+			return err
+		}
+		atom.logger.Info("Skipping redeem on Ethereum blockchain")
 	}
 	return nil
 }

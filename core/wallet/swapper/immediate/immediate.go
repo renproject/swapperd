@@ -40,7 +40,7 @@ func New(cap int, builder ContractBuilder) tau.Task {
 func (swapper *swapper) Reduce(msg tau.Message) tau.Message {
 	switch msg := msg.(type) {
 	case tau.Tick:
-		return swapper.handleRetry()
+		return swapper.handleTick()
 	case SwapRequest:
 		return swapper.handleSwap(msg)
 	default:
@@ -48,7 +48,7 @@ func (swapper *swapper) Reduce(msg tau.Message) tau.Message {
 	}
 }
 
-func (swapper *swapper) handleRetry() tau.Message {
+func (swapper *swapper) handleTick() tau.Message {
 	msgs := []tau.Message{}
 	for _, req := range swapper.swapMap {
 		msgs = append(msgs, swapper.handleSwap(req))
@@ -82,7 +82,7 @@ func (swapper *swapper) initiate(req SwapRequest, native, foreign Contract) tau.
 		if err := native.Refund(); err != nil {
 			return swapper.handleResult(req, swap.RefundFailed, native, foreign, err, false)
 		}
-		return swapper.handleResult(req, swap.Refunded, native, foreign, err, true)
+		return swapper.handleResult(req, swap.Refunded, native, foreign, nil, true)
 	}
 	if err := foreign.Redeem(secret); err != nil {
 		return swapper.handleResult(req, swap.Audited, native, foreign, err, false)
@@ -96,7 +96,7 @@ func (swapper *swapper) respond(req SwapRequest, native, foreign Contract) tau.M
 			return swapper.handleResult(req, swap.AuditPending, native, foreign, nil, false)
 		}
 		if err == ErrSwapExpired {
-			return swapper.handleResult(req, swap.AuditFailed, native, foreign, err, true)
+			return swapper.handleResult(req, swap.Expired, native, foreign, err, true)
 		}
 		return swapper.handleResult(req, swap.AuditPending, native, foreign, err, false)
 	}
@@ -115,7 +115,7 @@ func (swapper *swapper) respond(req SwapRequest, native, foreign Contract) tau.M
 		if err := native.Refund(); err != nil {
 			return swapper.handleResult(req, swap.RefundFailed, native, foreign, err, false)
 		}
-		return swapper.handleResult(req, swap.Refunded, native, foreign, err, true)
+		return swapper.handleResult(req, swap.Refunded, native, foreign, nil, true)
 	}
 	if err := foreign.Redeem(secret); err != nil {
 		return swapper.handleResult(req, swap.AuditedSecret, native, foreign, err, false)

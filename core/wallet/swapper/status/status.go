@@ -24,11 +24,12 @@ func (statuses *statuses) Reduce(msg tau.Message) tau.Message {
 	case ReceiptQuery:
 		return statuses.handleReceiptQuery(msg)
 	default:
-		return tau.NewError(fmt.Errorf("invalid message type in transfers: %T", msg))
+		return tau.NewError(fmt.Errorf("invalid message type in statuses: %T", msg))
 	}
 }
 
 func (statuses *statuses) handleReceiptQuery(msg ReceiptQuery) tau.Message {
+	// TODO: update to use shallow copy
 	msg.Responder <- statuses.statuses
 	return nil
 }
@@ -43,12 +44,6 @@ func (statuses *statuses) handleReceiptUpdate(update ReceiptUpdate) tau.Message 
 	update.Update(&receipt)
 	statuses.statuses[update.ID] = receipt
 	return nil
-}
-
-type Bootload struct {
-}
-
-func (msg Bootload) IsMessage() {
 }
 
 type Receipt swap.SwapReceipt

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/republicprotocol/swapperd/core/transfer"
+	"github.com/republicprotocol/swapperd/core/wallet/transfer"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 

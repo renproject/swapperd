@@ -3,7 +3,7 @@ package server
 import (
 	"encoding/json"
 
-	"github.com/republicprotocol/swapperd/core/transfer"
+	"github.com/republicprotocol/swapperd/core/wallet/transfer"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 )
@@ -21,15 +21,13 @@ type GetSwapsResponse struct {
 
 type GetSwapResponse swap.SwapReceipt
 
+type GetBalanceResponse blockchain.Balance
 type GetBalancesResponse map[blockchain.TokenName]blockchain.Balance
 
 type GetAddressesResponse map[blockchain.TokenName]string
+type GetAddressResponse string
 
 type PostSwapRequest swap.SwapBlob
-
-type GetIDResponse struct {
-	PublicKey string `json:"publicKey"`
-}
 
 type PostSwapResponse struct {
 	ID        swap.SwapID   `json:"id"`
