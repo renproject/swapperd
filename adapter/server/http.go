@@ -41,7 +41,7 @@ func (server *httpServer) Run(done <-chan struct{}) {
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", server.postSwapsHandler(server.handler)).Methods("POST")
 	r.HandleFunc("/swaps", server.getSwapsHandler(server.handler)).Methods("GET")
-	r.HandleFunc("/swap", server.getSwapsHandler(server.handler)).Queries("id", "{id}").Methods("GET")
+	r.HandleFunc("/swaps/{id}", server.getSwapHandler(server.handler)).Methods("GET")
 	r.HandleFunc("/transfers", server.postTransfersHandler(server.handler)).Methods("POST")
 	r.HandleFunc("/transfers", server.getTransfersHandler(server.handler)).Methods("GET")
 	r.HandleFunc("/balances", server.getBalancesHandler(server.handler)).Methods("GET")
@@ -129,9 +129,9 @@ func (server *httpServer) getInfoHandler(reqHandler Handler) http.HandlerFunc {
 	}
 }
 
-// getSwapHandler handles the get swaps request, it returns the status of the
-// existing swap with given a swap id on the swapper.
-func (server *httpServer) getSwapsHandler(reqHandler Handler) http.HandlerFunc {
+// getSwapHandler handles the get swap request, it returns the status of the
+// existing swap with given swap id on the swapper.
+func (server *httpServer) getSwapHandler(reqHandler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, password, ok := r.BasicAuth()
 		if !ok {
@@ -141,18 +141,7 @@ func (server *httpServer) getSwapsHandler(reqHandler Handler) http.HandlerFunc {
 
 		swapID := r.FormValue("id")
 		if swapID == "" {
-			resp, err := reqHandler.GetSwaps(password)
-			if err != nil {
-				server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("cannot get swaps: %v", err))
-				return
-			}
-
-			respBytes, err := json.MarshalIndent(resp, "\t", "")
-			if err != nil {
-				server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
-				return
-			}
-			server.writeResponse(w, r, http.StatusOK, respBytes)
+			server.writeError(w, r, http.StatusBadRequest, "requires a swap id")
 			return
 		}
 
@@ -168,6 +157,32 @@ func (server *httpServer) getSwapsHandler(reqHandler Handler) http.HandlerFunc {
 			return
 		}
 		server.writeResponse(w, r, http.StatusOK, respBytes)
+	}
+}
+
+// getSwapsHandler handles the get swaps request, it returns the status of the
+// existing swaps of the person calling it.
+func (server *httpServer) getSwapsHandler(reqHandler Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, password, ok := r.BasicAuth()
+		if !ok {
+			server.writeError(w, r, http.StatusUnauthorized, "authentication required")
+			return
+		}
+
+		resp, err := reqHandler.GetSwaps(password)
+		if err != nil {
+			server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("cannot get swaps: %v", err))
+			return
+		}
+
+		respBytes, err := json.MarshalIndent(resp, "\t", "")
+		if err != nil {
+			server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode swaps response: %v", err))
+			return
+		}
+		server.writeResponse(w, r, http.StatusOK, respBytes)
+		return
 	}
 }
 
