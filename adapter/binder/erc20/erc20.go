@@ -70,6 +70,8 @@ func NewERC20SwapContractBinder(account beth.Account, swap swap.Swap, cost block
 		cost[swap.Token.Name] = big.NewInt(0)
 	}
 
+	swap.Value = new(big.Int).Add(swap.Value, swap.BrokerFee)
+
 	return &erc20SwapContractBinder{
 		account:        account,
 		swapperAddress: swapperAddress,

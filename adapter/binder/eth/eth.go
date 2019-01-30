@@ -53,6 +53,8 @@ func NewETHSwapContractBinder(account beth.Account, swap swap.Swap, cost blockch
 		cost[blockchain.ETH] = big.NewInt(0)
 	}
 
+	swap.Value = new(big.Int).Add(swap.Value, swap.BrokerFee)
+
 	logger.Info(swap.ID, fmt.Sprintf("Ethereum Atomic Swap ID: %s", base64.StdEncoding.EncodeToString(id[:])))
 	return &ethSwapContractBinder{
 		account: account,

@@ -51,6 +51,8 @@ func NewBTCSwapContractBinder(account libbtc.Account, swap swap.Swap, cost block
 		swap.BrokerFee = big.NewInt(600)
 	}
 
+	swap.Value = new(big.Int).Add(swap.Value, swap.BrokerFee)
+
 	logger.Info(swap.ID, fmt.Sprintf("BTC atomic swap = %s", scriptAddr))
 	return &btcSwapContractBinder{
 		scriptAddr:  scriptAddr,
@@ -123,7 +125,8 @@ func (atom *btcSwapContractBinder) Initiate() error {
 
 func (atom *btcSwapContractBinder) Audit() error {
 	if funded, amount, err := atom.ScriptFunded(context.Background(), atom.scriptAddr, atom.swap.Value.Int64()); funded && err == nil {
-		if amount < atom.swap.Value.Int64() {
+		value := new(big.Int).Sub(atom.swap.Value, atom.swap.BrokerFee)
+		if amount < value.Int64() {
 			return fmt.Errorf("Audit Failed")
 		}
 		return nil
