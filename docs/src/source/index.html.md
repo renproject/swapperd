@@ -212,17 +212,35 @@ curl -i     \
 }
 ```
 
-## Get balances of a particular token
+### HTTP Request
+
+`GET http://localhost:17927/balances`
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
+
+## Get balance of a single token
 
 ```shell
 curl -i     \
      -X GET \
-     http://username:password@localhost:17927/balances
+     http://username:password@localhost:17927/balances/btc
+```
+
+> The response body is structured like this:
+
+```json
+{
+	"address": "mzKgUBHX7xSkKiNrdnxTe6fJKAcvFri2Tc",
+	"decimals": 8,
+	"balance": "19149414"
+}
 ```
 
 ### HTTP Request
 
-`GET http://localhost:17927/balances`
+`GET http://localhost:17927/balances/{token}`
 
 <aside class="success">
 This is a protected HTTP endpoint.
