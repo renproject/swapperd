@@ -5,8 +5,8 @@ language_tabs:
   - shell
 
 toc_footers:
-  - <a href='https://github.com/republicprotocol/swapperd'>GitHub</a>
-  - <a href='https://republicprotocol.com'>Built by Republic Protocol</a>
+  - <a href='https://github.com/renproject/swapperd'>GitHub</a>
+  - <a href='https://renproject.com'>Built by Republic Protocol</a>
 
 search: true
 ---
@@ -17,24 +17,22 @@ Welcome to Swapperd! You can use Swapperd to execute cross-chain atomic swaps be
 
 # Installation
 
-> Swapperd currently supports macOS, and Ubuntu. Run the following command in a terminal:
+> Swapperd currently supports macOS, Ubuntu and Windows. Run the following command in a terminal:
 
 ```shell
-curl https://releases.republicprotocol.com/swapperd/install.sh -sSf | sh
+curl https://releases.renproject.com/swapperd/install.sh -sSf | sh
 ```
 
-Swapperd installs itself as a system service. In the event of an unexpected shutdown, Swapperd will automatically restart and resume all pending atomic swaps.
+Swapperd installs itself as a system service. In the event of an unexpected shutdown, Swapperd will automatically restart and on the first http request it will resume all pending atomic swaps.
 
-During installing, you will need to choose a `username` and `password`. These will be required when interacting with the authenticated HTTP endpoints exposed by Swapperd.
-
-A `mnemonic` will be generated and printed to the terminal. Swapperd uses this `mnemonic`, with your `password`, to generate its Bitcoin and Ethereum private keys on-demand.
+A `mnemonic` will be generated during the installation process. Swapperd uses this `mnemonic`, with the `password` the user provides in a swap request, to generate its Bitcoin and Ethereum private keys on-demand.
 
 <aside class="success">
-Swapperd never stores private keys to persistent storage. The <code>password</code> will be temporarily stored to persistent storage until the associated atomic swap has completed.
+Swapperd never stores private keys to persistent storage. 
 </aside>
 
 <aside class="notice">
-Backup the <code>username</code>, <code>password</code>, and <code>mnemonic</code> generated during installation. Forgetting these could result in the loss of funds!
+Backup the <code>mnemonic</code> generated during installation. Forgetting this could result in the loss of funds!
 </aside>
 
 # Authentication
@@ -44,14 +42,18 @@ Backup the <code>username</code>, <code>password</code>, and <code>mnemonic</cod
 ```shell
 curl -i     \
      -X GET \
-     http://username:password@localhost:7777/balances
+     http://username:password@localhost:17927/balances
 ```
 
-Swapperd protects itself using HTTP Basic Authentication. Swapperd protects all HTTP endpoints that require a Bitcoin or Ethereum private key.
+Swapperd protects itself using HTTP Basic Authentication. All the HTTP endpoints are protected.
 
 <aside class="success">
-Use the <code>username</code> and <code>password</code> that you entered during installation.
+Every <code>password</code> that you enter will give you a different keypair for Ethereum and Bitcoin. There is no concept of a wrong password in Swapperd. This helps us to support multiple accounts, and protecting the user from the rubber hammer attack. 
 </aside>
+
+# Networks
+
+Swapperd runs on two ports by default, <code>Mainnet</code> on 7927 and <code>Testnet</code> on 17927. We are working on adding a local environment, which will setup local swapperd and blockchain nodes for testing. This <code>Local</code> network would be using 27927.
 
 # Swaps
 
@@ -79,44 +81,43 @@ Swapperd cannot execute the interactive swapping process when the host machine i
 ```shell
 curl -i      \
      -X POST \
-     -d '{ "sendToken": "BTC",                                          
-           "receiveToken": "WBTC",                                      
-           "sendAmount": "100000000",                                   
-           "receiveAmount": "100000000",                                
-           "sendTo": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",              
-           "receiveFrom": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E", 
-           "shouldInitiateFirst": true }' \
-     http://username:password@localhost:7777/swaps
+     -d '{
+          "sendToken":"BTC",
+          "receiveToken":"ETH",
+          "sendAmount":"20000",
+          "receiveAmount":"20000000000000000",
+          "sendTo":"n2RcTmQu2PoRcfHn7uyfQ2jWVcmuHDQLnh",
+          "receiveFrom":"0x780c6d20b6C59F4b5F3658A66E1e8ef22d61725D",
+          "shouldInitiateFirst":true
+        }' \
+     http://username:password@localhost:17927/swaps
 ```
 
 > The response body is structured like this:
 
 ```json
 {
-  "id": "U1nWa7ggpDEFSh3ChZMxni6YZwy6SbcYpAy/Wc7CRRQ=",
-  "sendToken": "BTC",
-  "receiveToken": "WBTC",
-  "sendAmount": "100000000",
-  "receiveAmount": "100000000",
-  "sendTo": "mzcJVzZgVcgmErPp2bu4DzXcdHpHA7wy1b",
-  "receiveFrom": "0x43256f96601178Fd8594E02eed2e0d41f68DBb27",
-  "timeLock": 1639947328,
-  "secretHash": "4HOqdX0HpFtRz9bmPrYC2IYtAIOgsxCiN8L9+mp00zY=",
-  "shouldInitiateFirst": true
+	"id": "c7t5VHbJdx2M0PtRS6G3lN2nrRH1fX0arUoZYkFBlvI=",
+	"swap": {
+      "sendToken": "ETH",
+      "receiveToken": "BTC",
+      "sendAmount": "20000000000000000",
+      "receiveAmount": "20000",
+      "sendTo": "0x5Ea5F67cC958023F2da2ea92231d358F2a3BbA47",
+      "receiveFrom": "mzKgUBHX7xSkKiNrdnxTe6fJKAcvFri2Tc",
+      "timeLock": 1548669277,
+      "secretHash": "3YyU0uyS2TKWdAkVQpQWwTXRXcEkpjpya8atI2x+OTE=",
+      "shouldInitiateFirst": false,
+  },
+	"signature": "qruvrzo2hpyCp76wdcmpo+E+5fZ42n2MNyA4sOjSCzgr8rYh4tLZ0vpKrGDqYptOXzYpakC+NKgPO51hFM7L4AE="
 }
 ```
 
 The beginning party sends a HTTP request to his Swapperd using the agreed addresses.
 
-Swapperd will validate the request and generate a `timeLock` and `secretHash`. These values must be sent to the responding party.
+Swapperd will validate the request and generate the responding swap object. The begining party can send this response to the responding party. The responding party can check KYC (if they require it), by using the signature. Then they could start the responding swap with the given swap object.
 
-### HTTP Request
-
-`POST http://localhost:7777/swaps`
-
-<aside class="success">
-This is a protected HTTP endpoint.
-</aside>
+The begining party can check the status of their swap using the <code>id</code> returned by the swapperd.
 
 ## Responding to an atomic swap
 
@@ -125,16 +126,18 @@ This is a protected HTTP endpoint.
 ```shell
 curl -i      \
      -X POST \
-     -d '{ "sendToken": "WBTC",
-           "receiveToken": "BTC",
-           "sendAmount": "100000000",
-           "receiveAmount": "100000000",
-           "sendTo": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E",
-           "receiveFrom": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
-           "timeLock": 1639947328,
-           "secretHash": "4HOqdX0HpFtRz9bmPrYC2IYtAIOgsxCiN8L9+mp00zY=",
-           "shouldInitiateFirst": false }' \
-     http://username:password@localhost:7777/swaps
+     -d '{
+        "sendToken": "ETH",
+        "receiveToken": "BTC",
+        "sendAmount": "20000000000000000",
+        "receiveAmount": "20000",
+        "sendTo": "0x5Ea5F67cC958023F2da2ea92231d358F2a3BbA47",
+        "receiveFrom": "mzKgUBHX7xSkKiNrdnxTe6fJKAcvFri2Tc",
+        "timeLock": 1548669277,
+        "secretHash": "3YyU0uyS2TKWdAkVQpQWwTXRXcEkpjpya8atI2x+OTE=",
+        "shouldInitiateFirst": false,
+    }' \
+    http://username:password@localhost:17927/swaps
 ```
 
 > The response body is structured like this:
@@ -142,34 +145,17 @@ curl -i      \
 ```json
 {
   "id": "S1Jn5MTLBqD8M2lm6vYjt1n2qy7XlW7sjHyIY3eInNA=",
-  "sendToken": "WBTC",
-  "receiveToken": "BTC",
-  "sendAmount": "100000000",
-  "receiveAmount": "100000000",
-  "sendTo": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E",
-  "receiveFrom": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
-  "timeLock": 1639947328,
-  "secretHash": "4HOqdX0HpFtRz9bmPrYC2IYtAIOgsxCiN8L9+mp00zY=",
-  "shouldInitiateFirst": false
 }
 ```
 
-After receiving the `timeLock` and `secretHash`, the responding party sends a HTTP request to his Swapperd using these values and the agreed addresses.
+After receiving the response from the begining party (and checking the KYC information if required), the responding party sends the swap object they received to their swapperd.
 
-### HTTP Request
-
-`POST http://localhost:7777/swaps`
-
-<aside class="success">
-This is a protected HTTP endpoint.
-</aside>
-
-## Get pending atomic swaps
+## Get atomic swap receipts
 
 ```shell
 curl -i     \
      -X GET \
-     http://localhost:7777/swaps
+     http://username:password@localhost:17927/swaps
 ```
 
 > The response body is structured like this:
@@ -178,20 +164,26 @@ curl -i     \
 {
   "swaps": [
     {
-      "id": "S1Jn5MTLBqD8M2lm6vYjt1n2qy7XlW7sjHyIY3eInNA=",
-      "status": 1
+      "id": "DiqkYPg/2mCzGhlk7ENighXhFDSkSYJ9+qmmVHI3UrE=",
+      "sendToken": "BTC",
+      "receiveToken": "ETH",
+      "sendAmount": "20000",
+      "receiveAmount": "2000000000000",
+      "sendCost": {
+        "BTC": "0"
+      },
+      "receiveCost": {
+        "ETH": "0"
+      },
+      "timestamp": 1548656666,
+      "timeLock": 1548678266,
+      "status": 5,
+      "delay": false,
+      "active": true
     }
   ]
 }
 ```
-
-### HTTP Request
-
-`GET http://localhost:7777/swaps`
-
-<aside class="notice">
-This is not a protected HTTP endpoint.
-</aside>
 
 # Balances
 
@@ -200,44 +192,45 @@ This is not a protected HTTP endpoint.
 ```shell
 curl -i     \
      -X GET \
-     http://username:password@localhost:7777/balances
+     http://username:password@localhost:17927/balances
 ```
 
 > The response body is structured like this:
 
 ```json
 {
-  "balances": [
-    {
-      "token": "BTC",
-      "address": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
-      "amount": "13565"
-    },
-    {
-      "token": "ETH",
-      "address": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E",
-      "amount": "990038930600000000"
-    },
-    {
-      "token": "WBTC",
-      "address": "0x5E6B16d705D81ec0822e6926E7841267Fa490b3E",
-      "amount": "999846435"
-    }
-  ]
+	"BTC": {
+	"address": "mzKgUBHX7xSkKiNrdnxTe6fJKAcvFri2Tc",
+	"decimals": 8,
+	"balance": "19190614"
+	},
+	"WBTC": {
+	"address": "0x5Ea5F67cC958023F2da2ea92231d358F2a3BbA47",
+	"decimals": 18,
+	"balance": "0"
+  }
 }
+```
+
+## Get balances of a particular token
+
+```shell
+curl -i     \
+     -X GET \
+     http://username:password@localhost:17927/balances
 ```
 
 ### HTTP Request
 
-`GET http://localhost:7777/balances`
+`GET http://localhost:17927/balances`
 
 <aside class="success">
 This is a protected HTTP endpoint.
 </aside>
 
-# Withdrawals
+# Transfers
 
-## Withdrawing funds
+## Transferring funds
 
 ```shell
 curl -i      \
@@ -245,7 +238,7 @@ curl -i      \
      -d '{ "to": "mv1Pb8Ed7MA2wegbJQLZS3GzNHe9rpTBGK",
            "token": "BTC",
            "amount": "100000000" }' \
-     http://username:password@localhost:7777/withdrawals
+     http://username:password@localhost:17927/transfers
 ```
 
 > The response body is structured like this:
@@ -256,47 +249,52 @@ curl -i      \
 
 ### HTTP Request
 
-`POST http://localhost:7777/withdrawals`
+`POST http://localhost:17927/withdrawals`
 
 <aside class="success">
 This is a protected HTTP endpoint.
 </aside>
 
-# Whoami
+# Info
 
 ## Getting information about Swapperd
 
 ```shell
 curl -i     \
      -X GET \
-     http://localhost:7777/whoami
+     http://username:password@localhost:17927/info
 ```
 
 > The response body is structured like this:
 
 ```json
 {
-  "version": "0.1.0",
-  "supportedTokens": [
-    {
-      "name": "BTC",
-      "blockchain": "bitcoin"
-    },
-    {
-      "name": "ETH",
-      "blockchain": "ethereum"
-    },
-    {
-      "name": "WBTC",
-      "blockchain": "ethereum"
-    }
-  ]
+    "version": "1.0.0",
+    "bootloaded": true,
+    "supportedBlockchains": null,
+    "supportedTokens": [
+        {
+            "name": "BTC",
+            "decimals": 8,
+            "blockchain": "bitcoin"
+        },
+        {
+            "name": "ETH",
+            "decimals": 18,
+            "blockchain": "ethereum"
+        },
+        {
+            "name": "WBTC",
+            "decimals": 8,
+            "blockchain": "erc20"
+        }
+    ]
 }
 ```
 
 ### HTTP Request
 
-`GET http://localhost:7777/whoami`
+`GET http://localhost:17927/whoami`
 
 <aside class="notice">
 This is not a protected HTTP endpoint.
