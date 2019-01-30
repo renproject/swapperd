@@ -67,9 +67,9 @@ cputype="$(uname -m)"
 
 # download swapperd binary depending on the system and architecture
 if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
-  curl -s 'https://releases.republicprotocol.com/swapperd/swapper_linux_amd64.zip' > swapper.zip
+  curl -Ls 'https://github.com/renproject/swapperd/releases/download/v1.0.0-beta/swapper_linux_amd64.zip' > swapper.zip
 elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
-  curl -s 'https://releases.republicprotocol.com/swapperd/swapper_darwin_amd64.zip' > swapper.zip
+  curl -Ls 'https://github.com/renproject/swapperd/releases/download/v1.0.0-beta/swapper_darwin_amd64.zip' > swapper.zip
 else
   echo 'unsupported OS type or architecture'
   cd ..
