@@ -328,7 +328,7 @@ func (handler *handler) patchSwap(swapBlob swap.SwapBlob) (swap.SwapBlob, error)
 		}
 	}
 
-	if err := handler.verifySendAmount(swapBlob.Password, sendToken, swapBlob.SendAmount); err != nil {
+	if err := handler.verifySendAmount(swapBlob.Password, sendToken, swapBlob.SendAmount, swapBlob.BrokerFee); err != nil {
 		return swapBlob, err
 	}
 
@@ -371,7 +371,7 @@ func (handler *handler) patchDelayedSwap(blob swap.SwapBlob) (swap.SwapBlob, err
 	if err != nil {
 		return blob, err
 	}
-	if err := handler.verifySendAmount(blob.Password, sendToken, blob.SendAmount); err != nil {
+	if err := handler.verifySendAmount(blob.Password, sendToken, blob.SendAmount, blob.BrokerFee); err != nil {
 		return blob, err
 	}
 
@@ -390,12 +390,12 @@ func (handler *handler) patchDelayedSwap(blob swap.SwapBlob) (swap.SwapBlob, err
 	return blob, nil
 }
 
-func (handler *handler) verifySendAmount(password string, token blockchain.Token, amount string) error {
+func (handler *handler) verifySendAmount(password string, token blockchain.Token, amount string, fee int64) error {
 	sendAmount, ok := new(big.Int).SetString(amount, 10)
 	if !ok {
 		return fmt.Errorf("invalid send amount")
 	}
-	return handler.wallet.VerifyBalance(password, token, sendAmount)
+	return handler.wallet.VerifyBalance(password, token, withFees(sendAmount, fee))
 }
 
 func (handler *handler) verifyReceiveAmount(password string, token blockchain.Token) error {
@@ -521,4 +521,8 @@ func genereateSecret(password string, id swap.SwapID) [32]byte {
 func passwordHash(password string) string {
 	passwordHash32 := sha3.Sum256([]byte(password))
 	return base64.StdEncoding.EncodeToString(passwordHash32[:])
+}
+
+func withFees(amount *big.Int, bips int64) *big.Int {
+	return new(big.Int).Div(new(big.Int).Mul(amount, big.NewInt(bips+10000)), big.NewInt(10000))
 }
