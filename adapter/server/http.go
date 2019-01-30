@@ -41,7 +41,7 @@ func (server *httpServer) Run(done <-chan struct{}) {
 	r := mux.NewRouter()
 	r.HandleFunc("/swaps", server.postSwapsHandler(server.handler)).Methods("POST")
 	r.HandleFunc("/swaps", server.getSwapsHandler(server.handler)).Methods("GET")
-	r.HandleFunc("/swaps/{id}", server.getSwapHandler(server.handler)).Methods("GET")
+	// r.HandleFunc("/swaps/{id}", server.getSwapHandler(server.handler)).Methods("GET")
 	r.HandleFunc("/transfers", server.postTransfersHandler(server.handler)).Methods("POST")
 	r.HandleFunc("/transfers", server.getTransfersHandler(server.handler)).Methods("GET")
 	r.HandleFunc("/balances", server.getBalancesHandler(server.handler)).Methods("GET")

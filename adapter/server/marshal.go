@@ -9,10 +9,9 @@ import (
 )
 
 type GetInfoResponse struct {
-	Version              string                  `json:"version"`
-	Bootloaded           bool                    `json:"bootloaded"`
-	SupportedBlockchains []blockchain.Blockchain `json:"supportedBlockchains"`
-	SupportedTokens      []blockchain.Token      `json:"supportedTokens"`
+	Version         string             `json:"version"`
+	Bootloaded      bool               `json:"bootloaded"`
+	SupportedTokens []blockchain.Token `json:"supportedTokens"`
 }
 
 type GetSwapsResponse struct {
