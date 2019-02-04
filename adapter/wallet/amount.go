@@ -96,6 +96,10 @@ func (wallet *wallet) verifyBitcoinBalance(password string, amount *big.Int) err
 		return nil
 	}
 
+	if amount.Cmp(big.NewInt(20000)) < 0 {
+		return fmt.Errorf("invalid bitcoin amount: minimum swappable bitcoin amount 20000 SAT (or 0.0002 BTC)")
+	}
+
 	fee, err := blockchain.TokenBTC.TransactionCost(amount)
 	if err != nil {
 		return err
@@ -112,8 +116,8 @@ func (wallet *wallet) verifyBitcoinBalance(password string, amount *big.Int) err
 	}
 
 	leftover := balanceAmount.Sub(balanceAmount, amount)
-	if leftover.Cmp(fee[blockchain.BTC]) < 0 {
-		return fmt.Errorf("You need at least 10000 SAT (or 0.0001 BTC) remaining in your wallet to cover transaction fees. You have: %v", balanceAmount)
+	if leftover.Cmp(new(big.Int).Add(fee[blockchain.BTC], big.NewInt(600))) < 0 {
+		return fmt.Errorf("You need at least 10600 SAT (or 0.000106 BTC) remaining in your wallet to cover transaction fees. You have: %v", balanceAmount)
 	}
 	return nil
 }
