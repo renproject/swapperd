@@ -14,7 +14,6 @@ import (
 
 type Storage interface {
 	LoadCosts(id swap.SwapID) (blockchain.Cost, blockchain.Cost)
-
 	PutSwap(blob swap.SwapBlob) error
 	DeletePendingSwap(swap.SwapID) error
 	PendingSwaps() ([]swap.SwapBlob, error)
