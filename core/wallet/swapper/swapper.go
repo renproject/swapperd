@@ -4,10 +4,8 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/swapperd/core/wallet/swapper/delayed"
 	"github.com/republicprotocol/swapperd/core/wallet/swapper/immediate"
-	"github.com/republicprotocol/swapperd/core/wallet/swapper/status"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
@@ -16,124 +14,81 @@ import (
 
 type Storage interface {
 	LoadCosts(id swap.SwapID) (blockchain.Cost, blockchain.Cost)
-	Receipts() ([]swap.SwapReceipt, error)
-	PutReceipt(receipt swap.SwapReceipt) error
 
 	PutSwap(blob swap.SwapBlob) error
 	DeletePendingSwap(swap.SwapID) error
 	PendingSwaps() ([]swap.SwapBlob, error)
-	UpdateReceipt(receiptUpdate swap.ReceiptUpdate) error
 }
 
-type core struct {
+type swapper struct {
 	delayedSwapper   tau.Task
 	immediateSwapper tau.Task
-	status           tau.Task
 	storage          Storage
 }
 
 func New(cap int, storage Storage, builder immediate.ContractBuilder, callback delayed.DelayCallback) tau.Task {
 	delayedSwapperTask := delayed.New(cap, callback)
 	immediateSwapperTask := immediate.New(cap, builder)
-	swapStatusTask := status.New(cap)
-	return tau.New(tau.NewIO(cap), NewSwapper(delayedSwapperTask, immediateSwapperTask, swapStatusTask, storage), delayedSwapperTask, immediateSwapperTask, swapStatusTask)
+	return tau.New(tau.NewIO(cap), NewSwapper(delayedSwapperTask, immediateSwapperTask, storage), delayedSwapperTask, immediateSwapperTask)
 }
 
-func NewSwapper(delayedSwapperTask, immediateSwapperTask, statusTask tau.Task, storage Storage) tau.Reducer {
-	return &core{delayedSwapperTask, immediateSwapperTask, statusTask, storage}
+func NewSwapper(delayedSwapperTask, immediateSwapperTask tau.Task, storage Storage) tau.Reducer {
+	return &swapper{delayedSwapperTask, immediateSwapperTask, storage}
 }
 
-func (core *core) Reduce(msg tau.Message) tau.Message {
+func (swapper *swapper) Reduce(msg tau.Message) tau.Message {
 	switch msg := msg.(type) {
 	case Bootload:
-		return core.handleBootload(msg)
+		return swapper.handleBootload(msg)
 	case SwapRequest:
-		return core.handleSwapRequest(msg)
+		return swapper.handleSwapRequest(msg)
 	case immediate.ReceiptUpdate:
-		return core.handleReceiptUpdate(swap.ReceiptUpdate(msg))
+		return ReceiptUpdate(msg)
 	case immediate.DeleteSwap:
-		return core.handleDeleteSwap(msg.ID)
+		return swapper.handleDeleteSwap(msg.ID)
 	case delayed.SwapRequest:
-		return core.handleSwapRequest(SwapRequest(msg))
+		return swapper.handleSwapRequest(SwapRequest(msg))
 	case delayed.ReceiptUpdate:
-		return core.handleReceiptUpdate(swap.ReceiptUpdate(msg))
+		return ReceiptUpdate(msg)
 	case delayed.DeleteSwap:
-		return core.handleDeleteSwap(msg.ID)
-	case status.ReceiptQuery:
-		return core.handleReceiptQuery(msg)
+		return swapper.handleDeleteSwap(msg.ID)
 	case tau.Error:
 		return msg
 	case tau.Tick:
-		return core.handleTick(msg)
+		return swapper.handleTick(msg)
 	default:
-		return tau.NewError(fmt.Errorf("invalid message type in core: %T", msg))
+		return tau.NewError(fmt.Errorf("invalid message type in swapper: %T", msg))
 	}
 }
 
-func (core *core) handleReceiptQuery(msg tau.Message) tau.Message {
-	core.status.Send(msg)
+func (swapper *swapper) handleTick(msg tau.Message) tau.Message {
+	swapper.immediateSwapper.Send(msg)
+	swapper.delayedSwapper.Send(msg)
 	return nil
 }
 
-func (core *core) handleTick(msg tau.Message) tau.Message {
-	core.immediateSwapper.Send(msg)
-	core.delayedSwapper.Send(msg)
-	return nil
-}
-
-func (core *core) handleReceiptUpdate(update swap.ReceiptUpdate) tau.Message {
-	core.status.Send(status.ReceiptUpdate(update))
-	if err := core.storage.UpdateReceipt(swap.ReceiptUpdate(update)); err != nil {
-		return tau.NewError(err)
-	}
-	return nil
-}
-
-func (core *core) handleSwapRequest(msg SwapRequest) tau.Message {
-	if err := core.storage.PutSwap(swap.SwapBlob(msg)); err != nil {
-		return tau.NewError(err)
-	}
-
-	receipt := swap.NewSwapReceipt(swap.SwapBlob(msg))
-	core.status.Send(status.Receipt(receipt))
-	if err := core.storage.PutReceipt(receipt); err != nil {
+func (swapper *swapper) handleSwapRequest(msg SwapRequest) tau.Message {
+	if err := swapper.storage.PutSwap(swap.SwapBlob(msg)); err != nil {
 		return tau.NewError(err)
 	}
 
 	if msg.Delay {
-		core.delayedSwapper.Send(delayed.DelayedSwapRequest(msg))
+		swapper.delayedSwapper.Send(delayed.DelayedSwapRequest(msg))
 		return nil
 	}
 
-	sendCost, receiveCost := core.storage.LoadCosts(msg.ID)
-	core.immediateSwapper.Send(immediate.NewSwapRequest(swap.SwapBlob(msg), sendCost, receiveCost))
+	sendCost, receiveCost := swapper.storage.LoadCosts(msg.ID)
+	swapper.immediateSwapper.Send(immediate.NewSwapRequest(swap.SwapBlob(msg), sendCost, receiveCost))
 	return nil
 }
 
-func (core *core) handleBootload(msg Bootload) tau.Message {
-	return tau.NewMessageBatch([]tau.Message{core.handleSwapperBootload(msg), core.handleStatusBootload(msg)})
-}
-
-func (core *core) handleStatusBootload(msg Bootload) tau.Message {
-	// Loading historical swap receipts
-	historicalReceipts, err := core.storage.Receipts()
+func (swapper *swapper) handleBootload(msg Bootload) tau.Message {
+	pendingSwaps, err := swapper.storage.PendingSwaps()
 	if err != nil {
 		return tau.NewError(err)
 	}
 
-	co.ParForAll(historicalReceipts, func(i int) {
-		core.status.Send(status.Receipt(historicalReceipts[i]))
-	})
-
-	return nil
-}
-
-func (core *core) handleSwapperBootload(msg Bootload) tau.Message {
-	pendingSwaps, err := core.storage.PendingSwaps()
-	if err != nil {
-		return tau.NewError(err)
-	}
-
+	msgs := []tau.Message{}
 	for _, pendingSwap := range pendingSwaps {
 		hash, err := base64.StdEncoding.DecodeString(pendingSwap.PasswordHash)
 		if pendingSwap.PasswordHash != "" && err != nil {
@@ -144,25 +99,25 @@ func (core *core) handleSwapperBootload(msg Bootload) tau.Message {
 			continue
 		}
 
-		core.status.Send(status.ReceiptUpdate(swap.NewReceiptUpdate(pendingSwap.ID, func(receipt *swap.SwapReceipt) {
+		msgs = append(msgs, ReceiptUpdate(swap.NewReceiptUpdate(pendingSwap.ID, func(receipt *swap.SwapReceipt) {
 			receipt.Active = true
 		})))
 
 		pendingSwap.Password = msg.Password
 		if pendingSwap.Delay {
-			core.delayedSwapper.Send(delayed.DelayedSwapRequest(pendingSwap))
+			swapper.delayedSwapper.Send(delayed.DelayedSwapRequest(pendingSwap))
 			continue
 		}
 
-		sendCost, receiveCost := core.storage.LoadCosts(pendingSwap.ID)
-		core.immediateSwapper.Send(immediate.NewSwapRequest(pendingSwap, sendCost, receiveCost))
+		sendCost, receiveCost := swapper.storage.LoadCosts(pendingSwap.ID)
+		swapper.immediateSwapper.Send(immediate.NewSwapRequest(pendingSwap, sendCost, receiveCost))
 	}
 
-	return nil
+	return tau.NewMessageBatch(msgs)
 }
 
-func (core *core) handleDeleteSwap(id swap.SwapID) tau.Message {
-	if err := core.storage.DeletePendingSwap(id); err != nil {
+func (swapper *swapper) handleDeleteSwap(id swap.SwapID) tau.Message {
+	if err := swapper.storage.DeletePendingSwap(id); err != nil {
 		return tau.NewError(err)
 	}
 	return nil
@@ -178,4 +133,9 @@ type Bootload struct {
 }
 
 func (Bootload) IsMessage() {
+}
+
+type ReceiptUpdate swap.ReceiptUpdate
+
+func (ReceiptUpdate) IsMessage() {
 }
