@@ -17,7 +17,11 @@ type statuses struct {
 }
 
 func New(cap int, storage Storage) tau.Task {
-	return tau.New(tau.NewIO(cap), &statuses{storage})
+	return tau.New(tau.NewIO(cap), NewReducer(storage))
+}
+
+func NewReducer(storage Storage) *statuses {
+	return &statuses{storage}
 }
 
 func (statuses *statuses) Reduce(msg tau.Message) tau.Message {
