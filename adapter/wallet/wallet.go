@@ -16,8 +16,7 @@ type Config struct {
 }
 
 type BlockchainConfig struct {
-	Network Network  `json:"network"`
-	Tokens  []string `json:"tokens"`
+	Network Network `json:"network"`
 }
 
 type Network struct {
