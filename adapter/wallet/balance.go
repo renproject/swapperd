@@ -6,12 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/republicprotocol/co-go"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/republicprotocol/beth-go"
+	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/libbtc-go"
 	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
 	"github.com/republicprotocol/swapperd/foundation/blockchain"
