@@ -10,7 +10,7 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/blockchain"
 )
 
 func (wallet *wallet) Addresses(password string) (map[blockchain.TokenName]string, error) {

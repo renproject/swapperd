@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/blockchain"
 )
 
 func (wallet *wallet) VerifyBalance(password string, token blockchain.Token, amount *big.Int) error {

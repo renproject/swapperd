@@ -11,18 +11,18 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/swapperd/adapter/server"
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	. "github.com/renproject/swapperd/adapter/server"
+	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/swap"
 
-	"github.com/republicprotocol/swapperd/adapter/binder"
-	"github.com/republicprotocol/swapperd/adapter/callback"
-	"github.com/republicprotocol/swapperd/adapter/db"
-	"github.com/republicprotocol/swapperd/core/wallet/swapper"
-	"github.com/republicprotocol/swapperd/core/wallet/transfer"
-	"github.com/republicprotocol/swapperd/driver/keystore"
-	"github.com/republicprotocol/swapperd/driver/leveldb"
-	"github.com/republicprotocol/swapperd/driver/logger"
+	"github.com/renproject/swapperd/adapter/binder"
+	"github.com/renproject/swapperd/adapter/callback"
+	"github.com/renproject/swapperd/adapter/db"
+	"github.com/renproject/swapperd/core/wallet/swapper"
+	"github.com/renproject/swapperd/core/wallet/transfer"
+	"github.com/renproject/swapperd/driver/keystore"
+	"github.com/renproject/swapperd/driver/leveldb"
+	"github.com/renproject/swapperd/driver/logger"
 )
 
 var _ = Describe("Server Adapter", func() {

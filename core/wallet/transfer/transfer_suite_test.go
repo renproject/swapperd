@@ -9,8 +9,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/swapperd/core/wallet/transfer"
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	. "github.com/renproject/swapperd/core/wallet/transfer"
+	"github.com/renproject/swapperd/foundation/blockchain"
 )
 
 func TestTransfer(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 	"math/big"
 	"net/http"
 
-	"github.com/republicprotocol/swapperd/core/wallet/swapper/delayed"
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/core/wallet/swapper/delayed"
+	"github.com/renproject/swapperd/foundation/swap"
 )
 
 type cb struct {

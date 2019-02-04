@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/blockchain"
 )
 
 // MockBlockchain implements the `balance.Blockchain` interface.

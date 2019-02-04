@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/republicprotocol/swapperd/adapter/wallet"
+	"github.com/renproject/swapperd/adapter/wallet"
 )
 
 func Wallet(homeDir, network string) (wallet.Wallet, error) {

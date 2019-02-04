@@ -3,9 +3,9 @@ package server
 import (
 	"encoding/json"
 
-	"github.com/republicprotocol/swapperd/core/wallet/transfer"
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/core/wallet/transfer"
+	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/swap"
 )
 
 type GetInfoResponse struct {

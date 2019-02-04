@@ -3,12 +3,12 @@ package wallet
 import (
 	"fmt"
 
-	"github.com/republicprotocol/swapperd/core/wallet/status"
-	"github.com/republicprotocol/swapperd/core/wallet/swapper"
-	"github.com/republicprotocol/swapperd/core/wallet/swapper/delayed"
-	"github.com/republicprotocol/swapperd/core/wallet/swapper/immediate"
-	"github.com/republicprotocol/swapperd/core/wallet/transfer"
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/core/wallet/status"
+	"github.com/renproject/swapperd/core/wallet/swapper"
+	"github.com/renproject/swapperd/core/wallet/swapper/delayed"
+	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
+	"github.com/renproject/swapperd/core/wallet/transfer"
+	"github.com/renproject/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
 )
 

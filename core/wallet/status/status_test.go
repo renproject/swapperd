@@ -6,15 +6,15 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/republicprotocol/swapperd/testutils"
+	"github.com/renproject/swapperd/testutils"
 
 	"github.com/republicprotocol/tau"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/swapperd/core/wallet/swapper/status"
+	. "github.com/renproject/swapperd/core/wallet/swapper/status"
 
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/foundation/swap"
 )
 
 var Random *rand.Rand

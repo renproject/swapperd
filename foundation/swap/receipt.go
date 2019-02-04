@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/blockchain"
 )
 
 // The SwapReceipt contains the swap details and the status.

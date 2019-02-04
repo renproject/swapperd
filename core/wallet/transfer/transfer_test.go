@@ -5,12 +5,12 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/swapperd/core/wallet/transfer"
+	. "github.com/renproject/swapperd/core/wallet/transfer"
 )
 
 const BufferLimit = 1024

@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/republicprotocol/tau"
 	"golang.org/x/crypto/bcrypt"
 )

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/republicprotocol/swapperd/driver/composer"
+	"github.com/renproject/swapperd/driver/composer"
 	"golang.org/x/sys/windows/svc"
 )
 

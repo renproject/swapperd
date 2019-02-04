@@ -3,8 +3,8 @@ package immediate
 import (
 	"fmt"
 
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
 	"golang.org/x/crypto/sha3"
 )

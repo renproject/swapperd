@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/republicprotocol/swapperd/adapter/binder/btc"
-	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
-	"github.com/republicprotocol/swapperd/adapter/binder/eth"
-	"github.com/republicprotocol/swapperd/adapter/wallet"
-	"github.com/republicprotocol/swapperd/core/wallet/swapper/immediate"
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/adapter/binder/btc"
+	"github.com/renproject/swapperd/adapter/binder/erc20"
+	"github.com/renproject/swapperd/adapter/binder/eth"
+	"github.com/renproject/swapperd/adapter/wallet"
+	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
+	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
 )
 
