@@ -12,7 +12,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/renproject/swapperd/core/wallet/swapper/status"
+	. "github.com/renproject/swapperd/core/wallet/status"
 
 	"github.com/renproject/swapperd/foundation/swap"
 )
@@ -25,56 +25,41 @@ func init() {
 
 var _ = Describe("Status Task", func() {
 
-	init := func() (tau.Task, chan struct{}) {
-		return New(testutils.DefaultQuickCheckConfig.MaxCount), make(chan struct{})
+	init := func() (*MockStorage, tau.Reducer) {
+		storage := NewMockStorage()
+		return storage, NewReducer(storage)
 	}
 
 	Context("when receiving new receipt", func() {
 		It("should store the receipt", func() {
-			statusTask, done := init()
-			defer close(done)
-			go statusTask.Run(done)
+			storage, reducer := init()
 
 			test := func(receipt Receipt) bool {
-				statusTask.IO().InputWriter() <- receipt
-				responder := make(chan map[swap.SwapID]swap.SwapReceipt, 1)
-				query := ReceiptQuery{
-					Responder: responder,
-				}
-				statusTask.IO().InputWriter() <- query
-				response := <-responder
-				return reflect.DeepEqual(response[receipt.ID], swap.SwapReceipt(receipt))
+				Expect(reducer.Reduce(receipt)).Should(BeNil())
+				statusReceipt, err := storage.Receipt(receipt.ID)
+				Expect(err).Should(BeNil())
+				return reflect.DeepEqual(statusReceipt, swap.SwapReceipt(receipt))
 			}
-
 			Expect(quick.Check(test, testutils.DefaultQuickCheckConfig)).ShouldNot(HaveOccurred())
 		})
 	})
 
 	Context("when receiving new update", func() {
 		It("should update the receipt", func() {
-			statusTask, done := init()
-			defer close(done)
-			go statusTask.Run(done)
-
+			storage, reducer := init()
 			test := func(receipt Receipt) bool {
-				statusTask.IO().InputWriter() <- receipt
+				Expect(reducer.Reduce(receipt)).Should(BeNil())
 
 				receipt.Status = swap.Audited
 				update := ReceiptUpdate(swap.NewReceiptUpdate(receipt.ID, func(re *swap.SwapReceipt) {
 					re.ID = receipt.ID
 					re.Status = swap.Audited
 				}))
+				Expect(reducer.Reduce(update)).Should(BeNil())
 
-				statusTask.IO().InputWriter() <- update
-
-				responder := make(chan map[swap.SwapID]swap.SwapReceipt, 1)
-				query := ReceiptQuery{
-					Responder: responder,
-				}
-				statusTask.IO().InputWriter() <- query
-				response := <-responder
-
-				return reflect.DeepEqual(response[receipt.ID], swap.SwapReceipt(receipt))
+				statusReceipt, err := storage.Receipt(receipt.ID)
+				Expect(err).Should(BeNil())
+				return reflect.DeepEqual(statusReceipt, swap.SwapReceipt(receipt))
 			}
 
 			Expect(quick.Check(test, testutils.DefaultQuickCheckConfig)).ShouldNot(HaveOccurred())
@@ -83,13 +68,9 @@ var _ = Describe("Status Task", func() {
 
 	Context("when receiving an unknown message type", func() {
 		It("should return an error", func() {
-			statusTask, done := init()
-			defer close(done)
-			go statusTask.Run(done)
-
-			statusTask.IO().InputWriter() <- tau.RandomMessage{}
-			err := <-statusTask.IO().OutputReader()
-			_, ok := err.(tau.Error)
+			_, reducer := init()
+			msg := reducer.Reduce(tau.RandomMessage{})
+			_, ok := msg.(tau.Error)
 			Expect(ok).Should(BeTrue())
 		})
 	})
