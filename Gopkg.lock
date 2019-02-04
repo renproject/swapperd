@@ -26,7 +26,7 @@
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "8f049bdb8feb7d7d5f1a9b9cd854396112fb0c0e"
+  revision = "e2363f69bde9cb44d6b7f31b741a5a65a8f73b39"
 
 [[projects]]
   branch = "master"
@@ -98,8 +98,8 @@
     "rpc",
     "trie"
   ]
-  revision = "9dc5d1a915ac0e0bd8429d6ac41df50eec91de5f"
-  version = "v1.8.21"
+  revision = "7fa3509e2eaf1a4ebc12344590e5699406690f15"
+  version = "v1.8.22"
 
 [[projects]]
   name = "github.com/go-stack/stack"
@@ -123,7 +123,7 @@
   name = "github.com/gorilla/mux"
   packages = ["."]
   revision = "a7962380ca08b5a188038c69871b8d3fbdf31e89"
-  version = "v1.7"
+  version = "v1.7.0"
 
 [[projects]]
   name = "github.com/hashicorp/golang-lru"
@@ -265,7 +265,7 @@
     "leveldb/table",
     "leveldb/util"
   ]
-  revision = "b001fa50d6b27f3f0bb175a87d0cb55426d0a0ae"
+  revision = "2f17a3356c6616cbfc4ae4c38147dc062a68fb0e"
 
 [[projects]]
   branch = "master"
@@ -300,7 +300,7 @@
     "sha3",
     "ssh/terminal"
   ]
-  revision = "057139ce5d2bdbe6fe73c53679e24e9cf007f637"
+  revision = "b8fe1690c61389d7d2a8074a507d1d40c5d30448"
 
 [[projects]]
   branch = "master"
@@ -326,7 +326,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "b90733256f2e882e81d52f9126de08df5615afd9"
+  revision = "7ae0202eb74c2b534255c71b5a15fa4115aabbcc"
 
 [[projects]]
   name = "golang.org/x/text"
