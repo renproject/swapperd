@@ -9,7 +9,6 @@ import (
 	"github.com/republicprotocol/swapperd/core/wallet/swapper/immediate"
 	"github.com/republicprotocol/swapperd/core/wallet/transfer"
 	"github.com/republicprotocol/swapperd/foundation/swap"
-
 	"github.com/republicprotocol/tau"
 )
 
