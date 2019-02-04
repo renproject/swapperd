@@ -4,9 +4,9 @@
 version: 2
 jobs:
   build:
-    branches:
-      only:
-        - arch-update
+    branches: 
+      - master
+      - arch-update
     docker:
       # specify the version
       - image: circleci/golang:1.9
