@@ -7,12 +7,17 @@ import (
 	"github.com/republicprotocol/tau"
 )
 
-type statuses struct {
-	statuses map[swap.SwapID]swap.SwapReceipt
+type Storage interface {
+	PutReceipt(receipt swap.SwapReceipt) error
+	UpdateReceipt(receiptUpdate swap.ReceiptUpdate) error
 }
 
-func New(cap int) tau.Task {
-	return tau.New(tau.NewIO(cap), &statuses{map[swap.SwapID]swap.SwapReceipt{}})
+type statuses struct {
+	storage Storage
+}
+
+func New(cap int, storage Storage) tau.Task {
+	return tau.New(tau.NewIO(cap), &statuses{storage})
 }
 
 func (statuses *statuses) Reduce(msg tau.Message) tau.Message {
@@ -21,44 +26,48 @@ func (statuses *statuses) Reduce(msg tau.Message) tau.Message {
 		return statuses.handleReceipt(msg)
 	case ReceiptUpdate:
 		return statuses.handleReceiptUpdate(msg)
-	case ReceiptQuery:
-		return statuses.handleReceiptQuery(msg)
 	default:
 		return tau.NewError(fmt.Errorf("invalid message type in statuses: %T", msg))
 	}
 }
 
-func (statuses *statuses) handleReceiptQuery(msg ReceiptQuery) tau.Message {
-	// TODO: update to use shallow copy
-	msg.Responder <- statuses.statuses
-	return nil
-}
-
 func (statuses *statuses) handleReceipt(receipt Receipt) tau.Message {
-	statuses.statuses[receipt.ID] = swap.SwapReceipt(receipt)
+	if err := statuses.storage.PutReceipt(swap.SwapReceipt(receipt)); err != nil {
+		return tau.NewError(err)
+	}
 	return nil
 }
 
 func (statuses *statuses) handleReceiptUpdate(update ReceiptUpdate) tau.Message {
-	receipt := statuses.statuses[update.ID]
-	update.Update(&receipt)
-	statuses.statuses[update.ID] = receipt
+	if err := statuses.storage.UpdateReceipt(swap.ReceiptUpdate(update)); err != nil {
+		return tau.NewError(err)
+	}
 	return nil
 }
 
 type Receipt swap.SwapReceipt
 
-func (msg Receipt) IsMessage() {
+func (Receipt) IsMessage() {
+}
+
+func NewReceipt(blob swap.SwapBlob) Receipt {
+	return Receipt(swap.NewSwapReceipt(blob))
 }
 
 type ReceiptUpdate swap.ReceiptUpdate
 
-func (msg ReceiptUpdate) IsMessage() {
+func (ReceiptUpdate) IsMessage() {
 }
 
 type ReceiptQuery struct {
 	Responder chan<- map[swap.SwapID]swap.SwapReceipt
 }
 
-func (msg ReceiptQuery) IsMessage() {
+func (ReceiptQuery) IsMessage() {
+}
+
+type Bootload struct {
+}
+
+func (Bootload) IsMessage() {
 }
