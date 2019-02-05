@@ -28,6 +28,18 @@ func (store *MockStorage) Receipt(id swap.SwapID) (swap.SwapReceipt, error) {
 	return store.receipts[id], nil
 }
 
+func (store *MockStorage) Receipts() ([]swap.SwapReceipt, error) {
+	store.mu.RLock()
+	defer store.mu.RUnlock()
+
+	swapReceipts := []swap.SwapReceipt{}
+	for _, receipt := range store.receipts {
+		swapReceipts = append(swapReceipts, receipt)
+	}
+
+	return swapReceipts, nil
+}
+
 func (store *MockStorage) PutReceipt(receipt swap.SwapReceipt) error {
 	store.mu.Lock()
 	defer store.mu.Unlock()
