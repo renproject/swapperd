@@ -10,6 +10,6 @@ db*/*
 .DS_Store
 .idea
 
-secrets
+secret.sh
 todo
 PRs
