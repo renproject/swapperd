@@ -25,8 +25,8 @@ func init() {
 
 var _ = Describe("Status Task", func() {
 
-	init := func() (*MockStorage, tau.Reducer) {
-		storage := NewMockStorage()
+	init := func() (*testutils.MockStorage, tau.Reducer) {
+		storage := testutils.NewMockStorage()
 		return storage, NewReducer(storage)
 	}
 
