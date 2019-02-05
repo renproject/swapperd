@@ -3,20 +3,21 @@ package server_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"reflect"
 
-	"github.com/renproject/swapperd/core/wallet"
-	"github.com/renproject/swapperd/core/wallet/swapper"
+	"github.com/renproject/swapperd/testutils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/renproject/swapperd/adapter/server"
 
-	"github.com/renproject/swapperd/adapter/db"
-	"github.com/renproject/swapperd/driver/keystore"
-	"github.com/renproject/swapperd/driver/leveldb"
+	bc "github.com/renproject/swapperd/adapter/wallet"
+	"github.com/renproject/swapperd/core/wallet"
+	"github.com/renproject/swapperd/core/wallet/swapper"
 	"github.com/renproject/swapperd/driver/logger"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
@@ -27,20 +28,24 @@ var _ = Describe("Server Adapter", func() {
 	done := make(chan struct{})
 
 	buildServer := func() Server {
-		Expect(keystore.Generate("../../secrets", "testnet", "weird")).Should(BeNil())
-		blockchain, err := keystore.Wallet("../../secrets", "testnet")
-		Expect(err).Should(BeNil())
-		ldb, err := leveldb.NewStore("../../secrets", "testnet")
-		Expect(err).Should(BeNil())
-		storage := db.New(ldb)
+		config := bc.Testnet
+		config.Mnemonic = os.Getenv("MNEMONIC")
+		port := os.Getenv("PORT")
+		fmt.Println("MNEMONIC: ", os.Getenv("MNEMONIC"))
+		fmt.Println("PORT: ", os.Getenv("PORT"))
+
+		blockchain := bc.New(config)
+		storage := testutils.NewMockStorage()
 		logger := logger.NewStdOut()
-		httpServer := NewHttpServer(128, "27927", receiver, storage, blockchain, logger)
+		httpServer := NewHttpServer(128, port, receiver, storage, blockchain, logger)
 		return httpServer
 	}
 
 	buildSwap := func(password string) swap.SwapBlob {
-		wallet, err := keystore.Wallet("../../secrets", "testnet")
-		Expect(err).Should(BeNil())
+		config := bc.Testnet
+		config.Mnemonic = os.Getenv("MNEMONIC")
+		wallet := bc.New(config)
+
 		ethAddr, err := wallet.GetAddress(password, blockchain.Ethereum)
 		Expect(err).Should(BeNil())
 		btcAddr, err := wallet.GetAddress(password, blockchain.Bitcoin)
@@ -63,7 +68,7 @@ var _ = Describe("Server Adapter", func() {
 
 	Context("basic requests", func() {
 		It("when getting swapperd info", func() {
-			req, err := http.NewRequest("GET", "http://localhost:27927/info", nil)
+			req, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%s/info", os.Getenv("PORT")), nil)
 			Expect(err).Should(BeNil())
 			req.SetBasicAuth("", "Alice")
 			resp, err := http.DefaultClient.Do(req)
@@ -80,7 +85,7 @@ var _ = Describe("Server Adapter", func() {
 			aliceSwap := buildSwap("Bob")
 			data, err := json.MarshalIndent(aliceSwap, "", "  ")
 			Expect(err).Should(BeNil())
-			req, err := http.NewRequest("POST", "http://localhost:27927/swaps", bytes.NewBuffer(data))
+			req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/swaps", os.Getenv("PORT")), bytes.NewBuffer(data))
 			Expect(err).Should(BeNil())
 			req.SetBasicAuth("", "Alice")
 			resp, err := http.DefaultClient.Do(req)
