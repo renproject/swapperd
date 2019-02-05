@@ -6,7 +6,7 @@ language_tabs:
 
 toc_footers:
   - <a href='https://github.com/renproject/swapperd'>GitHub</a>
-  - <a href='https://renproject.com'>Built by Republic Protocol</a>
+  - <a href='https://renproject.com'>Built by Ren</a>
 
 search: true
 ---

@@ -7,17 +7,14 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/republicprotocol/swapperd/core/wallet/swapper/delayed"
-	"github.com/republicprotocol/swapperd/core/wallet/swapper/immediate"
-
-	"github.com/republicprotocol/swapperd/core/wallet/swapper/status"
+	"github.com/renproject/swapperd/core/wallet/swapper/delayed"
+	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
+	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/republicprotocol/tau"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/swapperd/core/wallet/swapper"
-	"github.com/republicprotocol/swapperd/foundation/swap"
-
-	"github.com/republicprotocol/tau"
+	. "github.com/renproject/swapperd/core/wallet/swapper"
 )
 
 var _ = Describe("Swapper", func() {
@@ -40,21 +37,20 @@ var _ = Describe("Swapper", func() {
 		}
 	}
 
-	init := func(storage Storage, delayed, immediate, status tau.Task) tau.Task {
-		swapper := New(2048, storage, delayed, immediate, status)
-		return swapper
+	init := func(storage Storage, delayed, immediate tau.Task) tau.Task {
+		reducer := NewSwapper(delayed, immediate, storage)
+		return tau.New(tau.NewIO(2048), reducer, delayed, immediate)
 	}
 
 	Context("when receiving bootload message", func() {
 		It("when there are no swaps in the database", func() {
 			delayed := newTask(nil)
 			immediate := newTask(nil)
-			status := newTask(nil)
 
 			storage := NewMockStorage()
 			done := make(chan struct{})
 			defer close(done)
-			swapper := init(storage, delayed, immediate, status)
+			swapper := init(storage, delayed, immediate)
 			go swapper.Run(done)
 
 			test := func() bool {
@@ -62,9 +58,7 @@ var _ = Describe("Swapper", func() {
 				msg := <-swapper.IO().OutputReader()
 				msgBatch, ok := msg.(tau.MessageBatch)
 				Expect(ok).Should(BeTrue())
-				Expect(len(msgBatch)).Should(Equal(2))
-				Expect(msgBatch[0]).Should(BeNil())
-				Expect(msgBatch[1]).Should(BeNil())
+				Expect(len(msgBatch)).Should(Equal(0))
 				return true
 			}
 
@@ -90,31 +84,18 @@ var _ = Describe("Swapper", func() {
 				return nil
 			})
 
-			status := newTask(func(msg tau.Message) tau.Message {
-				switch msg := msg.(type) {
-				case status.Receipt, status.ReceiptUpdate:
-				default:
-					Expect(msg).ShouldNot(HaveOccurred())
-				}
-				return nil
-			})
-
 			storage := NewMockStorage()
 			done := make(chan struct{})
 			defer close(done)
-			swapper := init(storage, delayed, immediate, status)
+			swapper := init(storage, delayed, immediate)
 			go swapper.Run(done)
 
 			test := func(blob swap.SwapBlob) bool {
 				storage.PutSwap(blob)
 				swapper.IO().InputWriter() <- Bootload{}
 				msg := <-swapper.IO().OutputReader()
-				msgBatch, ok := msg.(tau.MessageBatch)
-				Expect(ok).Should(BeTrue())
-				Expect(len(msgBatch)).Should(Equal(2))
-				Expect(msgBatch[0]).Should(BeNil())
-				Expect(msgBatch[1]).Should(BeNil())
-				return true
+				_, ok := msg.(tau.MessageBatch)
+				return ok
 			}
 
 			Expect(quick.Check(test, quickCheckConfig())).ShouldNot(HaveOccurred())
@@ -125,12 +106,11 @@ var _ = Describe("Swapper", func() {
 		It("should return the error message", func() {
 			delayed := newTask(nil)
 			immediate := newTask(nil)
-			status := newTask(nil)
 
 			storage := NewMockStorage()
 			done := make(chan struct{})
 			defer close(done)
-			swapper := init(storage, delayed, immediate, status)
+			swapper := init(storage, delayed, immediate)
 			go swapper.Run(done)
 
 			test := func(errStr string) bool {
@@ -159,12 +139,11 @@ var _ = Describe("Swapper", func() {
 
 			delayed := newTask(reducer)
 			immediate := newTask(reducer)
-			status := newTask(reducer)
 
 			storage := NewMockStorage()
 			done := make(chan struct{})
 			defer close(done)
-			swapper := init(storage, delayed, immediate, status)
+			swapper := init(storage, delayed, immediate)
 			go swapper.Run(done)
 
 			test := func(errStr string) bool {
@@ -176,52 +155,15 @@ var _ = Describe("Swapper", func() {
 		})
 	})
 
-	Context("when receiving receipt query message", func() {
-		It("should send receipt query message to status task", func() {
-			reducer := func(msg tau.Message) tau.Message {
-				switch msg := msg.(type) {
-				case status.ReceiptQuery:
-				default:
-					Expect(msg).ShouldNot(HaveOccurred())
-				}
-				return nil
-			}
-
-			delayedTask := newTask(nil)
-			immediateTask := newTask(nil)
-			statusTask := newTask(reducer)
-
-			storage := NewMockStorage()
-			done := make(chan struct{})
-			defer close(done)
-			swapper := init(storage, delayedTask, immediateTask, statusTask)
-			go swapper.Run(done)
-
-			test := func() bool {
-				swapper.IO().InputWriter() <- status.ReceiptQuery{}
-				return true
-			}
-			Expect(quick.Check(test, quickCheckConfig())).ShouldNot(HaveOccurred())
-		})
-	})
-
 	Context("when receiving receipt update message", func() {
 		It("should send receipt update to status task", func() {
 			delayedTask := newTask(nil)
 			immediateTask := newTask(nil)
-			statusTask := newTask(func(msg tau.Message) tau.Message {
-				switch msg := msg.(type) {
-				case status.ReceiptUpdate:
-				default:
-					Expect(msg).ShouldNot(HaveOccurred())
-				}
-				return nil
-			})
 
 			storage := NewMockStorage()
 			done := make(chan struct{})
 			defer close(done)
-			swapper := init(storage, delayedTask, immediateTask, statusTask)
+			swapper := init(storage, delayedTask, immediateTask)
 			go swapper.Run(done)
 
 			test := func() bool {
@@ -238,12 +180,11 @@ var _ = Describe("Swapper", func() {
 		It("should return an error", func() {
 			delayedTask := newTask(nil)
 			immediateTask := newTask(nil)
-			statusTask := newTask(nil)
 
 			storage := NewMockStorage()
 			done := make(chan struct{})
 			defer close(done)
-			swapper := init(storage, delayedTask, immediateTask, statusTask)
+			swapper := init(storage, delayedTask, immediateTask)
 			go swapper.Run(done)
 
 			test := func() bool {

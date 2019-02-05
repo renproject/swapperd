@@ -3,16 +3,15 @@ package server
 import (
 	"encoding/json"
 
-	"github.com/republicprotocol/swapperd/core/wallet/transfer"
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/core/wallet/transfer"
+	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/swap"
 )
 
 type GetInfoResponse struct {
-	Version              string                  `json:"version"`
-	Bootloaded           bool                    `json:"bootloaded"`
-	SupportedBlockchains []blockchain.Blockchain `json:"supportedBlockchains"`
-	SupportedTokens      []blockchain.Token      `json:"supportedTokens"`
+	Version         string             `json:"version"`
+	Bootloaded      bool               `json:"bootloaded"`
+	SupportedTokens []blockchain.Token `json:"supportedTokens"`
 }
 
 type GetSwapsResponse struct {

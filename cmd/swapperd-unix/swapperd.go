@@ -4,7 +4,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/republicprotocol/swapperd/driver/composer"
+	"github.com/renproject/swapperd/driver/composer"
 )
 
 func main() {

@@ -6,15 +6,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/republicprotocol/co-go"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/republicprotocol/beth-go"
+	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/libbtc-go"
-	"github.com/republicprotocol/swapperd/adapter/binder/erc20"
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/adapter/binder/erc20"
+	"github.com/renproject/swapperd/foundation/blockchain"
 )
 
 func (wallet *wallet) Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error) {

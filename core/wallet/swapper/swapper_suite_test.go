@@ -8,8 +8,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/swap"
 )
 
 func TestSwapper(t *testing.T) {
@@ -18,16 +18,14 @@ func TestSwapper(t *testing.T) {
 }
 
 type MockStorage struct {
-	mu       *sync.RWMutex
-	swaps    map[swap.SwapID]swap.SwapBlob
-	receipts map[swap.SwapID]swap.SwapReceipt
+	mu    *sync.RWMutex
+	swaps map[swap.SwapID]swap.SwapBlob
 }
 
 func NewMockStorage() *MockStorage {
 	return &MockStorage{
-		mu:       new(sync.RWMutex),
-		swaps:    map[swap.SwapID]swap.SwapBlob{},
-		receipts: map[swap.SwapID]swap.SwapReceipt{},
+		mu:    new(sync.RWMutex),
+		swaps: map[swap.SwapID]swap.SwapBlob{},
 	}
 }
 
@@ -36,7 +34,6 @@ func (store *MockStorage) PutSwap(swapBlob swap.SwapBlob) error {
 	defer store.mu.Unlock()
 	swapBlob.Password = ""
 	store.swaps[swapBlob.ID] = swapBlob
-	store.receipts[swapBlob.ID] = swap.NewSwapReceipt(swapBlob)
 	return nil
 }
 
@@ -71,34 +68,6 @@ func (store *MockStorage) PendingSwaps() ([]swap.SwapBlob, error) {
 	return swaps, nil
 }
 
-func (store *MockStorage) Receipts() ([]swap.SwapReceipt, error) {
-	return []swap.SwapReceipt{}, nil
-}
-
-func (store *MockStorage) PutReceipt(receipt swap.SwapReceipt) error {
-	return nil
-}
-
-func (store *MockStorage) UpdateReceipt(update swap.ReceiptUpdate) error {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-
-	receipt, ok := store.receipts[update.ID]
-	if !ok {
-		return errors.New("swap not found")
-	}
-
-	update.Update(&receipt)
-	store.receipts[update.ID] = receipt
-	return nil
-}
-
 func (store *MockStorage) LoadCosts(id swap.SwapID) (blockchain.Cost, blockchain.Cost) {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-	receipt, ok := store.receipts[id]
-	if !ok {
-		return blockchain.Cost{}, blockchain.Cost{}
-	}
-	return blockchain.CostBlobToCost(receipt.SendCost), blockchain.CostBlobToCost(receipt.ReceiveCost)
+	return blockchain.Cost{}, blockchain.Cost{}
 }

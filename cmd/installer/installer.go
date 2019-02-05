@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/republicprotocol/swapperd/driver/keystore"
+	"github.com/renproject/swapperd/driver/keystore"
 	"github.com/tyler-smith/go-bip39"
 )
 
