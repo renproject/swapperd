@@ -64,14 +64,14 @@ var _ = Describe("Server Adapter", func() {
 	}
 
 	tokenPairOptions := []struct {
-		sendToken, receiveToken string
+		sendToken, receiveToken blockchain.TokenName
 	}{
-		{blockchain.TokenBTC.String(), blockchain.TokenETH.String()},
-		{blockchain.TokenBTC.String(), blockchain.TokenWBTC.String()},
-		{blockchain.TokenETH.String(), blockchain.TokenBTC.String()},
-		{blockchain.TokenETH.String(), blockchain.TokenWBTC.String()},
-		{blockchain.TokenWBTC.String(), blockchain.TokenBTC.String()},
-		{blockchain.TokenWBTC.String(), blockchain.TokenETH.String()},
+		{blockchain.BTC, blockchain.ETH},
+		{blockchain.BTC, blockchain.WBTC},
+		{blockchain.ETH, blockchain.BTC},
+		{blockchain.ETH, blockchain.WBTC},
+		{blockchain.WBTC, blockchain.BTC},
+		{blockchain.WBTC, blockchain.ETH},
 	}
 
 	amountOptions := []struct {
@@ -125,7 +125,7 @@ var _ = Describe("Server Adapter", func() {
 			for _, initiationOption := range initiationOptions {
 				delayInfo, _ := json.Marshal(TestDelayInfo{i})
 				swap := swap.SwapBlob{
-					ID:                   swap.RandomID(),
+					ID:                   swap.SwapID(randomString()),
 					SendToken:            tokenPairOption.sendToken,
 					ReceiveToken:         tokenPairOption.receiveToken,
 					SendAmount:           amountOption.sendAmount,
