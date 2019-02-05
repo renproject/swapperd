@@ -10,7 +10,7 @@ xgo --targets=linux/amd64 .
 cd ../../../swapperd-win/
 xgo --targets=windows/amd64 .
 
-cd ..
+cd ../swapperd/cmd
 mv installer/installer bin/installer
 mv swapperd-unix/swapperd-unix bin/swapperd
 zip -r swapper_darwin_amd64.zip bin
