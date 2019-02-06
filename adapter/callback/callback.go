@@ -8,8 +8,8 @@ import (
 	"math/big"
 	"net/http"
 
-	"github.com/republicprotocol/swapperd/core/wallet/swapper/delayed"
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/core/wallet/swapper/delayed"
+	"github.com/renproject/swapperd/foundation/swap"
 )
 
 type cb struct {
@@ -53,11 +53,10 @@ func (cb *cb) DelayCallback(partialSwap swap.SwapBlob) (swap.SwapBlob, error) {
 }
 
 func verifyDelaySwap(partialSwap, filledSwap swap.SwapBlob) (swap.SwapBlob, error) {
-
-	// initialMinReceiveValue, ok := new(big.Int).SetString(partialSwap.MinimumReceiveAmount, 10)
-	// if !ok {
-	// 	initialMinReceiveValue = big.NewInt(0)
-	// }
+	initialMinReceiveValue, ok := new(big.Int).SetString(partialSwap.MinimumReceiveAmount, 10)
+	if !ok {
+		initialMinReceiveValue = big.NewInt(0)
+	}
 
 	initialSendValue, ok := new(big.Int).SetString(partialSwap.SendAmount, 10)
 	if !ok {
@@ -69,14 +68,6 @@ func verifyDelaySwap(partialSwap, filledSwap swap.SwapBlob) (swap.SwapBlob, erro
 		return partialSwap, fmt.Errorf("corrupted receive value")
 	}
 
-	sendBrokerFee := new(big.Int).Div(new(big.Int).Mul(initialSendValue, big.NewInt(partialSwap.BrokerFee)), big.NewInt(10000))
-	recvBrokerFee := new(big.Int).Div(new(big.Int).Mul(initialRecvValue, big.NewInt(partialSwap.BrokerFee)), big.NewInt(10000))
-	// minRecvBrokerFee := new(big.Int).Div(new(big.Int).Mul(initialMinReceiveValue, big.NewInt(partialSwap.BrokerFee)), big.NewInt(10000))
-
-	actualSendValue := new(big.Int).Sub(initialSendValue, sendBrokerFee)
-	actualRecvValue := new(big.Int).Sub(initialRecvValue, recvBrokerFee)
-	// actualMinRecvValue := new(big.Int).Sub(initialMinReceiveValue, minRecvBrokerFee)
-
 	filledSendValue, ok := big.NewInt(0).SetString(filledSwap.SendAmount, 10)
 	if !ok {
 		return partialSwap, fmt.Errorf("corrupted filled send value")
@@ -87,11 +78,11 @@ func verifyDelaySwap(partialSwap, filledSwap swap.SwapBlob) (swap.SwapBlob, erro
 		return partialSwap, fmt.Errorf("corrupted filled receive value")
 	}
 
-	// if filledReceiveValue.Cmp(actualMinRecvValue) < 0 || actualSendValue.Cmp(filledSendValue) > 0 {
-	// 	return partialSwap, fmt.Errorf("invalid filled swap receive value too low or send value too high %v %v %v %v", actualMinRecvValue, filledReceiveValue, actualSendValue, filledSendValue)
-	// }
+	if filledReceiveValue.Cmp(initialMinReceiveValue) < 0 || initialSendValue.Cmp(filledSendValue) < 0 {
+		return partialSwap, fmt.Errorf("invalid filled swap receive value too low or send value too high %v %v %v %v", initialMinReceiveValue, filledReceiveValue, initialSendValue, filledSendValue)
+	}
 
-	if filledReceiveValue.Mul(filledReceiveValue, actualSendValue).Cmp(actualRecvValue.Mul(actualRecvValue, filledSendValue)) < 0 {
+	if filledReceiveValue.Mul(filledReceiveValue, initialSendValue).Cmp(initialRecvValue.Mul(initialRecvValue, filledSendValue)) < 0 {
 		return partialSwap, fmt.Errorf("invalid filled swap unfavorable price")
 	}
 

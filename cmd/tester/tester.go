@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/republicprotocol/swapperd/adapter/server"
-	"github.com/republicprotocol/swapperd/driver/keystore"
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/adapter/server"
+	"github.com/renproject/swapperd/driver/keystore"
+	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/swap"
 )
 
 func main() {

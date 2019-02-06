@@ -8,9 +8,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/republicprotocol/swapperd/core/wallet/swapper/immediate"
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
+	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/swap"
 )
 
 func TestImmediate(t *testing.T) {

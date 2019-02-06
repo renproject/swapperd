@@ -3,14 +3,14 @@ package immediate_test
 import (
 	"testing/quick"
 
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/swapperd/foundation/swap"
-	"github.com/republicprotocol/swapperd/testutils"
+	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/testutils"
 	"github.com/republicprotocol/tau"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/republicprotocol/swapperd/core/wallet/swapper/immediate"
+	. "github.com/renproject/swapperd/core/wallet/swapper/immediate"
 )
 
 var _ = Describe("Immediate Swap Task", func() {

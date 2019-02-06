@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"reflect"
 
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/blockchain"
 )
 
 const ExpiryUnit = int64(2 * 60 * 60)

@@ -3,7 +3,7 @@ package delayed
 import (
 	"fmt"
 
-	"github.com/republicprotocol/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
 )
 

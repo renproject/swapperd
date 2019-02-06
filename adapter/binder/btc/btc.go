@@ -11,10 +11,10 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
+	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/swap"
 	"github.com/republicprotocol/libbtc-go"
-	"github.com/republicprotocol/swapperd/core/wallet/swapper/immediate"
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/swapperd/foundation/swap"
 	"github.com/sirupsen/logrus"
 )
 
@@ -99,6 +99,10 @@ func (atom *btcSwapContractBinder) Initiate() error {
 				return false
 			}
 
+			if atom.swap.Value.Int64()-value < 600 {
+				return false
+			}
+
 			// creating unsigned transaction and adding transaction outputs
 			tx.AddTxOut(wire.NewTxOut(atom.swap.Value.Int64()-value, initiateScriptP2SHPKScript))
 			return !funded
@@ -179,9 +183,10 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 				return false
 			}
 			if !redeemed {
-				if atom.swap.BrokerFee.Int64() != 0 {
-					tx.AddTxOut(wire.NewTxOut(atom.swap.BrokerFee.Int64(), feeAddrScript))
+				if val-atom.swap.BrokerFee.Int64()-atom.fee < 600 {
+					return false
 				}
+				tx.AddTxOut(wire.NewTxOut(atom.swap.BrokerFee.Int64(), feeAddrScript))
 				tx.AddTxOut(wire.NewTxOut(val-atom.swap.BrokerFee.Int64()-atom.fee, payToAddrScript))
 			}
 			return !redeemed
@@ -241,11 +246,11 @@ func (atom *btcSwapContractBinder) Refund() error {
 	atom.Info("Refunding on Bitcoin blockchain")
 	address, err := atom.Address()
 	if err != nil {
-		return NewErrRedeem(err)
+		return NewErrRefund(err)
 	}
 	payToAddrScript, err := txscript.PayToAddrScript(address)
 	if err != nil {
-		return NewErrRedeem(err)
+		return NewErrRefund(err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
@@ -284,7 +289,7 @@ func (atom *btcSwapContractBinder) Refund() error {
 			return spent
 		},
 	); err != nil && err != libbtc.ErrPreConditionCheckFailed {
-		return err
+		return NewErrRefund(err)
 	}
 	return nil
 }

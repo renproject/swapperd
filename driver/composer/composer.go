@@ -1,17 +1,15 @@
 package composer
 
 import (
-	"time"
-
+	"github.com/renproject/swapperd/adapter/binder"
+	"github.com/renproject/swapperd/adapter/callback"
+	"github.com/renproject/swapperd/adapter/db"
+	"github.com/renproject/swapperd/adapter/server"
+	"github.com/renproject/swapperd/core/wallet"
+	"github.com/renproject/swapperd/driver/keystore"
+	"github.com/renproject/swapperd/driver/leveldb"
+	"github.com/renproject/swapperd/driver/logger"
 	"github.com/republicprotocol/co-go"
-	"github.com/republicprotocol/swapperd/adapter/binder"
-	"github.com/republicprotocol/swapperd/adapter/callback"
-	"github.com/republicprotocol/swapperd/adapter/db"
-	"github.com/republicprotocol/swapperd/adapter/server"
-	"github.com/republicprotocol/swapperd/core/wallet"
-	"github.com/republicprotocol/swapperd/driver/keystore"
-	"github.com/republicprotocol/swapperd/driver/leveldb"
-	"github.com/republicprotocol/swapperd/driver/logger"
 	"github.com/republicprotocol/tau"
 	"github.com/sirupsen/logrus"
 )
@@ -19,9 +17,10 @@ import (
 const BufferCapacity = 2048
 
 type composer struct {
-	server     server.Server
-	logger     logrus.FieldLogger
-	walletTask tau.Task
+	server      server.Server
+	logger      logrus.FieldLogger
+	walletTask  tau.Task
+	serviceTask tau.Task
 }
 
 type Composer interface {
@@ -41,51 +40,34 @@ func New(homeDir, network, port string) Composer {
 	if err != nil {
 		panic(err)
 	}
-	server := server.NewHttpServer(BufferCapacity, port, bc, logger)
 
+	receiver := server.NewReceiver(BufferCapacity)
+	serviceTask := server.NewService(BufferCapacity, receiver)
+	serviceTask.Send(server.AcceptRequest{})
+
+	server := server.NewHttpServer(BufferCapacity, port, receiver, storage, bc, logger)
 	walletTask := wallet.New(BufferCapacity, storage, bc, binder.NewBuilder(bc, logger), callback.New())
-	return &composer{server, logger, walletTask}
+	return &composer{server, logger, walletTask, serviceTask}
 }
 
 func (composer *composer) Run(done <-chan struct{}) {
-	io := tau.NewIO(BufferCapacity)
 	co.ParBegin(
 		func() {
-			io.InputWriter() <- tau.NewTick(time.Now())
-		},
-		func() {
-			tau.New(io, tau.ReduceFunc(func(msg tau.Message) tau.Message {
+			tau.New(tau.NewIO(BufferCapacity), tau.ReduceFunc(func(msg tau.Message) tau.Message {
 				switch msg := msg.(type) {
-				case tau.Tick:
-					composer.walletTask.Send(msg)
-				case wallet.AcceptRequest:
-					composer.handleAcceptRequest()
+				case server.AcceptedRequest:
+					composer.walletTask.Send(msg.Message)
+					composer.serviceTask.Send(server.AcceptRequest{})
 				case tau.Error:
 					composer.logger.Error(msg)
 				default:
 					composer.logger.Errorf("Unexpected message type: %T in compser", msg)
 				}
 				return nil
-			}), composer.walletTask).Run(done)
+			}), composer.walletTask, composer.serviceTask).Run(done)
 		},
 		func() {
 			composer.server.Run(done)
 		},
 	)
-}
-
-func (composer *composer) handleAcceptRequest() {
-	msg, err := composer.server.Receive()
-	if err != nil {
-		composer.logger.Error(err)
-		return
-	}
-
-	switch msg := msg.(type) {
-	case tau.Tick, wallet.TransferRequest, wallet.SwapperRequest:
-		composer.walletTask.Send(msg)
-	default:
-		composer.logger.Errorf("Unexpected message type: %T from server", msg)
-	}
-	return
 }

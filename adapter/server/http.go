@@ -7,33 +7,30 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"time"
-
-	"github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
-	"github.com/republicprotocol/swapperd/adapter/wallet"
-	"github.com/republicprotocol/swapperd/core/wallet/swapper"
-	"github.com/republicprotocol/swapperd/core/wallet/transfer"
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/swapperd/foundation/swap"
-	"github.com/republicprotocol/tau"
+	"github.com/renproject/swapperd/adapter/wallet"
+	"github.com/renproject/swapperd/core/wallet/transfer"
+	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/foundation/swap"
 	"github.com/rs/cors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Storage interface {
-	swapper.Storage
-	transfer.Storage
+	Receipts() ([]swap.SwapReceipt, error)
+	Transfers() ([]transfer.TransferReceipt, error)
 }
+
 type httpServer struct {
 	port    string
 	handler Handler
 	logger  logrus.FieldLogger
 }
 
-func NewHttpServer(cap int, port string, wallet wallet.Wallet, logger logrus.FieldLogger) Server {
-	return &httpServer{port, NewHandler(cap, wallet), logger}
+func NewHttpServer(cap int, port string, receiver *Receiver, storage Storage, wallet wallet.Wallet, logger logrus.FieldLogger) Server {
+	return &httpServer{port, NewHandler(cap, wallet, storage, receiver), logger}
 }
 
 // NewHttpListener creates a new http listener
@@ -68,28 +65,11 @@ func (server *httpServer) Run(done <-chan struct{}) {
 			panic(err)
 		}
 	}()
-	go server.ticker(done)
 	server.logger.Infof("swapperd started listening on http://127.0.0.1:%s", server.port)
 	<-done
 	server.logger.Infof("swapperd stopped listening on http://127.0.0.1:%s", server.port)
 	listener.Close()
-	server.handler.ShutDown()
-}
-
-func (listener *httpServer) ticker(done <-chan struct{}) {
-	ticker := time.NewTicker(30 * time.Second)
-	for {
-		select {
-		case <-done:
-			return
-		case <-ticker.C:
-			listener.handler.Write(tau.NewTick(time.Now()))
-		}
-	}
-}
-
-func (listener *httpServer) Receive() (tau.Message, error) {
-	return listener.handler.Receive()
+	server.handler.Shutdown()
 }
 
 // writeError response.
@@ -260,19 +240,11 @@ func (server *httpServer) postTransfersHandler(reqHandler Handler) http.HandlerF
 		}
 		transferReq.Password = password
 
-		transferResp, err := reqHandler.PostTransfers(transferReq)
-		if err != nil {
+		if err := reqHandler.PostTransfers(transferReq); err != nil {
 			server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("cannot decode transfers request: %v", err))
 			return
 		}
-		transferResp.PasswordHash = ""
-
-		respBytes, err := json.MarshalIndent(transferResp, "\t", "")
-		if err != nil {
-			server.writeError(w, r, http.StatusInternalServerError, fmt.Sprintf("cannot encode transfers response: %v", err))
-			return
-		}
-		server.writeResponse(w, r, http.StatusCreated, respBytes)
+		server.writeResponse(w, r, http.StatusCreated, []byte{})
 	}
 }
 

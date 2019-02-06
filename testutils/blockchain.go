@@ -2,9 +2,11 @@ package testutils
 
 import (
 	"errors"
+	"math/big"
 	"sync"
 
-	"github.com/republicprotocol/swapperd/foundation/blockchain"
+	"github.com/renproject/swapperd/core/wallet/transfer"
+	"github.com/renproject/swapperd/foundation/blockchain"
 )
 
 // MockBlockchain implements the `balance.Blockchain` interface.
@@ -35,6 +37,17 @@ func (blockchain *MockBlockchain) UpdateBalance(balance map[blockchain.TokenName
 	defer blockchain.mu.Unlock()
 
 	blockchain.balance = copyBalanceMap(balance)
+}
+
+func (bc *MockBlockchain) GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error) {
+	return "", nil
+}
+func (bc *MockBlockchain) Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error) {
+	return "", nil
+}
+
+func (bc *MockBlockchain) Lookup(token blockchain.Token, txHash string) (transfer.UpdateReceipt, error) {
+	return transfer.UpdateReceipt{}, nil
 }
 
 type FaultyBlockchain struct {
