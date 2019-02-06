@@ -7,14 +7,14 @@ import (
 	"testing/quick"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	. "github.com/renproject/swapperd/core/wallet/swapper"
+
 	"github.com/renproject/swapperd/core/wallet/swapper/delayed"
 	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
 	"github.com/renproject/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	. "github.com/renproject/swapperd/core/wallet/swapper"
 )
 
 var _ = Describe("Swapper", func() {

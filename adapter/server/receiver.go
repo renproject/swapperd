@@ -22,7 +22,7 @@ func NewReceiver(cap int) *Receiver {
 	}
 }
 
-// Shutdown shutsdown the receiver, by closing the done channel.
+// Shutdown shuts down the receiver, by closing the done channel.
 func (receiver *Receiver) Shutdown() {
 	close(receiver.done)
 }

@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/republicprotocol/beth-go"
-	"github.com/republicprotocol/libbtc-go"
 	"github.com/renproject/swapperd/adapter/binder/erc20"
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/republicprotocol/beth-go"
+	"github.com/republicprotocol/libbtc-go"
 )
 
 func (wallet *wallet) Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error) {

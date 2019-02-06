@@ -1,7 +1,6 @@
 package composer
 
 import (
-	"github.com/republicprotocol/co-go"
 	"github.com/renproject/swapperd/adapter/binder"
 	"github.com/renproject/swapperd/adapter/callback"
 	"github.com/renproject/swapperd/adapter/db"
@@ -10,6 +9,7 @@ import (
 	"github.com/renproject/swapperd/driver/keystore"
 	"github.com/renproject/swapperd/driver/leveldb"
 	"github.com/renproject/swapperd/driver/logger"
+	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/tau"
 	"github.com/sirupsen/logrus"
 )

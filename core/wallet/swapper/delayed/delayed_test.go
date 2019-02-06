@@ -5,15 +5,13 @@ import (
 	"reflect"
 	"testing/quick"
 
-	"github.com/renproject/swapperd/testutils"
-
-	"github.com/republicprotocol/tau"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/renproject/swapperd/core/wallet/swapper/delayed"
 
 	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/testutils"
+	"github.com/republicprotocol/tau"
 )
 
 var _ = Describe("Delayed Swap Task", func() {

@@ -9,8 +9,6 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/renproject/swapperd/testutils"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/renproject/swapperd/adapter/server"
@@ -21,6 +19,7 @@ import (
 	"github.com/renproject/swapperd/driver/logger"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/renproject/swapperd/testutils"
 )
 
 var _ = Describe("Server Adapter", func() {

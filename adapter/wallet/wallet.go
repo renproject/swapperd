@@ -3,10 +3,10 @@ package wallet
 import (
 	"math/big"
 
-	"github.com/republicprotocol/beth-go"
-	"github.com/republicprotocol/libbtc-go"
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/republicprotocol/beth-go"
+	"github.com/republicprotocol/libbtc-go"
 )
 
 type Config struct {
