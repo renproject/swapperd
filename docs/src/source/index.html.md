@@ -168,6 +168,83 @@ After receiving the response from the begining party (and checking the KYC infor
 This is a protected HTTP endpoint.
 </aside>
 
+## Starting a delayed swap
+
+In some cases we do not know both sides of an atomic swap, before commiting to 
+an atomic swap. An example usecase would be an exchange using swapperd, an 
+exchange would want to make sure that if an order match is found the users will 
+definately execute the swap. To solve this problem, we introduced a feature 
+called delayed swaps.
+
+A user starts an atomic swap and the swap request has a `delayCallbackUrl` which
+the swapperd keeps pinging with the relevant information. And once the 
+counter-party is found the server pointed to by the `delayCallbackUrl` returns 
+the swap blobs of both traders. The swappers of the traders will make sure the 
+new swap details, they check the following: 
+
+- The price is equal to or better than the initial price, and the receive value 
+is equal to or greater than the minimum receive value.
+- The send value is less than or equal to the initial value.
+- The receive value is greater than or equal to the initial minimum receive 
+value.
+- The token pair is same as the initial token pair.
+
+If all the checks pass, the atomic swap goes through, if they do not the swap 
+fails.
+
+```shell
+curl -i      \
+     -X POST \
+     -d '{
+        "sendToken": "ETH",
+        "receiveToken": "BTC",
+        "sendAmount": "200000000000000000",
+        "receiveAmount": "2000000",
+        "minimumReceiveAmount": "1000000",
+        "sendTo": "0x5Ea5F67cC958023F2da2ea92231d358F2a3BbA47",
+        "receiveFrom": "mzKgUBHX7xSkKiNrdnxTe6fJKAcvFri2Tc",
+
+        "delay": true,
+        "delayInfo": {
+          "usecaseSpecificKey": "usecaseSpecificValue",
+        },
+        "delayCallbackUrl": "your_swapperd_callback_url"
+    }' \
+    http://username:password@localhost:17927/swaps
+```
+
+The swapperd pings `your_swapperd_callback_url` with 
+```json
+  {
+        "sendToken": "ETH",
+        "receiveToken": "BTC",
+        "sendAmount": "200000000000000000",
+        "receiveAmount": "2000000",
+        "minimumReceiveAmount": "1000000",
+
+        "delay": true,
+        "delayInfo": {
+          "usecaseSpecificKey": "usecaseSpecificValue",
+        },
+        "delayCallbackUrl": "your_swapperd_callback_url"
+    }
+```
+
+Swapperd expects `delayCallbackUrl` to respond with one of the following responses. 
+
+Status Code | Meaning | Response
+---------- | ------- | --------------------
+200 | StatusOK -- The HTTP endpoint or method is invalid. | A filled executable swap json object.
+204 | StatusNoContent -- Please try again after some time. | Nothing.
+410 | StatusGone -- The swap is cancelled, stop requesting. | Nothing.
+
+### HTTP Request
+
+`POST http://localhost:17927/swaps`
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
 
 ## Status of existing atomic swaps
 
