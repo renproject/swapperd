@@ -6,21 +6,22 @@ language_tabs:
 
 toc_footers:
   - <a href='https://github.com/renproject/swapperd'>GitHub</a>
-  - <a href='https://renproject.com'>Built by Ren</a>
+  - <a href='https://renproject.io'>Built by Ren</a>
+
 
 search: true
 ---
 
 # Introduction
 
-Welcome to Swapperd! You can use Swapperd to execute cross-chain atomic swaps between Bitcoin, Ethereum, and ERC20 tokens.
+Welcome to Swapperd! You can use Swapperd to execute cross-chain atomic swaps between Bitcoin, Ethereum, and ERC20 tokens, with more blockchain support comming soon.
 
 # Installation
 
-> Swapperd currently supports macOS, Ubuntu and Windows. Run the following command in a terminal:
+> Swapperd currently supports macOS and Ubuntu. Run the following command in a terminal:
 
 ```shell
-curl https://releases.renproject.com/swapperd/install.sh -sSf | sh
+curl https://github.com/renproject/swapperd/releases/download/v1.0.0-beta.2/install.sh -sSf | sh
 ```
 
 Swapperd installs itself as a system service. In the event of an unexpected shutdown, Swapperd will automatically restart and on the first http request it will resume all pending atomic swaps.
@@ -347,27 +348,6 @@ curl -i      \
      http://username:password@localhost:17927/transfers
 ```
 
-> The response body is structured like this:
-
-```json
-{
-	"confirmations": 0,
-	"timestamp": 1548828011,
-	"to": "mroqkoMK1L9ugjBbyJDh1B2kHmHPRzRjRS",
-	"from": "mzKgUBHX7xSkKiNrdnxTe6fJKAcvFri2Tc",
-	"token": {
-	"name": "BTC",
-	"decimals": 8,
-	"blockchain": "bitcoin"
-	},
-	"value": "100000",
-	"txCost": {
-    "BTC": "10000"
-  },
-	"txHash": "db7cf2e04d1fa5669323bcbba73b175938fa5dfe0d05ea1f216d151b7728f057"
-}
-```
-
 ### HTTP Request
 
 `POST http://localhost:17927/transfers`
@@ -431,7 +411,7 @@ curl -i     \
 
 ```json
 {
-    "version": "1.0.0",
+    "version": "v1.0.0-beta.2",
     "bootloaded": true,
     "supportedBlockchains": [
       "ethereum", "bitcoin", "erc20"
@@ -463,6 +443,158 @@ curl -i     \
 <aside class="success">
 This is a protected HTTP endpoint.
 </aside>
+
+# ID
+
+Swapperd uses a seperate ecdsa keypair to sign messages, to prove identity. 
+This id can be connected to KYC details, which will allow KYC verification for 
+atomic swaps (the developer/counter-party can make sure that the user is KYCd 
+before doing atomic swaps with them), This is a completely optional feature.
+
+## Getting Swapperd's ID
+
+This returns the base64 encoding of the public key.
+
+```shell
+curl -i     \
+     -X GET \
+     http://username:password@localhost:17927/id
+```
+
+> The response body is structured like this:
+
+```
+BLUOP6KMR7jMhhLzpvuUk9lCHjNsb2hn0FPNV7fJ/rHisJBs7CapPkqPCnrkGWBb9xS3ThO3ftUX85zrbXs2r+M=
+```
+
+### HTTP Request
+
+`GET http://localhost:17927/id`
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
+
+
+## Getting Swapperd's ID as ethereum address
+
+This returns the ethereum address generated from the identity keypair.
+
+```shell
+curl -i     \
+     -X GET \
+     http://username:password@localhost:17927/id/eth
+```
+
+> The response body is structured like this:
+
+```
+0x80B7DF532FFDC5DF28D6bc98205b58daeE1E407f
+```
+
+### HTTP Request
+
+`GET http://localhost:17927/id/eth`
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
+
+# Sign
+
+Swapperd uses the identity ecdsa keypair to sign messages, to prove identity. It 
+supports signing base64, hex and json strings. This endpoint can be used to sign 
+arbitrary messages, this keypair is not used by any blockchain so it cannot lead
+to loss of funds. 
+
+## Getting Swapperd to sign a json message with the identity keypair.
+
+Signing an arbitrary json object
+
+```shell
+curl -i     \
+     -X POST \
+     -d '{
+        "hello": "world"
+      }' \
+     http://username:password@localhost:17927/sign/json
+```
+
+> The response body is structured like this:
+
+```json
+{
+	"message": {
+  	"hello": "world"
+	},
+	"signature": "6JXLmjJMXSmmGO1zuYr7r3pTiQCRvAw8yr8wsv6r8MMM7r5508Kt0zmXjJECDoZ5IgLSo3T2ivZBAYoRjl6UPgA="
+}
+```
+
+### HTTP Request
+
+`GET http://localhost:17927/sign/json`
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
+
+## Getting Swapperd to sign a hex message with the identity keypair.
+
+Signing an arbitrary hex string
+
+```shell
+curl -i     \
+     -X POST \
+     -d '1234567890abcdef' \
+     http://username:password@localhost:17927/sign/hex
+```
+
+> The response body is structured like this:
+
+```json
+{
+	"message": "1234567890abcdef",
+	"signature": "e759547d4fa1979260e84622ca732fa6149b95001dd33dd7aad50f1285334f605bb091616667cb7bf81e62d499ab23dac8336153fc85ce96690b01bee0620b4801"
+	}
+```
+
+### HTTP Request
+
+`GET http://localhost:17927/sign/hex`
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
+
+## Getting Swapperd to sign a base64 message with the identity keypair.
+
+Signing an arbitrary base64 string
+
+```shell
+curl -i     \
+     -X POST \
+     -d '1234567890abcdefghijklmNOPQRSTUVWXYZ' \
+     http://username:password@localhost:17927/sign/base64
+```
+
+> The response body is structured like this:
+
+```json
+{
+	"message": "1234567890abcdefghijklmNOPQRSTUVWXYZ",
+	"signature": "Ey2OP+gS0ylrwxqJkMLbtita/dAuoxtUSF1vnUzMGiMLh/kDz3nBQ927ZE9XyfQqEeUWKEoicml+c59oJJ9jDQE="
+}
+```
+
+### HTTP Request
+
+`GET http://localhost:17927/sign/base64`
+
+<aside class="success">
+This is a protected HTTP endpoint.
+</aside>
+
 
 # Errors
 
