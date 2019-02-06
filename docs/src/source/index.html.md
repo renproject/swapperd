@@ -201,8 +201,6 @@ curl -i      \
         "sendAmount": "200000000000000000",
         "receiveAmount": "2000000",
         "minimumReceiveAmount": "1000000",
-        "sendTo": "0x5Ea5F67cC958023F2da2ea92231d358F2a3BbA47",
-        "receiveFrom": "mzKgUBHX7xSkKiNrdnxTe6fJKAcvFri2Tc",
 
         "delay": true,
         "delayInfo": {
@@ -213,21 +211,22 @@ curl -i      \
     http://username:password@localhost:17927/swaps
 ```
 
-The swapperd pings `your_swapperd_callback_url` with 
+> The swapperd pings `your_swapperd_callback_url` with the following request:
+
 ```json
   {
-        "sendToken": "ETH",
-        "receiveToken": "BTC",
-        "sendAmount": "200000000000000000",
-        "receiveAmount": "2000000",
-        "minimumReceiveAmount": "1000000",
+      "sendToken": "ETH",
+      "receiveToken": "BTC",
+      "sendAmount": "200000000000000000",
+      "receiveAmount": "2000000",
+      "minimumReceiveAmount": "1000000",
 
-        "delay": true,
-        "delayInfo": {
-          "usecaseSpecificKey": "usecaseSpecificValue",
-        },
-        "delayCallbackUrl": "your_swapperd_callback_url"
-    }
+      "delay": true,
+      "delayInfo": {
+        "usecaseSpecificKey": "usecaseSpecificValue",
+      },
+      "delayCallbackUrl": "your_swapperd_callback_url"
+  }
 ```
 
 Swapperd expects `delayCallbackUrl` to respond with one of the following responses. 
