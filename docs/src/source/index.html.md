@@ -75,6 +75,34 @@ Swapperd handles all other interactions. Swapperd is built to be fault-tolerant 
 Swapperd cannot execute the interactive swapping process when the host machine is shut down, or offline. Keeping the host machine shutdown, or offline, for more than 24 hours could result in the loss of funds!
 </aside>
 
+// SendAmount and ReceiveAmount are decimal strings.
+SendFee              string `json:"sendFee,omitempty"`
+SendAmount           string `json:"sendAmount"`
+ReceiveFee           string `json:"receiveFee,omitempty"`
+ReceiveAmount        string `json:"receiveAmount"`
+MinimumReceiveAmount string `json:"minimumReceiveAmount,omitempty"`
+
+Name | Type | Usage
+---------- | ------- | ---------------- 
+sendToken | TokenName | The name of the token you want to send
+receiveToken | TokenName | The name of the token you want to receive
+sendAmount | string | The amount of token you want to send (decimal string)
+receiveAmount | string | The amount of token you want to receive (decimal string)
+shouldInitiateFirst | bool | Should the swapper initiate first
+timeLock | int64 | Timelock of the initiating atomic swap (required when shouldInitiateFirst is false).
+secretHash | string | Base64 encoding of the secret hash (required when shouldInitiateFirst is false).
+sendTo | string | counter-party's `sendToken` address (required when doing an immediate swap).
+receiveFrom | string | counter-party's `receiveToken` address (required when doing an immediate swap).
+sendFee | string (optional) | `sendToken` transaction fee
+receiveFee | string (optional) | `receiveToken` transaction fee
+brokerFee | int64 (optional) | broker/matching fee in bips
+brokerSendTokenAddr | string (optional) | broker's `sendToken` address
+brokerReceiveTokenAddr | string (optional) | broker's `receiveToken` address
+minimumReceiveAmount | string (optional, default: "0") | used when the delay is true, to check the updated swap details
+delay | bool (optional, default: false) | set it to true if it is a delayed swap
+delayCallbackURL | string (optional) | url to which swapperd can post the partial swap information to get it filled.
+delayInfo | JSON (optional) | information required by your server behind `delayCallbackURL` to identify the user and the swap.
+
 ## Beginning an atomic swap
 
 > Beginning an atomic swap by initiating first:
