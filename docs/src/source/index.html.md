@@ -26,7 +26,7 @@ curl https://github.com/renproject/swapperd/releases/download/v1.0.0-beta.2/inst
 
 Swapperd installs itself as a system service. In the event of an unexpected shutdown, Swapperd automatically restarts, and on the first HTTP request, it resumes all pending atomic swaps.
 
-A `mnemonic` is generated during the installation process. Swapperd uses this `mnemonic`, with the `password` the user provides in a swap request, to generate it's Bitcoin and Ethereum private keys on-demand.
+A `mnemonic` is generated during the installation process. Swapperd uses this `mnemonic`, with the `password` provided in the swap request, to generate it's Bitcoin and Ethereum private keys on-demand.
 
 <aside class="success">
 Swapperd never stores private keys to persistent storage. 
@@ -74,6 +74,20 @@ Swapperd handles all other interactions. Swapperd is built to be fault-tolerant 
 <aside class="notice">
 Swapperd cannot execute the interactive swapping process when the host machine is shut down, or offline. Keeping the host machine shutdown, or offline, for more than 24 hours could result in the loss of funds!
 </aside>
+
+### Supported Tokens:
+- Bitcoin: "bitcoin", "btc", "xbt"
+- Ether: "ethereum", "eth", "ether"
+- WrappedBitcoin: "wrappedbtc", "wbtc", "wrappedbitcoin"
+- Ren: "ren", "republictoken", "republic token"
+- TrueUSD: "tusd", "trueusd", "true-usd"
+- DigixGoldToken: "digix-gold-token", "dgx", "dgt"
+- ZeroEx: "zerox", "zrx", "0x"
+- OmiseGo: "omisego", "omg", "omise-go"
+- CircleUSD: "usdc", "usd-coin", "usdcoin"
+- MakerDAI: "dai", "maker-dai", "makerdai"
+- GeminiUSD: "gusd", "gemini-dollar", "geminidollar"
+- Paxos: "pax", "paxosstandardtoken", "paxos-standard-token"
 
 Name | Type | Usage
 ---------- | ------- | ---------------- 
@@ -245,7 +259,7 @@ Swapperd expects `delayCallbackUrl` to respond with one of the following respons
 
 Status Code | Meaning | Response
 ---------- | ------- | --------------------
-200 | StatusOK -- The HTTP endpoint or method is invalid. | A filled executable swap json object.
+200 | StatusOK -- Success | A filled executable swap json object.
 204 | StatusNoContent -- Please try again after some time. | Nothing.
 410 | StatusGone -- The swap is cancelled, stop requesting. | Nothing.
 
