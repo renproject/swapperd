@@ -75,13 +75,6 @@ Swapperd handles all other interactions. Swapperd is built to be fault-tolerant 
 Swapperd cannot execute the interactive swapping process when the host machine is shut down, or offline. Keeping the host machine shutdown, or offline, for more than 24 hours could result in the loss of funds!
 </aside>
 
-// SendAmount and ReceiveAmount are decimal strings.
-SendFee              string `json:"sendFee,omitempty"`
-SendAmount           string `json:"sendAmount"`
-ReceiveFee           string `json:"receiveFee,omitempty"`
-ReceiveAmount        string `json:"receiveAmount"`
-MinimumReceiveAmount string `json:"minimumReceiveAmount,omitempty"`
-
 Name | Type | Usage
 ---------- | ------- | ---------------- 
 sendToken | TokenName | The name of the token you want to send
