@@ -115,9 +115,9 @@ func (wallet *wallet) verifyBitcoinBalance(password string, amount *big.Int) err
 		return fmt.Errorf("Invalid balance amount: %s", balance.Amount)
 	}
 
-	leftover := balanceAmount.Sub(balanceAmount, amount)
+	leftover := new(big.Int).Sub(balanceAmount, amount)
 	if leftover.Cmp(new(big.Int).Add(fee[blockchain.BTC], big.NewInt(600))) < 0 {
-		return fmt.Errorf("You need at least 10600 SAT (or 0.000106 BTC) remaining in your wallet to cover transaction fees. You have: %v", balanceAmount)
+		return fmt.Errorf("You need at least 10600 SAT (or 0.000106 BTC) remaining in your wallet to cover transaction fees. You have: %v", leftover)
 	}
 	return nil
 }
