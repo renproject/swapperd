@@ -3,13 +3,18 @@ package main
 import (
 	"os"
 	"os/signal"
+	"path/filepath"
 
 	"github.com/renproject/swapperd/driver/composer"
 )
 
 func main() {
 	done := make(chan struct{})
-	homeDir := os.Getenv("HOME") + "/.swapperd"
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	homeDir := filepath.Dir(filepath.Dir(ex))
 
 	testnet := composer.New(homeDir, "testnet", "17927")
 	go testnet.Run(done)
