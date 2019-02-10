@@ -55,15 +55,12 @@ func createKeystore(network, mnemonic string) {
 func createHomeDir(loc string) error {
 	switch runtime.GOOS {
 	case "linux", "darwin":
-		cmd := exec.Command("mkdir", "-p", loc)
-		if err := cmd.Run(); err != nil {
-			return err
-		}
+		return exec.Command("mkdir", "-p", loc).Run()
 	case "windows":
+		return nil
 	default:
 		return fmt.Errorf("unsupported OS: %s", runtime.GOOS)
 	}
-	return nil
 }
 
 func getSwapperHome() string {
@@ -110,7 +107,7 @@ func startLinuxService(swapperdHome string) error {
 func startDarwinService(swapperdHome string) error {
 	serviceContent := fmt.Sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\t\n<dict>\t\t\n<key>Label</key>\t\t\n<string>ren.swapperd</string>\t\t\n<key>ProgramArguments</key>\t\t\n<array>\t\t\t\t\n<string>%s/.swapperd/bin/swapperd</string>\t\t\n</array>\t\t\n<key>KeepAlive</key>\t\t\n<true/>\t\t\n<key>StandardOutPath</key>\t\t\n<string>%s/.swapperd/swapperd.log</string>\t\t\n<key>StandardErrorPath</key>\t\t\n<string>%s/.swapperd/swapperd.log</string>\t\n</dict>\n</plist>", swapperdHome, swapperdHome, swapperdHome)
 	servicePath := path.Join(os.Getenv("HOME"), "Library", "LaunchAgents", "ren.swapperd.plist")
-	if err := ioutil.WriteFile(servicePath, []byte(serviceContent), 0777); err != nil {
+	if err := ioutil.WriteFile(servicePath, []byte(serviceContent), 0755); err != nil {
 		return err
 	}
 	return exec.Command("launchctl", "load", "-w", servicePath).Run()
