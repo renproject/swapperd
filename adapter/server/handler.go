@@ -66,7 +66,7 @@ func NewHandler(cap int, wallet wallet.Wallet, storage Storage, receiver *Receiv
 func (handler *handler) GetInfo(password string) GetInfoResponse {
 	handler.bootload(password)
 	return GetInfoResponse{
-		Version:         "v1.0.0-beta.2",
+		Version:         "v1.0.0-beta.3",
 		Bootloaded:      handler.bootloaded[passwordHash(password)],
 		SupportedTokens: handler.wallet.SupportedTokens(),
 	}
