@@ -90,7 +90,7 @@ func startLinuxService(swapperdHome string) error {
 	if err := exec.Command("mkdir", "-p", serviceLocation).Run(); err != nil {
 		return err
 	}
-	serviceContent := fmt.Sprintf("[Unit]\nDescription=Swapper Daemon\nAssertPathExists=%s/.swapperd\n\n[Service]\nWorkingDirectory=%s/.swapperd\nExecStart=%s/.swapperd/bin/swapperd\nRestart=on-failure\nPrivateTmp=true\nNoNewPrivileges=true\n\n# Specifies which signal to use when killing a service. Defaults to SIGTERM.\n# SIGHUP gives parity time to exit cleanly before SIGKILL (default 90s)\nKillSignal=SIGHUP\n\n[Install]\nWantedBy=default.target", swapperdHome, swapperdHome, swapperdHome)
+	serviceContent := fmt.Sprintf("[Unit]\nDescription=Swapper Daemon\nAssertPathExists=%s\n\n[Service]\nWorkingDirectory=%s\nExecStart=%s/bin/swapperd\nRestart=on-failure\nPrivateTmp=true\nNoNewPrivileges=true\n\n# Specifies which signal to use when killing a service. Defaults to SIGTERM.\n# SIGHUP gives parity time to exit cleanly before SIGKILL (default 90s)\nKillSignal=SIGHUP\n\n[Install]\nWantedBy=default.target", swapperdHome, swapperdHome, swapperdHome)
 	servicePath := path.Join(serviceLocation, "swapperd.service")
 	if err := ioutil.WriteFile(servicePath, []byte(serviceContent), 0644); err != nil {
 		return err
