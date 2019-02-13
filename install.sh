@@ -49,7 +49,7 @@ else
   rm -rf .swapperd
   exit 1
 fi
-curl -Ls 'https://github.com/renproject/swapperd/releases/download/$(latest_version)/config.json' > config.json
+curl -Ls 'https://raw.githubusercontent.com/renproject/swapperd/$(latest_version)/config.json' > config.json
 
 unzip -o swapper.zip
 chmod +x bin/swapperd
