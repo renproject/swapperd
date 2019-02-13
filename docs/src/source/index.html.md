@@ -21,7 +21,7 @@ Welcome to Swapperd! You can use Swapperd to execute cross-chain atomic swaps be
 > Swapperd currently supports macOS and Ubuntu. Run the following command in a terminal:
 
 ```shell
-curl https://github.com/renproject/swapperd/releases/download/v1.0.0-beta.3/install.sh -sSf | sh
+curl https://git.io/test-swapperd -sSLf | sh
 ```
 
 Swapperd installs itself as a system service. In the event of an unexpected shutdown, Swapperd automatically restarts, and on the first HTTP request, it resumes all pending atomic swaps.

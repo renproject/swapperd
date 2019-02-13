@@ -30,13 +30,12 @@ var _ = Describe("Server Adapter", func() {
 		config := bc.Testnet
 		config.Mnemonic = os.Getenv("MNEMONIC")
 		port := os.Getenv("PORT")
-		fmt.Println("MNEMONIC: ", os.Getenv("MNEMONIC"))
-		fmt.Println("PORT: ", os.Getenv("PORT"))
+		version := os.Getenv("VERSION")
 
 		blockchain := bc.New(config)
 		storage := testutils.NewMockStorage()
 		logger := logger.NewStdOut()
-		httpServer := NewHttpServer(128, port, receiver, storage, blockchain, logger)
+		httpServer := NewHttpServer(128, port, version, receiver, storage, blockchain, logger)
 		return httpServer
 	}
 

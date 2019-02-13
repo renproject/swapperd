@@ -6,7 +6,6 @@ temp/*
 local_*
 
 db*/*
-*.json
 .DS_Store
 .idea
 

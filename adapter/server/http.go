@@ -29,8 +29,8 @@ type httpServer struct {
 	logger  logrus.FieldLogger
 }
 
-func NewHttpServer(cap int, port string, receiver *Receiver, storage Storage, wallet wallet.Wallet, logger logrus.FieldLogger) Server {
-	return &httpServer{port, NewHandler(cap, wallet, storage, receiver), logger}
+func NewHttpServer(cap int, port, version string, receiver *Receiver, storage Storage, wallet wallet.Wallet, logger logrus.FieldLogger) Server {
+	return &httpServer{port, NewHandler(cap, version, wallet, storage, receiver), logger}
 }
 
 // NewHttpListener creates a new http listener

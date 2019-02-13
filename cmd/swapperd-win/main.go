@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/renproject/swapperd/driver/composer"
 	"golang.org/x/sys/windows/svc"
 )
 
@@ -24,21 +22,12 @@ func usage(errmsg string) {
 func main() {
 	const svcName = "swapperd"
 
-	ex, err := os.Executable()
-	if err != nil {
-		log.Fatalf("unable to get the swapperd's home directory: ", err)
-	}
-	homeDir := filepath.Dir(filepath.Dir(ex))
-
-	testnet := composer.New(homeDir, "testnet", "17927")
-	mainnet := composer.New(homeDir, "mainnet", "7927")
-
 	isIntSess, err := svc.IsAnInteractiveSession()
 	if err != nil {
 		log.Fatalf("failed to determine if we are running in an interactive session: %v", err)
 	}
 	if !isIntSess {
-		runService(svcName, testnet, mainnet, false)
+		runService(svcName, false)
 		return
 	}
 
@@ -49,7 +38,7 @@ func main() {
 	cmd := strings.ToLower(os.Args[1])
 	switch cmd {
 	case "debug":
-		runService(svcName, testnet, mainnet, true)
+		runService(svcName, true)
 		return
 	case "install":
 		err = installService(svcName, "Swapperd Service")

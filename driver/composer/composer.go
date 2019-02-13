@@ -1,73 +1,69 @@
 package composer
 
 import (
-	"github.com/renproject/swapperd/adapter/binder"
-	"github.com/renproject/swapperd/adapter/callback"
-	"github.com/renproject/swapperd/adapter/db"
-	"github.com/renproject/swapperd/adapter/server"
-	"github.com/renproject/swapperd/core/wallet"
-	"github.com/renproject/swapperd/driver/keystore"
-	"github.com/renproject/swapperd/driver/leveldb"
-	"github.com/renproject/swapperd/driver/logger"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/renproject/swapperd/driver/swapperd"
+	"github.com/renproject/swapperd/driver/updater"
 	"github.com/republicprotocol/co-go"
-	"github.com/republicprotocol/tau"
 	"github.com/sirupsen/logrus"
 )
 
-const BufferCapacity = 2048
-
-type composer struct {
-	server      server.Server
-	logger      logrus.FieldLogger
-	walletTask  tau.Task
-	serviceTask tau.Task
+type Config struct {
+	Version   string        `json:"version"`
+	Frequency time.Duration `json:"frequency"`
 }
 
-type Composer interface {
-	Run(doneCh <-chan struct{})
-}
-
-func New(homeDir, network, port string) Composer {
-	ldb, err := leveldb.NewStore(homeDir, network)
+func Run(done <-chan struct{}) {
+	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
 	}
+	homeDir := filepath.Dir(filepath.Dir(ex))
+	logger := logrus.New()
+	logger.SetOutput(os.Stdout)
 
-	storage := db.New(ldb)
-	logger := logger.NewStdOut()
-
-	bc, err := keystore.Wallet(homeDir, network)
+	configData, err := ioutil.ReadFile(fmt.Sprintf("%s/config.json", homeDir))
 	if err != nil {
 		panic(err)
 	}
+	config := Config{}
+	if err := json.Unmarshal(configData, &config); err != nil {
+		panic(err)
+	}
 
-	receiver := server.NewReceiver(BufferCapacity)
-	serviceTask := server.NewService(BufferCapacity, receiver)
-	serviceTask.Send(server.AcceptRequest{})
-
-	server := server.NewHttpServer(BufferCapacity, port, receiver, storage, bc, logger)
-	walletTask := wallet.New(BufferCapacity, storage, bc, binder.NewBuilder(bc, logger), callback.New())
-	return &composer{server, logger, walletTask, serviceTask}
-}
-
-func (composer *composer) Run(done <-chan struct{}) {
+	version := make(chan string, 1)
 	co.ParBegin(
 		func() {
-			tau.New(tau.NewIO(BufferCapacity), tau.ReduceFunc(func(msg tau.Message) tau.Message {
-				switch msg := msg.(type) {
-				case server.AcceptedRequest:
-					composer.walletTask.Send(msg.Message)
-					composer.serviceTask.Send(server.AcceptRequest{})
-				case tau.Error:
-					composer.logger.Error(msg)
-				default:
-					composer.logger.Errorf("Unexpected message type: %T in compser", msg)
-				}
-				return nil
-			}), composer.walletTask, composer.serviceTask).Run(done)
+			updater.New(config.Version, homeDir, config.Frequency*time.Second, logger).Run(done, version)
 		},
 		func() {
-			composer.server.Run(done)
+			swapperd.New(config.Version, homeDir, "testnet", "17927", logger).Run(done)
+		},
+		func() {
+			swapperd.New(config.Version, homeDir, "mainnet", "7927", logger).Run(done)
+		},
+		func() {
+			select {
+			case <-done:
+			case ver := <-version:
+				config.Version = ver
+				configBytes, err := json.Marshal(config)
+				if err != nil {
+					logger.Println(err)
+					return
+				}
+				if err := ioutil.WriteFile(fmt.Sprintf("%s/config.json", homeDir), configBytes, 0644); err != nil {
+					logger.Println(err)
+					return
+				}
+				os.Exit(0)
+			}
 		},
 	)
 }
