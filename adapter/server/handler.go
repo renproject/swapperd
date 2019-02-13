@@ -28,6 +28,7 @@ import (
 var ErrHandlerIsShuttingDown = fmt.Errorf("Http handler is shutting down")
 
 type handler struct {
+	version    string
 	bootloaded map[string]bool
 	wallet     wallet.Wallet
 	storage    Storage
@@ -54,8 +55,9 @@ type Handler interface {
 	Shutdown()
 }
 
-func NewHandler(cap int, wallet wallet.Wallet, storage Storage, receiver *Receiver) Handler {
+func NewHandler(cap int, version string, wallet wallet.Wallet, storage Storage, receiver *Receiver) Handler {
 	return &handler{
+		version:    version,
 		bootloaded: map[string]bool{},
 		wallet:     wallet,
 		storage:    storage,
@@ -66,7 +68,7 @@ func NewHandler(cap int, wallet wallet.Wallet, storage Storage, receiver *Receiv
 func (handler *handler) GetInfo(password string) GetInfoResponse {
 	handler.bootload(password)
 	return GetInfoResponse{
-		Version:         "v1.0.0-beta.3",
+		Version:         handler.version,
 		Bootloaded:      handler.bootloaded[passwordHash(password)],
 		SupportedTokens: handler.wallet.SupportedTokens(),
 	}
