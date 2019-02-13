@@ -8,7 +8,7 @@ Swapperd is built and officially supported by the Republic Protocol team. It is 
 
 ### macOS and Ubuntu
 
-`curl https://github.com/renproject/swapperd/releases/download/v1.0.0-beta.2/install.sh -sSLf | sh`
+`curl https://github.com/renproject/swapperd/releases/download/v1.0.0-beta.3/install.sh -sSLf | sh`
 
 ### Windows
 
