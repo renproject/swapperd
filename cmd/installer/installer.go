@@ -105,7 +105,7 @@ func startLinuxService(swapperdHome string) error {
 }
 
 func startDarwinService(swapperdHome string) error {
-	serviceContent := fmt.Sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\t\n<dict>\t\t\n<key>Label</key>\t\t\n<string>ren.swapperd</string>\t\t\n<key>ProgramArguments</key>\t\t\n<array>\t\t\t\t\n<string>%s/.swapperd/bin/swapperd</string>\t\t\n</array>\t\t\n<key>KeepAlive</key>\t\t\n<true/>\t\t\n<key>StandardOutPath</key>\t\t\n<string>%s/.swapperd/swapperd.log</string>\t\t\n<key>StandardErrorPath</key>\t\t\n<string>%s/.swapperd/swapperd.log</string>\t\n</dict>\n</plist>", swapperdHome, swapperdHome, swapperdHome)
+	serviceContent := fmt.Sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\t\n<dict>\t\t\n<key>Label</key>\t\t\n<string>ren.swapperd</string>\t\t\n<key>ProgramArguments</key>\t\t\n<array>\t\t\t\t\n<string>%s/bin/swapperd</string>\t\t\n</array>\t\t\n<key>KeepAlive</key>\t\t\n<true/>\t\t\n<key>StandardOutPath</key>\t\t\n<string>%s/swapperd.log</string>\t\t\n<key>StandardErrorPath</key>\t\t\n<string>%s/swapperd.log</string>\t\n</dict>\n</plist>", swapperdHome, swapperdHome, swapperdHome)
 	servicePath := path.Join(os.Getenv("HOME"), "Library", "LaunchAgents", "ren.swapperd.plist")
 	if err := ioutil.WriteFile(servicePath, []byte(serviceContent), 0755); err != nil {
 		return err
