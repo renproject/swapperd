@@ -16,7 +16,6 @@ go build .
 xgo --targets=linux/amd64,windows/amd64 .
 
 cd ../
-
 mv installer/installer bin/installer
 mv swapperd-unix/swapperd-unix bin/swapperd
 mv uninstaller/uninstaller bin/uninstaller
