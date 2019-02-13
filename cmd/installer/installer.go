@@ -90,7 +90,7 @@ func startLinuxService(swapperdHome string) error {
 	if err := exec.Command("mkdir", "-p", serviceLocation).Run(); err != nil {
 		return err
 	}
-	serviceContent := fmt.Sprintf("[Unit]\nDescription=Swapper Daemon\nAssertPathExists=%s/.swapperd\n\n[Service]\nWorkingDirectory=%s/.swapperd\nExecStart=%s/.swapperd/bin/swapperd\nRestart=on-failure\nPrivateTmp=true\nNoNewPrivileges=true\n\n# Specifies which signal to use when killing a service. Defaults to SIGTERM.\n# SIGHUP gives parity time to exit cleanly before SIGKILL (default 90s)\nKillSignal=SIGHUP\n\n[Install]\nWantedBy=default.target", swapperdHome, swapperdHome, swapperdHome)
+	serviceContent := fmt.Sprintf("[Unit]\nDescription=Swapper Daemon\nAssertPathExists=%s\n\n[Service]\nWorkingDirectory=%s\nExecStart=%s/bin/swapperd\nRestart=on-failure\nPrivateTmp=true\nNoNewPrivileges=true\n\n# Specifies which signal to use when killing a service. Defaults to SIGTERM.\n# SIGHUP gives parity time to exit cleanly before SIGKILL (default 90s)\nKillSignal=SIGHUP\n\n[Install]\nWantedBy=default.target", swapperdHome, swapperdHome, swapperdHome)
 	servicePath := path.Join(serviceLocation, "swapperd.service")
 	if err := ioutil.WriteFile(servicePath, []byte(serviceContent), 0644); err != nil {
 		return err
@@ -105,7 +105,7 @@ func startLinuxService(swapperdHome string) error {
 }
 
 func startDarwinService(swapperdHome string) error {
-	serviceContent := fmt.Sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\t\n<dict>\t\t\n<key>Label</key>\t\t\n<string>ren.swapperd</string>\t\t\n<key>ProgramArguments</key>\t\t\n<array>\t\t\t\t\n<string>%s/.swapperd/bin/swapperd</string>\t\t\n</array>\t\t\n<key>KeepAlive</key>\t\t\n<true/>\t\t\n<key>StandardOutPath</key>\t\t\n<string>%s/.swapperd/swapperd.log</string>\t\t\n<key>StandardErrorPath</key>\t\t\n<string>%s/.swapperd/swapperd.log</string>\t\n</dict>\n</plist>", swapperdHome, swapperdHome, swapperdHome)
+	serviceContent := fmt.Sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\t\n<dict>\t\t\n<key>Label</key>\t\t\n<string>ren.swapperd</string>\t\t\n<key>ProgramArguments</key>\t\t\n<array>\t\t\t\t\n<string>%s/bin/swapperd</string>\t\t\n</array>\t\t\n<key>KeepAlive</key>\t\t\n<true/>\t\t\n<key>StandardOutPath</key>\t\t\n<string>%s/swapperd.log</string>\t\t\n<key>StandardErrorPath</key>\t\t\n<string>%s/swapperd.log</string>\t\n</dict>\n</plist>", swapperdHome, swapperdHome, swapperdHome)
 	servicePath := path.Join(os.Getenv("HOME"), "Library", "LaunchAgents", "ren.swapperd.plist")
 	if err := ioutil.WriteFile(servicePath, []byte(serviceContent), 0755); err != nil {
 		return err
