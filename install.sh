@@ -33,7 +33,7 @@ if ls "$HOME"/.swapperd/*.json 1> /dev/null 2>&1; then
 fi
 
 if [ "$latest_version" == "" ]; then 
-  echo "Cannot get the latest version from github"
+  echo "Cannot get the latest version from Github"
   exit 1
 fi
 
