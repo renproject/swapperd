@@ -34,48 +34,47 @@ func New(version, homeDir string, frequency time.Duration, logger logrus.FieldLo
 	}
 }
 
-func (updater *updater) Run(done <-chan struct{}, version chan<- string) {
+func (updater *updater) Run(done <-chan struct{}) {
 	ticker := time.NewTicker(updater.frequency)
 	for {
 		select {
 		case <-done:
 		case <-ticker.C:
-			ver, err := updater.Update(done)
-			if err != nil {
+			if err := updater.Update(done); err != nil {
 				updater.logger.Error(err)
-				continue
 			}
-			version <- ver
 		}
 	}
 }
 
-func (updater *updater) Update(done <-chan struct{}) (string, error) {
+func (updater *updater) Update(done <-chan struct{}) error {
 	updater.logger.Info("looking for latest version ...")
 	ver, err := getLatestVersion()
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	updater.logger.Infof("latest version is %s", ver)
 	res, err := compareVersions(updater.version, ver)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	if res {
 		updater.logger.Info("downloading swapperd ...")
 		if err := downloadSwapperd(ver, updater.homeDir); err != nil {
-			return "", err
+			return err
 		}
 
 		if err := updater.unzipSwapperd(); err != nil {
-			return "", err
+			return err
+		}
+
+		if err := updater.updateLocalVersion(ver); err != nil {
+			return err
 		}
 	}
-
-	updater.logger.Info("done")
-	return ver, nil
+	return nil
 }
 
 func getLatestVersion() (string, error) {
@@ -101,6 +100,22 @@ func getLatestVersion() (string, error) {
 	}
 
 	return release.TagName, nil
+}
+
+func (updater *updater) updateLocalVersion(newVer string) error {
+	config := struct {
+		Version   string        `json:"version"`
+		Frequency time.Duration `json:"frequency"`
+	}{
+		Version:   newVer,
+		Frequency: updater.frequency,
+	}
+
+	configBytes, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(fmt.Sprintf("%s/config.json", updater.homeDir), configBytes, 0644)
 }
 
 func (updater *updater) unzipSwapperd() error {
