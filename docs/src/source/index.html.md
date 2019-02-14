@@ -513,7 +513,7 @@ curl -i     \
 
 ```json
 {
-    "version": "v1.0.0-beta.3",
+    "version": "v1.0.0-beta.5",
     "bootloaded": true,
     "supportedBlockchains": [
       "ethereum", "bitcoin", "erc20"
