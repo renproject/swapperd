@@ -41,7 +41,7 @@ func (notifier *notifier) Watch(done <-chan struct{}, files ...string) {
 			if !ok {
 				return
 			}
-			os.Exit(0)
+			os.Exit(1)
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
