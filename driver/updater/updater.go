@@ -62,7 +62,7 @@ func (updater *updater) Update(done <-chan struct{}) error {
 
 	if res {
 		updater.logger.Info("downloading swapperd ...")
-		if err := downloadSwapperd(ver, updater.homeDir); err != nil {
+		if err := updater.downloadSwapperd(ver); err != nil {
 			return err
 		}
 
@@ -70,7 +70,7 @@ func (updater *updater) Update(done <-chan struct{}) error {
 			return err
 		}
 
-		if err := updater.updateLocalVersion(ver); err != nil {
+		if err := updater.updateConfig(ver); err != nil {
 			return err
 		}
 	}
@@ -102,20 +102,24 @@ func getLatestVersion() (string, error) {
 	return release.TagName, nil
 }
 
-func (updater *updater) updateLocalVersion(newVer string) error {
-	config := struct {
-		Version   string        `json:"version"`
-		Frequency time.Duration `json:"frequency"`
-	}{
-		Version:   newVer,
-		Frequency: updater.frequency,
-	}
-
-	configBytes, err := json.Marshal(config)
+func (updater *updater) updateConfig(version string) error {
+	// Get the data
+	resp, err := http.Get(fmt.Sprintf("https://github.com/renproject/swapperd/releases/download/%s/config.json", version))
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(fmt.Sprintf("%s/config.json", updater.homeDir), configBytes, 0644)
+	defer resp.Body.Close()
+
+	respBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to get the latest config file (%d): %s", resp.StatusCode, respBytes)
+	}
+
+	return ioutil.WriteFile(fmt.Sprintf("%s/config.json", updater.homeDir), respBytes, 0644)
 }
 
 func (updater *updater) unzipSwapperd() error {
@@ -165,7 +169,7 @@ func (updater *updater) unzipSwapperd() error {
 	return nil
 }
 
-func downloadSwapperd(version, homeDir string) error {
+func (updater *updater) downloadSwapperd(version string) error {
 	// Get the data
 	resp, err := http.Get(fmt.Sprintf("https://github.com/renproject/swapperd/releases/download/%s/swapper_%s_amd64.zip", version, runtime.GOOS))
 	if err != nil {
@@ -173,8 +177,16 @@ func downloadSwapperd(version, homeDir string) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		respBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("failed to download the swapperd.zip file: %s", respBytes)
+	}
+
 	// Create the file
-	out, err := os.Create(fmt.Sprintf("%s/swapperd.zip", homeDir))
+	out, err := os.Create(fmt.Sprintf("%s/swapperd.zip", updater.homeDir))
 	if err != nil {
 		return err
 	}
