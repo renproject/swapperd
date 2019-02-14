@@ -50,8 +50,7 @@ else
   rm -rf .swapperd
   exit 1
 fi
-
-echo "{ \"version\": \"$VERSION\", \"frequency\": 3600 }" > config.json
+curl -Ls "https://github.com/renproject/swapperd/releases/download/$VERSION/config.json"  > config.json
 
 unzip -o swapper.zip
 chmod +x bin/swapperd
