@@ -26,8 +26,13 @@ func Run(done <-chan struct{}) {
 		panic(err)
 	}
 	homeDir := filepath.Dir(filepath.Dir(ex))
+	logFile, err := os.OpenFile(fmt.Sprintf("%s/swapperd.log", homeDir), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		panic(err)
+	}
+
 	logger := logrus.New()
-	logger.SetOutput(os.Stdout)
+	logger.SetOutput(logFile)
 
 	configData, err := ioutil.ReadFile(fmt.Sprintf("%s/config.json", homeDir))
 	if err != nil {
