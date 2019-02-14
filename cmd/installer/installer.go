@@ -117,5 +117,9 @@ func startWindowsService(swapperdHome string) error {
 	if err := exec.Command("cmd", "/C", "sc", "create", "swapperd", "start=", "auto", "binpath=", path.Join(swapperdHome, "bin", "swapperd.exe")).Run(); err != nil {
 		return err
 	}
-	return exec.Command("cmd", "/C", "sc", "start", "swapperd").Run()
+
+	if err := exec.Command("cmd", "/C", "sc", "start", "swapperd").Run(); err != nil {
+		return err
+	}
+	return exec.Command("cmd", "/C", "sc", "failure", "swapperd", "reset=", "0", "actions=", "restart/0/restart/0/restart/0").Run()
 }
