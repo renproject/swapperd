@@ -296,10 +296,8 @@ func (atom *erc20SwapContractBinder) Cost() blockchain.Cost {
 }
 
 func (atom *erc20SwapContractBinder) sendValue() *big.Int {
-	cost, _ := atom.swap.Token.TransactionCost(atom.swap.Value)
-	fee, ok := cost[atom.swap.Token.Name]
-	if ok {
-		return new(big.Int).Add(atom.swap.Value, fee)
+	if additionalFee := atom.swap.Token.AdditionalTransactionFee(atom.swap.Value); additionalFee != nil {
+		return new(big.Int).Add(atom.swap.Value, additionalFee)
 	}
 	return atom.swap.Value
 }
