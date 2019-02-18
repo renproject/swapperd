@@ -15,11 +15,11 @@ import (
 func (wallet *wallet) Transfer(password string, token blockchain.Token, to string, amount, fee *big.Int, sendAll bool) (string, blockchain.Cost, error) {
 	switch token.Blockchain {
 	case blockchain.Bitcoin:
-		return wallet.transferBTC(password, to, amount)
+		return wallet.transferBTC(password, to, amount, fee, sendAll)
 	case blockchain.Ethereum:
-		return wallet.transferETH(password, to, amount)
+		return wallet.transferETH(password, to, amount, fee, sendAll)
 	case blockchain.ERC20:
-		return wallet.transferERC20(password, token, to, amount)
+		return wallet.transferERC20(password, token, to, amount, fee, sendAll)
 	default:
 		return "", blockchain.Cost{}, blockchain.NewErrUnsupportedToken(token.Name)
 	}
@@ -87,7 +87,7 @@ func (wallet *wallet) Lookup(token blockchain.Token, txHash string) (transfer.Up
 	switch token.Blockchain {
 	case blockchain.Bitcoin:
 		return wallet.bitcoinLookup(txHash)
-	case blockchain.Ethereum:
+	case blockchain.Ethereum, blockchain.ERC20:
 		return wallet.ethereumLookup(txHash)
 	default:
 		return transfer.UpdateReceipt{}, blockchain.NewErrUnsupportedBlockchain(token.Blockchain)
