@@ -220,9 +220,11 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) error {
 	if err != nil {
 		return err
 	}
-
 	if err := handler.wallet.VerifyAddress(token.Blockchain, req.To); err != nil {
 		return err
+	}
+	if req.SendAll {
+		return handler.Write(transfer.NewTransferRequest(req.Password, token, req.To, nil, nil, true))
 	}
 
 	amount, ok := big.NewInt(0).SetString(req.Amount, 10)
@@ -234,16 +236,7 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) error {
 		return err
 	}
 
-	txCost, err := token.TransactionCost(amount)
-	if err != nil {
-		return err
-	}
-
-	if err := handler.Write(transfer.NewTransferRequest(req.Password, token, req.To, amount, txCost)); err != nil {
-		return err
-	}
-
-	return nil
+	return handler.Write(transfer.NewTransferRequest(req.Password, token, req.To, amount, nil, false))
 }
 
 func (handler *handler) GetID(password, idType string) (string, error) {
