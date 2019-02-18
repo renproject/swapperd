@@ -102,7 +102,7 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 	atom.logger.Info(fmt.Sprintf("Initiating on Ethereum blockchain"))
 
 	// Approve the contract to transfer tokens
-	if err := atom.account.Transact(
+	approveTx, err := atom.account.Transact(
 		ctx,
 		nil,
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
@@ -111,20 +111,20 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 			if err != nil {
 				return tx, err
 			}
-			txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
-			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], txFee)
 			msg, _ := atom.account.FormatTransactionView("Approved on Ethereum blockchain", tx.Hash().String())
 			atom.logger.Info(msg)
 			return tx, nil
 		},
 		nil,
 		1,
-	); err != nil {
+	)
+	if err != nil {
 		return err
 	}
+	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], approveTx.Cost())
 
 	// Initiate the Atomic Swap
-	return atom.account.Transact(
+	initiateTx, err := atom.account.Transact(
 		ctx,
 		nil,
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
@@ -143,10 +143,6 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 					return tx, err
 				}
 			}
-
-			txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
-			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], txFee)
-
 			msg, _ := atom.account.FormatTransactionView("Initiated on Ethereum blockchain", tx.Hash().String())
 			atom.logger.Info(msg)
 			return tx, nil
@@ -160,6 +156,11 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 		},
 		1,
 	)
+	if err != nil {
+		return err
+	}
+	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], initiateTx.Cost())
+	return nil
 }
 
 // Refund an Atom swap by calling a function on ethereum
@@ -167,7 +168,7 @@ func (atom *erc20SwapContractBinder) Refund() error {
 	atom.logger.Info("Refunding on Ethereum blockchain")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	if err := atom.account.Transact(
+	tx, err := atom.account.Transact(
 		ctx,
 		func() bool {
 			refundable, err := atom.swapperBinder.Refundable(&bind.CallOpts{}, atom.id)
@@ -182,9 +183,6 @@ func (atom *erc20SwapContractBinder) Refund() error {
 			if err != nil {
 				return nil, err
 			}
-
-			txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
-			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], txFee)
 
 			if _, ok := atom.cost[atom.swap.Token.Name]; ok {
 				atom.cost[atom.swap.Token.Name] = new(big.Int).Sub(atom.cost[atom.swap.Token.Name], atom.swap.BrokerFee)
@@ -202,9 +200,11 @@ func (atom *erc20SwapContractBinder) Refund() error {
 			return !refundable
 		},
 		1,
-	); err != nil && err != beth.ErrPreConditionCheckFailed {
+	)
+	if err != nil && err != beth.ErrPreConditionCheckFailed {
 		return err
 	}
+	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], tx.Cost())
 	return nil
 }
 
@@ -274,7 +274,7 @@ func (atom *erc20SwapContractBinder) Audit() error {
 func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	if err := atom.account.Transact(
+	tx, err := atom.account.Transact(
 		ctx,
 		func() bool {
 			redeemable, err := atom.swapperBinder.Redeemable(&bind.CallOpts{}, atom.id)
@@ -290,9 +290,6 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 				return nil, err
 			}
 
-			txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
-			atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], txFee)
-
 			msg, _ := atom.account.FormatTransactionView("Redeemed the atomic swap on Ethereum blockchain", tx.Hash().String())
 			atom.logger.Info(msg)
 			return tx, nil
@@ -305,12 +302,14 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 			return !refundable
 		},
 		1,
-	); err != nil {
+	)
+	if err != nil {
 		if err != beth.ErrPreConditionCheckFailed {
 			return err
 		}
 		atom.logger.Info("Skipping redeem on Ethereum Blockchain")
 	}
+	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], tx.Cost())
 	return nil
 }
 
