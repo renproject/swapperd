@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/renproject/swapperd/driver/notifier"
 	"github.com/renproject/swapperd/driver/swapperd"
 	"github.com/renproject/swapperd/driver/updater"
 	"github.com/republicprotocol/co-go"
@@ -25,8 +26,13 @@ func Run(done <-chan struct{}) {
 		panic(err)
 	}
 	homeDir := filepath.Dir(filepath.Dir(ex))
+	logFile, err := os.OpenFile(fmt.Sprintf("%s/swapperd.log", homeDir), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		panic(err)
+	}
+
 	logger := logrus.New()
-	logger.SetOutput(os.Stdout)
+	logger.SetOutput(logFile)
 
 	configData, err := ioutil.ReadFile(fmt.Sprintf("%s/config.json", homeDir))
 	if err != nil {
@@ -37,10 +43,9 @@ func Run(done <-chan struct{}) {
 		panic(err)
 	}
 
-	version := make(chan string, 1)
 	co.ParBegin(
 		func() {
-			updater.New(config.Version, homeDir, config.Frequency*time.Second, logger).Run(done, version)
+			updater.New(config.Version, homeDir, config.Frequency*time.Second, logger).Run(done)
 		},
 		func() {
 			swapperd.New(config.Version, homeDir, "testnet", "17927", logger).Run(done)
@@ -49,21 +54,7 @@ func Run(done <-chan struct{}) {
 			swapperd.New(config.Version, homeDir, "mainnet", "7927", logger).Run(done)
 		},
 		func() {
-			select {
-			case <-done:
-			case ver := <-version:
-				config.Version = ver
-				configBytes, err := json.Marshal(config)
-				if err != nil {
-					logger.Println(err)
-					return
-				}
-				if err := ioutil.WriteFile(fmt.Sprintf("%s/config.json", homeDir), configBytes, 0644); err != nil {
-					logger.Println(err)
-					return
-				}
-				os.Exit(0)
-			}
+			notifier.New(homeDir, logger).Watch(done, "config.json", "mainnet.json", "testnet.json")
 		},
 	)
 }

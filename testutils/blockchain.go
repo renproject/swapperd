@@ -42,8 +42,8 @@ func (blockchain *MockBlockchain) UpdateBalance(balance map[blockchain.TokenName
 func (bc *MockBlockchain) GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error) {
 	return "", nil
 }
-func (bc *MockBlockchain) Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error) {
-	return "", nil
+func (bc *MockBlockchain) Transfer(password string, token blockchain.Token, to string, amount, gasPrice *big.Int, sendAll bool) (string, blockchain.Cost, error) {
+	return "", blockchain.Cost{}, nil
 }
 
 func (bc *MockBlockchain) Lookup(token blockchain.Token, txHash string) (transfer.UpdateReceipt, error) {
