@@ -18,7 +18,7 @@ type Storage interface {
 
 type Blockchain interface {
 	GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error)
-	Transfer(password string, token blockchain.Token, to string, amount *big.Int) (string, error)
+	Transfer(password string, token blockchain.Token, to string, amount, fee *big.Int, sendAll bool) (string, blockchain.Cost, error)
 	Lookup(token blockchain.Token, txHash string) (UpdateReceipt, error)
 }
 
@@ -45,18 +45,18 @@ func (transfers *transfers) handleTransferRequest(msg TransferRequest) tau.Messa
 	if err != nil {
 		return tau.NewError(err)
 	}
-	txHash, err := transfers.blockchain.Transfer(msg.Password, msg.Token, msg.To, msg.Amount)
+	txHash, txCost, err := transfers.blockchain.Transfer(msg.Password, msg.Token, msg.To, msg.Amount, msg.Fee, msg.SendAll)
 	if err != nil {
 		return tau.NewError(err)
 	}
-	receipt := buildReceipt(msg, from, txHash)
+	receipt := buildReceipt(msg, from, txHash, txCost)
 	if err := transfers.storage.PutTransfer(receipt); err != nil {
 		return tau.NewError(err)
 	}
 	return nil
 }
 
-func buildReceipt(req TransferRequest, from, txHash string) TransferReceipt {
+func buildReceipt(req TransferRequest, from, txHash string, txCost blockchain.Cost) TransferReceipt {
 	passwordHash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	return TransferReceipt{
 		Confirmations: 0,
@@ -67,7 +67,7 @@ func buildReceipt(req TransferRequest, from, txHash string) TransferReceipt {
 			From:   from,
 			Token:  req.Token,
 			Amount: req.Amount.String(),
-			TxCost: blockchain.CostToCostBlob(req.TxCost),
+			TxCost: blockchain.CostToCostBlob(txCost),
 			TxHash: txHash,
 		},
 	}
@@ -78,11 +78,12 @@ type TransferRequest struct {
 	Token    blockchain.Token
 	To       string
 	Amount   *big.Int
-	TxCost   blockchain.Cost
+	Fee      *big.Int
+	SendAll  bool
 }
 
-func NewTransferRequest(password string, token blockchain.Token, to string, amount *big.Int, txCost blockchain.Cost) TransferRequest {
-	return TransferRequest{password, token, to, amount, txCost}
+func NewTransferRequest(password string, token blockchain.Token, to string, amount, fee *big.Int, sendAll bool) TransferRequest {
+	return TransferRequest{password, token, to, amount, fee, sendAll}
 }
 
 func (request TransferRequest) IsMessage() {
