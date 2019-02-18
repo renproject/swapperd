@@ -26,12 +26,6 @@ cd $HOME/.swapperd
 ostype="$(uname -s)"
 cputype="$(uname -m)"
 
-# check whether the service/plist file exists
-if ls "$HOME"/.swapperd/*.json 1> /dev/null 2>&1; then
-  echo "Swapperd has already been installed"
-  exit 0
-fi
-
 VERSION=$(latest_version)
 if [ "$VERSION" = '' ]; then 
   echo "Cannot get the latest version from Github"
