@@ -46,6 +46,15 @@ else
 fi
 curl -Ls "https://github.com/renproject/swapperd/releases/download/$VERSION/config.json"  > config.json
 
+# do not run the installer if keystore files exist
+if ls "$HOME"/.swapperd/*.json 1> /dev/null 2>&1; then
+  echo "Swapperd has already been installed, updating..."
+  rm swapper.zip
+  rm bin/installer
+  echo "Swapperd has been updated. Great!"
+  exit 0
+fi
+
 unzip -o swapper.zip
 chmod +x bin/swapperd
 chmod +x bin/installer
