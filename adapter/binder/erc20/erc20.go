@@ -23,25 +23,19 @@ type erc20SwapContractBinder struct {
 	swap           swap.Swap
 	logger         logrus.FieldLogger
 	swapperAddress common.Address
-	tokenAddress   common.Address
 	swapperBinder  *ERC20SwapContract
-	tokenBinder    *CompatibleERC20
+	erc20          beth.ERC20
 	cost           blockchain.Cost
 }
 
 // NewERC20SwapContractBinder returns a new ERC20 Atom instance
 func NewERC20SwapContractBinder(account beth.Account, swap swap.Swap, cost blockchain.Cost, logger logrus.FieldLogger) (immediate.Contract, error) {
-	tokenAddress, err := account.ReadAddress(fmt.Sprintf("%s", swap.Token.Name))
+	erc20, err := account.NewERC20(string(swap.Token.Name))
 	if err != nil {
 		return nil, err
 	}
 
 	swapperAddress, err := account.ReadAddress(fmt.Sprintf("%sSwapContract", swap.Token.Name))
-	if err != nil {
-		return nil, err
-	}
-
-	tokenBinder, err := NewCompatibleERC20(tokenAddress, bind.ContractBackend(account.EthClient()))
 	if err != nil {
 		return nil, err
 	}
@@ -75,9 +69,8 @@ func NewERC20SwapContractBinder(account beth.Account, swap swap.Swap, cost block
 	return &erc20SwapContractBinder{
 		account:        account,
 		swapperAddress: swapperAddress,
-		tokenAddress:   tokenAddress,
 		swapperBinder:  swapperBinder,
-		tokenBinder:    tokenBinder,
+		erc20:          erc20,
 		logger:         logger,
 		swap:           swap,
 		id:             id,
@@ -102,22 +95,7 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 	atom.logger.Info(fmt.Sprintf("Initiating on Ethereum blockchain"))
 
 	// Approve the contract to transfer tokens
-	approveTx, err := atom.account.Transact(
-		ctx,
-		nil,
-		func(tops *bind.TransactOpts) (*types.Transaction, error) {
-			tops.GasPrice = atom.swap.Fee
-			tx, err := atom.tokenBinder.Approve(tops, atom.swapperAddress, atom.sendValue())
-			if err != nil {
-				return tx, err
-			}
-			msg, _ := atom.account.FormatTransactionView("Approved on Ethereum blockchain", tx.Hash().String())
-			atom.logger.Info(msg)
-			return tx, nil
-		},
-		nil,
-		1,
-	)
+	approveTx, err := atom.erc20.Approve(ctx, atom.swapperAddress, atom.sendValue(), atom.swap.Fee)
 	if err != nil {
 		return err
 	}
