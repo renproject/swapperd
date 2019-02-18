@@ -114,8 +114,11 @@ func (atom *ethSwapContractBinder) Initiate() error {
 		},
 		0,
 	)
-	if err != nil && err != beth.ErrPreConditionCheckFailed {
-		return err
+	if err != nil {
+		if err != beth.ErrPreConditionCheckFailed {
+			return err
+		}
+		return nil
 	}
 	txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
 	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], txFee)
@@ -268,6 +271,7 @@ func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 			return err
 		}
 		atom.logger.Info("Skipping redeem on Ethereum blockchain")
+		return nil
 	}
 	txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
 	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], txFee)
