@@ -44,7 +44,17 @@ else
   rm -rf .swapperd
   exit 1
 fi
+
 curl -Ls "https://github.com/renproject/swapperd/releases/download/$VERSION/config.json"  > config.json
+
+# do not run the installer if mainnet keystore file exists
+if ls "$HOME"/.swapperd/mainnet.json 1> /dev/null 2>&2; then
+  echo "Swapperd has already been installed, updating..."
+  rm swapper.zip
+  rm bin/installer
+  echo "Swapperd has been updated. Great!"
+  exit 0
+fi
 
 unzip -o swapper.zip
 chmod +x bin/swapperd
