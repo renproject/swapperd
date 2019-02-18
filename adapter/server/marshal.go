@@ -42,6 +42,8 @@ type PostTransfersRequest struct {
 	Token    string `json:"token"`
 	To       string `json:"to"`
 	Amount   string `json:"amount"`
+	Fee      string `json:"fee"`
+	SendAll  bool   `json:"sendAll"`
 	Password string `json:"password"`
 }
 
