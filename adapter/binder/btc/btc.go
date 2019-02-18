@@ -52,6 +52,9 @@ func NewBTCSwapContractBinder(account libbtc.Account, swap swap.Swap, cost block
 	}
 
 	swap.Value = new(big.Int).Add(swap.Value, swap.BrokerFee)
+	if swap.Fee == nil {
+		swap.Fee = big.NewInt(10000)
+	}
 
 	logger.Info(swap.ID, fmt.Sprintf("BTC atomic swap = %s", scriptAddr))
 	return &btcSwapContractBinder{
