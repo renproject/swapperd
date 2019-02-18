@@ -161,11 +161,6 @@ func (atom *erc20SwapContractBinder) Refund() error {
 			if err != nil {
 				return nil, err
 			}
-
-			if _, ok := atom.cost[atom.swap.Token.Name]; ok {
-				atom.cost[atom.swap.Token.Name] = new(big.Int).Sub(atom.cost[atom.swap.Token.Name], atom.swap.BrokerFee)
-			}
-
 			msg, _ := atom.account.FormatTransactionView("Refunded on Ethereum blockchain", tx.Hash().String())
 			atom.logger.Info(msg)
 			return tx, nil
@@ -183,6 +178,9 @@ func (atom *erc20SwapContractBinder) Refund() error {
 		return err
 	}
 	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], tx.Cost())
+	if _, ok := atom.cost[atom.swap.Token.Name]; ok {
+		atom.cost[atom.swap.Token.Name] = new(big.Int).Sub(atom.cost[atom.swap.Token.Name], atom.swap.BrokerFee)
+	}
 	return nil
 }
 
