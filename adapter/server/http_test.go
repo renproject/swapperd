@@ -65,6 +65,7 @@ var _ = Describe("Server Adapter", func() {
 	})
 
 	Context("basic requests", func() {
+
 		It("when getting swapperd info", func() {
 			req, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%s/info", os.Getenv("PORT")), nil)
 			Expect(err).Should(BeNil())
@@ -78,7 +79,6 @@ var _ = Describe("Server Adapter", func() {
 			Expect(err).Should(BeNil())
 			reflect.DeepEqual(msg, wallet.Bootload{Password: "Alice"})
 		})
-
 		It("when doing an atomic swap", func() {
 			aliceSwap := buildSwap("Bob")
 			data, err := json.MarshalIndent(aliceSwap, "", "  ")
@@ -96,10 +96,10 @@ var _ = Describe("Server Adapter", func() {
 			_, ok := msg.(swapper.SwapRequest)
 			Expect(ok).Should(BeTrue())
 		})
+	})
 
-		AfterSuite(func() {
-			close(done)
-		})
+	AfterSuite(func() {
+		close(done)
 	})
 })
 

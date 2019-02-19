@@ -46,6 +46,7 @@ else
 fi
 
 curl -Ls "https://github.com/renproject/swapperd/releases/download/$VERSION/config.json"  > config.json
+unzip -o swapper.zip
 
 # do not run the installer if mainnet keystore file exists
 if ls "$HOME"/.swapperd/mainnet.json 1> /dev/null 2>&2; then
@@ -56,7 +57,6 @@ if ls "$HOME"/.swapperd/mainnet.json 1> /dev/null 2>&2; then
   exit 0
 fi
 
-unzip -o swapper.zip
 chmod +x bin/swapperd
 chmod +x bin/installer
 

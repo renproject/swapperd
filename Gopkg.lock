@@ -111,7 +111,7 @@
   branch = "master"
   name = "github.com/golang/snappy"
   packages = ["."]
-  revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
+  revision = "2a8bb927dd31d8daada140a5d09578521ce5c36a"
 
 [[projects]]
   name = "github.com/google/uuid"
@@ -206,7 +206,7 @@
   branch = "master"
   name = "github.com/republicprotocol/beth-go"
   packages = ["."]
-  revision = "e4aa895efc89c0ca62dd6749439788f0d01d3eae"
+  revision = "6df1f5884092334a780deef977614de143562790"
 
 [[projects]]
   branch = "master"

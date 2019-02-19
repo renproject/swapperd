@@ -33,6 +33,13 @@ func (wallet *wallet) transferBTC(password, to string, amount, fee *big.Int, sen
 	if err != nil {
 		return "", blockchain.Cost{}, err
 	}
+
+	if amount == nil {
+		amount = big.NewInt(0)
+	}
+	if fee == nil {
+		fee = big.NewInt(10000)
+	}
 	txHash, err := account.Transfer(ctx, to, amount.Int64(), fee.Int64(), sendAll)
 	if err != nil {
 		return txHash, blockchain.Cost{}, err
