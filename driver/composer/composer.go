@@ -54,7 +54,7 @@ func Run(done <-chan struct{}) {
 			swapperd.New(config.Version, homeDir, "mainnet", "7927", logger).Run(done)
 		},
 		func() {
-			notifier.New(homeDir, logger).Watch(done, "config.json", "mainnet.json", "testnet.json")
+			notifier.New(homeDir, logger).Watch(done, "config.json", "mainnet.json", "testnet.json", filepath.Join("bin", filepath.Base(ex)))
 		},
 	)
 }
