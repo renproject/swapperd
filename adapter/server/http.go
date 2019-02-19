@@ -58,11 +58,11 @@ func (server *httpServer) Run(done <-chan struct{}) {
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", server.port))
 	if err != nil {
-		panic(err)
+		server.logger.Error(err)
 	}
 	go func() {
 		if err := http.Serve(listener, handler); err != nil {
-			panic(err)
+			server.logger.Error(err)
 		}
 	}()
 	server.logger.Infof("swapperd started listening on http://127.0.0.1:%s", server.port)
