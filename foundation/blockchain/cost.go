@@ -2,6 +2,15 @@ package blockchain
 
 import "math/big"
 
+type TxExecutionSpeed uint8
+
+const (
+	Nil = TxExecutionSpeed(iota)
+	Slow
+	Standard
+	Fast
+)
+
 // Cost of an atomic swap
 type Cost map[TokenName]*big.Int
 
