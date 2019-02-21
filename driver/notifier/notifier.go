@@ -2,21 +2,18 @@ package notifier
 
 import (
 	"os"
-	"path"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/fsnotify.v1"
 )
 
 type notifier struct {
-	homeDir string
-	logger  logrus.FieldLogger
+	logger logrus.FieldLogger
 }
 
-func New(homeDir string, logger logrus.FieldLogger) *notifier {
+func New(logger logrus.FieldLogger) *notifier {
 	return &notifier{
-		homeDir: homeDir,
-		logger:  logger,
+		logger: logger,
 	}
 }
 
@@ -28,7 +25,7 @@ func (notifier *notifier) Watch(done <-chan struct{}, files ...string) {
 	defer watcher.Close()
 
 	for _, file := range files {
-		if err := watcher.Add(path.Join(notifier.homeDir, file)); err != nil {
+		if err := watcher.Add(file); err != nil {
 			notifier.logger.Fatal(err)
 		}
 	}
