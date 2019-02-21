@@ -6,26 +6,26 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/renproject/libbtc-go"
+	"github.com/renproject/libeth-go"
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/beth-go"
-	"github.com/republicprotocol/libbtc-go"
 )
 
-func (wallet *wallet) Transfer(password string, token blockchain.Token, to string, amount, fee *big.Int, sendAll bool) (string, blockchain.Cost, error) {
+func (wallet *wallet) Transfer(password string, token blockchain.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error) {
 	switch token.Blockchain {
 	case blockchain.Bitcoin:
-		return wallet.transferBTC(password, to, amount, fee, sendAll)
+		return wallet.transferBTC(password, to, amount, speed, sendAll)
 	case blockchain.Ethereum:
-		return wallet.transferETH(password, to, amount, fee, sendAll)
+		return wallet.transferETH(password, to, amount, speed, sendAll)
 	case blockchain.ERC20:
-		return wallet.transferERC20(password, token, to, amount, fee, sendAll)
+		return wallet.transferERC20(password, token, to, amount, speed, sendAll)
 	default:
 		return "", blockchain.Cost{}, blockchain.NewErrUnsupportedToken(token.Name)
 	}
 }
 
-func (wallet *wallet) transferBTC(password, to string, amount, fee *big.Int, sendAll bool) (string, blockchain.Cost, error) {
+func (wallet *wallet) transferBTC(password, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 	cost := blockchain.Cost{}
@@ -33,22 +33,18 @@ func (wallet *wallet) transferBTC(password, to string, amount, fee *big.Int, sen
 	if err != nil {
 		return "", blockchain.Cost{}, err
 	}
-
 	if amount == nil {
 		amount = big.NewInt(0)
 	}
-	if fee == nil {
-		fee = big.NewInt(10000)
-	}
-	txHash, err := account.Transfer(ctx, to, amount.Int64(), fee.Int64(), sendAll)
+	txHash, txFee, err := account.Transfer(ctx, to, amount.Int64(), libbtc.Fast, sendAll)
 	if err != nil {
 		return txHash, blockchain.Cost{}, err
 	}
-	cost[blockchain.BTC] = fee
+	cost[blockchain.BTC] = big.NewInt(txFee)
 	return txHash, cost, nil
 }
 
-func (wallet *wallet) transferETH(password, to string, amount, fee *big.Int, sendAll bool) (string, blockchain.Cost, error) {
+func (wallet *wallet) transferETH(password, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 	cost := blockchain.Cost{}
@@ -56,7 +52,7 @@ func (wallet *wallet) transferETH(password, to string, amount, fee *big.Int, sen
 	if err != nil {
 		return "", cost, err
 	}
-	tx, err := account.Transfer(ctx, common.HexToAddress(to), amount, fee, 0, sendAll)
+	tx, err := account.Transfer(ctx, common.HexToAddress(to), amount, libeth.TxExecutionSpeed(speed), 0, sendAll)
 	if err != nil {
 		return "", cost, err
 	}
@@ -64,7 +60,7 @@ func (wallet *wallet) transferETH(password, to string, amount, fee *big.Int, sen
 	return tx.Hash().String(), cost, nil
 }
 
-func (wallet *wallet) transferERC20(password string, token blockchain.Token, to string, amount, gasPrice *big.Int, sendAll bool) (string, blockchain.Cost, error) {
+func (wallet *wallet) transferERC20(password string, token blockchain.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error) {
 	cost := blockchain.Cost{}
 	account, err := wallet.EthereumAccount(password)
 	if err != nil {
@@ -79,7 +75,7 @@ func (wallet *wallet) transferERC20(password string, token blockchain.Token, to 
 	if sendAll {
 		amount, err = erc20.BalanceOf(ctx, account.Address())
 	}
-	tx, err := erc20.Transfer(ctx, common.HexToAddress(to), amount, gasPrice, sendAll)
+	tx, err := erc20.Transfer(ctx, common.HexToAddress(to), amount, libeth.TxExecutionSpeed(speed), sendAll)
 	if err != nil {
 		return "", cost, err
 	}
@@ -102,7 +98,7 @@ func (wallet *wallet) Lookup(token blockchain.Token, txHash string) (transfer.Up
 }
 
 func (wallet *wallet) ethereumLookup(txHash string) (transfer.UpdateReceipt, error) {
-	client, err := beth.Connect(wallet.config.Ethereum.Network.URL)
+	client, err := libeth.Connect(wallet.config.Ethereum.Network.URL)
 	if err != nil {
 		return transfer.UpdateReceipt{}, err
 	}

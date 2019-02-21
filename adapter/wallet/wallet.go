@@ -3,10 +3,12 @@ package wallet
 import (
 	"math/big"
 
+	"github.com/sirupsen/logrus"
+
+	"github.com/renproject/libbtc-go"
+	"github.com/renproject/libeth-go"
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/beth-go"
-	"github.com/republicprotocol/libbtc-go"
 )
 
 type Config struct {
@@ -35,23 +37,25 @@ type Wallet interface {
 	Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error)
 	Balance(password string, token blockchain.Token) (blockchain.Balance, error)
 	Lookup(token blockchain.Token, txHash string) (transfer.UpdateReceipt, error)
-	Transfer(password string, token blockchain.Token, to string, amount, fee *big.Int, senAll bool) (string, blockchain.Cost, error)
+	Transfer(password string, token blockchain.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, senAll bool) (string, blockchain.Cost, error)
 	GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error)
 	Addresses(password string) (map[blockchain.TokenName]string, error)
 	VerifyAddress(blockchain blockchain.BlockchainName, address string) error
 	VerifyBalance(password string, token blockchain.Token, balance *big.Int) error
 
-	EthereumAccount(password string) (beth.Account, error)
+	EthereumAccount(password string) (libeth.Account, error)
 	BitcoinAccount(password string) (libbtc.Account, error)
 	ECDSASigner(password string) (ECDSASigner, error)
 }
 
 type wallet struct {
 	config Config
+	logger logrus.FieldLogger
 }
 
-func New(config Config) Wallet {
+func New(config Config, logger logrus.FieldLogger) Wallet {
 	return &wallet{
 		config: config,
+		logger: logger,
 	}
 }

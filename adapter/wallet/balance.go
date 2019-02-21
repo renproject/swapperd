@@ -9,11 +9,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/renproject/libbtc-go"
+	"github.com/renproject/libeth-go"
 	"github.com/renproject/swapperd/adapter/binder/erc20"
 	"github.com/renproject/swapperd/foundation/blockchain"
-	"github.com/republicprotocol/beth-go"
 	"github.com/republicprotocol/co-go"
-	"github.com/republicprotocol/libbtc-go"
 )
 
 func (wallet *wallet) Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error) {
@@ -56,7 +56,7 @@ func (wallet *wallet) balanceBTC(address string) (blockchain.Balance, error) {
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
-	btcAccount := libbtc.NewAccount(libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name), randomKey)
+	btcAccount := libbtc.NewAccount(libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name), randomKey, nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
@@ -73,7 +73,7 @@ func (wallet *wallet) balanceBTC(address string) (blockchain.Balance, error) {
 }
 
 func (wallet *wallet) balanceETH(address string) (blockchain.Balance, error) {
-	client, err := beth.Connect(wallet.config.Ethereum.Network.URL)
+	client, err := libeth.Connect(wallet.config.Ethereum.Network.URL)
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
@@ -94,7 +94,7 @@ func (wallet *wallet) balanceETH(address string) (blockchain.Balance, error) {
 }
 
 func (wallet *wallet) balanceERC20(token blockchain.Token, address string) (blockchain.Balance, error) {
-	client, err := beth.Connect(wallet.config.Ethereum.Network.URL)
+	client, err := libeth.Connect(wallet.config.Ethereum.Network.URL)
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
