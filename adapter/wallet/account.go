@@ -6,13 +6,13 @@ import (
 	"crypto/rsa"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/republicprotocol/beth-go"
-	"github.com/republicprotocol/libbtc-go"
+	"github.com/renproject/libbtc-go"
+	"github.com/renproject/libeth-go"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
 )
 
-func (wallet *wallet) EthereumAccount(password string) (beth.Account, error) {
+func (wallet *wallet) EthereumAccount(password string) (libeth.Account, error) {
 	var derivationPath []uint32
 	switch wallet.config.Ethereum.Network.Name {
 	case "kovan", "ropsten":
@@ -24,7 +24,7 @@ func (wallet *wallet) EthereumAccount(password string) (beth.Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	ethAccount, err := beth.NewAccount(wallet.config.Ethereum.Network.URL, privKey)
+	ethAccount, err := libeth.NewAccount(wallet.config.Ethereum.Network.URL, privKey)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,9 @@ func (wallet *wallet) BitcoinAccount(password string) (libbtc.Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	return libbtc.NewAccount(libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name), privKey), nil
+	logger := wallet.logger.WithField("token", "bitcoin")
+	logger = logger.WithField("network", wallet.config.Bitcoin.Network.Name)
+	return libbtc.NewAccount(libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name), privKey, logger), nil
 }
 
 func (wallet *wallet) loadECDSAKey(password string, path []uint32) (*ecdsa.PrivateKey, error) {

@@ -10,24 +10,25 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/renproject/libeth-go"
 	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
-	"github.com/republicprotocol/beth-go"
 	"github.com/sirupsen/logrus"
 )
 
 type ethSwapContractBinder struct {
 	id      [32]byte
-	account beth.Account
+	account libeth.Account
 	swap    swap.Swap
+	speed   libeth.TxExecutionSpeed
 	logger  logrus.FieldLogger
 	binder  *EthSwapContract
 	cost    blockchain.Cost
 }
 
 // NewETHSwapContractBinder returns a new Ethereum RequestAtom instance
-func NewETHSwapContractBinder(account beth.Account, swap swap.Swap, cost blockchain.Cost, logger logrus.FieldLogger) (immediate.Contract, error) {
+func NewETHSwapContractBinder(account libeth.Account, swap swap.Swap, cost blockchain.Cost, logger logrus.FieldLogger) (immediate.Contract, error) {
 	swapperAddr, err := account.ReadAddress("ETHSwapContract")
 	if err != nil {
 		return nil, err
@@ -61,6 +62,7 @@ func NewETHSwapContractBinder(account beth.Account, swap swap.Swap, cost blockch
 		binder:  contract,
 		logger:  logger,
 		swap:    swap,
+		speed:   libeth.TxExecutionSpeed(swap.Speed),
 		id:      id,
 		cost:    cost,
 	}, nil
@@ -76,6 +78,7 @@ func (atom *ethSwapContractBinder) Initiate() error {
 	// Initiate the Atomic Swap
 	tx, err := atom.account.Transact(
 		ctx,
+		atom.speed,
 		func() bool {
 			initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
 			if err != nil {
@@ -84,7 +87,6 @@ func (atom *ethSwapContractBinder) Initiate() error {
 			return initiatable
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
-			tops.GasPrice = atom.swap.Fee
 			tops.Value = atom.swap.Value
 			var tx *types.Transaction
 			var err error
@@ -115,7 +117,7 @@ func (atom *ethSwapContractBinder) Initiate() error {
 		0,
 	)
 	if err != nil {
-		if err != beth.ErrPreConditionCheckFailed {
+		if err != libeth.ErrPreConditionCheckFailed {
 			return err
 		}
 		return nil
@@ -134,6 +136,7 @@ func (atom *ethSwapContractBinder) Refund() error {
 
 	tx, err := atom.account.Transact(
 		ctx,
+		atom.speed,
 		func() bool {
 			refundable, err := atom.binder.Refundable(&bind.CallOpts{}, atom.id)
 			if err != nil {
@@ -142,7 +145,6 @@ func (atom *ethSwapContractBinder) Refund() error {
 			return refundable
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
-			tops.GasPrice = atom.swap.Fee
 			tx, err := atom.binder.Refund(tops, atom.id)
 			if err != nil {
 				return nil, err
@@ -160,7 +162,7 @@ func (atom *ethSwapContractBinder) Refund() error {
 		},
 		0,
 	)
-	if err != nil && err != beth.ErrPreConditionCheckFailed {
+	if err != nil && err != libeth.ErrPreConditionCheckFailed {
 		return err
 	}
 
@@ -240,6 +242,7 @@ func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 
 	tx, err := atom.account.Transact(
 		ctx,
+		atom.speed,
 		func() bool {
 			redeemable, err := atom.binder.Redeemable(&bind.CallOpts{}, atom.id)
 			if err != nil {
@@ -248,7 +251,6 @@ func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 			return redeemable
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
-			tops.GasPrice = atom.swap.Fee
 			tx, err := atom.binder.Redeem(tops, atom.id, common.HexToAddress(atom.swap.WithdrawAddress), secret)
 			if err != nil {
 				return nil, err
@@ -267,7 +269,7 @@ func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 		0,
 	)
 	if err != nil {
-		if err != beth.ErrPreConditionCheckFailed {
+		if err != libeth.ErrPreConditionCheckFailed {
 			return err
 		}
 		atom.logger.Info("Skipping redeem on Ethereum blockchain")

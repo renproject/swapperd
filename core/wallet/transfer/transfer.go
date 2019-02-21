@@ -18,7 +18,7 @@ type Storage interface {
 
 type Blockchain interface {
 	GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error)
-	Transfer(password string, token blockchain.Token, to string, amount, fee *big.Int, sendAll bool) (string, blockchain.Cost, error)
+	Transfer(password string, token blockchain.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error)
 	Lookup(token blockchain.Token, txHash string) (UpdateReceipt, error)
 }
 
@@ -45,7 +45,7 @@ func (transfers *transfers) handleTransferRequest(msg TransferRequest) tau.Messa
 	if err != nil {
 		return tau.NewError(err)
 	}
-	txHash, txCost, err := transfers.blockchain.Transfer(msg.Password, msg.Token, msg.To, msg.Amount, msg.Fee, msg.SendAll)
+	txHash, txCost, err := transfers.blockchain.Transfer(msg.Password, msg.Token, msg.To, msg.Amount, msg.Speed, msg.SendAll)
 	if err != nil {
 		return tau.NewError(err)
 	}
@@ -78,12 +78,12 @@ type TransferRequest struct {
 	Token    blockchain.Token
 	To       string
 	Amount   *big.Int
-	Fee      *big.Int
+	Speed    blockchain.TxExecutionSpeed
 	SendAll  bool
 }
 
-func NewTransferRequest(password string, token blockchain.Token, to string, amount, fee *big.Int, sendAll bool) TransferRequest {
-	return TransferRequest{password, token, to, amount, fee, sendAll}
+func NewTransferRequest(password string, token blockchain.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) TransferRequest {
+	return TransferRequest{password, token, to, amount, speed, sendAll}
 }
 
 func (request TransferRequest) IsMessage() {

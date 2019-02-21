@@ -32,9 +32,9 @@ var _ = Describe("Server Adapter", func() {
 		port := os.Getenv("PORT")
 		version := os.Getenv("VERSION")
 
-		blockchain := bc.New(config)
-		storage := testutils.NewMockStorage()
 		logger := logger.NewStdOut()
+		blockchain := bc.New(config, logger)
+		storage := testutils.NewMockStorage()
 		httpServer := NewHttpServer(128, port, version, receiver, storage, blockchain, logger)
 		return httpServer
 	}
@@ -42,7 +42,8 @@ var _ = Describe("Server Adapter", func() {
 	buildSwap := func(password string) swap.SwapBlob {
 		config := bc.Testnet
 		config.Mnemonic = os.Getenv("MNEMONIC")
-		wallet := bc.New(config)
+		logger := logger.NewStdOut()
+		wallet := bc.New(config, logger)
 
 		ethAddr, err := wallet.GetAddress(password, blockchain.Ethereum)
 		Expect(err).Should(BeNil())

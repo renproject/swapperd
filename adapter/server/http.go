@@ -182,6 +182,9 @@ func (server *httpServer) postSwapsHandler(reqHandler Handler) http.HandlerFunc 
 			return
 		}
 		swapReq.Password = password
+		if swapReq.Speed == blockchain.Nil {
+			swapReq.Speed = blockchain.Fast
+		}
 
 		passwordHashBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {

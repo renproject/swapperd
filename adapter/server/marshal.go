@@ -39,12 +39,12 @@ type PostRedeemSwapResponse struct {
 }
 
 type PostTransfersRequest struct {
-	Token    string `json:"token"`
-	To       string `json:"to"`
-	Amount   string `json:"amount"`
-	Fee      string `json:"fee"`
-	SendAll  bool   `json:"sendAll"`
-	Password string `json:"password"`
+	Token    string                      `json:"token"`
+	To       string                      `json:"to"`
+	Amount   string                      `json:"amount"`
+	Speed    blockchain.TxExecutionSpeed `json:"speed"`
+	SendAll  bool                        `json:"sendAll"`
+	Password string                      `json:"password"`
 }
 
 type PostTransfersResponse transfer.TransferReceipt

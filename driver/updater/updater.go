@@ -16,78 +16,141 @@ import (
 	"strings"
 	"time"
 
+	"github.com/renproject/swapperd/adapter/server"
+	"github.com/renproject/swapperd/driver/notifier"
+	"github.com/renproject/swapperd/driver/service"
+	"github.com/republicprotocol/co-go"
 	"github.com/sirupsen/logrus"
 )
 
 type updater struct {
-	version   string
-	homeDir   string
 	frequency time.Duration
+	homeDir   string
 	logger    logrus.FieldLogger
 }
 
-func New(version, homeDir string, frequency time.Duration, logger logrus.FieldLogger) *updater {
-	return &updater{
-		version:   version,
-		homeDir:   homeDir,
-		frequency: frequency,
-		logger:    logger,
+func Run(done <-chan struct{}) {
+	updater, err := new()
+	if err != nil {
+		updater.logger.Error(err)
+		time.Sleep(10 * time.Second)
+		os.Exit(1)
 	}
+	co.ParBegin(
+		func() {
+			updater.run(done)
+		},
+		func() {
+			notifier.New(updater.logger).Watch(done, filepath.Join(updater.homeDir, "config.json"))
+		},
+	)
 }
 
-func (updater *updater) Run(done <-chan struct{}) {
+func new() (*updater, error) {
+	ex, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+	homeDir := filepath.Dir(filepath.Dir(ex))
+	logFile, err := os.OpenFile(fmt.Sprintf("%s/swapperd-updater.log", homeDir), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		return nil, err
+	}
+	logger := logrus.New()
+	logger.SetOutput(logFile)
+	frequency := time.Minute
+	if configData, err := ioutil.ReadFile(fmt.Sprintf("%s/config.json", homeDir)); err == nil {
+		config := struct {
+			Frequency time.Duration `json:"frequency"`
+		}{}
+		if err := json.Unmarshal(configData, &config); err == nil {
+			frequency = config.Frequency * time.Second
+		}
+	}
+	return &updater{
+		frequency: frequency,
+		homeDir:   homeDir,
+		logger:    logger,
+	}, nil
+}
+
+func (updater *updater) run(done <-chan struct{}) {
 	ticker := time.NewTicker(updater.frequency)
 	for {
 		select {
 		case <-done:
 		case <-ticker.C:
-			if err := updater.Update(done); err != nil {
+			if err := updater.update(done); err != nil {
 				updater.logger.Error(err)
 			}
 		}
 	}
 }
 
-func (updater *updater) Update(done <-chan struct{}) error {
+func (updater *updater) update(done <-chan struct{}) error {
 	updater.logger.Info("looking for latest version ...")
-	ver, err := getLatestVersion()
+	latVer, err := getLatestVersion()
 	if err != nil {
 		return err
 	}
-
-	updater.logger.Infof("latest version is %s", ver)
-	res, err := compareVersions(updater.version, ver)
+	updater.logger.Infof("latest version is %s", latVer)
+	currVer, err := updater.getCurrentVersion()
 	if err != nil {
+		return updater.updateSwapperd(latVer)
+	}
+	updater.logger.Info("current version is %s", currVer)
+	if res, err := compareVersions(currVer, latVer); err != nil || !res {
 		return err
 	}
+	return updater.updateSwapperd(latVer)
+}
 
-	if res {
-		updater.logger.Info("downloading swapperd ...")
-		if err := updater.downloadSwapperd(ver); err != nil {
-			return err
-		}
-
-		if err := updater.unzipSwapperd(); err != nil {
-			return err
-		}
-
-		if err := updater.updateConfig(ver); err != nil {
-			return err
-		}
+func (updater *updater) getCurrentVersion() (string, error) {
+	info := server.GetInfoResponse{}
+	req, err := http.NewRequest("GET", "http://127.0.0.1:7927/info", nil)
+	if err != nil {
+		return info.Version, err
 	}
-	return nil
+
+	req.SetBasicAuth("", "")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return info.Version, err
+	}
+
+	if resp.StatusCode != 200 {
+		respBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return info.Version, err
+		}
+		return info.Version, fmt.Errorf("Failed to get the current version: %s", string(respBytes))
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+		return info.Version, err
+	}
+	return info.Version, nil
+}
+
+func (updater *updater) updateSwapperd(ver string) error {
+	if err := updater.downloadSwapperd(ver); err != nil {
+		return err
+	}
+	service.Stop("swapperd")
+	if err := updater.unzipSwapperd(); err != nil {
+		return err
+	}
+	service.Start("swapperd")
+	return updater.updateConfig(ver)
 }
 
 func getLatestVersion() (string, error) {
 	release := struct {
 		TagName string `json:"tag_name"`
 	}{}
-
 	resp, err := http.DefaultClient.Get("https://api.github.com/repos/renproject/swapperd/releases/latest")
 	if err != nil {
 		return release.TagName, err
 	}
-
 	if resp.StatusCode != 200 {
 		respBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
@@ -95,11 +158,9 @@ func getLatestVersion() (string, error) {
 		}
 		return release.TagName, fmt.Errorf("Failed to get the latest version: %s", string(respBytes))
 	}
-
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return release.TagName, err
 	}
-
 	return release.TagName, nil
 }
 
@@ -110,16 +171,13 @@ func (updater *updater) updateConfig(version string) error {
 		return err
 	}
 	defer resp.Body.Close()
-
 	respBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to get the latest config file (%d): %s", resp.StatusCode, respBytes)
 	}
-
 	return ioutil.WriteFile(fmt.Sprintf("%s/config.json", updater.homeDir), respBytes, 0644)
 }
 

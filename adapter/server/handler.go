@@ -216,6 +216,10 @@ func (handler *handler) PostDelayedSwaps(swapReq PostSwapRequest) error {
 
 func (handler *handler) PostTransfers(req PostTransfersRequest) error {
 	handler.bootload(req.Password)
+	if req.Speed == blockchain.Nil {
+		req.Speed = blockchain.Fast
+	}
+
 	token, err := blockchain.PatchToken(req.Token)
 	if err != nil {
 		return err
@@ -224,7 +228,7 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) error {
 		return err
 	}
 	if req.SendAll {
-		return handler.Write(transfer.NewTransferRequest(req.Password, token, req.To, nil, nil, true))
+		return handler.Write(transfer.NewTransferRequest(req.Password, token, req.To, nil, req.Speed, true))
 	}
 
 	amount, ok := big.NewInt(0).SetString(req.Amount, 10)
@@ -236,7 +240,7 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) error {
 		return err
 	}
 
-	return handler.Write(transfer.NewTransferRequest(req.Password, token, req.To, amount, nil, false))
+	return handler.Write(transfer.NewTransferRequest(req.Password, token, req.To, amount, req.Speed, false))
 }
 
 func (handler *handler) GetID(password, idType string) (string, error) {
