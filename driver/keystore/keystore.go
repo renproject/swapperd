@@ -9,9 +9,10 @@ import (
 	"strings"
 
 	"github.com/renproject/swapperd/adapter/wallet"
+	"github.com/sirupsen/logrus"
 )
 
-func Wallet(homeDir, network string) (wallet.Wallet, error) {
+func Wallet(homeDir, network string, logger logrus.FieldLogger) (wallet.Wallet, error) {
 	path := keystorePath(homeDir, network)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -21,7 +22,7 @@ func Wallet(homeDir, network string) (wallet.Wallet, error) {
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, err
 	}
-	return wallet.New(config), nil
+	return wallet.New(config, logger), nil
 }
 
 func Generate(homeDir, network, mnemonic string) error {
