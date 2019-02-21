@@ -33,7 +33,7 @@ func New(version, homeDir, network, port string, logger logrus.FieldLogger) Swap
 	}
 
 	storage := db.New(ldb)
-	bc, err := keystore.Wallet(homeDir, network)
+	bc, err := keystore.Wallet(homeDir, network, logger)
 	if err != nil {
 		panic(err)
 	}
