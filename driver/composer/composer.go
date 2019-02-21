@@ -5,56 +5,73 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
-	"time"
 
 	"github.com/renproject/swapperd/driver/notifier"
 	"github.com/renproject/swapperd/driver/swapperd"
-	"github.com/renproject/swapperd/driver/updater"
 	"github.com/republicprotocol/co-go"
 	"github.com/sirupsen/logrus"
 )
 
-type Config struct {
-	Version   string        `json:"version"`
-	Frequency time.Duration `json:"frequency"`
+type composer struct {
+	version    string
+	homeDir    string
+	executable string
+	logger     logrus.FieldLogger
 }
 
-func Run(done <-chan struct{}) {
+func New() (*composer, error) {
 	ex, err := os.Executable()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	homeDir := filepath.Dir(filepath.Dir(ex))
 	logFile, err := os.OpenFile(fmt.Sprintf("%s/swapperd.log", homeDir), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-
 	logger := logrus.New()
 	logger.SetOutput(logFile)
-
 	configData, err := ioutil.ReadFile(fmt.Sprintf("%s/config.json", homeDir))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	config := Config{}
+	config := struct {
+		Version string `json:"version"`
+	}{}
 	if err := json.Unmarshal(configData, &config); err != nil {
-		panic(err)
+		return nil, err
 	}
+	return &composer{
+		version:    config.Version,
+		homeDir:    homeDir,
+		executable: ex,
+		logger:     logger,
+	}, nil
+}
 
+func Run(done <-chan struct{}) {
+	composer, err := New()
+	if err != nil {
+		composer.logger.Error(err)
+		os.Exit(1)
+	}
 	co.ParBegin(
 		func() {
-			updater.New(config.Version, homeDir, config.Frequency*time.Second, logger).Run(done)
+			swapperd.New(composer.version, composer.homeDir, "testnet", "17927", composer.logger).Run(done)
 		},
 		func() {
-			swapperd.New(config.Version, homeDir, "testnet", "17927", logger).Run(done)
+			swapperd.New(composer.version, composer.homeDir, "mainnet", "7927", composer.logger).Run(done)
 		},
 		func() {
-			swapperd.New(config.Version, homeDir, "mainnet", "7927", logger).Run(done)
-		},
-		func() {
-			notifier.New(homeDir, logger).Watch(done, "config.json", "mainnet.json", "testnet.json", filepath.Join("bin", filepath.Base(ex)))
+			notifier.New(composer.logger).Watch(
+				done,
+				path.Join(composer.homeDir, "config.json"),
+				path.Join(composer.homeDir, "mainnet.json"),
+				path.Join(composer.homeDir, "testnet.json"),
+				composer.executable,
+			)
 		},
 	)
 }
