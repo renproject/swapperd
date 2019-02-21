@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -11,6 +10,7 @@ import (
 	"runtime"
 
 	"github.com/renproject/swapperd/driver/keystore"
+	"github.com/renproject/swapperd/driver/service"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -22,7 +22,6 @@ func main() {
 	mnemonicFlag := flag.String("mnemonic", "", "Mneumonic for restoring an existing account")
 	flag.Parse()
 	mnemonic := *mnemonicFlag
-
 	if mnemonic == "" {
 		entropy, err := bip39.NewEntropy(128)
 		if err != nil {
@@ -36,17 +35,16 @@ func main() {
 	}
 	createKeystore("testnet", mnemonic)
 	createKeystore("mainnet", mnemonic)
-	if err := startSwapperd(); err != nil {
+	if err := startServices(); err != nil {
 		panic(err)
 	}
 }
 
 func createKeystore(network, mnemonic string) {
 	homeDir := getSwapperHome()
-	if _, err := keystore.Wallet(homeDir, network); err == nil {
+	if _, err := keystore.Wallet(homeDir, network, nil); err == nil {
 		return
 	}
-
 	if err := keystore.Generate(homeDir, network, mnemonic); err != nil {
 		panic(err)
 	}
@@ -71,55 +69,22 @@ func getSwapperHome() string {
 	return filepath.Dir(filepath.Dir(ex))
 }
 
-func startSwapperd() error {
-	home := getSwapperHome()
-	switch runtime.GOOS {
-	case "linux":
-		return startLinuxService(home)
-	case "darwin":
-		return startDarwinService(home)
-	case "windows":
-		return startWindowsService(home)
-	default:
-		return fmt.Errorf("unsupported OS: %s", runtime.GOOS)
-	}
-}
-
-func startLinuxService(swapperdHome string) error {
-	serviceLocation := path.Join(os.Getenv("HOME"), ".config", "systemd", "user")
-	if err := exec.Command("mkdir", "-p", serviceLocation).Run(); err != nil {
+func startServices() error {
+	ex, err := os.Executable()
+	if err != nil {
 		return err
 	}
-	serviceContent := fmt.Sprintf("[Unit]\nDescription=Swapper Daemon\nAssertPathExists=%s\n\n[Service]\nWorkingDirectory=%s\nExecStart=%s/bin/swapperd\nRestart=on-failure\nPrivateTmp=true\nNoNewPrivileges=true\n\n# Specifies which signal to use when killing a service. Defaults to SIGTERM.\n# SIGHUP gives parity time to exit cleanly before SIGKILL (default 90s)\nKillSignal=SIGHUP\n\n[Install]\nWantedBy=default.target", swapperdHome, swapperdHome, swapperdHome)
-	servicePath := path.Join(serviceLocation, "swapperd.service")
-	if err := ioutil.WriteFile(servicePath, []byte(serviceContent), 0644); err != nil {
+	if err := service.Create("swapperd", path.Join(path.Dir(ex), "swapperd", path.Ext(ex))); err != nil {
 		return err
 	}
-	if err := exec.Command("loginctl", "enable-linger", os.Getenv("whoami")).Run(); err != nil {
+	if err := service.Start("swapperd"); err != nil {
 		return err
 	}
-	if err := exec.Command("systemctl", "--user", "enable", "swapperd.service").Run(); err != nil {
+	if err := service.Create("swapperd-updater", path.Join(path.Dir(ex), "swapperd-updater", path.Ext(ex))); err != nil {
 		return err
 	}
-	return exec.Command("systemctl", "--user", "start", "swapperd.service").Run()
-}
-
-func startDarwinService(swapperdHome string) error {
-	serviceContent := fmt.Sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\t\n<dict>\t\t\n<key>Label</key>\t\t\n<string>ren.swapperd</string>\t\t\n<key>ProgramArguments</key>\t\t\n<array>\t\t\t\t\n<string>%s/bin/swapperd</string>\t\t\n</array>\t\t\n<key>KeepAlive</key>\t\t\n<true/>\t\t\n<key>StandardOutPath</key>\t\t\n<string>/dev/null</string>\t\t\n<key>StandardErrorPath</key>\t\t\n<string>/dev/null</string>\t\n</dict>\n</plist>", swapperdHome)
-	servicePath := path.Join(os.Getenv("HOME"), "Library", "LaunchAgents", "ren.swapperd.plist")
-	if err := ioutil.WriteFile(servicePath, []byte(serviceContent), 0755); err != nil {
+	if err := service.Start("swapperd-updater"); err != nil {
 		return err
 	}
-	return exec.Command("launchctl", "load", "-w", servicePath).Run()
-}
-
-func startWindowsService(swapperdHome string) error {
-	if err := exec.Command("cmd", "/C", "sc", "create", "swapperd", "start=", "auto", "binpath=", path.Join(swapperdHome, "bin", "swapperd.exe")).Run(); err != nil {
-		return err
-	}
-
-	if err := exec.Command("cmd", "/C", "sc", "start", "swapperd").Run(); err != nil {
-		return err
-	}
-	return exec.Command("cmd", "/C", "sc", "failure", "swapperd", "reset=", "0", "actions=", "restart/0/restart/0/restart/0").Run()
+	return nil
 }
