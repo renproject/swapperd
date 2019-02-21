@@ -10,26 +10,27 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/renproject/libeth-go"
 	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
-	"github.com/republicprotocol/beth-go"
 	"github.com/sirupsen/logrus"
 )
 
 type erc20SwapContractBinder struct {
 	id             [32]byte
-	account        beth.Account
+	account        libeth.Account
+	speed          libeth.TxExecutionSpeed
 	swap           swap.Swap
 	logger         logrus.FieldLogger
 	swapperAddress common.Address
 	swapperBinder  *ERC20SwapContract
-	erc20          beth.ERC20
+	erc20          libeth.ERC20
 	cost           blockchain.Cost
 }
 
 // NewERC20SwapContractBinder returns a new ERC20 Atom instance
-func NewERC20SwapContractBinder(account beth.Account, swap swap.Swap, cost blockchain.Cost, logger logrus.FieldLogger) (immediate.Contract, error) {
+func NewERC20SwapContractBinder(account libeth.Account, swap swap.Swap, cost blockchain.Cost, logger logrus.FieldLogger) (immediate.Contract, error) {
 	erc20, err := account.NewERC20(string(swap.Token.Name))
 	if err != nil {
 		return nil, err
@@ -71,6 +72,7 @@ func NewERC20SwapContractBinder(account beth.Account, swap swap.Swap, cost block
 		swapperAddress: swapperAddress,
 		swapperBinder:  swapperBinder,
 		erc20:          erc20,
+		speed:          libeth.TxExecutionSpeed(swap.Speed),
 		logger:         logger,
 		swap:           swap,
 		id:             id,
@@ -95,7 +97,7 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 	atom.logger.Info(fmt.Sprintf("Initiating on Ethereum blockchain"))
 
 	// Approve the contract to transfer tokens
-	approveTx, err := atom.erc20.Approve(ctx, atom.swapperAddress, atom.sendValue(), atom.swap.Fee)
+	approveTx, err := atom.erc20.Approve(ctx, atom.swapperAddress, atom.sendValue(), atom.speed)
 	if err != nil {
 		return err
 	}
@@ -104,9 +106,9 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 	// Initiate the Atomic Swap
 	initiateTx, err := atom.account.Transact(
 		ctx,
+		atom.speed,
 		nil,
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
-			tops.GasPrice = atom.swap.Fee
 			var tx *types.Transaction
 			var err error
 			if atom.swap.BrokerFee.Cmp(big.NewInt(0)) > 0 {
@@ -148,6 +150,7 @@ func (atom *erc20SwapContractBinder) Refund() error {
 	defer cancel()
 	tx, err := atom.account.Transact(
 		ctx,
+		atom.speed,
 		func() bool {
 			refundable, err := atom.swapperBinder.Refundable(&bind.CallOpts{}, atom.id)
 			if err != nil {
@@ -156,7 +159,6 @@ func (atom *erc20SwapContractBinder) Refund() error {
 			return refundable
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
-			tops.GasPrice = atom.swap.Fee
 			tx, err := atom.swapperBinder.Refund(tops, atom.id)
 			if err != nil {
 				return nil, err
@@ -174,7 +176,7 @@ func (atom *erc20SwapContractBinder) Refund() error {
 		},
 		1,
 	)
-	if err != nil && err != beth.ErrPreConditionCheckFailed {
+	if err != nil && err != libeth.ErrPreConditionCheckFailed {
 		return err
 	}
 	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], tx.Cost())
@@ -252,6 +254,7 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 	defer cancel()
 	tx, err := atom.account.Transact(
 		ctx,
+		atom.speed,
 		func() bool {
 			redeemable, err := atom.swapperBinder.Redeemable(&bind.CallOpts{}, atom.id)
 			if err != nil {
@@ -260,7 +263,6 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 			return redeemable
 		},
 		func(tops *bind.TransactOpts) (*types.Transaction, error) {
-			tops.GasPrice = atom.swap.Fee
 			tx, err := atom.swapperBinder.Redeem(tops, atom.id, common.HexToAddress(atom.swap.WithdrawAddress), secret)
 			if err != nil {
 				return nil, err
@@ -280,7 +282,7 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 		1,
 	)
 	if err != nil {
-		if err != beth.ErrPreConditionCheckFailed {
+		if err != libeth.ErrPreConditionCheckFailed {
 			return err
 		}
 		atom.logger.Info("Skipping redeem on Ethereum Blockchain")
