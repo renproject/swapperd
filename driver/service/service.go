@@ -61,7 +61,6 @@ func Stop(name string) error {
 		return exec.Command("systemctl", "--user", "stop", fmt.Sprintf("%s.service", name)).Run()
 	case "darwin":
 		servicePath := path.Join(os.Getenv("HOME"), "Library", "LaunchAgents", fmt.Sprintf("%s.plist", name))
-		fmt.Println(servicePath)
 		return exec.Command("launchctl", "unload", "-w", servicePath).Run()
 	case "windows":
 		return exec.Command("cmd", "/C", "sc", "stop", name).Run()
@@ -76,7 +75,6 @@ func Delete(name string) error {
 		return exec.Command("rm", path.Join(os.Getenv("HOME"), ".config", "systemd", "user", fmt.Sprintf("%s.service", name))).Run()
 	case "darwin":
 		servicePath := path.Join(os.Getenv("HOME"), "Library", "LaunchAgents", fmt.Sprintf("%s.plist", name))
-		fmt.Println(servicePath)
 		return exec.Command("rm", servicePath).Run()
 	case "windows":
 		return exec.Command("cmd", "/C", "sc", "delete", name).Run()
