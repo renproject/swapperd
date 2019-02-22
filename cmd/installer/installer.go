@@ -74,13 +74,17 @@ func startServices() error {
 	if err != nil {
 		return err
 	}
-	if err := service.Create("swapperd", path.Join(path.Dir(ex), "swapperd", path.Ext(ex))); err != nil {
+	homeDir, err := filepath.Abs(path.Dir(ex))
+	if err != nil {
+		return err
+	}
+	if err := service.Create("swapperd", path.Join(homeDir, fmt.Sprintf("swapperd%s", path.Ext(ex)))); err != nil {
 		return err
 	}
 	if err := service.Start("swapperd"); err != nil {
 		return err
 	}
-	if err := service.Create("swapperd-updater", path.Join(path.Dir(ex), "swapperd-updater", path.Ext(ex))); err != nil {
+	if err := service.Create("swapperd-updater", path.Join(homeDir, fmt.Sprintf("swapperd-updater%s", path.Ext(ex)))); err != nil {
 		return err
 	}
 	if err := service.Start("swapperd-updater"); err != nil {
