@@ -17,36 +17,17 @@ import (
 	"time"
 
 	"github.com/renproject/swapperd/adapter/server"
-	"github.com/renproject/swapperd/driver/notifier"
 	"github.com/renproject/swapperd/driver/service"
-	"github.com/republicprotocol/co-go"
 	"github.com/sirupsen/logrus"
 )
 
-type updater struct {
+type Updater struct {
 	frequency time.Duration
 	homeDir   string
 	logger    logrus.FieldLogger
 }
 
-func Run(done <-chan struct{}) {
-	updater, err := new()
-	if err != nil {
-		updater.logger.Error(err)
-		time.Sleep(10 * time.Second)
-		os.Exit(1)
-	}
-	co.ParBegin(
-		func() {
-			updater.run(done)
-		},
-		func() {
-			notifier.New(updater.logger).Watch(done, filepath.Join(updater.homeDir, "config.json"))
-		},
-	)
-}
-
-func new() (*updater, error) {
+func New() (*Updater, error) {
 	ex, err := os.Executable()
 	if err != nil {
 		return nil, err
@@ -67,27 +48,14 @@ func new() (*updater, error) {
 			frequency = config.Frequency * time.Second
 		}
 	}
-	return &updater{
+	return &Updater{
 		frequency: frequency,
 		homeDir:   homeDir,
 		logger:    logger,
 	}, nil
 }
 
-func (updater *updater) run(done <-chan struct{}) {
-	ticker := time.NewTicker(updater.frequency)
-	for {
-		select {
-		case <-done:
-		case <-ticker.C:
-			if err := updater.update(done); err != nil {
-				updater.logger.Error(err)
-			}
-		}
-	}
-}
-
-func (updater *updater) update(done <-chan struct{}) error {
+func (updater *Updater) Update() error {
 	updater.logger.Info("looking for latest version ...")
 	latVer, err := getLatestVersion()
 	if err != nil {
@@ -105,7 +73,7 @@ func (updater *updater) update(done <-chan struct{}) error {
 	return updater.updateSwapperd(latVer)
 }
 
-func (updater *updater) getCurrentVersion() (string, error) {
+func (updater *Updater) getCurrentVersion() (string, error) {
 	info := server.GetInfoResponse{}
 	req, err := http.NewRequest("GET", "http://127.0.0.1:7927/info", nil)
 	if err != nil {
@@ -131,7 +99,7 @@ func (updater *updater) getCurrentVersion() (string, error) {
 	return info.Version, nil
 }
 
-func (updater *updater) updateSwapperd(ver string) error {
+func (updater *Updater) updateSwapperd(ver string) error {
 	if err := updater.downloadSwapperd(ver); err != nil {
 		return err
 	}
@@ -164,7 +132,7 @@ func getLatestVersion() (string, error) {
 	return release.TagName, nil
 }
 
-func (updater *updater) updateConfig(version string) error {
+func (updater *Updater) updateConfig(version string) error {
 	// Get the data
 	resp, err := http.Get(fmt.Sprintf("https://github.com/renproject/swapperd/releases/download/%s/config.json", version))
 	if err != nil {
@@ -181,7 +149,7 @@ func (updater *updater) updateConfig(version string) error {
 	return ioutil.WriteFile(fmt.Sprintf("%s/config.json", updater.homeDir), respBytes, 0644)
 }
 
-func (updater *updater) unzipSwapperd() error {
+func (updater *Updater) unzipSwapperd() error {
 	src := fmt.Sprintf("%s/swapperd.zip", updater.homeDir)
 	dest := fmt.Sprintf("%s", updater.homeDir)
 
@@ -228,7 +196,7 @@ func (updater *updater) unzipSwapperd() error {
 	return nil
 }
 
-func (updater *updater) downloadSwapperd(version string) error {
+func (updater *Updater) downloadSwapperd(version string) error {
 	// Get the data
 	resp, err := http.Get(fmt.Sprintf("https://github.com/renproject/swapperd/releases/download/%s/swapper_%s_amd64.zip", version, runtime.GOOS))
 	if err != nil {
