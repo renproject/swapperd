@@ -3,12 +3,11 @@ package wallet
 import (
 	"math/big"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/renproject/libbtc-go"
 	"github.com/renproject/libeth-go"
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/sirupsen/logrus"
 )
 
 type Config struct {

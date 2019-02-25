@@ -228,7 +228,15 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) error {
 		return err
 	}
 	if req.SendAll {
-		return handler.Write(transfer.NewTransferRequest(req.Password, token, req.To, nil, req.Speed, true))
+		balance, err := handler.wallet.Balance(req.Password, token)
+		if err != nil {
+			return err
+		}
+		amount, ok := new(big.Int).SetString(balance.Amount, 10)
+		if !ok {
+			return fmt.Errorf("unable to decode balance: %s", balance.Amount)
+		}
+		return handler.Write(transfer.NewTransferRequest(req.Password, token, req.To, amount, req.Speed, true))
 	}
 
 	amount, ok := big.NewInt(0).SetString(req.Amount, 10)
