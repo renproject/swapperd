@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/renproject/swapperd/driver/updater"
+	"github.com/renproject/swapperd/driver/autoupdater"
 
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
@@ -19,7 +19,7 @@ func (m *swapperdService) Execute(args []string, r <-chan svc.ChangeRequest, cha
 	doneCh := make(chan struct{}, 1)
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue
 	changes <- svc.Status{State: svc.StartPending}
-	go updater.Run(doneCh)
+	go autoupdater.Run(doneCh)
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 loop:
 	for {
@@ -34,7 +34,7 @@ loop:
 				changes <- svc.Status{State: svc.Paused, Accepts: cmdsAccepted}
 			case svc.Continue:
 				doneCh = make(chan struct{}, 1)
-				go updater.Run(doneCh)
+				go autoupdater.Run(doneCh)
 				changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 			default:
 				elog.Error(1, fmt.Sprintf("unexpected control request #%d", c))
