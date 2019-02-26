@@ -35,9 +35,9 @@ fi
 echo "Latest version of swapperd is $VERSION"
 # download swapperd binary depending on the system and architecture
 if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
-  curl -Ls "https://github.com/renproject/swapperd/releases/download/$VERSION/swapper_linux_amd64.zip" > swapper.zip
+  curl -#L "https://github.com/renproject/swapperd/releases/download/$VERSION/swapper_linux_amd64.zip" > swapper.zip
 elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
-  curl -Ls "https://github.com/renproject/swapperd/releases/download/$VERSION/swapper_darwin_amd64.zip" > swapper.zip
+  curl -#L "https://github.com/renproject/swapperd/releases/download/$VERSION/swapper_darwin_amd64.zip" > swapper.zip
 else
   echo 'unsupported OS type or architecture'
   cd ..
