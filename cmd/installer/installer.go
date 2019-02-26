@@ -58,10 +58,7 @@ func updateSwapperd(binDir string) error {
 	if err != nil {
 		return err
 	}
-	if err := updater.Update(); err != nil {
-		return err
-	}
-	return nil
+	return updater.Update()
 }
 
 func createKeystore(network, mnemonic string) {
