@@ -3,27 +3,30 @@
 mkdir -p bin
 cd installer
 go build .
-xgo --targets=linux/amd64,windows/amd64 .
+xgo --targets=linux/amd64 .
+xgo --targets=windows/amd64 -ldflags "-H windowsgui" .
 
 cd ../updater/
 go build .
-xgo --targets=linux/amd64,windows/amd64 .
+xgo --targets=linux/amd64 .
+xgo --targets=windows/amd64 -ldflags "-H windowsgui" .
 
 cd ../swapperd-unix/
 go build .
 xgo --targets=linux/amd64 .
 cd ../swapperd-win/
-xgo --targets=windows/amd64 .
+xgo --targets=windows/amd64 -ldflags "-H windowsgui" .
 
 cd ../updater-unix/
 go build .
 xgo --targets=linux/amd64 .
 cd ../updater-win/
-xgo --targets=windows/amd64 .
+xgo --targets=windows/amd64 -ldflags "-H windowsgui" .
 
 cd ../uninstaller/
 go build .
-xgo --targets=linux/amd64,windows/amd64 .
+xgo --targets=linux/amd64 .
+xgo --targets=windows/amd64 -ldflags "-H windowsgui" .
 
 cd ../
 mv installer/installer bin/installer
