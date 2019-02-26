@@ -11,6 +11,7 @@ import (
 
 	"github.com/renproject/swapperd/driver/keystore"
 	"github.com/renproject/swapperd/driver/service"
+	"github.com/renproject/swapperd/driver/updater"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -35,9 +36,32 @@ func main() {
 	}
 	createKeystore("testnet", mnemonic)
 	createKeystore("mainnet", mnemonic)
+
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		panic(err)
+	}
+	if err := updateSwapperd(dir); err != nil {
+		panic(err)
+	}
 	if err := startServices(); err != nil {
 		panic(err)
 	}
+}
+
+func updateSwapperd(binDir string) error {
+	service.Stop("swapperd-updater")
+	service.Stop("swapperd")
+	service.Delete("swapperd-updater")
+	service.Delete("swapperd")
+	updater, err := updater.New()
+	if err != nil {
+		return err
+	}
+	if err := updater.Update(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func createKeystore(network, mnemonic string) {
