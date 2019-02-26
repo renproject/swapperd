@@ -212,7 +212,7 @@
   branch = "master"
   name = "github.com/renproject/libeth-go"
   packages = ["."]
-  revision = "b3ac32917d0245a7590fb9df5d94331e306ce65c"
+  revision = "c8f4fefe69bd5994ce538eedd3645b11e8758d3c"
 
 [[projects]]
   branch = "master"
@@ -300,7 +300,7 @@
     "sha3",
     "ssh/terminal"
   ]
-  revision = "ffb98f73852f696ea2bb21a617a5c4b3e067a439"
+  revision = "7f87c0fbb88b590338857bcb720678c2583d4dea"
 
 [[projects]]
   branch = "master"
@@ -311,7 +311,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "3a22650c66bd7f4fb6d1e8072ffd7b75c8a27898"
+  revision = "fe579d43d83210096a79b46dcca0e3721058393a"
 
 [[projects]]
   branch = "master"
@@ -326,7 +326,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "cd391775e71e684db52b63df9affd58269495083"
+  revision = "cc5685c2db1239775905f3911f0067c0fa74762f"
 
 [[projects]]
   name = "golang.org/x/text"

@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -104,9 +105,11 @@ func (updater *Updater) updateSwapperd(ver string) error {
 		return err
 	}
 	service.Stop("swapperd")
+	service.Stop("swapperd-updater")
 	if err := updater.unzipSwapperd(); err != nil {
 		return err
 	}
+	service.Start("swapperd-updater")
 	service.Start("swapperd")
 	return updater.updateConfig(ver)
 }
@@ -150,8 +153,8 @@ func (updater *Updater) updateConfig(version string) error {
 }
 
 func (updater *Updater) unzipSwapperd() error {
-	src := fmt.Sprintf("%s/swapperd.zip", updater.homeDir)
-	dest := fmt.Sprintf("%s", updater.homeDir)
+	src := path.Join(updater.homeDir, "swapperd.zip")
+	dest := updater.homeDir
 
 	r, err := zip.OpenReader(src)
 	if err != nil {
@@ -174,7 +177,6 @@ func (updater *Updater) unzipSwapperd() error {
 			if lastIndex := strings.LastIndex(fpath, string(os.PathSeparator)); lastIndex > -1 {
 				fdir = fpath[:lastIndex]
 			}
-
 			err = os.MkdirAll(fdir, f.Mode())
 			if err != nil {
 				log.Fatal(err)
@@ -183,12 +185,11 @@ func (updater *Updater) unzipSwapperd() error {
 			f, err := os.OpenFile(
 				fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 			if err != nil {
-				return err
+				updater.logger.Errorf("could not update %s: %v", f.Name, err)
+				continue
 			}
 			defer f.Close()
-
-			_, err = io.Copy(f, rc)
-			if err != nil {
+			if _, err := io.Copy(f, rc); err != nil {
 				return err
 			}
 		}
