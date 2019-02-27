@@ -10,8 +10,8 @@ import (
 	"runtime"
 
 	"github.com/renproject/swapperd/driver/keystore"
-	"github.com/renproject/swapperd/driver/service"
 	"github.com/renproject/swapperd/driver/updater"
+	"github.com/renproject/swapperd/driver/winexec"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -50,11 +50,11 @@ func main() {
 }
 
 func updateSwapperd(binDir string) error {
-	service.Stop("swapperd-updater")
-	service.Stop("swapperd")
-	service.Delete("swapperd-updater")
-	service.Delete("swapperd")
-	updater, err := updater.New()
+	winexec.StopService("swapperd-updater")
+	winexec.StopService("swapperd")
+	winexec.DeleteService("swapperd-updater")
+	winexec.DeleteService("swapperd")
+	updater, err := updater.New(nil, nil)
 	if err != nil {
 		return err
 	}
@@ -99,16 +99,10 @@ func startServices() error {
 	if err != nil {
 		return err
 	}
-	if err := service.Create("swapperd", path.Join(homeDir, fmt.Sprintf("swapperd%s", path.Ext(ex)))); err != nil {
+	if err := winexec.CreateService("swapperd", path.Join(homeDir, fmt.Sprintf("swapperd%s", path.Ext(ex)))); err != nil {
 		return err
 	}
-	if err := service.Start("swapperd"); err != nil {
-		return err
-	}
-	if err := service.Create("swapperd-updater", path.Join(homeDir, fmt.Sprintf("swapperd-updater%s", path.Ext(ex)))); err != nil {
-		return err
-	}
-	if err := service.Start("swapperd-updater"); err != nil {
+	if err := winexec.StartService("swapperd"); err != nil {
 		return err
 	}
 	return nil
