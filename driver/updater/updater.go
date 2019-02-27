@@ -15,20 +15,19 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/renproject/swapperd/adapter/server"
-	"github.com/renproject/swapperd/driver/service"
 	"github.com/sirupsen/logrus"
 )
 
 type Updater struct {
-	frequency time.Duration
 	homeDir   string
 	logger    logrus.FieldLogger
+	preUnzip  func()
+	postUnzip func()
 }
 
-func New() (*Updater, error) {
+func New(preUnzip, postUnzip func()) (*Updater, error) {
 	ex, err := os.Executable()
 	if err != nil {
 		return nil, err
@@ -40,19 +39,11 @@ func New() (*Updater, error) {
 	}
 	logger := logrus.New()
 	logger.SetOutput(logFile)
-	frequency := time.Minute
-	if configData, err := ioutil.ReadFile(fmt.Sprintf("%s/config.json", homeDir)); err == nil {
-		config := struct {
-			Frequency time.Duration `json:"frequency"`
-		}{}
-		if err := json.Unmarshal(configData, &config); err == nil {
-			frequency = config.Frequency * time.Second
-		}
-	}
 	return &Updater{
-		frequency: frequency,
 		homeDir:   homeDir,
 		logger:    logger,
+		preUnzip:  preUnzip,
+		postUnzip: postUnzip,
 	}, nil
 }
 
@@ -60,6 +51,7 @@ func (updater *Updater) Update() error {
 	updater.logger.Info("looking for latest version ...")
 	latVer, err := getLatestVersion()
 	if err != nil {
+		updater.logger.Info("unable to get the latest version")
 		return err
 	}
 	updater.logger.Infof("latest version is %s", latVer)
@@ -67,11 +59,16 @@ func (updater *Updater) Update() error {
 	if err != nil {
 		return updater.updateSwapperd(latVer)
 	}
-	updater.logger.Info("current version is %s", currVer)
+	updater.logger.Infof("current version is %s", currVer)
 	if res, err := compareVersions(currVer, latVer); err != nil || !res {
+		updater.logger.Info("swapperd is up to date")
 		return err
 	}
-	return updater.updateSwapperd(latVer)
+	if err := updater.updateSwapperd(latVer); err != nil {
+		return err
+	}
+	updater.logger.Infof("successfully updated swapperd to the latest version %s", latVer)
+	return nil
 }
 
 func (updater *Updater) getCurrentVersion() (string, error) {
@@ -104,13 +101,15 @@ func (updater *Updater) updateSwapperd(ver string) error {
 	if err := updater.downloadSwapperd(ver); err != nil {
 		return err
 	}
-	service.Stop("swapperd")
-	service.Stop("swapperd-updater")
+	if updater.preUnzip != nil {
+		updater.preUnzip()
+	}
 	if err := updater.unzipSwapperd(); err != nil {
 		return err
 	}
-	service.Start("swapperd-updater")
-	service.Start("swapperd")
+	if updater.postUnzip != nil {
+		updater.postUnzip()
+	}
 	return updater.updateConfig(ver)
 }
 
@@ -185,7 +184,7 @@ func (updater *Updater) unzipSwapperd() error {
 			f, err := os.OpenFile(
 				fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 			if err != nil {
-				updater.logger.Errorf("could not update %s: %v", f.Name, err)
+				updater.logger.Error("unable to overwrite: %s", f.Name())
 				continue
 			}
 			defer f.Close()

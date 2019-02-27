@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/renproject/swapperd/driver/composer"
+	"github.com/renproject/swapperd/driver/composer-win"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
 	"golang.org/x/sys/windows/svc/eventlog"
