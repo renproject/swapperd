@@ -77,6 +77,8 @@
     "common/prque",
     "consensus",
     "consensus/misc",
+    "contracts/ens",
+    "contracts/ens/contract",
     "core",
     "core/rawdb",
     "core/state",
@@ -116,8 +118,8 @@
 [[projects]]
   name = "github.com/google/uuid"
   packages = ["."]
-  revision = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8"
-  version = "v1.1.0"
+  revision = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/gorilla/mux"
@@ -131,8 +133,8 @@
     ".",
     "simplelru"
   ]
-  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
-  version = "v0.5.0"
+  revision = "7087cb70de9f7a8bc0a10c375cb0d2280a8edf9c"
+  version = "v0.5.1"
 
 [[projects]]
   name = "github.com/hpcloud/tail"
@@ -149,8 +151,8 @@
 [[projects]]
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
-  revision = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242"
-  version = "v1.0.1"
+  revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
+  version = "v1.0.2"
 
 [[projects]]
   name = "github.com/onsi/ginkgo"
@@ -212,7 +214,7 @@
   branch = "master"
   name = "github.com/renproject/libeth-go"
   packages = ["."]
-  revision = "c8f4fefe69bd5994ce538eedd3645b11e8758d3c"
+  revision = "aa28b3e846ae7abbcab2877b1d09fc62d5a1f344"
 
 [[projects]]
   branch = "master"
@@ -300,7 +302,7 @@
     "sha3",
     "ssh/terminal"
   ]
-  revision = "7f87c0fbb88b590338857bcb720678c2583d4dea"
+  revision = "215aa809caaf1f5be699aef5e3ccebeb15d67b0b"
 
 [[projects]]
   branch = "master"
@@ -311,7 +313,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "fe579d43d83210096a79b46dcca0e3721058393a"
+  revision = "c95aed5357e77a4bf7d3955c46740000a17adee1"
 
 [[projects]]
   branch = "master"
@@ -326,7 +328,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "cc5685c2db1239775905f3911f0067c0fa74762f"
+  revision = "775f8194d0f9e65c46913c7be783d3d95a29333c"
 
 [[projects]]
   name = "golang.org/x/text"

@@ -39,7 +39,7 @@ type Wallet interface {
 	Transfer(password string, token blockchain.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, senAll bool) (string, blockchain.Cost, error)
 	GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error)
 	Addresses(password string) (map[blockchain.TokenName]string, error)
-	VerifyAddress(blockchain blockchain.BlockchainName, address string) error
+	ResolveAddress(blockchain blockchain.BlockchainName, address string) (string, error)
 	VerifyBalance(password string, token blockchain.Token, balance *big.Int) error
 
 	EthereumAccount(password string) (libeth.Account, error)

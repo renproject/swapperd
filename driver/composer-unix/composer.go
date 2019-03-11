@@ -7,21 +7,25 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	"github.com/renproject/swapperd/driver/notifier"
 	"github.com/renproject/swapperd/driver/swapperd"
+	"github.com/renproject/swapperd/driver/updater"
 	"github.com/republicprotocol/co-go"
 	"github.com/sirupsen/logrus"
 )
 
-type composer struct {
+type Composer struct {
 	version    string
 	homeDir    string
 	executable string
+	frequency  time.Duration
 	logger     logrus.FieldLogger
+	updater    *updater.Updater
 }
 
-func New() (*composer, error) {
+func New() (*Composer, error) {
 	ex, err := os.Executable()
 	if err != nil {
 		return nil, err
@@ -38,15 +42,22 @@ func New() (*composer, error) {
 		return nil, err
 	}
 	config := struct {
-		Version string `json:"version"`
+		Version   string        `json:"version"`
+		Frequency time.Duration `json:"frequency"`
 	}{}
 	if err := json.Unmarshal(configData, &config); err != nil {
 		return nil, err
 	}
-	return &composer{
+	updater, err := updater.New(nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &Composer{
+		frequency:  config.Frequency * time.Second,
 		version:    config.Version,
 		homeDir:    homeDir,
 		executable: ex,
+		updater:    updater,
 		logger:     logger,
 	}, nil
 }
@@ -58,6 +69,19 @@ func Run(done <-chan struct{}) {
 		os.Exit(1)
 	}
 	co.ParBegin(
+		func() {
+			ticker := time.NewTicker(composer.frequency)
+			for {
+				select {
+				case <-done:
+					return
+				case <-ticker.C:
+					if err := composer.updater.Update(); err != nil {
+						composer.logger.Error(err)
+					}
+				}
+			}
+		},
 		func() {
 			swapperd.New(composer.version, composer.homeDir, "testnet", "17927", composer.logger).Run(done)
 		},

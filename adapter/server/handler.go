@@ -224,9 +224,13 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) error {
 	if err != nil {
 		return err
 	}
-	if err := handler.wallet.VerifyAddress(token.Blockchain, req.To); err != nil {
+
+	to, err := handler.wallet.ResolveAddress(token.Blockchain, req.To)
+	if err != nil {
 		return err
 	}
+	req.To = to
+
 	if req.SendAll {
 		balance, err := handler.wallet.Balance(req.Password, token)
 		if err != nil {
@@ -332,23 +336,29 @@ func (handler *handler) patchSwap(swapBlob swap.SwapBlob) (swap.SwapBlob, error)
 		return swapBlob, err
 	}
 
-	if err := handler.wallet.VerifyAddress(sendToken.Blockchain, swapBlob.SendTo); err != nil {
+	sendTo, err := handler.wallet.ResolveAddress(sendToken.Blockchain, swapBlob.SendTo)
+	if err != nil {
 		return swapBlob, err
 	}
+	swapBlob.SendTo = sendTo
 
 	receiveToken, err := blockchain.PatchToken(string(swapBlob.ReceiveToken))
 	if err != nil {
 		return swapBlob, err
 	}
 
-	if err := handler.wallet.VerifyAddress(receiveToken.Blockchain, swapBlob.ReceiveFrom); err != nil {
+	receiveFrom, err := handler.wallet.ResolveAddress(receiveToken.Blockchain, swapBlob.ReceiveFrom)
+	if err != nil {
 		return swapBlob, err
 	}
+	swapBlob.ReceiveFrom = receiveFrom
 
 	if swapBlob.WithdrawAddress != "" {
-		if err := handler.wallet.VerifyAddress(receiveToken.Blockchain, swapBlob.WithdrawAddress); err != nil {
+		withdrawAddress, err := handler.wallet.ResolveAddress(receiveToken.Blockchain, swapBlob.WithdrawAddress)
+		if err != nil {
 			return swapBlob, err
 		}
+		swapBlob.WithdrawAddress = withdrawAddress
 	}
 
 	if err := handler.verifySendAmount(swapBlob.Password, sendToken, swapBlob.SendAmount, swapBlob.BrokerFee); err != nil {
@@ -478,7 +488,6 @@ func (handler *handler) buildSwapResponse(blob swap.SwapBlob) (PostSwapResponse,
 	responseBlob.ReceiveFrom = receiveFrom
 	responseBlob.SecretHash = blob.SecretHash
 	responseBlob.TimeLock = blob.TimeLock
-
 	responseBlob.BrokerFee = blob.BrokerFee
 	responseBlob.BrokerSendTokenAddr = blob.BrokerReceiveTokenAddr
 	responseBlob.BrokerReceiveTokenAddr = blob.BrokerSendTokenAddr

@@ -1,16 +1,14 @@
 package wallet
 
 import (
-	"encoding/hex"
 	"fmt"
-	"strings"
 	"sync"
-
-	"github.com/republicprotocol/co-go"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
+	"github.com/renproject/libeth-go"
 	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/republicprotocol/co-go"
 )
 
 func (wallet *wallet) Addresses(password string) (map[blockchain.TokenName]string, error) {
@@ -61,50 +59,45 @@ func (wallet *wallet) getBitcoinAddress(password string) (string, error) {
 	return btcAddr.String(), nil
 }
 
-func (wallet *wallet) VerifyAddress(blockchainName blockchain.BlockchainName, address string) error {
-	switch blockchainName {
+func (wallet *wallet) ResolveAddress(bcName blockchain.BlockchainName, address string) (string, error) {
+	switch bcName {
 	case blockchain.Ethereum, blockchain.ERC20:
-		return wallet.verifyEthereumAddress(address)
+		return wallet.resolveEthereumAddress(address)
 	case blockchain.Bitcoin:
-		return wallet.verifyBitcoinAddress(address)
+		return wallet.resolveBitcoinAddress(address)
 	default:
-		return blockchain.NewErrUnsupportedToken("unsupported blockchain")
+		return "", blockchain.NewErrUnsupportedBlockchain(bcName)
 	}
 }
 
-func (wallet *wallet) verifyEthereumAddress(address string) error {
-	if address == "" {
-		return fmt.Errorf("Empty ethereum address")
+func (wallet *wallet) resolveEthereumAddress(address string) (string, error) {
+	conn, err := libeth.Connect(wallet.config.Ethereum.Network.URL)
+	if err != nil {
+		return "", err
 	}
-
-	address = strings.ToLower(address)
-	if len(address) > 2 && address[:2] == "0x" {
-		address = address[2:]
+	addr, err := conn.Resolve(address)
+	if err != nil {
+		return "", err
 	}
-
-	addrBytes, err := hex.DecodeString(address)
-	if err != nil || len(addrBytes) != 20 {
-		return fmt.Errorf("Invalid ethereum address: %s", address)
-	}
-	return nil
+	return addr.String(), nil
 }
 
-func (wallet *wallet) verifyBitcoinAddress(address string) error {
+func (wallet *wallet) resolveBitcoinAddress(address string) (string, error) {
 	if address == "" {
-		return fmt.Errorf("Empty bitcoin address")
+		return "", fmt.Errorf("Empty bitcoin address")
 	}
 
 	network := wallet.config.Bitcoin.Network.Name
 	switch network {
 	case "mainnet":
 		if _, err := btcutil.DecodeAddress(address, &chaincfg.MainNetParams); err != nil {
-			return fmt.Errorf("Invalid %s bitcoin address: %s", network, address)
+			return "", fmt.Errorf("Invalid %s bitcoin address: %s", network, address)
 		}
 
 	case "testnet":
 		if _, err := btcutil.DecodeAddress(address, &chaincfg.TestNet3Params); err != nil {
-			return fmt.Errorf("Invalid %s bitcoin address: %s", network, address)
+			return "", fmt.Errorf("Invalid %s bitcoin address: %s", network, address)
 		}
 	}
-	return nil
+	return address, nil
 }

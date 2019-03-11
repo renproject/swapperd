@@ -31,11 +31,6 @@ func Create(name, binLocation string) error {
 		serviceContent := fmt.Sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\t\n<dict>\t\t\n<key>Label</key>\t\t\n<string>%s</string>\t\t\n<key>ProgramArguments</key>\t\t\n<array>\t\t\t\t\n<string>%s</string>\t\t\n</array>\t\t\n<key>KeepAlive</key>\t\t\n<true/>\t\t\n<key>StandardOutPath</key>\t\t\n<string>/dev/null</string>\t\t\n<key>StandardErrorPath</key>\t\t\n<string>/dev/null</string>\t\n</dict>\n</plist>", name, binLocation)
 		servicePath := path.Join(os.Getenv("HOME"), "Library", "LaunchAgents", fmt.Sprintf("%s.plist", name))
 		return ioutil.WriteFile(servicePath, []byte(serviceContent), 0755)
-	case "windows":
-		if err := exec.Command("cmd", "/C", "sc", "create", name, "start=", "auto", "binpath=", binLocation).Run(); err != nil {
-			return err
-		}
-		return exec.Command("cmd", "/C", "sc", "failure", name, "reset=", "0", "actions=", "restart/0/restart/0/restart/0").Run()
 	default:
 		return fmt.Errorf("unsupported Operating System: %s", runtime.GOOS)
 	}
@@ -48,8 +43,6 @@ func Start(name string) error {
 	case "darwin":
 		servicePath := path.Join(os.Getenv("HOME"), "Library", "LaunchAgents", fmt.Sprintf("%s.plist", name))
 		return exec.Command("launchctl", "load", "-w", servicePath).Run()
-	case "windows":
-		return exec.Command("cmd", "/C", "sc", "start", name).Run()
 	default:
 		return fmt.Errorf("unsupported Operating System: %s", runtime.GOOS)
 	}
@@ -62,8 +55,6 @@ func Stop(name string) error {
 	case "darwin":
 		servicePath := path.Join(os.Getenv("HOME"), "Library", "LaunchAgents", fmt.Sprintf("%s.plist", name))
 		return exec.Command("launchctl", "unload", "-w", servicePath).Run()
-	case "windows":
-		return exec.Command("cmd", "/C", "sc", "stop", name).Run()
 	default:
 		return fmt.Errorf("unsupported Operating System: %s", runtime.GOOS)
 	}
@@ -76,8 +67,6 @@ func Delete(name string) error {
 	case "darwin":
 		servicePath := path.Join(os.Getenv("HOME"), "Library", "LaunchAgents", fmt.Sprintf("%s.plist", name))
 		return exec.Command("rm", servicePath).Run()
-	case "windows":
-		return exec.Command("cmd", "/C", "sc", "delete", name).Run()
 	default:
 		return fmt.Errorf("unsupported Operating System: %s", runtime.GOOS)
 	}
