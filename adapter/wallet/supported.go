@@ -1,7 +1,9 @@
 package wallet
 
-import "github.com/renproject/swapperd/foundation/blockchain"
+import (
+	"github.com/renproject/tokens"
+)
 
-func (wallet *wallet) SupportedTokens() []blockchain.Token {
-	return blockchain.SupportedTokens
+func (wallet *wallet) SupportedTokens() []tokens.Token {
+	return tokens.SupportedTokens
 }

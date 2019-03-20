@@ -15,6 +15,7 @@ import (
 	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/renproject/tokens"
 	"github.com/sirupsen/logrus"
 )
 
@@ -41,8 +42,8 @@ func NewBTCSwapContractBinder(account libbtc.Account, swap swap.Swap, cost block
 	fields["Token"] = swap.Token.Name
 	logger = logger.WithFields(fields)
 
-	if _, ok := cost[blockchain.BTC]; !ok {
-		cost[blockchain.BTC] = big.NewInt(0)
+	if _, ok := cost[tokens.NameBTC]; !ok {
+		cost[tokens.NameBTC] = big.NewInt(0)
 	}
 
 	if swap.BrokerFee.Int64() != 0 && swap.BrokerFee.Int64() < 600 {
@@ -119,8 +120,8 @@ func (atom *btcSwapContractBinder) Initiate() error {
 		}
 		return nil
 	}
-	atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(txFee), atom.cost[blockchain.BTC])
-	atom.cost[blockchain.BTC] = new(big.Int).Add(atom.swap.BrokerFee, atom.cost[blockchain.BTC])
+	atom.cost[tokens.NameBTC] = new(big.Int).Add(big.NewInt(txFee), atom.cost[tokens.NameBTC])
+	atom.cost[tokens.NameBTC] = new(big.Int).Add(atom.swap.BrokerFee, atom.cost[tokens.NameBTC])
 	atom.Info(atom.FormatTransactionView("Initiated on Bitcoin blockchain", txHash))
 	return nil
 }
@@ -213,7 +214,7 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 		}
 		return err
 	}
-	atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(txFee), atom.cost[blockchain.BTC])
+	atom.cost[tokens.NameBTC] = new(big.Int).Add(big.NewInt(txFee), atom.cost[tokens.NameBTC])
 	atom.Info(atom.FormatTransactionView("Redeemed on Bitcoin blockchain", txHash))
 	return nil
 }
@@ -298,8 +299,8 @@ func (atom *btcSwapContractBinder) Refund() error {
 		}
 		return nil
 	}
-	atom.cost[blockchain.BTC] = new(big.Int).Add(big.NewInt(txFee), atom.cost[blockchain.BTC])
-	atom.cost[blockchain.BTC] = new(big.Int).Sub(atom.cost[blockchain.BTC], atom.swap.BrokerFee)
+	atom.cost[tokens.NameBTC] = new(big.Int).Add(big.NewInt(txFee), atom.cost[tokens.NameBTC])
+	atom.cost[tokens.NameBTC] = new(big.Int).Sub(atom.cost[tokens.NameBTC], atom.swap.BrokerFee)
 	atom.Info(atom.FormatTransactionView("Refunded on Bitcoin blockchain", txHash))
 	return nil
 }

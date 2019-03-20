@@ -12,9 +12,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/renproject/swapperd/adapter/callback"
+	"github.com/renproject/tokens"
 
 	"github.com/gorilla/mux"
-	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
 	"github.com/rs/cors"
 )
@@ -64,14 +64,14 @@ var _ = Describe("Server Adapter", func() {
 	}
 
 	tokenPairOptions := []struct {
-		sendToken, receiveToken blockchain.TokenName
+		sendToken, receiveToken tokens.Name
 	}{
-		{blockchain.BTC, blockchain.ETH},
-		{blockchain.BTC, blockchain.WBTC},
-		{blockchain.ETH, blockchain.BTC},
-		{blockchain.ETH, blockchain.WBTC},
-		{blockchain.WBTC, blockchain.BTC},
-		{blockchain.WBTC, blockchain.ETH},
+		{tokens.NameBTC, tokens.NameETH},
+		{tokens.NameBTC, tokens.NameWBTC},
+		{tokens.NameETH, tokens.NameBTC},
+		{tokens.NameETH, tokens.NameWBTC},
+		{tokens.NameWBTC, tokens.NameBTC},
+		{tokens.NameWBTC, tokens.NameETH},
 	}
 
 	amountOptions := []struct {

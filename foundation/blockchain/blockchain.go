@@ -1,22 +1,10 @@
 package blockchain
 
-import "fmt"
-
-func NewErrUnsupportedBlockchain(blockchain BlockchainName) error {
-	return fmt.Errorf("unsupported blockchain: %s", blockchain)
-}
-
-type BlockchainName string
-
-var (
-	Bitcoin  = BlockchainName("bitcoin")
-	Ethereum = BlockchainName("ethereum")
-	ERC20    = BlockchainName("erc20")
-)
+import "github.com/renproject/tokens"
 
 type Blockchain struct {
-	Name    BlockchainName `json:"name"`
-	Address string         `json:"address"`
+	Name    tokens.BlockchainName `json:"name"`
+	Address string                `json:"address"`
 }
 
 type Balance struct {

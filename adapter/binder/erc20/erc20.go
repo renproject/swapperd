@@ -14,6 +14,7 @@ import (
 	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/renproject/tokens"
 	"github.com/sirupsen/logrus"
 )
 
@@ -57,8 +58,8 @@ func NewERC20SwapContractBinder(account libeth.Account, swap swap.Swap, cost blo
 	fields["Token"] = swap.Token.Name
 	logger = logger.WithFields(fields)
 
-	if _, ok := cost[blockchain.ETH]; !ok {
-		cost[blockchain.ETH] = big.NewInt(0)
+	if _, ok := cost[tokens.NameETH]; !ok {
+		cost[tokens.NameETH] = big.NewInt(0)
 	}
 
 	if _, ok := cost[swap.Token.Name]; !ok {
@@ -101,7 +102,7 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 	if err != nil {
 		return err
 	}
-	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], approveTx.Cost())
+	atom.cost[tokens.NameETH] = new(big.Int).Add(atom.cost[tokens.NameETH], approveTx.Cost())
 
 	// Initiate the Atomic Swap
 	initiateTx, err := atom.account.Transact(
@@ -139,7 +140,7 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 	if err != nil {
 		return err
 	}
-	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], initiateTx.Cost())
+	atom.cost[tokens.NameETH] = new(big.Int).Add(atom.cost[tokens.NameETH], initiateTx.Cost())
 	return nil
 }
 
@@ -179,7 +180,7 @@ func (atom *erc20SwapContractBinder) Refund() error {
 	if err != nil && err != libeth.ErrPreConditionCheckFailed {
 		return err
 	}
-	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], tx.Cost())
+	atom.cost[tokens.NameETH] = new(big.Int).Add(atom.cost[tokens.NameETH], tx.Cost())
 	if _, ok := atom.cost[atom.swap.Token.Name]; ok {
 		atom.cost[atom.swap.Token.Name] = new(big.Int).Sub(atom.cost[atom.swap.Token.Name], atom.swap.BrokerFee)
 	}
@@ -287,7 +288,7 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 		}
 		atom.logger.Info("Skipping redeem on Ethereum Blockchain")
 	}
-	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], tx.Cost())
+	atom.cost[tokens.NameETH] = new(big.Int).Add(atom.cost[tokens.NameETH], tx.Cost())
 	return nil
 }
 

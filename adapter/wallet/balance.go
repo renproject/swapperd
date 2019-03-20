@@ -13,11 +13,12 @@ import (
 	"github.com/renproject/libeth-go"
 	"github.com/renproject/swapperd/adapter/binder/erc20"
 	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/tokens"
 	"github.com/republicprotocol/co-go"
 )
 
-func (wallet *wallet) Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error) {
-	balanceMap := map[blockchain.TokenName]blockchain.Balance{}
+func (wallet *wallet) Balances(password string) (map[tokens.Name]blockchain.Balance, error) {
+	balanceMap := map[tokens.Name]blockchain.Balance{}
 	mu := new(sync.RWMutex)
 	tokens := wallet.SupportedTokens()
 	co.ParForAll(tokens, func(i int) {
@@ -33,21 +34,21 @@ func (wallet *wallet) Balances(password string) (map[blockchain.TokenName]blockc
 	return balanceMap, nil
 }
 
-func (wallet *wallet) Balance(password string, token blockchain.Token) (blockchain.Balance, error) {
+func (wallet *wallet) Balance(password string, token tokens.Token) (blockchain.Balance, error) {
 	address, err := wallet.GetAddress(password, token.Blockchain)
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
 
 	switch token.Blockchain {
-	case blockchain.Bitcoin:
+	case tokens.BITCOIN:
 		return wallet.balanceBTC(address)
-	case blockchain.Ethereum:
+	case tokens.ETHEREUM:
 		return wallet.balanceETH(address)
-	case blockchain.ERC20:
+	case tokens.ERC20:
 		return wallet.balanceERC20(token, address)
 	default:
-		return blockchain.Balance{}, blockchain.NewErrUnsupportedToken(token.Name)
+		return blockchain.Balance{}, tokens.NewErrUnsupportedBlockchain(token.Blockchain)
 	}
 }
 
@@ -67,7 +68,7 @@ func (wallet *wallet) balanceBTC(address string) (blockchain.Balance, error) {
 
 	return blockchain.Balance{
 		Address:  address,
-		Decimals: blockchain.TokenBTC.Decimals,
+		Decimals: int(tokens.BTC.Decimals),
 		Amount:   big.NewInt(balance).String(),
 	}, nil
 }
@@ -88,12 +89,12 @@ func (wallet *wallet) balanceETH(address string) (blockchain.Balance, error) {
 
 	return blockchain.Balance{
 		Address:  address,
-		Decimals: blockchain.TokenETH.Decimals,
+		Decimals: int(tokens.ETH.Decimals),
 		Amount:   balance.String(),
 	}, nil
 }
 
-func (wallet *wallet) balanceERC20(token blockchain.Token, address string) (blockchain.Balance, error) {
+func (wallet *wallet) balanceERC20(token tokens.Token, address string) (blockchain.Balance, error) {
 	client, err := libeth.Connect(wallet.config.Ethereum.Network.URL)
 	if err != nil {
 		return blockchain.Balance{}, err
@@ -123,7 +124,7 @@ func (wallet *wallet) balanceERC20(token blockchain.Token, address string) (bloc
 
 	return blockchain.Balance{
 		Address:  address,
-		Decimals: token.Decimals,
+		Decimals: int(token.Decimals),
 		Amount:   balance.String(),
 	}, nil
 }

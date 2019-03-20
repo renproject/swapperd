@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/renproject/tokens"
+
 	"github.com/renproject/swapperd/adapter/binder/btc"
 	"github.com/renproject/swapperd/adapter/binder/erc20"
 	"github.com/renproject/swapperd/adapter/binder/eth"
@@ -45,26 +47,26 @@ func (builder *builder) BuildSwapContracts(req immediate.SwapRequest) (immediate
 
 func (builder *builder) buildBinder(swap swap.Swap, cost blockchain.Cost, password string) (immediate.Contract, error) {
 	switch swap.Token.Blockchain {
-	case blockchain.Bitcoin:
+	case tokens.BITCOIN:
 		btcAccount, err := builder.BitcoinAccount(password)
 		if err != nil {
 			return nil, err
 		}
 		return btc.NewBTCSwapContractBinder(btcAccount, swap, cost, builder.FieldLogger)
-	case blockchain.Ethereum:
+	case tokens.ETHEREUM:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
 		}
 		return eth.NewETHSwapContractBinder(ethAccount, swap, cost, builder.FieldLogger)
-	case blockchain.ERC20:
+	case tokens.ERC20:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
 			return nil, err
 		}
 		return erc20.NewERC20SwapContractBinder(ethAccount, swap, cost, builder.FieldLogger)
 	default:
-		return nil, blockchain.NewErrUnsupportedToken(swap.Token.Name)
+		return nil, tokens.NewErrUnsupportedToken(swap.Token.Name)
 	}
 }
 
@@ -87,9 +89,9 @@ func (builder *builder) buildComplementarySwaps(blob swap.SwapBlob) (swap.Swap, 
 }
 
 func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fundingAddress string) (swap.Swap, error) {
-	token, err := blockchain.PatchToken(string(blob.SendToken))
-	if err != nil {
-		return swap.Swap{}, err
+	token := tokens.ParseToken(string(blob.SendToken))
+	if token == tokens.InvalidToken {
+		return swap.Swap{}, tokens.NewErrUnsupportedToken(blob.SendToken)
 	}
 	value, ok := new(big.Int).SetString(blob.SendAmount, 10)
 	if !ok {
@@ -124,9 +126,9 @@ func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fund
 }
 
 func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spendingAddress string) (swap.Swap, error) {
-	token, err := blockchain.PatchToken(string(blob.ReceiveToken))
-	if err != nil {
-		return swap.Swap{}, err
+	token := tokens.ParseToken(string(blob.ReceiveToken))
+	if token == tokens.InvalidToken {
+		return swap.Swap{}, tokens.NewErrUnsupportedToken(blob.ReceiveToken)
 	}
 
 	value, ok := new(big.Int).SetString(blob.ReceiveAmount, 10)
@@ -179,17 +181,17 @@ func (builder *builder) calculateTimeLocks(swap swap.SwapBlob) (native, foreign 
 }
 
 func (builder *builder) calculateAddresses(swap swap.SwapBlob) (string, string, error) {
-	sendToken, err := blockchain.PatchToken(string(swap.SendToken))
-	if err != nil {
-		return "", "", err
+	sendToken := tokens.ParseToken(string(swap.SendToken))
+	if sendToken == tokens.InvalidToken {
+		return "", "", tokens.NewErrUnsupportedToken(swap.SendToken)
 	}
 	sendAddress, err := builder.Wallet.GetAddress(swap.Password, sendToken.Blockchain)
 	if err != nil {
 		return "", "", err
 	}
-	receiveToken, err := blockchain.PatchToken(string(swap.ReceiveToken))
-	if err != nil {
-		return "", "", err
+	receiveToken := tokens.ParseToken(string(swap.ReceiveToken))
+	if receiveToken == tokens.InvalidToken {
+		return "", "", tokens.NewErrUnsupportedToken(swap.ReceiveToken)
 	}
 	receiveAddress, err := builder.Wallet.GetAddress(swap.Password, receiveToken.Blockchain)
 	if err != nil {

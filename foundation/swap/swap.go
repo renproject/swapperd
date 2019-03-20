@@ -8,6 +8,7 @@ import (
 	"reflect"
 
 	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/tokens"
 )
 
 const ExpiryUnit = int64(2 * 60 * 60)
@@ -26,7 +27,7 @@ func (SwapID) Generate(rand *rand.Rand, size int) reflect.Value {
 // A Swap stores all of the information required to execute an atomic swap.
 type Swap struct {
 	ID              SwapID
-	Token           blockchain.Token
+	Token           tokens.Token
 	Value           *big.Int
 	BrokerFee       *big.Int
 	SecretHash      [32]byte
@@ -40,9 +41,9 @@ type Swap struct {
 
 // A SwapBlob is used to encode a Swap for storage and transmission.
 type SwapBlob struct {
-	ID           SwapID               `json:"id,omitempty"`
-	SendToken    blockchain.TokenName `json:"sendToken"`
-	ReceiveToken blockchain.TokenName `json:"receiveToken"`
+	ID           SwapID      `json:"id,omitempty"`
+	SendToken    tokens.Name `json:"sendToken"`
+	ReceiveToken tokens.Name `json:"receiveToken"`
 
 	// SendAmount and ReceiveAmount are decimal strings.
 	SendAmount           string                      `json:"sendAmount"`
