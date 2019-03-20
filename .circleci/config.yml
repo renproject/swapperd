@@ -47,8 +47,9 @@ jobs:
           command: |
             # docker pull karalabe/xgo-latest
             # go get github.com/karalabe/xgo
-            cd ./cmd/
-            sh ./pipeline.sh
+            # cd ./cmd/
+            # sh ./pipeline.sh
+            make darwin
   test:
     docker:
       # specify the version
