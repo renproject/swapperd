@@ -1,28 +1,64 @@
 # Golang CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-go/ for more details
-version: 2
+version: 2.1
+
+_defaults: &defaults
+    docker:
+      - image: karalabe/xgo-latest
+    working_directory: /go/src/github.com/renproject/swapperd
+
+commands:
+  dep_ensure:
+    description: Installing dependencies
+    steps:
+      - restore_cache:
+          key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          paths:
+              - /go/src/github.com/renproject/swapperd/vendor
+      - run:
+          name: Download dependencies
+          command: |
+            if ! [ -x "$(command -v dep)" ]; then
+                if ! [ -x "$(command -v curl)" ]; then
+                    apt-get update -y
+                    apt-get install -y curl
+                fi
+                curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+            fi
+            if [ ! -d /go/src/github.com/renproject/swapperd/vendor ]; then
+                dep ensure -v
+            else
+                echo "Dependencies were restored from cache."
+            fi
+      - save_cache:
+          key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          paths:
+              - /go/src/github.com/renproject/swapperd/vendor
+
 jobs:
   build:
+    <<: *defaults
+    steps:
+      - checkout
+      - dep_ensure
+      - run:
+          name: Build binaries
+          command: |
+            # docker pull karalabe/xgo-latest
+            # go get github.com/karalabe/xgo
+            cd ./cmd/
+            sh ./pipeline.sh
+  test:
     docker:
       # specify the version
       - image: circleci/golang:1.9
-      
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
-
-    #### TEMPLATE_NOTE: go expects specific checkout path representing url
-    #### expecting it in the form of
-    ####   /go/src/github.com/circleci/go-tool
-    ####   /go/src/bitbucket.org/circleci/go-tool
     working_directory: /go/src/github.com/renproject/swapperd
     steps:
       - checkout
-
       # specify any bash command here prefixed with `run: `
       - run: go get -v -t -d ./adapter/...
       - run: go get -v -t -d ./core/...
       - run: go test -v ./adapter/...
       - run: go test -v ./core/...
+
