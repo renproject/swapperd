@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/tokens"
 	"github.com/republicprotocol/tau"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -17,9 +18,9 @@ type Storage interface {
 }
 
 type Blockchain interface {
-	GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error)
-	Transfer(password string, token blockchain.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error)
-	Lookup(token blockchain.Token, txHash string) (UpdateReceipt, error)
+	GetAddress(password string, blockchainName tokens.BlockchainName) (string, error)
+	Transfer(password string, token tokens.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error)
+	Lookup(token tokens.Token, txHash string) (UpdateReceipt, error)
 }
 
 type transfers struct {
@@ -75,14 +76,14 @@ func buildReceipt(req TransferRequest, from, txHash string, txCost blockchain.Co
 
 type TransferRequest struct {
 	Password string
-	Token    blockchain.Token
+	Token    tokens.Token
 	To       string
 	Amount   *big.Int
 	Speed    blockchain.TxExecutionSpeed
 	SendAll  bool
 }
 
-func NewTransferRequest(password string, token blockchain.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) TransferRequest {
+func NewTransferRequest(password string, token tokens.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) TransferRequest {
 	return TransferRequest{password, token, to, amount, speed, sendAll}
 }
 
@@ -101,7 +102,7 @@ type TransferReceipt struct {
 type TokenDetails struct {
 	To     string              `json:"to"`
 	From   string              `json:"from"`
-	Token  blockchain.Token    `json:"token"`
+	Token  tokens.Token        `json:"token"`
 	Amount string              `json:"value"`
 	TxCost blockchain.CostBlob `json:"txCost"`
 	TxHash string              `json:"txHash"`

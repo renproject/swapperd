@@ -10,18 +10,19 @@ import (
 	"github.com/renproject/libeth-go"
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/tokens"
 )
 
-func (wallet *wallet) Transfer(password string, token blockchain.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error) {
+func (wallet *wallet) Transfer(password string, token tokens.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error) {
 	switch token.Blockchain {
-	case blockchain.Bitcoin:
+	case tokens.BITCOIN:
 		return wallet.transferBTC(password, to, amount, speed, sendAll)
-	case blockchain.Ethereum:
+	case tokens.ETHEREUM:
 		return wallet.transferETH(password, to, amount, speed, sendAll)
-	case blockchain.ERC20:
+	case tokens.ERC20:
 		return wallet.transferERC20(password, token, to, amount, speed, sendAll)
 	default:
-		return "", blockchain.Cost{}, blockchain.NewErrUnsupportedToken(token.Name)
+		return "", blockchain.Cost{}, tokens.NewErrUnsupportedToken(token.Name)
 	}
 }
 
@@ -40,7 +41,7 @@ func (wallet *wallet) transferBTC(password, to string, amount *big.Int, speed bl
 	if err != nil {
 		return txHash, blockchain.Cost{}, err
 	}
-	cost[blockchain.BTC] = big.NewInt(txFee)
+	cost[tokens.NameBTC] = big.NewInt(txFee)
 	return txHash, cost, nil
 }
 
@@ -56,11 +57,11 @@ func (wallet *wallet) transferETH(password, to string, amount *big.Int, speed bl
 	if err != nil {
 		return "", cost, err
 	}
-	cost[blockchain.ETH] = new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
+	cost[tokens.NameETH] = new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
 	return tx.Hash().String(), cost, nil
 }
 
-func (wallet *wallet) transferERC20(password string, token blockchain.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error) {
+func (wallet *wallet) transferERC20(password string, token tokens.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error) {
 	cost := blockchain.Cost{}
 	account, err := wallet.EthereumAccount(password)
 	if err != nil {
@@ -79,21 +80,21 @@ func (wallet *wallet) transferERC20(password string, token blockchain.Token, to 
 	if err != nil {
 		return "", cost, err
 	}
-	cost[blockchain.ETH] = tx.Cost()
+	cost[tokens.NameETH] = tx.Cost()
 	if txFee := token.AdditionalTransactionFee(amount); txFee != nil {
 		cost[token.Name] = txFee
 	}
 	return tx.Hash().String(), cost, nil
 }
 
-func (wallet *wallet) Lookup(token blockchain.Token, txHash string) (transfer.UpdateReceipt, error) {
+func (wallet *wallet) Lookup(token tokens.Token, txHash string) (transfer.UpdateReceipt, error) {
 	switch token.Blockchain {
-	case blockchain.Bitcoin:
+	case tokens.BITCOIN:
 		return wallet.bitcoinLookup(txHash)
-	case blockchain.Ethereum, blockchain.ERC20:
+	case tokens.ETHEREUM, tokens.ERC20:
 		return wallet.ethereumLookup(txHash)
 	default:
-		return transfer.UpdateReceipt{}, blockchain.NewErrUnsupportedBlockchain(token.Blockchain)
+		return transfer.UpdateReceipt{}, tokens.NewErrUnsupportedBlockchain(token.Blockchain)
 	}
 }
 

@@ -7,16 +7,17 @@ import (
 
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/tokens"
 )
 
 // MockBlockchain implements the `balance.Blockchain` interface.
 type MockBlockchain struct {
 	mu      *sync.Mutex
-	balance map[blockchain.TokenName]blockchain.Balance
+	balance map[tokens.Name]blockchain.Balance
 }
 
 // NewMockBlockchain creates a new `MockBlockchain`.
-func NewMockBlockchain(balance map[blockchain.TokenName]blockchain.Balance) *MockBlockchain {
+func NewMockBlockchain(balance map[tokens.Name]blockchain.Balance) *MockBlockchain {
 	return &MockBlockchain{
 		mu:      new(sync.Mutex),
 		balance: copyBalanceMap(balance),
@@ -24,7 +25,7 @@ func NewMockBlockchain(balance map[blockchain.TokenName]blockchain.Balance) *Moc
 }
 
 // Balances implements the `balance.Blockchain` interface.
-func (blockchain *MockBlockchain) Balances() (map[blockchain.TokenName]blockchain.Balance, error) {
+func (blockchain *MockBlockchain) Balances() (map[tokens.Name]blockchain.Balance, error) {
 	blockchain.mu.Lock()
 	defer blockchain.mu.Unlock()
 
@@ -32,37 +33,37 @@ func (blockchain *MockBlockchain) Balances() (map[blockchain.TokenName]blockchai
 }
 
 // UpdateBalance with given data.
-func (blockchain *MockBlockchain) UpdateBalance(balance map[blockchain.TokenName]blockchain.Balance) {
+func (blockchain *MockBlockchain) UpdateBalance(balance map[tokens.Name]blockchain.Balance) {
 	blockchain.mu.Lock()
 	defer blockchain.mu.Unlock()
 
 	blockchain.balance = copyBalanceMap(balance)
 }
 
-func (bc *MockBlockchain) GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error) {
+func (bc *MockBlockchain) GetAddress(password string, blockchainName tokens.BlockchainName) (string, error) {
 	return "", nil
 }
-func (bc *MockBlockchain) Transfer(password string, token blockchain.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error) {
+func (bc *MockBlockchain) Transfer(password string, token tokens.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error) {
 	return "", blockchain.Cost{}, nil
 }
 
-func (bc *MockBlockchain) Lookup(token blockchain.Token, txHash string) (transfer.UpdateReceipt, error) {
+func (bc *MockBlockchain) Lookup(token tokens.Token, txHash string) (transfer.UpdateReceipt, error) {
 	return transfer.UpdateReceipt{}, nil
 }
 
 type FaultyBlockchain struct {
-	balance map[blockchain.TokenName]blockchain.Balance
+	balance map[tokens.Name]blockchain.Balance
 	counter int
 }
 
-func NewFaultyBlockchain(balance map[blockchain.TokenName]blockchain.Balance) *FaultyBlockchain {
+func NewFaultyBlockchain(balance map[tokens.Name]blockchain.Balance) *FaultyBlockchain {
 	return &FaultyBlockchain{
 		balance: balance,
 		counter: 0,
 	}
 }
 
-func (blockchain *FaultyBlockchain) Balances() (map[blockchain.TokenName]blockchain.Balance, error) {
+func (blockchain *FaultyBlockchain) Balances() (map[tokens.Name]blockchain.Balance, error) {
 	blockchain.counter++
 	if blockchain.counter%2 != 0 {
 		return blockchain.balance, nil
@@ -70,8 +71,8 @@ func (blockchain *FaultyBlockchain) Balances() (map[blockchain.TokenName]blockch
 	return nil, errors.New("cannot get the balance")
 }
 
-func copyBalanceMap(balance map[blockchain.TokenName]blockchain.Balance) map[blockchain.TokenName]blockchain.Balance {
-	copied := map[blockchain.TokenName]blockchain.Balance{}
+func copyBalanceMap(balance map[tokens.Name]blockchain.Balance) map[tokens.Name]blockchain.Balance {
+	copied := map[tokens.Name]blockchain.Balance{}
 	for i, j := range balance {
 		copied[i] = j
 	}

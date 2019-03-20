@@ -14,6 +14,7 @@ import (
 	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/renproject/tokens"
 	"github.com/sirupsen/logrus"
 )
 
@@ -50,8 +51,8 @@ func NewETHSwapContractBinder(account libeth.Account, swap swap.Swap, cost block
 	fields["Token"] = swap.Token.Name
 	logger = logger.WithFields(fields)
 
-	if _, ok := cost[blockchain.ETH]; !ok {
-		cost[blockchain.ETH] = big.NewInt(0)
+	if _, ok := cost[tokens.NameETH]; !ok {
+		cost[tokens.NameETH] = big.NewInt(0)
 	}
 
 	swap.Value = new(big.Int).Add(swap.Value, swap.BrokerFee)
@@ -95,7 +96,7 @@ func (atom *ethSwapContractBinder) Initiate() error {
 				if err != nil {
 					return tx, err
 				}
-				atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], atom.swap.BrokerFee)
+				atom.cost[tokens.NameETH] = new(big.Int).Add(atom.cost[tokens.NameETH], atom.swap.BrokerFee)
 			} else {
 				tx, err = atom.binder.Initiate(tops, atom.id, common.HexToAddress(atom.swap.SpendingAddress), atom.swap.SecretHash, big.NewInt(atom.swap.TimeLock), atom.swap.Value)
 				if err != nil {
@@ -123,7 +124,7 @@ func (atom *ethSwapContractBinder) Initiate() error {
 		return nil
 	}
 	txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
-	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], txFee)
+	atom.cost[tokens.NameETH] = new(big.Int).Add(atom.cost[tokens.NameETH], txFee)
 	return nil
 }
 
@@ -167,8 +168,8 @@ func (atom *ethSwapContractBinder) Refund() error {
 	}
 
 	txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
-	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], txFee)
-	atom.cost[blockchain.ETH] = new(big.Int).Sub(atom.cost[blockchain.ETH], atom.swap.BrokerFee)
+	atom.cost[tokens.NameETH] = new(big.Int).Add(atom.cost[tokens.NameETH], txFee)
+	atom.cost[tokens.NameETH] = new(big.Int).Sub(atom.cost[tokens.NameETH], atom.swap.BrokerFee)
 	return nil
 }
 
@@ -276,7 +277,7 @@ func (atom *ethSwapContractBinder) Redeem(secret [32]byte) error {
 		return nil
 	}
 	txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
-	atom.cost[blockchain.ETH] = new(big.Int).Add(atom.cost[blockchain.ETH], txFee)
+	atom.cost[tokens.NameETH] = new(big.Int).Add(atom.cost[tokens.NameETH], txFee)
 	return nil
 }
 

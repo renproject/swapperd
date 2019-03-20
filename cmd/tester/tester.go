@@ -8,9 +8,10 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/renproject/tokens"
+
 	"github.com/renproject/swapperd/adapter/server"
 	"github.com/renproject/swapperd/driver/keystore"
-	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
 )
 
@@ -26,12 +27,12 @@ func buildSwap(initiatorPassword string) swap.SwapBlob {
 		panic(err)
 	}
 
-	ethAddr, err := wallet.GetAddress(initiatorPassword, blockchain.Ethereum)
+	ethAddr, err := wallet.GetAddress(initiatorPassword, tokens.ETHEREUM)
 	if err != nil {
 		panic(err)
 	}
 
-	btcAddr, err := wallet.GetAddress(initiatorPassword, blockchain.Bitcoin)
+	btcAddr, err := wallet.GetAddress(initiatorPassword, tokens.BITCOIN)
 	if err != nil {
 		panic(err)
 	}

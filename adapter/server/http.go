@@ -13,6 +13,7 @@ import (
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/renproject/tokens"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -280,8 +281,8 @@ func (server *httpServer) getBalancesHandler(reqHandler Handler) http.HandlerFun
 			return
 		}
 
-		token, err := blockchain.PatchToken(tokenName)
-		if err != nil {
+		token := tokens.ParseToken(tokenName)
+		if token == tokens.InvalidToken {
 			server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("invalid token name: %s", tokenName))
 		}
 
@@ -352,8 +353,8 @@ func (server *httpServer) getAddressesHandler(reqHandler Handler) http.HandlerFu
 			}
 			server.writeResponse(w, r, http.StatusOK, respBytes)
 		} else {
-			token, err := blockchain.PatchToken(tokenName)
-			if err != nil {
+			token := tokens.ParseToken(tokenName)
+			if token == tokens.InvalidToken {
 				server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("invalid token name: %s", tokenName))
 				return
 			}

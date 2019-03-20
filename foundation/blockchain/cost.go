@@ -1,6 +1,10 @@
 package blockchain
 
-import "math/big"
+import (
+	"math/big"
+
+	"github.com/renproject/tokens"
+)
 
 type TxExecutionSpeed uint8
 
@@ -12,11 +16,11 @@ const (
 )
 
 // Cost of an atomic swap
-type Cost map[TokenName]*big.Int
+type Cost map[tokens.Name]*big.Int
 
 // TODO: Why this is in foundation?
 // CostBlob is the json representation of cost.
-type CostBlob map[TokenName]string
+type CostBlob map[tokens.Name]string
 
 // CostToCostBlob converts cost to cost blob
 func CostToCostBlob(cost Cost) CostBlob {
@@ -34,17 +38,4 @@ func CostBlobToCost(costBlob CostBlob) Cost {
 		cost[tokenName], _ = new(big.Int).SetString(tokenCost, 10)
 	}
 	return cost
-}
-
-func (token Token) AdditionalTransactionFee(amount *big.Int) *big.Int {
-	switch token {
-	case TokenDGX:
-		return calculateFeesFromBips(amount, 13)
-	default:
-		return nil
-	}
-}
-
-func calculateFeesFromBips(value *big.Int, bips int64) *big.Int {
-	return new(big.Int).Div(new(big.Int).Mul(value, big.NewInt(bips)), new(big.Int).Sub(big.NewInt(10000), big.NewInt(bips)))
 }
