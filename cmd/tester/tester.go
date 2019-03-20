@@ -12,6 +12,7 @@ import (
 	"github.com/renproject/swapperd/driver/keystore"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -21,7 +22,7 @@ func main() {
 }
 
 func buildSwap(initiatorPassword string) swap.SwapBlob {
-	wallet, err := keystore.Wallet(os.Getenv("HOME")+"/.swapperd", "mainnet")
+	wallet, err := keystore.Wallet(os.Getenv("HOME")+"/.swapperd", "mainnet", logrus.StandardLogger())
 	if err != nil {
 		panic(err)
 	}
