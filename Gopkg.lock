@@ -26,19 +26,21 @@
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "728bce664cf5dfb921941b240828f989a2c8f8e3"
+  revision = "489128639c407ec675e1068bb55f1515bc22f8fc"
 
 [[projects]]
   branch = "master"
   name = "github.com/btcsuite/btcd"
   packages = [
     "btcec",
+    "btcjson",
     "chaincfg",
     "chaincfg/chainhash",
+    "rpcclient",
     "txscript",
     "wire"
   ]
-  revision = "306aecffea325e97f513b3ff0cf7895a5310651d"
+  revision = "aa6e0f35703c1438cc45860ddc0c3f6e6c633c93"
 
 [[projects]]
   branch = "master"
@@ -54,7 +56,19 @@
     "base58",
     "bech32"
   ]
-  revision = "4c204d6978034c001714728401fcd63060d568b4"
+  revision = "3ac1210f4b38284536002486ef8a21ac54c14497"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/btcsuite/go-socks"
+  packages = ["socks"]
+  revision = "4720035b7bfd2a9bb130b1c184f8bbe41b6f0d0f"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/btcsuite/websocket"
+  packages = ["."]
+  revision = "31079b6807923eb23992c421b114992b95131b55"
 
 [[projects]]
   name = "github.com/deckarep/golang-set"
@@ -77,6 +91,8 @@
     "common/prque",
     "consensus",
     "consensus/misc",
+    "contracts/ens",
+    "contracts/ens/contract",
     "core",
     "core/rawdb",
     "core/state",
@@ -116,8 +132,8 @@
 [[projects]]
   name = "github.com/google/uuid"
   packages = ["."]
-  revision = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8"
-  version = "v1.1.0"
+  revision = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/gorilla/mux"
@@ -131,8 +147,8 @@
     ".",
     "simplelru"
   ]
-  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
-  version = "v0.5.0"
+  revision = "7087cb70de9f7a8bc0a10c375cb0d2280a8edf9c"
+  version = "v0.5.1"
 
 [[projects]]
   name = "github.com/hpcloud/tail"
@@ -149,8 +165,8 @@
 [[projects]]
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
-  revision = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242"
-  version = "v1.0.1"
+  revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
+  version = "v1.0.2"
 
 [[projects]]
   name = "github.com/onsi/ginkgo"
@@ -174,8 +190,8 @@
     "reporters/stenographer/support/go-isatty",
     "types"
   ]
-  revision = "2e1be8f7d90e9d3e3e58b0ce470f2f14d075406f"
-  version = "v1.7.0"
+  revision = "eea6ad008b96acdaa524f5b409513bf062b500ad"
+  version = "v1.8.0"
 
 [[projects]]
   name = "github.com/onsi/gomega"
@@ -193,8 +209,8 @@
     "matchers/support/goraph/util",
     "types"
   ]
-  revision = "65fb64232476ad9046e57c26cd0bff3d3a8dc6cd"
-  version = "v1.4.3"
+  revision = "90e289841c1ed79b7a598a7cd9959750cb5e89e2"
+  version = "v1.5.0"
 
 [[projects]]
   name = "github.com/pborman/uuid"
@@ -205,14 +221,18 @@
 [[projects]]
   branch = "master"
   name = "github.com/renproject/libbtc-go"
-  packages = ["."]
-  revision = "6f980dfa24def606ec68ec3545f7a306e256330f"
+  packages = [
+    ".",
+    "clients",
+    "errors"
+  ]
+  revision = "31d5549e856aad50d159d0924299a6114aca9841"
 
 [[projects]]
   branch = "master"
   name = "github.com/renproject/libeth-go"
   packages = ["."]
-  revision = "c8f4fefe69bd5994ce538eedd3645b11e8758d3c"
+  revision = "702ea0e5c26ba66610effd0938793498c0623a6a"
 
 [[projects]]
   branch = "master"
@@ -245,8 +265,8 @@
 [[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  revision = "e1e72e9de974bd926e5c56f83753fba2df402ce5"
-  version = "v1.3.0"
+  revision = "dae0fa8d5b0c810a8ab733fbd5510c7cae84eca4"
+  version = "v1.4.0"
 
 [[projects]]
   name = "github.com/syndtr/goleveldb"
@@ -300,7 +320,7 @@
     "sha3",
     "ssh/terminal"
   ]
-  revision = "7f87c0fbb88b590338857bcb720678c2583d4dea"
+  revision = "a1f597ede03a7bef967a422b5b3a5bd08805a01e"
 
 [[projects]]
   branch = "master"
@@ -311,7 +331,7 @@
     "html/charset",
     "websocket"
   ]
-  revision = "fe579d43d83210096a79b46dcca0e3721058393a"
+  revision = "d196dffd7c2beec1957382065df08bcc353b9706"
 
 [[projects]]
   branch = "master"
@@ -326,7 +346,7 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "cc5685c2db1239775905f3911f0067c0fa74762f"
+  revision = "6c81ef8f67ca3f42fc9cd71dfbd5f35b0c4b5771"
 
 [[projects]]
   name = "golang.org/x/text"
