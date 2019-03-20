@@ -99,7 +99,7 @@ func (wallet *wallet) Lookup(token tokens.Token, txHash string) (transfer.Update
 }
 
 func (wallet *wallet) ethereumLookup(txHash string) (transfer.UpdateReceipt, error) {
-	client, err := libeth.Connect(wallet.config.Ethereum.Network.URL)
+	client, err := libeth.NewInfuraClient(wallet.config.Ethereum.Network.Name, "172978c53e244bd78388e6d50a4ae2fa")
 	if err != nil {
 		return transfer.UpdateReceipt{}, err
 	}
@@ -124,7 +124,10 @@ func (wallet *wallet) ethereumLookup(txHash string) (transfer.UpdateReceipt, err
 }
 
 func (wallet *wallet) bitcoinLookup(txHash string) (transfer.UpdateReceipt, error) {
-	client := libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name)
+	client, err := libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name)
+	if err != nil {
+		return transfer.UpdateReceipt{}, err
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()

@@ -33,7 +33,6 @@
   digest = "1:ff4e1049338aaaa374250d874f65496d95e12798d67de5a6fe3956faf0f353b6"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  pruneopts = "T"
   revision = "489128639c407ec675e1068bb55f1515bc22f8fc"
 
 [[projects]]
@@ -49,7 +48,6 @@
     "txscript",
     "wire",
   ]
-  pruneopts = "T"
   revision = "aa6e0f35703c1438cc45860ddc0c3f6e6c633c93"
 
 [[projects]]
@@ -69,8 +67,19 @@
     "base58",
     "bech32",
   ]
-  pruneopts = "T"
   revision = "3ac1210f4b38284536002486ef8a21ac54c14497"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/btcsuite/go-socks"
+  packages = ["socks"]
+  revision = "4720035b7bfd2a9bb130b1c184f8bbe41b6f0d0f"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/btcsuite/websocket"
+  packages = ["."]
+  revision = "31079b6807923eb23992c421b114992b95131b55"
 
 [[projects]]
   branch = "master"
@@ -159,7 +168,6 @@
   digest = "1:582b704bebaa06b48c29b0cec224a6058a09c86883aaddabde889cd1a5f73e1b"
   name = "github.com/google/uuid"
   packages = ["."]
-  pruneopts = "T"
   revision = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4"
   version = "v1.1.1"
 
@@ -178,7 +186,6 @@
     ".",
     "simplelru",
   ]
-  pruneopts = "T"
   revision = "7087cb70de9f7a8bc0a10c375cb0d2280a8edf9c"
   version = "v0.5.1"
 
@@ -200,7 +207,6 @@
   digest = "1:31e761d97c76151dde79e9d28964a812c46efc5baee4085b86f68f0c654450de"
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
-  pruneopts = "T"
   revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
   version = "v1.0.2"
 
@@ -227,7 +233,6 @@
     "reporters/stenographer/support/go-isatty",
     "types",
   ]
-  pruneopts = "T"
   revision = "eea6ad008b96acdaa524f5b409513bf062b500ad"
   version = "v1.8.0"
 
@@ -248,7 +253,6 @@
     "matchers/support/goraph/util",
     "types",
   ]
-  pruneopts = "T"
   revision = "90e289841c1ed79b7a598a7cd9959750cb5e89e2"
   version = "v1.5.0"
 
@@ -267,9 +271,8 @@
   packages = [
     ".",
     "clients",
-    "errors",
+    "errors"
   ]
-  pruneopts = "T"
   revision = "31d5549e856aad50d159d0924299a6114aca9841"
 
 [[projects]]
@@ -277,7 +280,6 @@
   digest = "1:53242b4bf69c1338eea1906e3027029b4c0207ffef01897d173dcd2d829f26c9"
   name = "github.com/renproject/libeth-go"
   packages = ["."]
-  pruneopts = "T"
   revision = "702ea0e5c26ba66610effd0938793498c0623a6a"
 
 [[projects]]
@@ -328,7 +330,6 @@
   digest = "1:e943eb8262b5644f4b5808d6b092df55df6f0961219fb19f49401f0df0cc625e"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  pruneopts = "T"
   revision = "dae0fa8d5b0c810a8ab733fbd5510c7cae84eca4"
   version = "v1.4.0"
 
@@ -393,7 +394,6 @@
     "sha3",
     "ssh/terminal",
   ]
-  pruneopts = "T"
   revision = "a1f597ede03a7bef967a422b5b3a5bd08805a01e"
 
 [[projects]]
@@ -406,7 +406,6 @@
     "html/charset",
     "websocket",
   ]
-  pruneopts = "T"
   revision = "d196dffd7c2beec1957382065df08bcc353b9706"
 
 [[projects]]
@@ -423,7 +422,6 @@
     "windows/svc/eventlog",
     "windows/svc/mgr",
   ]
-  pruneopts = "T"
   revision = "6c81ef8f67ca3f42fc9cd71dfbd5f35b0c4b5771"
 
 [[projects]]

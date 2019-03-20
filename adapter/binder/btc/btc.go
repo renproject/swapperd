@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"time"
@@ -200,7 +201,7 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 			builder.AddInt64(1)
 		},
 		func(tx *wire.MsgTx) bool {
-			spent, err := atom.ScriptSpent(ctx, atom.scriptAddr)
+			spent, _, err := atom.ScriptSpent(ctx, atom.scriptAddr, atom.swap.SpendingAddress)
 			if err != nil {
 				return false
 			}
@@ -221,19 +222,19 @@ func (atom *btcSwapContractBinder) Redeem(secret [32]byte) error {
 
 func (atom *btcSwapContractBinder) AuditSecret() ([32]byte, error) {
 	atom.Info("Auditing secret on Bitcoin blockchain")
-	if spent, err := atom.ScriptSpent(context.Background(), atom.scriptAddr); !spent || err != nil {
+	spent, sigScript, err := atom.ScriptSpent(context.Background(), atom.scriptAddr, atom.swap.SpendingAddress)
+	if !spent || err != nil {
 		if time.Now().Unix() > atom.swap.TimeLock {
 			return [32]byte{}, immediate.ErrSwapExpired
 		}
 		return [32]byte{}, immediate.ErrAuditPending
 	}
-
-	sigScript, err := atom.GetScriptFromSpentP2SH(context.Background(), atom.scriptAddr)
+	sigScriptBytes, err := hex.DecodeString(sigScript)
 	if err != nil {
 		return [32]byte{}, NewErrAuditSecret(err)
 	}
 
-	pushes, err := txscript.PushedData(sigScript)
+	pushes, err := txscript.PushedData(sigScriptBytes)
 	if err != nil {
 		return [32]byte{}, NewErrAuditSecret(err)
 	}
@@ -284,7 +285,7 @@ func (atom *btcSwapContractBinder) Refund() error {
 			builder.AddInt64(0)
 		},
 		func(tx *wire.MsgTx) bool {
-			spent, err := atom.ScriptSpent(ctx, atom.scriptAddr)
+			spent, _, err := atom.ScriptSpent(ctx, atom.scriptAddr, atom.swap.SpendingAddress)
 			if err != nil {
 				return false
 			}
