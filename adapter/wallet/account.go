@@ -24,7 +24,11 @@ func (wallet *wallet) EthereumAccount(password string) (libeth.Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	ethAccount, err := libeth.NewAccount(wallet.config.Ethereum.Network.URL, privKey)
+	ethClient, err := libeth.NewInfuraClient(wallet.config.Ethereum.Network.Name, "172978c53e244bd78388e6d50a4ae2fa")
+	if err != nil {
+		return nil, err
+	}
+	ethAccount, err := libeth.NewAccount(ethClient, privKey)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +50,11 @@ func (wallet *wallet) BitcoinAccount(password string) (libbtc.Account, error) {
 	}
 	logger := wallet.logger.WithField("token", "bitcoin")
 	logger = logger.WithField("network", wallet.config.Bitcoin.Network.Name)
-	return libbtc.NewAccount(libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name), privKey, logger), nil
+	client, err := libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name)
+	if err != nil {
+		return nil, err
+	}
+	return libbtc.NewAccount(client, privKey, logger), nil
 }
 
 func (wallet *wallet) loadECDSAKey(password string, path []uint32) (*ecdsa.PrivateKey, error) {
