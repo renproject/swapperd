@@ -1,3 +1,7 @@
+# Custom Dockerfile that uses xgo
+# Based off:
+# https://github.com/billziss-gh/cgofuse/blob/9b5a7c093a2b5da9dc74494e4c7714af8c82de93/Dockerfile
+
 FROM \
     karalabe/xgo-latest
 
