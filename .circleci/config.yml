@@ -4,9 +4,13 @@
 version: 2.1
 
 _defaults: &defaults
-    docker:
-      - image: karalabe/xgo-latest
-    working_directory: /go/src/github.com/renproject/swapperd
+#   docker:
+#     - image: karalabe/xgo-latest
+    machine: true
+    working_directory: ~/.go_workspace/src/github.com/renproject/swapperd
+    environment:
+      - GOPATH: /home/circleci/.go_workspace
+
 
 commands:
   dep_ensure:
@@ -15,33 +19,38 @@ commands:
       - restore_cache:
           key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
           paths:
-              - /go/src/github.com/renproject/swapperd/vendor
+              - ~/.go_workspace/src/github.com/renproject/swapperd/vendor
       - run:
           name: Download dependencies
           command: |
-            if ! [ -x "$(command -v /go/bin/dep)" ]; then
-                if ! [ -x "$(command -v curl)" ]; then
-                    apt-get update -y
-                    apt-get install -y curl
+            if [ ! -d ~/.go_workspace/src/github.com/renproject/swapperd/vendor ]; then
+                if ! [ -x "$(command -v dep)" ]; then
+                    mkdir -p ~/.go_workspace/bin
+                    curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+                    export PATH=~/.go_workspace/bin:$PATH
                 fi
-                curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            fi
-            if [ ! -d /go/src/github.com/renproject/swapperd/vendor ]; then
-                /go/bin/dep ensure -v
+                dep ensure -v
             else
                 echo "Dependencies were restored from cache."
             fi
       - save_cache:
           key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
           paths:
-              - /go/src/github.com/renproject/swapperd/vendor
+              - ~/.go_workspace/src/github.com/renproject/swapperd/vendor
 
 jobs:
   build:
     <<: *defaults
     steps:
       - checkout
+      - run: docker build -t karalabe/xgo-latest .
       - dep_ensure
+      - run:
+          name: Install xgo
+          command: |
+            mkdir -p $GOPATH/src
+            mkdir -p $GOPATH/bin
+            go get -v github.com/karalabe/xgo
       - run:
           name: Build binaries
           command: |
@@ -49,12 +58,12 @@ jobs:
             # go get github.com/karalabe/xgo
             # cd ./cmd/
             # sh ./pipeline.sh
-            make darwin
+            make
   test:
     docker:
       # specify the version
       - image: circleci/golang:1.9
-    working_directory: /go/src/github.com/renproject/swapperd
+    working_directory: ~/.go_workspace/src/github.com/renproject/swapperd
     steps:
       - checkout
       # specify any bash command here prefixed with `run: `
