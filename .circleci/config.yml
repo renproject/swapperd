@@ -19,7 +19,7 @@ commands:
       - run:
           name: Download dependencies
           command: |
-            if ! [ -x "$(command -v dep)" ]; then
+            if ! [ -x "$(command -v /go/bin/dep)" ]; then
                 if ! [ -x "$(command -v curl)" ]; then
                     apt-get update -y
                     apt-get install -y curl
@@ -27,7 +27,7 @@ commands:
                 curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             fi
             if [ ! -d /go/src/github.com/renproject/swapperd/vendor ]; then
-                dep ensure -v
+                /go/bin/dep ensure -v
             else
                 echo "Dependencies were restored from cache."
             fi
