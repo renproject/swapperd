@@ -60,7 +60,7 @@ jobs:
     docker:
       # specify the version
       - image: circleci/golang:1.9
-    working_directory: ~/.go_workspace/src/github.com/renproject/swapperd
+    working_directory: /go/src/github.com/renproject/swapperd
     steps:
       - checkout
       - run:
