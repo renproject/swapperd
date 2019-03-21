@@ -27,7 +27,7 @@ commands:
                     curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
                     export PATH=~/.go_workspace/bin:$PATH
                 fi
-                dep ensure -v
+                dep ensure -v -update
             else
                 echo "Dependencies were restored from cache."
             fi
