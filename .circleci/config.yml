@@ -28,6 +28,7 @@ commands:
                     export PATH=~/.go_workspace/bin:$PATH
                 fi
                 dep ensure -v -update
+                dep ensure -v
             else
                 echo "Dependencies were restored from cache."
             fi
