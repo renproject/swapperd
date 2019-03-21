@@ -55,7 +55,6 @@ func Run(version string, done <-chan struct{}) {
 		func() {
 			notifier.New(composer.logger).Watch(
 				done,
-				path.Join(composer.homeDir, "config.json"),
 				path.Join(composer.homeDir, "mainnet.json"),
 				path.Join(composer.homeDir, "testnet.json"),
 				composer.executable,

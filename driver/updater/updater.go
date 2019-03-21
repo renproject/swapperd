@@ -99,7 +99,7 @@ func (updater *Updater) updateSwapperd(ver string) error {
 	}
 	service.Start("swapperd-updater")
 	service.Start("swapperd")
-	return updater.updateConfig(ver)
+	return nil
 }
 
 func getLatestVersion() (string, error) {
@@ -121,23 +121,6 @@ func getLatestVersion() (string, error) {
 		return release.TagName, err
 	}
 	return release.TagName, nil
-}
-
-func (updater *Updater) updateConfig(version string) error {
-	// Get the data
-	resp, err := http.Get(fmt.Sprintf("https://github.com/renproject/swapperd/releases/download/%s/config.json", version))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	respBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to get the latest config file (%d): %s", resp.StatusCode, respBytes)
-	}
-	return ioutil.WriteFile(fmt.Sprintf("%s/config.json", updater.homeDir), respBytes, 0644)
 }
 
 func (updater *Updater) unzipSwapperd() error {
