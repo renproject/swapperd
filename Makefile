@@ -1,3 +1,4 @@
+WIN_LDFLAGS = -H windowsgui
 
 LINUX_TARGET = swapper_linux_amd64.zip
 DARWIN_TARGET = swapper_darwin_amd64.zip
@@ -41,22 +42,30 @@ windows: build-win
 	zip -r $(WIN_TARGET) bin
 	rm -rf bin
 
+clean:
+	rm -rf ${DARWIN_TARGET} ${WIN_TARGET} ${LINUX_TARGET}
+
+define build_unix
+	xgo --targets=darwin/amd64,linux/amd64 $(1)
+endef
+
+define build_win
+	xgo --targets=windows/amd64 -ldflags "${WIN_LDFLAGS}" $(1)
+endef
+
 build-unix:
-	xgo --targets=darwin/amd64,linux/amd64 ./cmd/installer
-	xgo --targets=darwin/amd64,linux/amd64 ./cmd/updater
-	xgo --targets=darwin/amd64,linux/amd64 ./cmd/swapperd-unix
-	xgo --targets=darwin/amd64,linux/amd64 ./cmd/updater-unix
-	xgo --targets=darwin/amd64,linux/amd64 ./cmd/uninstaller
+	$(call build_unix,./cmd/installer)
+	$(call build_unix,./cmd/updater)
+	$(call build_unix,./cmd/swapperd-unix)
+	$(call build_unix,./cmd/updater-unix)
+	$(call build_unix,./cmd/uninstaller)
 
 build-win:
-	xgo --targets=windows/amd64 -ldflags "-H windowsgui" ./cmd/installer
-	xgo --targets=windows/amd64 -ldflags "-H windowsgui" ./cmd/updater
-	xgo --targets=windows/amd64 -ldflags "-H windowsgui" ./cmd/swapperd-win
-	xgo --targets=windows/amd64 -ldflags "-H windowsgui" ./cmd/updater-win
-	xgo --targets=windows/amd64 -ldflags "-H windowsgui" ./cmd/uninstaller
-
-clean:
-	rm -rf $(DARWIN_TARGET) $(WIN_TARGET) $(LINUX_TARGET)
+	$(call build_win,./cmd/installer)
+	$(call build_win,./cmd/updater)
+	$(call build_win,./cmd/swapperd-win)
+	$(call build_win,./cmd/updater-win)
+	$(call build_win,./cmd/uninstaller)
 
 .PHONY: all build-unix build-win windows linux darwin version
 
