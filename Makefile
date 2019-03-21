@@ -1,4 +1,3 @@
-.PHONY: all build build-win windows linux darwin
 
 LINUX_TARGET = swapper_linux_amd64.zip
 DARWIN_TARGET = swapper_darwin_amd64.zip
@@ -12,7 +11,7 @@ $(LINUX_TARGET): linux
 
 $(WIN_TARGET): windows
 
-darwin: build
+darwin: build-unix
 	mkdir -p bin
 	mv installer-darwin-10.6-amd64 bin/installer
 	mv updater-darwin-10.6-amd64 bin/updater
@@ -22,7 +21,7 @@ darwin: build
 	zip -r $(DARWIN_TARGET) bin
 	rm -rf bin
 
-linux: build
+linux: build-unix
 	mkdir -p bin
 	mv installer-linux-amd64 bin/installer
 	mv updater-linux-amd64 bin/updater
@@ -42,7 +41,7 @@ windows: build-win
 	zip -r $(WIN_TARGET) bin
 	rm -rf bin
 
-build:
+build-unix:
 	xgo --targets=darwin/amd64,linux/amd64 ./cmd/installer
 	xgo --targets=darwin/amd64,linux/amd64 ./cmd/updater
 	xgo --targets=darwin/amd64,linux/amd64 ./cmd/swapperd-unix
@@ -58,3 +57,6 @@ build-win:
 
 clean:
 	rm -rf $(DARWIN_TARGET) $(WIN_TARGET) $(LINUX_TARGET)
+
+.PHONY: all build-unix build-win windows linux darwin version
+
