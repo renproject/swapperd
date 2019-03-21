@@ -47,11 +47,6 @@ jobs:
             docker build -t karalabe/xgo-latest .
       - dep_ensure
       - run:
-          name: Running tests
-          command: |
-            go test -v ./adapter/...
-            go test -v ./core/...
-      - run:
           name: Installing xgo
           command: |
             mkdir -p $GOPATH/src
@@ -61,14 +56,26 @@ jobs:
           name: Build binaries
           command: |
             make
-# test:
-#   docker:
-#     # specify the version
-#     - image: circleci/golang:1.9
-#   working_directory: ~/.go_workspace/src/github.com/renproject/swapperd
-#   steps:
-#     - checkout
-#     # specify any bash command here prefixed with `run: `
-#     - run: go get -v -t -d ./adapter/...
-#     - run: go get -v -t -d ./core/...
+  test:
+    docker:
+      # specify the version
+      - image: circleci/golang:1.9
+    working_directory: ~/.go_workspace/src/github.com/renproject/swapperd
+    steps:
+      - checkout
+      - run:
+          name: Running tests
+          command: |
+            go get -v -t -d ./adapter/...
+            go get -v -t -d ./core/...
+            go test -v ./adapter/...
+            go test -v ./core/...
 
+
+workflows:
+  test_and_build:
+    jobs:
+      - test
+      - build:
+          requires:
+            - test
