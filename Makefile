@@ -19,7 +19,7 @@ darwin: build
 	mv swapperd-unix-darwin-10.6-amd64 bin/swapperd
 	mv updater-unix-darwin-10.6-amd64 bin/swapperd-updater
 	mv uninstaller-darwin-10.6-amd64 bin/uninstaller
-	zip -r swapper_darwin_amd64.zip bin
+	zip -r $(DARWIN_TARGET) bin
 	rm -rf bin
 
 linux: build
@@ -29,7 +29,7 @@ linux: build
 	mv swapperd-unix-linux-amd64 bin/swapperd
 	mv updater-unix-linux-amd64 bin/swapperd-updater
 	mv uninstaller-linux-amd64 bin/uninstaller
-	zip -r swapper_linux_amd64.zip bin
+	zip -r $(LINUX_TARGET) bin
 	rm -rf bin
 
 windows: build-win
@@ -39,7 +39,7 @@ windows: build-win
 	mv swapperd-win-windows-4.0-amd64.exe bin/swapperd.exe
 	mv updater-win-windows-4.0-amd64.exe bin/swapperd-updater.exe
 	mv uninstaller-windows-4.0-amd64.exe bin/uninstaller.exe
-	zip -r swapper_windows_amd64.zip bin
+	zip -r $(WIN_TARGET) bin
 	rm -rf bin
 
 build:
