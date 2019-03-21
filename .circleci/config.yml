@@ -4,8 +4,6 @@
 version: 2.1
 
 _defaults: &defaults
-#   docker:
-#     - image: karalabe/xgo-latest
     machine: true
     working_directory: ~/.go_workspace/src/github.com/renproject/swapperd
     environment:
@@ -43,10 +41,18 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: docker build -t karalabe/xgo-latest .
+      - run:
+          name: Building Docker image
+          command: |
+            docker build -t karalabe/xgo-latest .
       - dep_ensure
       - run:
-          name: Install xgo
+          name: Running tests
+          command: |
+            go test -v ./adapter/...
+            go test -v ./core/...
+      - run:
+          name: Installing xgo
           command: |
             mkdir -p $GOPATH/src
             mkdir -p $GOPATH/bin
@@ -54,21 +60,15 @@ jobs:
       - run:
           name: Build binaries
           command: |
-            # docker pull karalabe/xgo-latest
-            # go get github.com/karalabe/xgo
-            # cd ./cmd/
-            # sh ./pipeline.sh
             make
-  test:
-    docker:
-      # specify the version
-      - image: circleci/golang:1.9
-    working_directory: ~/.go_workspace/src/github.com/renproject/swapperd
-    steps:
-      - checkout
-      # specify any bash command here prefixed with `run: `
-      - run: go get -v -t -d ./adapter/...
-      - run: go get -v -t -d ./core/...
-      - run: go test -v ./adapter/...
-      - run: go test -v ./core/...
+# test:
+#   docker:
+#     # specify the version
+#     - image: circleci/golang:1.9
+#   working_directory: ~/.go_workspace/src/github.com/renproject/swapperd
+#   steps:
+#     - checkout
+#     # specify any bash command here prefixed with `run: `
+#     - run: go get -v -t -d ./adapter/...
+#     - run: go get -v -t -d ./core/...
 
