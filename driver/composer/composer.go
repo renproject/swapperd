@@ -1,9 +1,7 @@
 package composer
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -21,7 +19,7 @@ type composer struct {
 	logger     logrus.FieldLogger
 }
 
-func New() (*composer, error) {
+func New(version string) (*composer, error) {
 	ex, err := os.Executable()
 	if err != nil {
 		return nil, err
@@ -33,26 +31,16 @@ func New() (*composer, error) {
 	}
 	logger := logrus.New()
 	logger.SetOutput(logFile)
-	configData, err := ioutil.ReadFile(fmt.Sprintf("%s/config.json", homeDir))
-	if err != nil {
-		return nil, err
-	}
-	config := struct {
-		Version string `json:"version"`
-	}{}
-	if err := json.Unmarshal(configData, &config); err != nil {
-		return nil, err
-	}
 	return &composer{
-		version:    config.Version,
+		version:    version,
 		homeDir:    homeDir,
 		executable: ex,
 		logger:     logger,
 	}, nil
 }
 
-func Run(done <-chan struct{}) {
-	composer, err := New()
+func Run(version string, done <-chan struct{}) {
+	composer, err := New(version)
 	if err != nil {
 		composer.logger.Error(err)
 		os.Exit(1)

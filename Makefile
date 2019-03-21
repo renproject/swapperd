@@ -1,4 +1,10 @@
-WIN_LDFLAGS = -H windowsgui
+MAIN_VERSION = $(shell cat ./VERSION)
+BRANCH = $(shell git branch | grep \* | cut -d ' ' -f2)
+COMMIT_HASH = $(shell git describe --always --long)
+FULL_VERSION = ${MAIN_VERSION}-${BRANCH}-${COMMIT_HASH}
+
+LDFLAGS = -X main.version=${FULL_VERSION}
+WIN_LDFLAGS = ${LDFLAGS} -H windowsgui
 
 LINUX_TARGET = swapper_linux_amd64.zip
 DARWIN_TARGET = swapper_darwin_amd64.zip
@@ -46,7 +52,7 @@ clean:
 	rm -rf ${DARWIN_TARGET} ${WIN_TARGET} ${LINUX_TARGET}
 
 define build_unix
-	xgo --targets=darwin/amd64,linux/amd64 $(1)
+	xgo --targets=darwin/amd64,linux/amd64 -ldflags "${LDFLAGS}" $(1)
 endef
 
 define build_win
