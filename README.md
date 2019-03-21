@@ -19,7 +19,13 @@ Download the latest version from [releases](https://github.com/renproject/swappe
 
 ## Development
 
-You will need Docker and [xgo](https://github.com/karalabe/xgo/) to build.
+To build locally, run:
+
+```bash
+make build
+```
+
+In order to cross-compile for all platforms, you will need Docker and [xgo](https://github.com/karalabe/xgo/).
 
 To build for all platforms, run:
 
