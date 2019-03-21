@@ -6,12 +6,13 @@ import (
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/renproject/tokens"
 )
 
 type GetInfoResponse struct {
-	Version         string             `json:"version"`
-	Bootloaded      bool               `json:"bootloaded"`
-	SupportedTokens []blockchain.Token `json:"supportedTokens"`
+	Version         string         `json:"version"`
+	Bootloaded      bool           `json:"bootloaded"`
+	SupportedTokens []tokens.Token `json:"supportedTokens"`
 }
 
 type GetSwapsResponse struct {
@@ -21,9 +22,9 @@ type GetSwapsResponse struct {
 type GetSwapResponse swap.SwapReceipt
 
 type GetBalanceResponse blockchain.Balance
-type GetBalancesResponse map[blockchain.TokenName]blockchain.Balance
+type GetBalancesResponse map[tokens.Name]blockchain.Balance
 
-type GetAddressesResponse map[blockchain.TokenName]string
+type GetAddressesResponse map[tokens.Name]string
 type GetAddressResponse string
 
 type PostSwapRequest swap.SwapBlob

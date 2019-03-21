@@ -5,24 +5,25 @@ import (
 	"time"
 
 	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/tokens"
 )
 
 // The SwapReceipt contains the swap details and the status.
 type SwapReceipt struct {
-	ID            SwapID               `json:"id"`
-	SendToken     blockchain.TokenName `json:"sendToken"`
-	ReceiveToken  blockchain.TokenName `json:"receiveToken"`
-	SendAmount    string               `json:"sendAmount"`
-	ReceiveAmount string               `json:"receiveAmount"`
-	SendCost      blockchain.CostBlob  `json:"sendCost"`
-	ReceiveCost   blockchain.CostBlob  `json:"receiveCost"`
-	Timestamp     int64                `json:"timestamp"`
-	TimeLock      int64                `json:"timeLock"`
-	Status        int                  `json:"status"`
-	Delay         bool                 `json:"delay"`
-	DelayInfo     json.RawMessage      `json:"delayInfo,omitempty"`
-	Active        bool                 `json:"active"`
-	PasswordHash  string               `json:"passwordHash,omitempty"`
+	ID            SwapID              `json:"id"`
+	SendToken     tokens.Name         `json:"sendToken"`
+	ReceiveToken  tokens.Name         `json:"receiveToken"`
+	SendAmount    string              `json:"sendAmount"`
+	ReceiveAmount string              `json:"receiveAmount"`
+	SendCost      blockchain.CostBlob `json:"sendCost"`
+	ReceiveCost   blockchain.CostBlob `json:"receiveCost"`
+	Timestamp     int64               `json:"timestamp"`
+	TimeLock      int64               `json:"timeLock"`
+	Status        int                 `json:"status"`
+	Delay         bool                `json:"delay"`
+	DelayInfo     json.RawMessage     `json:"delayInfo,omitempty"`
+	Active        bool                `json:"active"`
+	PasswordHash  string              `json:"passwordHash,omitempty"`
 }
 
 // NewSwapReceipt returns a SwapReceipt from a swapBlob.

@@ -20,6 +20,7 @@ import (
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/renproject/tokens"
 	"github.com/republicprotocol/tau"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/sha3"
@@ -42,9 +43,9 @@ type Handler interface {
 	GetSwap(password string, id swap.SwapID) (GetSwapResponse, error)
 	GetSwaps(password string) (GetSwapsResponse, error)
 	GetBalances(password string) (GetBalancesResponse, error)
-	GetBalance(password string, token blockchain.Token) (GetBalanceResponse, error)
+	GetBalance(password string, token tokens.Token) (GetBalanceResponse, error)
 	GetAddresses(password string) (GetAddressesResponse, error)
-	GetAddress(password string, token blockchain.Token) (GetAddressResponse, error)
+	GetAddress(password string, token tokens.Token) (GetAddressResponse, error)
 	GetTransfers(password string) (GetTransfersResponse, error)
 	GetJSONSignature(password string, message json.RawMessage) (GetSignatureResponseJSON, error)
 	GetBase64Signature(password string, message string) (GetSignatureResponseString, error)
@@ -83,7 +84,7 @@ func (handler *handler) GetAddresses(password string) (GetAddressesResponse, err
 	return handler.wallet.Addresses(password)
 }
 
-func (handler *handler) GetAddress(password string, token blockchain.Token) (GetAddressResponse, error) {
+func (handler *handler) GetAddress(password string, token tokens.Token) (GetAddressResponse, error) {
 	handler.bootload(password)
 	address, err := handler.wallet.GetAddress(password, token.Blockchain)
 	return GetAddressResponse(address), err
@@ -149,7 +150,7 @@ func (handler *handler) GetBalances(password string) (GetBalancesResponse, error
 	return GetBalancesResponse(balanceMap), err
 }
 
-func (handler *handler) GetBalance(password string, token blockchain.Token) (GetBalanceResponse, error) {
+func (handler *handler) GetBalance(password string, token tokens.Token) (GetBalanceResponse, error) {
 	handler.bootload(password)
 	balance, err := handler.wallet.Balance(password, token)
 	return GetBalanceResponse(balance), err
@@ -220,9 +221,9 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) error {
 		req.Speed = blockchain.Fast
 	}
 
-	token, err := blockchain.PatchToken(req.Token)
-	if err != nil {
-		return err
+	token := tokens.ParseToken(req.Token)
+	if token == tokens.InvalidToken {
+		return tokens.NewErrUnsupportedToken(tokens.Name(req.Token))
 	}
 	if err := handler.wallet.VerifyAddress(token.Blockchain, req.To); err != nil {
 		return err
@@ -327,18 +328,18 @@ func (handler *handler) bootload(password string) {
 }
 
 func (handler *handler) patchSwap(swapBlob swap.SwapBlob) (swap.SwapBlob, error) {
-	sendToken, err := blockchain.PatchToken(string(swapBlob.SendToken))
-	if err != nil {
-		return swapBlob, err
+	sendToken := tokens.ParseToken(string(swapBlob.SendToken))
+	if sendToken == tokens.InvalidToken {
+		return swapBlob, tokens.NewErrUnsupportedToken(swapBlob.SendToken)
 	}
 
 	if err := handler.wallet.VerifyAddress(sendToken.Blockchain, swapBlob.SendTo); err != nil {
 		return swapBlob, err
 	}
 
-	receiveToken, err := blockchain.PatchToken(string(swapBlob.ReceiveToken))
-	if err != nil {
-		return swapBlob, err
+	receiveToken := tokens.ParseToken(string(swapBlob.ReceiveToken))
+	if receiveToken == tokens.InvalidToken {
+		return swapBlob, tokens.NewErrUnsupportedToken(swapBlob.ReceiveToken)
 	}
 
 	if err := handler.wallet.VerifyAddress(receiveToken.Blockchain, swapBlob.ReceiveFrom); err != nil {
@@ -390,17 +391,17 @@ func (handler *handler) patchDelayedSwap(blob swap.SwapBlob) (swap.SwapBlob, err
 	rand.Read(swapID[:])
 	blob.ID = swap.SwapID(base64.StdEncoding.EncodeToString(swapID[:]))
 
-	sendToken, err := blockchain.PatchToken(string(blob.SendToken))
-	if err != nil {
-		return blob, err
+	sendToken := tokens.ParseToken(string(blob.SendToken))
+	if sendToken == tokens.InvalidToken {
+		return blob, tokens.NewErrUnsupportedToken(blob.SendToken)
 	}
 	if err := handler.verifySendAmount(blob.Password, sendToken, blob.SendAmount, blob.BrokerFee); err != nil {
 		return blob, err
 	}
 
-	receiveToken, err := blockchain.PatchToken(string(blob.ReceiveToken))
-	if err != nil {
-		return blob, err
+	receiveToken := tokens.ParseToken(string(blob.ReceiveToken))
+	if receiveToken == tokens.InvalidToken {
+		return blob, tokens.NewErrUnsupportedToken(blob.ReceiveToken)
 	}
 	if err := handler.verifyReceiveAmount(blob.Password, receiveToken); err != nil {
 		return blob, err
@@ -413,7 +414,7 @@ func (handler *handler) patchDelayedSwap(blob swap.SwapBlob) (swap.SwapBlob, err
 	return blob, nil
 }
 
-func (handler *handler) verifySendAmount(password string, token blockchain.Token, amount string, fee int64) error {
+func (handler *handler) verifySendAmount(password string, token tokens.Token, amount string, fee int64) error {
 	sendAmount, ok := new(big.Int).SetString(amount, 10)
 	if !ok {
 		return fmt.Errorf("invalid send amount")
@@ -421,7 +422,7 @@ func (handler *handler) verifySendAmount(password string, token blockchain.Token
 	return handler.wallet.VerifyBalance(password, token, withFees(sendAmount, fee))
 }
 
-func (handler *handler) verifyReceiveAmount(password string, token blockchain.Token) error {
+func (handler *handler) verifyReceiveAmount(password string, token tokens.Token) error {
 	return handler.wallet.VerifyBalance(password, token, nil)
 }
 
@@ -454,14 +455,14 @@ func (handler *handler) buildSwapResponse(blob swap.SwapBlob) (PostSwapResponse,
 	responseBlob.ReceiveAmount = blob.SendAmount
 	swapResponse := PostSwapResponse{}
 
-	sendToken, err := blockchain.PatchToken(string(responseBlob.SendToken))
-	if err != nil {
-		return swapResponse, err
+	sendToken := tokens.ParseToken(string(responseBlob.SendToken))
+	if sendToken == tokens.InvalidToken {
+		return swapResponse, tokens.NewErrUnsupportedToken(responseBlob.SendToken)
 	}
 
-	receiveToken, err := blockchain.PatchToken(string(responseBlob.ReceiveToken))
-	if err != nil {
-		return swapResponse, err
+	receiveToken := tokens.ParseToken(string(responseBlob.ReceiveToken))
+	if receiveToken == tokens.InvalidToken {
+		return swapResponse, tokens.NewErrUnsupportedToken(responseBlob.ReceiveToken)
 	}
 
 	sendTo, err := handler.wallet.GetAddress(blob.Password, sendToken.Blockchain)

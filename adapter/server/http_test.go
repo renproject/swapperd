@@ -9,6 +9,8 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/renproject/tokens"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/renproject/swapperd/adapter/server"
@@ -17,7 +19,6 @@ import (
 	"github.com/renproject/swapperd/core/wallet"
 	"github.com/renproject/swapperd/core/wallet/swapper"
 	"github.com/renproject/swapperd/driver/logger"
-	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
 	"github.com/renproject/swapperd/testutils"
 )
@@ -45,9 +46,9 @@ var _ = Describe("Server Adapter", func() {
 		logger := logger.NewStdOut()
 		wallet := bc.New(config, logger)
 
-		ethAddr, err := wallet.GetAddress(password, blockchain.Ethereum)
+		ethAddr, err := wallet.GetAddress(password, tokens.ETHEREUM)
 		Expect(err).Should(BeNil())
-		btcAddr, err := wallet.GetAddress(password, blockchain.Bitcoin)
+		btcAddr, err := wallet.GetAddress(password, tokens.BITCOIN)
 		Expect(err).Should(BeNil())
 
 		return swap.SwapBlob{

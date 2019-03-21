@@ -6,15 +6,14 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/republicprotocol/co-go"
-
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
-	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/tokens"
+	"github.com/republicprotocol/co-go"
 )
 
-func (wallet *wallet) Addresses(password string) (map[blockchain.TokenName]string, error) {
-	addresses := map[blockchain.TokenName]string{}
+func (wallet *wallet) Addresses(password string) (map[tokens.Name]string, error) {
+	addresses := map[tokens.Name]string{}
 	mu := new(sync.RWMutex)
 	tokens := wallet.SupportedTokens()
 	co.ParForAll(tokens, func(i int) {
@@ -30,14 +29,14 @@ func (wallet *wallet) Addresses(password string) (map[blockchain.TokenName]strin
 	return addresses, nil
 }
 
-func (wallet *wallet) GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error) {
+func (wallet *wallet) GetAddress(password string, blockchainName tokens.BlockchainName) (string, error) {
 	switch blockchainName {
-	case blockchain.Ethereum, blockchain.ERC20:
+	case tokens.ETHEREUM, tokens.ERC20:
 		return wallet.getEthereumAddress(password)
-	case blockchain.Bitcoin:
+	case tokens.BITCOIN:
 		return wallet.getBitcoinAddress(password)
 	default:
-		return "", blockchain.NewErrUnsupportedToken("unsupported blockchain")
+		return "", tokens.NewErrUnsupportedBlockchain(blockchainName)
 	}
 }
 
@@ -61,14 +60,14 @@ func (wallet *wallet) getBitcoinAddress(password string) (string, error) {
 	return btcAddr.String(), nil
 }
 
-func (wallet *wallet) VerifyAddress(blockchainName blockchain.BlockchainName, address string) error {
+func (wallet *wallet) VerifyAddress(blockchainName tokens.BlockchainName, address string) error {
 	switch blockchainName {
-	case blockchain.Ethereum, blockchain.ERC20:
+	case tokens.ETHEREUM, tokens.ERC20:
 		return wallet.verifyEthereumAddress(address)
-	case blockchain.Bitcoin:
+	case tokens.BITCOIN:
 		return wallet.verifyBitcoinAddress(address)
 	default:
-		return blockchain.NewErrUnsupportedToken("unsupported blockchain")
+		return tokens.NewErrUnsupportedBlockchain(blockchainName)
 	}
 }
 

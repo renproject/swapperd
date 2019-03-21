@@ -7,6 +7,7 @@ import (
 	"github.com/renproject/libeth-go"
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/tokens"
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,15 +33,15 @@ type Balance struct {
 
 type Wallet interface {
 	ID(password, idType string) (string, error)
-	SupportedTokens() []blockchain.Token
-	Balances(password string) (map[blockchain.TokenName]blockchain.Balance, error)
-	Balance(password string, token blockchain.Token) (blockchain.Balance, error)
-	Lookup(token blockchain.Token, txHash string) (transfer.UpdateReceipt, error)
-	Transfer(password string, token blockchain.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, senAll bool) (string, blockchain.Cost, error)
-	GetAddress(password string, blockchainName blockchain.BlockchainName) (string, error)
-	Addresses(password string) (map[blockchain.TokenName]string, error)
-	VerifyAddress(blockchain blockchain.BlockchainName, address string) error
-	VerifyBalance(password string, token blockchain.Token, balance *big.Int) error
+	SupportedTokens() []tokens.Token
+	Balances(password string) (map[tokens.Name]blockchain.Balance, error)
+	Balance(password string, token tokens.Token) (blockchain.Balance, error)
+	Lookup(token tokens.Token, txHash string) (transfer.UpdateReceipt, error)
+	Transfer(password string, token tokens.Token, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, senAll bool) (string, blockchain.Cost, error)
+	GetAddress(password string, blockchainName tokens.BlockchainName) (string, error)
+	Addresses(password string) (map[tokens.Name]string, error)
+	VerifyAddress(blockchain tokens.BlockchainName, address string) error
+	VerifyBalance(password string, token tokens.Token, balance *big.Int) error
 
 	EthereumAccount(password string) (libeth.Account, error)
 	BitcoinAccount(password string) (libbtc.Account, error)

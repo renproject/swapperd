@@ -4,24 +4,24 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/renproject/swapperd/foundation/blockchain"
+	"github.com/renproject/tokens"
 )
 
-func (wallet *wallet) VerifyBalance(password string, token blockchain.Token, amount *big.Int) error {
+func (wallet *wallet) VerifyBalance(password string, token tokens.Token, amount *big.Int) error {
 	switch token.Blockchain {
-	case blockchain.Ethereum:
+	case tokens.ETHEREUM:
 		return wallet.verifyEthereumBalance(password, amount)
-	case blockchain.ERC20:
+	case tokens.ERC20:
 		return wallet.verifyERC20Balance(password, token, amount)
-	case blockchain.Bitcoin:
+	case tokens.BITCOIN:
 		return wallet.verifyBitcoinBalance(password, amount)
 	default:
-		return blockchain.NewErrUnsupportedToken("unsupported blockchain")
+		return tokens.NewErrUnsupportedBlockchain(token.Blockchain)
 	}
 }
 
 func (wallet *wallet) verifyEthereumBalance(password string, amount *big.Int) error {
-	balance, err := wallet.Balance(password, blockchain.TokenETH)
+	balance, err := wallet.Balance(password, tokens.ETH)
 	if err != nil {
 		return err
 	}
@@ -39,8 +39,8 @@ func (wallet *wallet) verifyEthereumBalance(password string, amount *big.Int) er
 	return nil
 }
 
-func (wallet *wallet) verifyERC20Balance(password string, token blockchain.Token, amount *big.Int) error {
-	ethBalance, err := wallet.Balance(password, blockchain.TokenETH)
+func (wallet *wallet) verifyERC20Balance(password string, token tokens.Token, amount *big.Int) error {
+	ethBalance, err := wallet.Balance(password, tokens.ETH)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (wallet *wallet) verifyBitcoinBalance(password string, amount *big.Int) err
 
 	fee := big.NewInt(10000)
 
-	balance, err := wallet.Balance(password, blockchain.TokenBTC)
+	balance, err := wallet.Balance(password, tokens.BTC)
 	if err != nil {
 		return err
 	}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/testutils"
+	"github.com/renproject/tokens"
 	"github.com/republicprotocol/tau"
 
 	. "github.com/onsi/ginkgo"
@@ -24,7 +25,7 @@ var DefaultQuickCheckConfig = &quick.Config{
 var _ = Describe("Transfer Task", func() {
 	Context("when receiving an unknown message type", func() {
 		It("should return an error", func() {
-			bc := testutils.NewMockBlockchain(map[blockchain.TokenName]blockchain.Balance{})
+			bc := testutils.NewMockBlockchain(map[tokens.Name]blockchain.Balance{})
 			storage := testutils.NewMockStorage()
 			transferTask := New(BufferCapacity, bc, storage)
 			done := make(chan struct{})
