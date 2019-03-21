@@ -15,7 +15,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/renproject/swapperd/adapter/server"
 	"github.com/renproject/swapperd/driver/service"
@@ -23,9 +22,8 @@ import (
 )
 
 type Updater struct {
-	frequency time.Duration
-	homeDir   string
-	logger    logrus.FieldLogger
+	homeDir string
+	logger  logrus.FieldLogger
 }
 
 func New() (*Updater, error) {
@@ -40,19 +38,9 @@ func New() (*Updater, error) {
 	}
 	logger := logrus.New()
 	logger.SetOutput(logFile)
-	frequency := time.Minute
-	if configData, err := ioutil.ReadFile(fmt.Sprintf("%s/config.json", homeDir)); err == nil {
-		config := struct {
-			Frequency time.Duration `json:"frequency"`
-		}{}
-		if err := json.Unmarshal(configData, &config); err == nil {
-			frequency = config.Frequency * time.Second
-		}
-	}
 	return &Updater{
-		frequency: frequency,
-		homeDir:   homeDir,
-		logger:    logger,
+		homeDir: homeDir,
+		logger:  logger,
 	}, nil
 }
 
