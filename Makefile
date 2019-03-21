@@ -41,6 +41,7 @@ linux: build-unix
 	@mv uninstaller-linux-amd64 bin/uninstaller
 	@zip -r ${LINUX_TARGET} bin
 	@rm -rf bin
+	@echo
 	@echo "Compiled ${LINUX_TARGET} (${FULL_VERSION})"
 
 windows: build-win
