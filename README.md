@@ -14,5 +14,24 @@ Swapperd is built and officially supported by the Republic Protocol team. It is 
 
 ### Windows
 
-Windows support will be coming soon!
+Download the latest version from [releases](https://github.com/renproject/swapperd/releases)!
+
+
+## Development
+
+You will need Docker and [xgo](https://github.com/karalabe/xgo/) to build.
+
+To build for all platforms, run:
+
+```bash
+make
+```
+
+You can build for a specific platform by running:
+
+```bash
+make [platform]
+```
+
+where [platform] is one of `darwin`, `linux`, or `windows`.
 
