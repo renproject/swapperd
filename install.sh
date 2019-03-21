@@ -45,7 +45,6 @@ else
   exit 1
 fi
 
-curl -Ls "https://github.com/renproject/swapperd/releases/download/$VERSION/config.json"  > config.json
 unzip -o swapper.zip
 
 # do not run the installer if mainnet keystore file exists
