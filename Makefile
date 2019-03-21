@@ -54,6 +54,9 @@ windows: build-win
 clean:
 	rm -rf ${DARWIN_TARGET} ${WIN_TARGET} ${LINUX_TARGET}
 
+version:
+	@echo ${FULL_VERSION}
+
 define build_unix
 	xgo --targets=darwin/amd64,linux/amd64 -ldflags "${LDFLAGS}" $(1)
 endef
