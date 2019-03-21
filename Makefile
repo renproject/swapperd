@@ -25,8 +25,9 @@ darwin: build-unix
 	mv swapperd-unix-darwin-10.6-amd64 bin/swapperd
 	mv updater-unix-darwin-10.6-amd64 bin/swapperd-updater
 	mv uninstaller-darwin-10.6-amd64 bin/uninstaller
-	zip -r $(DARWIN_TARGET) bin
+	zip -r ${DARWIN_TARGET} bin
 	rm -rf bin
+	@echo "Built ${FULL_VERSION} to ${DARWIN_TARGET}"
 
 linux: build-unix
 	mkdir -p bin
@@ -35,8 +36,9 @@ linux: build-unix
 	mv swapperd-unix-linux-amd64 bin/swapperd
 	mv updater-unix-linux-amd64 bin/swapperd-updater
 	mv uninstaller-linux-amd64 bin/uninstaller
-	zip -r $(LINUX_TARGET) bin
+	zip -r ${LINUX_TARGET} bin
 	rm -rf bin
+	@echo "Built ${FULL_VERSION} to ${LINUX_TARGET}"
 
 windows: build-win
 	mkdir -p bin
@@ -45,8 +47,9 @@ windows: build-win
 	mv swapperd-win-windows-4.0-amd64.exe bin/swapperd.exe
 	mv updater-win-windows-4.0-amd64.exe bin/swapperd-updater.exe
 	mv uninstaller-windows-4.0-amd64.exe bin/uninstaller.exe
-	zip -r $(WIN_TARGET) bin
+	zip -r ${WIN_TARGET} bin
 	rm -rf bin
+	@echo "Built ${FULL_VERSION} to ${WIN_TARGET}"
 
 clean:
 	rm -rf ${DARWIN_TARGET} ${WIN_TARGET} ${LINUX_TARGET}
