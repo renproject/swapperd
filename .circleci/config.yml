@@ -72,7 +72,7 @@ jobs:
 workflows:
   test_and_build:
     jobs:
-      - test
+#     - test
       - build
 #     - build:
 #         requires:
