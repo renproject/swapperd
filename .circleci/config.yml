@@ -21,6 +21,7 @@ commands:
       - run:
           name: Download dependencies
           command: |
+            go version
             if [ ! -d ~/.go_workspace/src/github.com/renproject/swapperd/vendor ]; then
                 go mod download
                 go mod vendor

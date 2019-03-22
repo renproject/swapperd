@@ -9,9 +9,10 @@ MAINTAINER \
     Vincent <vincent at renproject.io>
 
 # only add 64-bit architectures since we're only building for amd64
-# and also install curl
+# and also install curl and the latest version of go
 RUN \
     dpkg --add-architecture amd64 && \
+    add-apt-repository ppa:longsleep/golang-backports && \
     apt-get update && \
-    apt-get install -y --no-install-recommends curl
+    apt-get install -y --no-install-recommends curl golang-go
 
