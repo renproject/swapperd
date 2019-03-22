@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/renproject/tokens"
-
 	"github.com/renproject/swapperd/adapter/binder/btc"
 	"github.com/renproject/swapperd/adapter/binder/erc20"
 	"github.com/renproject/swapperd/adapter/binder/eth"
@@ -14,6 +12,7 @@ import (
 	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/renproject/tokens"
 	"github.com/sirupsen/logrus"
 )
 
@@ -66,7 +65,7 @@ func (builder *builder) buildBinder(swap swap.Swap, cost blockchain.Cost, passwo
 		}
 		return erc20.NewERC20SwapContractBinder(ethAccount, swap, cost, builder.FieldLogger)
 	default:
-		return nil, tokens.NewErrUnsupportedToken(swap.Token.Name)
+		return nil, tokens.NewErrUnsupportedToken(string(swap.Token.Name))
 	}
 }
 
@@ -89,9 +88,9 @@ func (builder *builder) buildComplementarySwaps(blob swap.SwapBlob) (swap.Swap, 
 }
 
 func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fundingAddress string) (swap.Swap, error) {
-	token := tokens.ParseToken(string(blob.SendToken))
-	if token == tokens.InvalidToken {
-		return swap.Swap{}, tokens.NewErrUnsupportedToken(blob.SendToken)
+	token, err := tokens.PatchToken(blob.SendToken)
+	if err != nil {
+		return swap.Swap{}, err
 	}
 	value, ok := new(big.Int).SetString(blob.SendAmount, 10)
 	if !ok {
@@ -126,9 +125,9 @@ func (builder *builder) buildNativeSwap(blob swap.SwapBlob, timelock int64, fund
 }
 
 func (builder *builder) buildForeignSwap(blob swap.SwapBlob, timelock int64, spendingAddress string) (swap.Swap, error) {
-	token := tokens.ParseToken(string(blob.ReceiveToken))
-	if token == tokens.InvalidToken {
-		return swap.Swap{}, tokens.NewErrUnsupportedToken(blob.ReceiveToken)
+	token, err := tokens.PatchToken(string(blob.ReceiveToken))
+	if err != nil {
+		return swap.Swap{}, err
 	}
 
 	value, ok := new(big.Int).SetString(blob.ReceiveAmount, 10)
@@ -181,17 +180,17 @@ func (builder *builder) calculateTimeLocks(swap swap.SwapBlob) (native, foreign 
 }
 
 func (builder *builder) calculateAddresses(swap swap.SwapBlob) (string, string, error) {
-	sendToken := tokens.ParseToken(string(swap.SendToken))
-	if sendToken == tokens.InvalidToken {
-		return "", "", tokens.NewErrUnsupportedToken(swap.SendToken)
+	sendToken, err := tokens.PatchToken(swap.SendToken)
+	if err != nil {
+		return "", "", err
 	}
 	sendAddress, err := builder.Wallet.GetAddress(swap.Password, sendToken.Blockchain)
 	if err != nil {
 		return "", "", err
 	}
-	receiveToken := tokens.ParseToken(string(swap.ReceiveToken))
-	if receiveToken == tokens.InvalidToken {
-		return "", "", tokens.NewErrUnsupportedToken(swap.ReceiveToken)
+	receiveToken, err := tokens.PatchToken(swap.ReceiveToken)
+	if err != nil {
+		return "", "", err
 	}
 	receiveAddress, err := builder.Wallet.GetAddress(swap.Password, receiveToken.Blockchain)
 	if err != nil {
