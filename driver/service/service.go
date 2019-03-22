@@ -28,7 +28,7 @@ func Create(name, binLocation string) error {
 		}
 		return exec.Command("systemctl", "--user", "enable", fmt.Sprintf("%s.service", name)).Run()
 	case "darwin":
-		serviceContent := fmt.Sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n\t<dict>\n\t\t<key>Label</key>\n\t\t<string>%s</string>\n\t\t<key>ProgramArguments</key>\n\t\t<array>\n\t\t\t\t<string>%s</string>\n\t\t</array>\n\t\t<key>KeepAlive</key>\n\t\t<true/>\n\t\t<key>StandardOutPath</key>\n\t\t<string>/dev/null</string>\n\t\t<key>StandardErrorPath</key>\n\t\t<string>/dev/null</string>\n\t</dict>\n</plist>\n", name, binLocation)
+		serviceContent := fmt.Sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n\t<dict>\n\t\t<key>Label</key>\n\t\t<string>%s</string>\n\t\t<key>ProgramArguments</key>\n\t\t<array>\n\t\t\t<string>%s</string>\n\t\t</array>\n\t\t<key>KeepAlive</key>\n\t\t<true/>\n\t\t<key>StandardOutPath</key>\n\t\t<string>/dev/null</string>\n\t\t<key>StandardErrorPath</key>\n\t\t<string>/dev/null</string>\n\t</dict>\n</plist>\n", name, binLocation)
 		servicePath := path.Join(os.Getenv("HOME"), "Library", "LaunchAgents", fmt.Sprintf("%s.plist", name))
 		return ioutil.WriteFile(servicePath, []byte(serviceContent), 0644)
 	case "windows":
