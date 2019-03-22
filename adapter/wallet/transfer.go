@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/renproject/libbtc-go"
 	"github.com/renproject/libeth-go"
+	"github.com/renproject/libzec-go"
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/tokens"
@@ -17,6 +18,8 @@ func (wallet *wallet) Transfer(password string, token tokens.Token, to string, a
 	switch token.Blockchain {
 	case tokens.BITCOIN:
 		return wallet.transferBTC(password, to, amount, speed, sendAll)
+	case tokens.ZCASH:
+		return wallet.transferZEC(password, to, amount, speed, sendAll)
 	case tokens.ETHEREUM:
 		return wallet.transferETH(password, to, amount, speed, sendAll)
 	case tokens.ERC20:
@@ -42,6 +45,25 @@ func (wallet *wallet) transferBTC(password, to string, amount *big.Int, speed bl
 		return txHash, blockchain.Cost{}, err
 	}
 	cost[tokens.NameBTC] = big.NewInt(txFee)
+	return txHash, cost, nil
+}
+
+func (wallet *wallet) transferZEC(password, to string, amount *big.Int, speed blockchain.TxExecutionSpeed, sendAll bool) (string, blockchain.Cost, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	cost := blockchain.Cost{}
+	account, err := wallet.ZCashAccount(password)
+	if err != nil {
+		return "", blockchain.Cost{}, err
+	}
+	if amount == nil {
+		amount = big.NewInt(0)
+	}
+	txHash, txFee, err := account.Transfer(ctx, to, amount.Int64(), libbtc.Fast, sendAll)
+	if err != nil {
+		return txHash, blockchain.Cost{}, err
+	}
+	cost[tokens.NameZEC] = big.NewInt(txFee)
 	return txHash, cost, nil
 }
 
@@ -91,6 +113,8 @@ func (wallet *wallet) Lookup(token tokens.Token, txHash string) (transfer.Update
 	switch token.Blockchain {
 	case tokens.BITCOIN:
 		return wallet.bitcoinLookup(txHash)
+	case tokens.ZCASH:
+		return wallet.zcashLookup(txHash)
 	case tokens.ETHEREUM, tokens.ERC20:
 		return wallet.ethereumLookup(txHash)
 	default:
@@ -125,6 +149,25 @@ func (wallet *wallet) ethereumLookup(txHash string) (transfer.UpdateReceipt, err
 
 func (wallet *wallet) bitcoinLookup(txHash string) (transfer.UpdateReceipt, error) {
 	client, err := libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name)
+	if err != nil {
+		return transfer.UpdateReceipt{}, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	confirmations, err := client.Confirmations(ctx, txHash)
+	if err != nil {
+		return transfer.UpdateReceipt{}, err
+	}
+
+	return transfer.NewUpdateReceipt(txHash, func(receipt *transfer.TransferReceipt) {
+		receipt.Confirmations = confirmations
+	}), nil
+}
+
+func (wallet *wallet) zcashLookup(txHash string) (transfer.UpdateReceipt, error) {
+	client, err := libzec.NewMercuryClient(wallet.config.Bitcoin.Network.Name)
 	if err != nil {
 		return transfer.UpdateReceipt{}, err
 	}

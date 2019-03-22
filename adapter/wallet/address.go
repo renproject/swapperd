@@ -8,6 +8,7 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
+	"github.com/renproject/libzec-go"
 	"github.com/renproject/tokens"
 	"github.com/republicprotocol/co-go"
 )
@@ -35,6 +36,8 @@ func (wallet *wallet) GetAddress(password string, blockchainName tokens.Blockcha
 		return wallet.getEthereumAddress(password)
 	case tokens.BITCOIN:
 		return wallet.getBitcoinAddress(password)
+	case tokens.ZCASH:
+		return wallet.generateZCashAddress(password)
 	default:
 		return "", tokens.NewErrUnsupportedBlockchain(blockchainName)
 	}
@@ -60,12 +63,26 @@ func (wallet *wallet) getBitcoinAddress(password string) (string, error) {
 	return btcAddr.String(), nil
 }
 
+func (wallet *wallet) getZCashAddress(password string) (string, error) {
+	zecAccount, err := wallet.ZCashAccount(password)
+	if err != nil {
+		return "", err
+	}
+	zecAddr, err := zecAccount.Address()
+	if err != nil {
+		return "", err
+	}
+	return zecAddr.String(), nil
+}
+
 func (wallet *wallet) VerifyAddress(blockchainName tokens.BlockchainName, address string) error {
 	switch blockchainName {
 	case tokens.ETHEREUM, tokens.ERC20:
 		return wallet.verifyEthereumAddress(address)
 	case tokens.BITCOIN:
 		return wallet.verifyBitcoinAddress(address)
+	case tokens.ZCASH:
+		return wallet.verifyZCashAddress(address)
 	default:
 		return tokens.NewErrUnsupportedBlockchain(blockchainName)
 	}
@@ -96,14 +113,34 @@ func (wallet *wallet) verifyBitcoinAddress(address string) error {
 	network := wallet.config.Bitcoin.Network.Name
 	switch network {
 	case "mainnet":
-		if _, err := btcutil.DecodeAddress(address, &chaincfg.MainNetParams); err != nil {
-			return fmt.Errorf("Invalid %s bitcoin address: %s", network, address)
+		if _, err := btcutil.DecodeAddress(address, &chaincfg.MainNetParams); err == nil {
+			return nil
 		}
 
-	case "testnet":
-		if _, err := btcutil.DecodeAddress(address, &chaincfg.TestNet3Params); err != nil {
-			return fmt.Errorf("Invalid %s bitcoin address: %s", network, address)
+	case "testnet3", "testnet", "regtest":
+		if _, err := btcutil.DecodeAddress(address, &chaincfg.TestNet3Params); err == nil {
+			return nil
 		}
 	}
-	return nil
+	return fmt.Errorf("Invalid %s bitcoin address: %s", network, address)
+}
+
+func (wallet *wallet) verifyZCashAddress(address string) error {
+	if address == "" {
+		return fmt.Errorf("Empty ZCash address")
+	}
+
+	network := wallet.config.ZCash.Network.Name
+	switch network {
+	case "mainnet":
+		if _, err := libzec.DecodeAddress(address, &chaincfg.MainNetParams); err == nil {
+			return nil
+		}
+
+	case "testnet3", "testnet", "regtest":
+		if _, err := libzec.DecodeAddress(address, &chaincfg.TestNet3Params); err == nil {
+			return nil
+		}
+	}
+	return fmt.Errorf("Invalid %s ZCash address: %s", network, address)
 }

@@ -15,6 +15,8 @@ func (wallet *wallet) VerifyBalance(password string, token tokens.Token, amount 
 		return wallet.verifyERC20Balance(password, token, amount)
 	case tokens.BITCOIN:
 		return wallet.verifyBitcoinBalance(password, amount)
+	case tokens.ZCASH:
+		return wallet.verifyZCashBalance(password, amount)
 	default:
 		return tokens.NewErrUnsupportedBlockchain(token.Blockchain)
 	}
@@ -103,6 +105,34 @@ func (wallet *wallet) verifyBitcoinBalance(password string, amount *big.Int) err
 	leftover := new(big.Int).Sub(balanceAmount, amount)
 	if leftover.Cmp(new(big.Int).Add(fee, big.NewInt(600))) < 0 {
 		return fmt.Errorf("You need at least 10600 SAT (or 0.000106 BTC) remaining in your wallet to cover transaction fees. You have: %v", leftover)
+	}
+	return nil
+}
+
+func (wallet *wallet) verifyZCashBalance(password string, amount *big.Int) error {
+	if amount == nil {
+		return nil
+	}
+
+	if amount.Cmp(big.NewInt(20000)) < 0 {
+		return fmt.Errorf("invalid ZCash amount: minimum swappable ZCash amount 20000 ZAT (or 0.0002 ZEC)")
+	}
+
+	fee := big.NewInt(10000)
+
+	balance, err := wallet.Balance(password, tokens.ZEC)
+	if err != nil {
+		return err
+	}
+
+	balanceAmount, ok := big.NewInt(0).SetString(balance.Amount, 10)
+	if !ok {
+		return fmt.Errorf("Invalid balance amount: %s", balance.Amount)
+	}
+
+	leftover := new(big.Int).Sub(balanceAmount, amount)
+	if leftover.Cmp(new(big.Int).Add(fee, big.NewInt(600))) < 0 {
+		return fmt.Errorf("You need at least 10600 ZAT (or 0.000106 ZEC) remaining in your wallet to cover transaction fees. You have: %v", leftover)
 	}
 	return nil
 }
