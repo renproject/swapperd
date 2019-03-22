@@ -1,0 +1,46 @@
+module github.com/renproject/swapperd
+
+require (
+	github.com/FactomProject/basen v0.0.0-20150613233007-fe3947df716e
+	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec
+	github.com/allegro/bigcache v1.2.0
+	github.com/aristanetworks/goarista v0.0.0-20190319235110-489128639c40
+	github.com/btcsuite/btcd v0.0.0-20190315201642-aa6e0f35703c
+	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
+	github.com/btcsuite/btcutil v0.0.0-20190316010144-3ac1210f4b38
+	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd
+	github.com/btcsuite/websocket v0.0.0-20150119174127-31079b680792
+	github.com/deckarep/golang-set v1.7.1
+	github.com/ethereum/go-ethereum v1.8.23
+	github.com/go-stack/stack v1.8.0
+	github.com/golang/snappy v0.0.1
+	github.com/google/uuid v1.1.1
+	github.com/gorilla/mux v1.7.0
+	github.com/hashicorp/golang-lru v0.5.1
+	github.com/hpcloud/tail v1.0.0
+	github.com/konsorten/go-windows-terminal-sequences v1.0.2
+	github.com/onsi/ginkgo v1.8.0
+	github.com/onsi/gomega v1.5.0
+	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
+	github.com/renproject/libbtc-go v0.0.0-20190320025517-31d5549e856a
+	github.com/renproject/libeth-go v0.0.0-20190320005049-702ea0e5c26b
+	github.com/renproject/tokens v0.0.0-20190321232840-ad1b6d47e138
+	github.com/republicprotocol/co-go v0.0.0-20180723052914-4e299fdb0e80
+	github.com/republicprotocol/tau v0.0.0-20190116001021-54c2ea27fbc3
+	github.com/rjeczalik/notify v0.9.2
+	github.com/rs/cors v1.6.0
+	github.com/sirupsen/logrus v1.4.0
+	github.com/syndtr/goleveldb v1.0.0
+	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
+	github.com/tyler-smith/go-bip39 v1.0.0
+	github.com/urfave/cli v1.20.0
+	golang.org/x/crypto v0.0.0-20190313024323-a1f597ede03a
+	golang.org/x/net v0.0.0-20190318221613-d196dffd7c2b
+	golang.org/x/sys v0.0.0-20190318195719-6c81ef8f67ca
+	golang.org/x/text v0.3.0
+	gopkg.in/fatih/set.v0 v0.1.0
+	gopkg.in/fsnotify.v1 v1.4.7
+	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
+	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
+	gopkg.in/yaml.v2 v2.2.2
+)
