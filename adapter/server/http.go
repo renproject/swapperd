@@ -281,9 +281,9 @@ func (server *httpServer) getBalancesHandler(reqHandler Handler) http.HandlerFun
 			return
 		}
 
-		token := tokens.ParseToken(tokenName)
-		if token == tokens.InvalidToken {
-			server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("invalid token name: %s", tokenName))
+		token, err := tokens.PatchToken(tokenName)
+		if err != nil {
+			server.writeError(w, r, http.StatusBadRequest, err.Error())
 		}
 
 		balance, err := reqHandler.GetBalance(password, token)
@@ -353,11 +353,11 @@ func (server *httpServer) getAddressesHandler(reqHandler Handler) http.HandlerFu
 			}
 			server.writeResponse(w, r, http.StatusOK, respBytes)
 		} else {
-			token := tokens.ParseToken(tokenName)
-			if token == tokens.InvalidToken {
-				server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("invalid token name: %s", tokenName))
-				return
+			token, err := tokens.PatchToken(tokenName)
+			if err != nil {
+				server.writeError(w, r, http.StatusBadRequest, err.Error())
 			}
+
 			address, err := reqHandler.GetAddress(password, token)
 			if err != nil {
 				server.writeError(w, r, http.StatusBadRequest, fmt.Sprintf("unable to retrieve address for token: %s", tokenName))
