@@ -7,33 +7,28 @@ _defaults: &defaults
     machine: true
     working_directory: ~/.go_workspace/src/github.com/renproject/swapperd
     environment:
+      - GO111MODULE: on
       - GOPATH: /home/circleci/.go_workspace
-
 
 commands:
   dep_ensure:
     description: Installing dependencies
     steps:
       - restore_cache:
-          key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          key: gopkg-{{ .Branch }}-{{ checksum "go.sum" }}
           paths:
               - ~/.go_workspace/src/github.com/renproject/swapperd/vendor
       - run:
           name: Download dependencies
           command: |
             if [ ! -d ~/.go_workspace/src/github.com/renproject/swapperd/vendor ]; then
-                if ! [ -x "$(command -v dep)" ]; then
-                    mkdir -p ~/.go_workspace/bin
-                    curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-                    export PATH=~/.go_workspace/bin:$PATH
-                fi
-                dep ensure -v -update
-                dep ensure -v
+                go mod download
+                go mod vendor
             else
                 echo "Dependencies were restored from cache."
             fi
       - save_cache:
-          key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          key: gopkg-{{ .Branch }}-{{ checksum "go.sum" }}
           paths:
               - ~/.go_workspace/src/github.com/renproject/swapperd/vendor
 
