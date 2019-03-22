@@ -12,8 +12,8 @@ MAINTAINER \
 # and also install curl and the latest version of go
 RUN \
     dpkg --add-architecture amd64 && \
-    apt-get install software-properties-common && \
+    apt-get purge -y golang && \
+    apt-get install -y software-properties-common && \
     add-apt-repository ppa:longsleep/golang-backports && \
     apt-get update && \
     apt-get install -y --no-install-recommends curl golang-go
-
