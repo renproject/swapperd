@@ -56,13 +56,14 @@ windows: build-win
 	@echo
 	@echo "Compiled ${WIN_TARGET} (${FULL_VERSION})"
 
-build:
+
+zip: installer updater swapperd swapperd-updater uninstaller
 	@mkdir -p bin
-	go build -ldflags="${LDFLAGS}" -o bin/installer ./cmd/installer
-	go build -ldflags="${LDFLAGS}" -o bin/updater ./cmd/updater
-	go build -ldflags="${LDFLAGS}" -o bin/swapperd ./cmd/swapperd-unix
-	go build -ldflags="${LDFLAGS}" -o bin/swapperd-updater ./cmd/updater-unix
-	go build -ldflags="${LDFLAGS}" -o bin/uninstaller ./cmd/uninstaller
+	@mv ./installer ./bin/installer
+	@mv ./updater ./bin/updater
+	@mv ./swapperd ./bin/swapperd
+	@mv ./swapperd-updater ./bin/swapperd-updater
+	@mv ./uninstaller ./bin/uninstaller
 	@echo
 	@zip -r ${LOCAL_TARGET} bin
 	@rm -rf bin
@@ -83,6 +84,27 @@ define build_win
 	xgo --targets=windows/amd64 -ldflags "${WIN_LDFLAGS}" $(1)
 endef
 
+define build_local
+	go build -ldflags="${LDFLAGS}" $(1)
+endef
+
+installer:
+	$(call build_local,./cmd/installer)
+
+updater:
+	$(call build_local,./cmd/updater)
+
+swapperd:
+	$(call build_local,./cmd/swapperd-unix)
+	@mv ./swapperd-unix ./swapperd
+
+swapperd-updater:
+	$(call build_local,./cmd/updater-unix)
+	@mv ./updater-unix ./swapperd-updater
+
+uninstaller:
+	$(call build_local,./cmd/uninstaller)
+
 build-unix:
 	$(call build_unix,./cmd/installer)
 	$(call build_unix,./cmd/updater)
@@ -97,5 +119,5 @@ build-win:
 	$(call build_win,./cmd/updater-win)
 	$(call build_win,./cmd/uninstaller)
 
-.PHONY: all build build-unix build-win windows linux darwin version clean
+.PHONY: all build build-unix build-win windows linux darwin version clean installer updater swapperd swapperd-updater uninstaller
 
