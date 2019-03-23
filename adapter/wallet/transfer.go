@@ -40,7 +40,7 @@ func (wallet *wallet) transferBTC(password, to string, amount *big.Int, speed bl
 	if amount == nil {
 		amount = big.NewInt(0)
 	}
-	txHash, txFee, err := account.Transfer(ctx, to, amount.Int64(), libbtc.Fast, sendAll)
+	txHash, txFee, err := account.Transfer(ctx, to, amount.Int64(), libbtc.TxExecutionSpeed(speed), sendAll)
 	if err != nil {
 		return txHash, blockchain.Cost{}, err
 	}
@@ -59,7 +59,7 @@ func (wallet *wallet) transferZEC(password, to string, amount *big.Int, speed bl
 	if amount == nil {
 		amount = big.NewInt(0)
 	}
-	txHash, txFee, err := account.Transfer(ctx, to, amount.Int64(), libbtc.Fast, sendAll)
+	txHash, txFee, err := account.Transfer(ctx, to, amount.Int64(), libzec.TxExecutionSpeed(speed), sendAll)
 	if err != nil {
 		return txHash, blockchain.Cost{}, err
 	}

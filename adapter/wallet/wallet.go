@@ -16,6 +16,7 @@ type Config struct {
 	Mnemonic string           `json:"mnemonic"`
 	Ethereum BlockchainConfig `json:"ethereum"`
 	Bitcoin  BlockchainConfig `json:"bitcoin"`
+	ZCash    BlockchainConfig `json:"zcash"`
 }
 
 type BlockchainConfig struct {

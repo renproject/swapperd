@@ -37,7 +37,7 @@ func (wallet *wallet) GetAddress(password string, blockchainName tokens.Blockcha
 	case tokens.BITCOIN:
 		return wallet.getBitcoinAddress(password)
 	case tokens.ZCASH:
-		return wallet.generateZCashAddress(password)
+		return wallet.getZCashAddress(password)
 	default:
 		return "", tokens.NewErrUnsupportedBlockchain(blockchainName)
 	}
