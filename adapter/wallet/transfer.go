@@ -22,7 +22,7 @@ func (wallet *wallet) Transfer(password string, token tokens.Token, to string, a
 	case tokens.ERC20:
 		return wallet.transferERC20(password, token, to, amount, speed, sendAll)
 	default:
-		return "", blockchain.Cost{}, tokens.NewErrUnsupportedToken(token.Name)
+		return "", blockchain.Cost{}, tokens.NewErrUnsupportedToken(string(token.Name))
 	}
 }
 

@@ -221,9 +221,9 @@ func (handler *handler) PostTransfers(req PostTransfersRequest) error {
 		req.Speed = blockchain.Fast
 	}
 
-	token := tokens.ParseToken(req.Token)
-	if token == tokens.InvalidToken {
-		return tokens.NewErrUnsupportedToken(tokens.Name(req.Token))
+	token, err := tokens.PatchToken(req.Token)
+	if err != nil {
+		return err
 	}
 	if err := handler.wallet.VerifyAddress(token.Blockchain, req.To); err != nil {
 		return err
@@ -328,18 +328,18 @@ func (handler *handler) bootload(password string) {
 }
 
 func (handler *handler) patchSwap(swapBlob swap.SwapBlob) (swap.SwapBlob, error) {
-	sendToken := tokens.ParseToken(string(swapBlob.SendToken))
-	if sendToken == tokens.InvalidToken {
-		return swapBlob, tokens.NewErrUnsupportedToken(swapBlob.SendToken)
+	sendToken, err := tokens.PatchToken(swapBlob.SendToken)
+	if err != nil {
+		return swapBlob, err
 	}
 
 	if err := handler.wallet.VerifyAddress(sendToken.Blockchain, swapBlob.SendTo); err != nil {
 		return swapBlob, err
 	}
 
-	receiveToken := tokens.ParseToken(string(swapBlob.ReceiveToken))
-	if receiveToken == tokens.InvalidToken {
-		return swapBlob, tokens.NewErrUnsupportedToken(swapBlob.ReceiveToken)
+	receiveToken, err := tokens.PatchToken(swapBlob.ReceiveToken)
+	if err != nil {
+		return swapBlob, err
 	}
 
 	if err := handler.wallet.VerifyAddress(receiveToken.Blockchain, swapBlob.ReceiveFrom); err != nil {
@@ -391,17 +391,17 @@ func (handler *handler) patchDelayedSwap(blob swap.SwapBlob) (swap.SwapBlob, err
 	rand.Read(swapID[:])
 	blob.ID = swap.SwapID(base64.StdEncoding.EncodeToString(swapID[:]))
 
-	sendToken := tokens.ParseToken(string(blob.SendToken))
-	if sendToken == tokens.InvalidToken {
-		return blob, tokens.NewErrUnsupportedToken(blob.SendToken)
+	sendToken, err := tokens.PatchToken(string(blob.SendToken))
+	if err != nil {
+		return blob, err
 	}
 	if err := handler.verifySendAmount(blob.Password, sendToken, blob.SendAmount, blob.BrokerFee); err != nil {
 		return blob, err
 	}
 
-	receiveToken := tokens.ParseToken(string(blob.ReceiveToken))
-	if receiveToken == tokens.InvalidToken {
-		return blob, tokens.NewErrUnsupportedToken(blob.ReceiveToken)
+	receiveToken, err := tokens.PatchToken(string(blob.ReceiveToken))
+	if err != nil {
+		return blob, err
 	}
 	if err := handler.verifyReceiveAmount(blob.Password, receiveToken); err != nil {
 		return blob, err
@@ -455,14 +455,14 @@ func (handler *handler) buildSwapResponse(blob swap.SwapBlob) (PostSwapResponse,
 	responseBlob.ReceiveAmount = blob.SendAmount
 	swapResponse := PostSwapResponse{}
 
-	sendToken := tokens.ParseToken(string(responseBlob.SendToken))
-	if sendToken == tokens.InvalidToken {
-		return swapResponse, tokens.NewErrUnsupportedToken(responseBlob.SendToken)
+	sendToken, err := tokens.PatchToken(responseBlob.SendToken)
+	if err != nil {
+		return swapResponse, err
 	}
 
-	receiveToken := tokens.ParseToken(string(responseBlob.ReceiveToken))
-	if receiveToken == tokens.InvalidToken {
-		return swapResponse, tokens.NewErrUnsupportedToken(responseBlob.ReceiveToken)
+	receiveToken, err := tokens.PatchToken(responseBlob.ReceiveToken)
+	if err != nil {
+		return swapResponse, err
 	}
 
 	sendTo, err := handler.wallet.GetAddress(blob.Password, sendToken.Blockchain)
