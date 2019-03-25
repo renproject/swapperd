@@ -1,9 +1,7 @@
 package autoupdater
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -11,8 +9,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/renproject/swapperd/driver/notifier"
-	"github.com/republicprotocol/co-go"
 	"github.com/sirupsen/logrus"
 )
 
@@ -35,34 +31,17 @@ func Run(done <-chan struct{}) {
 	logger.SetOutput(logFile)
 
 	frequency := time.Hour
-
-	if configData, err := ioutil.ReadFile(fmt.Sprintf("%s/config.json", homeDir)); err == nil {
-		config := struct {
-			Frequency time.Duration `json:"frequency"`
-		}{}
-		if err := json.Unmarshal(configData, &config); err == nil {
-			frequency = config.Frequency * time.Second
-		}
-	}
-
 	updaterPath := filepath.Join(homeDir, fmt.Sprintf("updater%s", path.Ext(ex)))
 	ticker := time.NewTicker(frequency)
-	co.ParBegin(
-		func() {
-			for {
-				select {
-				case <-done:
-				case <-ticker.C:
-					if err := update(updaterPath); err != nil {
-						logger.Error(err)
-					}
-				}
+	for {
+		select {
+		case <-done:
+		case <-ticker.C:
+			if err := update(updaterPath); err != nil {
+				logger.Error(err)
 			}
-		},
-		func() {
-			notifier.New(logger).Watch(done, filepath.Join(homeDir, "config.json"))
-		},
-	)
+		}
+	}
 }
 
 func update(updaterPath string) error {
