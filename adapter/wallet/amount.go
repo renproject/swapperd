@@ -68,7 +68,7 @@ func (wallet *wallet) verifyERC20Balance(password string, token tokens.Token, am
 		}
 
 		if erc20Amount.Cmp(expectedAmount) < 0 {
-			return fmt.Errorf("You must have at least %s %s remaining in your wallet to execute the swap. You have %s %s", expectedAmount, token.Name, erc20Amount, token.Name)
+			return fmt.Errorf("Invalid %s balance. Needed at least %s, but got %s", token.Name, expectedAmount, erc20Amount)
 		}
 	}
 
