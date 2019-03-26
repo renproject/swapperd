@@ -23,14 +23,11 @@ func (wallet *wallet) VerifyBalance(password string, token tokens.Token, amount 
 }
 
 func (wallet *wallet) verifyEthereumBalance(password string, amount *big.Int) error {
-	balance, err := wallet.Balance(password, tokens.ETH)
+	balanceAmount, err := wallet.AvailableBalance(password, tokens.ETH)
 	if err != nil {
 		return err
 	}
-	balanceAmount, ok := big.NewInt(0).SetString(balance.Amount, 10)
-	if !ok {
-		return fmt.Errorf("Invalid balance amount: %s", balance.Amount)
-	}
+
 	if amount != nil {
 		balanceAmount = new(big.Int).Sub(balanceAmount, amount)
 	}
@@ -42,26 +39,16 @@ func (wallet *wallet) verifyEthereumBalance(password string, amount *big.Int) er
 }
 
 func (wallet *wallet) verifyERC20Balance(password string, token tokens.Token, amount *big.Int) error {
-	ethBalance, err := wallet.Balance(password, tokens.ETH)
+	ethAmount, err := wallet.AvailableBalance(password, tokens.ETH)
 	if err != nil {
 		return err
 	}
 
-	ethAmount, ok := big.NewInt(0).SetString(ethBalance.Amount, 10)
-	if !ok {
-		return fmt.Errorf("Invalid balance amount: %s", ethBalance.Amount)
-	}
-
 	fee := big.NewInt(1200000000000000)
 	if amount != nil {
-		erc20Balance, err := wallet.Balance(password, token)
+		erc20Amount, err := wallet.AvailableBalance(password, token)
 		if err != nil {
 			return err
-		}
-
-		erc20Amount, ok := big.NewInt(0).SetString(erc20Balance.Amount, 10)
-		if !ok {
-			return fmt.Errorf("Invalid balance amount: %s", erc20Balance.Amount)
 		}
 
 		expectedAmount := amount
@@ -92,14 +79,9 @@ func (wallet *wallet) verifyBitcoinBalance(password string, amount *big.Int) err
 
 	fee := big.NewInt(10000)
 
-	balance, err := wallet.Balance(password, tokens.BTC)
+	balanceAmount, err := wallet.AvailableBalance(password, tokens.BTC)
 	if err != nil {
 		return err
-	}
-
-	balanceAmount, ok := big.NewInt(0).SetString(balance.Amount, 10)
-	if !ok {
-		return fmt.Errorf("Invalid balance amount: %s", balance.Amount)
 	}
 
 	leftover := new(big.Int).Sub(balanceAmount, amount)
@@ -120,14 +102,9 @@ func (wallet *wallet) verifyZCashBalance(password string, amount *big.Int) error
 
 	fee := big.NewInt(10000)
 
-	balance, err := wallet.Balance(password, tokens.ZEC)
+	balanceAmount, err := wallet.AvailableBalance(password, tokens.ZEC)
 	if err != nil {
 		return err
-	}
-
-	balanceAmount, ok := big.NewInt(0).SetString(balance.Amount, 10)
-	if !ok {
-		return fmt.Errorf("Invalid balance amount: %s", balance.Amount)
 	}
 
 	leftover := new(big.Int).Sub(balanceAmount, amount)

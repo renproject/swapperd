@@ -2,6 +2,8 @@ package wallet
 
 import (
 	"math/big"
+	"strings"
+	"sync"
 
 	"github.com/renproject/libbtc-go"
 	"github.com/renproject/libeth-go"
@@ -44,6 +46,9 @@ type Wallet interface {
 	Addresses(password string) (map[tokens.Name]string, error)
 	VerifyAddress(blockchain tokens.BlockchainName, address string) error
 	VerifyBalance(password string, token tokens.Token, balance *big.Int) error
+	AvailableBalance(password string, token tokens.Token) (*big.Int, error)
+	LockBalance(token tokens.Name, value string) error
+	UnlockBalance(token tokens.Name, value string) error
 
 	EthereumAccount(password string) (libeth.Account, error)
 	BitcoinAccount(password string) (libbtc.Account, error)
@@ -52,13 +57,32 @@ type Wallet interface {
 }
 
 type wallet struct {
-	config Config
-	logger logrus.FieldLogger
+	mu *sync.RWMutex
+
+	config         Config
+	lockedBalances map[tokens.Name]*big.Int
+	logger         logrus.FieldLogger
 }
 
 func New(config Config, logger logrus.FieldLogger) Wallet {
+	balances := map[tokens.Name]*big.Int{}
+	for _, token := range tokens.SupportedTokens {
+		balances[token.Name] = big.NewInt(0)
+	}
+
 	return &wallet{
-		config: config,
-		logger: logger,
+		config:         config,
+		logger:         logger,
+		lockedBalances: balances,
+	}
+}
+
+func Default(network string, logger logrus.FieldLogger) Wallet {
+	network = strings.ToLower(network)
+	switch network {
+	case "main", "mainnet":
+		return New(Mainnet, logger)
+	default:
+		return New(Testnet, logger)
 	}
 }
