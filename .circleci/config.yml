@@ -34,6 +34,20 @@ commands:
           key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
           paths:
               - ~/.go_workspace/src/github.com/renproject/swapperd/vendor
+  nightly_release:
+    description: Creating Github Pre-release
+    steps:
+      - run:
+          name: Check nightly branch
+          command: |
+            if [ "${CIRCLE_BRANCH}" != "nightly" ]; then
+              exit 0
+            fi
+      - core/install_ghr
+      - core/github_release
+          tag: nightly
+          filelist: ./RELEASE
+          prerelease: true
 
 jobs:
   build:
@@ -55,6 +69,7 @@ jobs:
           name: Build binaries
           command: |
             make
+      - nightly_release
   test:
     docker:
       # specify the version
