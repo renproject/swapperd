@@ -43,7 +43,7 @@ jobs:
       - run:
           name: Building Docker image
           command: |
-            docker build -t karalabe/xgo-latest .
+            docker pull karalabe/xgo-latest
       - dep_ensure
       - run:
           name: Installing xgo
