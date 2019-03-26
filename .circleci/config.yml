@@ -44,7 +44,7 @@ commands:
               exit 0
             fi
       - core/install_ghr
-      - core/github_release
+      - core/github_release:
           tag: nightly
           filelist: ./RELEASE
           prerelease: true
