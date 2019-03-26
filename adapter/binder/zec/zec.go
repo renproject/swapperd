@@ -115,11 +115,12 @@ func (atom *zecSwapContractBinder) Initiate() error {
 		false,
 	)
 	if err != nil {
-		if err != libzec.ErrPreConditionCheckFailed {
-			return err
+		if err == libzec.ErrPreConditionCheckFailed {
+			return immediate.ErrAlreadyInitiated
 		}
-		return nil
+		return err
 	}
+
 	atom.cost[tokens.NameZEC] = new(big.Int).Add(big.NewInt(txFee), atom.cost[tokens.NameZEC])
 	atom.cost[tokens.NameZEC] = new(big.Int).Add(atom.swap.BrokerFee, atom.cost[tokens.NameZEC])
 	atom.Info(atom.FormatTransactionView("Initiated on Zcash blockchain", txHash))

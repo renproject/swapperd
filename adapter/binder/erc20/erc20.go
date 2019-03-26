@@ -138,6 +138,9 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 		1,
 	)
 	if err != nil {
+		if err == libeth.ErrPreConditionCheckFailed {
+			return immediate.ErrAlreadyInitiated
+		}
 		return err
 	}
 	atom.cost[tokens.NameETH] = new(big.Int).Add(atom.cost[tokens.NameETH], initiateTx.Cost())
