@@ -5,6 +5,7 @@ import (
 
 	"github.com/renproject/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
+	"github.com/sirupsen/logrus"
 )
 
 var ErrSwapDetailsUnavailable = fmt.Errorf("swap details unavailable")
@@ -13,14 +14,15 @@ var ErrSwapCancelled = fmt.Errorf("swap cancelled")
 type callback struct {
 	delayCallback DelayCallback
 	swapMap       map[swap.SwapID]DelayedSwapRequest
+	logger        logrus.FieldLogger
 }
 
 type DelayCallback interface {
 	DelayCallback(swap.SwapBlob) (swap.SwapBlob, error)
 }
 
-func New(cap int, delayCallback DelayCallback) tau.Task {
-	return tau.New(tau.NewIO(cap), &callback{delayCallback, map[swap.SwapID]DelayedSwapRequest{}})
+func New(cap int, delayCallback DelayCallback, logger logrus.FieldLogger) tau.Task {
+	return tau.New(tau.NewIO(cap), &callback{delayCallback, map[swap.SwapID]DelayedSwapRequest{}, logger})
 }
 
 func (callback *callback) Reduce(msg tau.Message) tau.Message {
