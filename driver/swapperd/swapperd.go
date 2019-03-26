@@ -1,12 +1,14 @@
 package swapperd
 
 import (
+	"time"
+
 	"github.com/renproject/swapperd/adapter/binder"
 	"github.com/renproject/swapperd/adapter/callback"
 	"github.com/renproject/swapperd/adapter/db"
 	"github.com/renproject/swapperd/adapter/server"
+	walletAdapter "github.com/renproject/swapperd/adapter/wallet"
 	"github.com/renproject/swapperd/core/wallet"
-	"github.com/renproject/swapperd/driver/keystore"
 	"github.com/renproject/swapperd/driver/leveldb"
 	"github.com/republicprotocol/co-go"
 	"github.com/republicprotocol/tau"
@@ -27,21 +29,21 @@ type Swapperd interface {
 }
 
 func New(version, homeDir, network, port string, logger logrus.FieldLogger) Swapperd {
-	ldb, err := leveldb.NewStore(homeDir, network)
-	if err != nil {
-		panic(err)
+	var storage db.Storage
+	for {
+		ldb, err := leveldb.NewStore(homeDir, network)
+		if err == nil {
+			storage = db.New(ldb)
+			break
+		}
+		time.Sleep(15 * time.Second)
+		logger.Errorf("failed to connect to leveldb, will try again in 15 sec: %s\n", err)
 	}
 
-	storage := db.New(ldb)
-	bc, err := keystore.Wallet(homeDir, network, logger)
-	if err != nil {
-		panic(err)
-	}
-
+	bc := walletAdapter.Default(network, logger)
 	receiver := server.NewReceiver(BufferCapacity)
 	serviceTask := server.NewService(BufferCapacity, receiver)
 	serviceTask.Send(server.AcceptRequest{})
-
 	server := server.NewHttpServer(BufferCapacity, port, version, receiver, storage, bc, logger)
 	walletTask := wallet.New(BufferCapacity, storage, bc, binder.NewBuilder(bc, logger), callback.New())
 	return &swapperd{server, logger, walletTask, serviceTask}
