@@ -51,7 +51,7 @@ func (wallet *wallet) BitcoinAccount(password string) (libbtc.Account, error) {
 	}
 	logger := wallet.logger.WithField("token", "bitcoin")
 	logger = logger.WithField("network", wallet.config.Bitcoin.Network.Name)
-	client, err := libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name)
+	client, err := libbtc.NewMercuryClient(wallet.config.Bitcoin.Network.Name)
 	if err != nil {
 		return nil, err
 	}

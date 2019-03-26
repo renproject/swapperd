@@ -148,7 +148,7 @@ func (wallet *wallet) ethereumLookup(txHash string) (transfer.UpdateReceipt, err
 }
 
 func (wallet *wallet) bitcoinLookup(txHash string) (transfer.UpdateReceipt, error) {
-	client, err := libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name)
+	client, err := libbtc.NewMercuryClient(wallet.config.Bitcoin.Network.Name)
 	if err != nil {
 		return transfer.UpdateReceipt{}, err
 	}
