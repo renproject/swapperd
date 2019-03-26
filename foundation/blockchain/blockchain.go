@@ -8,7 +8,8 @@ type Blockchain struct {
 }
 
 type Balance struct {
-	Address  string `json:"address"`
-	Decimals int    `json:"decimals"`
-	Amount   string `json:"balance"`
+	Address    string `json:"address"`
+	Decimals   int    `json:"decimals"`
+	FullAmount string `json:"fullBalance"`
+	Amount     string `json:"balance"`
 }
