@@ -5,12 +5,14 @@ import (
 
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/renproject/tokens"
 	"github.com/republicprotocol/tau"
 	"golang.org/x/crypto/sha3"
 )
 
 var ErrSwapExpired = fmt.Errorf("swap expired")
 var ErrAuditPending = fmt.Errorf("audit pending")
+var ErrAlreadyInitiated = fmt.Errorf("already initiated")
 
 type Contract interface {
 	Initiate() error
@@ -69,9 +71,13 @@ func (swapper *swapper) handleSwap(req SwapRequest) tau.Message {
 
 func (swapper *swapper) initiate(req SwapRequest, native, foreign Contract) tau.Message {
 	secret := sha3.Sum256(append([]byte(req.Blob.Password), []byte(req.Blob.ID)...))
-	if err := native.Initiate(); err != nil {
+	if err := native.Initiate(); err != ErrAlreadyInitiated {
+		if err == nil {
+			return NewUnlockBalance(req.Blob.SendToken, req.Blob.SendAmount)
+		}
 		return swapper.handleResult(req, swap.Inactive, native, foreign, err, false)
 	}
+
 	if err := foreign.Audit(); err != nil {
 		if err == ErrAuditPending {
 			return swapper.handleResult(req, swap.AuditPending, native, foreign, nil, false)
@@ -172,4 +178,16 @@ type DeleteSwap struct {
 }
 
 func (msg DeleteSwap) IsMessage() {
+}
+
+type UnlockBalance struct {
+	Token  tokens.Name
+	Amount string
+}
+
+func (UnlockBalance) IsMessage() {
+}
+
+func NewUnlockBalance(token tokens.Name, amount string) UnlockBalance {
+	return UnlockBalance{token, amount}
 }
