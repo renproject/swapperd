@@ -24,10 +24,15 @@ type wallet struct {
 	transferTask   tau.Task
 }
 
-func New(cap int, storage Storage, bc transfer.Blockchain, builder immediate.ContractBuilder, callback delayed.DelayCallback) tau.Task {
-	swapperTask := swapper.New(cap, storage, builder, callback)
+type Wallet interface {
+	transfer.Blockchain
+	swapper.Wallet
+}
+
+func New(cap int, storage Storage, w Wallet, builder immediate.ContractBuilder, callback delayed.DelayCallback) tau.Task {
+	swapperTask := swapper.New(cap, storage, w, builder, callback)
 	swapStatusTask := status.New(cap, storage)
-	transferTask := transfer.New(cap, bc, storage)
+	transferTask := transfer.New(cap, w, storage)
 	return tau.New(tau.NewIO(cap), &wallet{swapStatusTask, swapperTask, transferTask}, swapStatusTask, swapperTask, transferTask)
 }
 
