@@ -3,12 +3,14 @@
 # https://github.com/billziss-gh/cgofuse/blob/9b5a7c093a2b5da9dc74494e4c7714af8c82de93/.circleci/config.yml
 version: 2.1
 
+orbs:
+    core: ren/circleci-orbs@dev:first
+
 _defaults: &defaults
     machine: true
     working_directory: ~/.go_workspace/src/github.com/renproject/swapperd
     environment:
       - GOPATH: /home/circleci/.go_workspace
-
 
 commands:
   dep_ensure:
@@ -18,15 +20,11 @@ commands:
           key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
           paths:
               - ~/.go_workspace/src/github.com/renproject/swapperd/vendor
+      - core/install_dep
       - run:
           name: Download dependencies
           command: |
             if [ ! -d ~/.go_workspace/src/github.com/renproject/swapperd/vendor ]; then
-                if ! [ -x "$(command -v dep)" ]; then
-                    mkdir -p ~/.go_workspace/bin
-                    curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-                    export PATH=~/.go_workspace/bin:$PATH
-                fi
                 dep ensure -v -update
                 dep ensure -v
             else
