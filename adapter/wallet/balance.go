@@ -9,9 +9,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/renproject/libbtc-go"
-	"github.com/renproject/libeth-go"
-	"github.com/renproject/libzec-go"
 	"github.com/renproject/swapperd/adapter/binder/erc20"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/tokens"
@@ -112,13 +109,13 @@ func (wallet *wallet) Balance(password string, token tokens.Token) (blockchain.B
 }
 
 func (wallet *wallet) balanceBTC(address string) (blockchain.Balance, error) {
-	btcClient, err := libbtc.NewMercuryClient(wallet.config.Bitcoin.Network.Name)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	btcClient, err := wallet.bitcoinClient()
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
 
 	balance, err := btcClient.Balance(ctx, address, 0)
 	if err != nil {
@@ -133,7 +130,7 @@ func (wallet *wallet) balanceBTC(address string) (blockchain.Balance, error) {
 }
 
 func (wallet *wallet) balanceZEC(address string) (blockchain.Balance, error) {
-	zecClient, err := libzec.NewMercuryClient(wallet.config.ZCash.Network.Name)
+	zecClient, err := wallet.zcashClient()
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
@@ -154,7 +151,7 @@ func (wallet *wallet) balanceZEC(address string) (blockchain.Balance, error) {
 }
 
 func (wallet *wallet) balanceETH(address string) (blockchain.Balance, error) {
-	client, err := libeth.NewInfuraClient(wallet.config.Ethereum.Network.Name, "172978c53e244bd78388e6d50a4ae2fa")
+	client, err := wallet.ethereumClient()
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
@@ -175,7 +172,7 @@ func (wallet *wallet) balanceETH(address string) (blockchain.Balance, error) {
 }
 
 func (wallet *wallet) balanceERC20(token tokens.Token, address string) (blockchain.Balance, error) {
-	client, err := libeth.NewInfuraClient(wallet.config.Ethereum.Network.Name, "172978c53e244bd78388e6d50a4ae2fa")
+	client, err := wallet.ethereumClient()
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
