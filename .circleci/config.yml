@@ -118,3 +118,18 @@ workflows:
     jobs:
       - core/merge_nightly:
           executor: go_exec
+  monthly:
+    triggers:
+      - schedule:
+          cron: "0 0 1 * *" # on the 1st of every month at 00:00
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - core/merge_stable:
+          executor: go_exec
+      - core/merge_beta:
+          executor: go_exec
+          requires:
+            - core/merge_stable
