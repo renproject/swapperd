@@ -59,7 +59,7 @@ commands:
           name: Build binaries
           command: |
             make
-  nightly_release:
+  nightly_prerelease:
     description: Creating Github Pre-release
     steps:
       - core/install_ghr
@@ -67,17 +67,33 @@ commands:
           tag: nightly
           filelist: ./RELEASE
           prerelease: true
+  stable_release:
+    description: Creating Github Pre-release
+    steps:
+      - core/install_ghr
+      - run:
+          name: Getting version name
+          command: |
+            export RELEASE_VERSION=$(make version)
+      - core/github_release:
+          tag: ${RELEASE_VERSION}
+          filelist: ./RELEASE
 
 jobs:
   build:
     executor: machine_exec
     steps:
       - build
+  build_prerelease:
+    executor: machine_exec
+    steps:
+      - build
+      - nightly_prerelease
   build_release:
     executor: machine_exec
     steps:
       - build
-      - nightly_release
+      - stable_release
   test:
     executor: go_exec
     steps:
@@ -100,8 +116,9 @@ workflows:
             - test
           filters:
             branches:
-              ignore: nightly
-      - build_release:
+              ignore:
+                - nightly
+      - build_prerelease:
           requires:
             - test
           filters:
