@@ -21,7 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-bool DISABLE_NIGHTLY_AUTOUPDATE = true
+const DisableNightlyAutoUpdate = true
 
 type Updater struct {
 	homeDir string
@@ -253,7 +253,7 @@ func compareTags(curr, latest []string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if DISABLE_NIGHTLY_AUTOUPDATE && currType == 1 {
+	if DisableNightlyAutoUpdate && currType == 1 {
 		return false, nil
 	}
 
