@@ -71,6 +71,7 @@ func New(config Config, logger logrus.FieldLogger) Wallet {
 	}
 
 	return &wallet{
+		mu:             new(sync.RWMutex),
 		config:         config,
 		logger:         logger,
 		lockedBalances: balances,

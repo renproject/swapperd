@@ -168,9 +168,9 @@ func (wallet *wallet) balanceETH(address string) (blockchain.Balance, error) {
 	}
 
 	return blockchain.Balance{
-		Address:  address,
-		Decimals: int(tokens.ETH.Decimals),
-		Amount:   balance.String(),
+		Address:    address,
+		Decimals:   int(tokens.ETH.Decimals),
+		FullAmount: balance.String(),
 	}, nil
 }
 
