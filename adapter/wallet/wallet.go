@@ -5,6 +5,7 @@ import (
 
 	"github.com/renproject/libbtc-go"
 	"github.com/renproject/libeth-go"
+	"github.com/renproject/libzec-go"
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/tokens"
@@ -15,6 +16,7 @@ type Config struct {
 	Mnemonic string           `json:"mnemonic"`
 	Ethereum BlockchainConfig `json:"ethereum"`
 	Bitcoin  BlockchainConfig `json:"bitcoin"`
+	ZCash    BlockchainConfig `json:"zcash"`
 }
 
 type BlockchainConfig struct {
@@ -45,6 +47,7 @@ type Wallet interface {
 
 	EthereumAccount(password string) (libeth.Account, error)
 	BitcoinAccount(password string) (libbtc.Account, error)
+	ZCashAccount(password string) (libzec.Account, error)
 	ECDSASigner(password string) (ECDSASigner, error)
 }
 

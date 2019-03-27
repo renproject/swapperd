@@ -320,7 +320,7 @@ func (handler *handler) Write(msg tau.Message) error {
 
 func (handler *handler) bootload(password string) {
 	if !handler.bootloaded[passwordHash(password)] {
-		if err := handler.Write(coreWallet.Bootload{password}); err != nil {
+		if err := handler.Write(coreWallet.Bootload{Password: password}); err != nil {
 			return
 		}
 		handler.bootloaded[passwordHash(password)] = true

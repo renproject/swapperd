@@ -57,7 +57,7 @@ func (wallet *wallet) handleSwapRequest(msg swapper.SwapRequest) {
 }
 
 func (wallet *wallet) handleBootload(msg Bootload) {
-	wallet.swapperTask.Send(swapper.Bootload{msg.Password})
+	wallet.swapperTask.Send(swapper.Bootload{Password: msg.Password})
 }
 
 func (wallet *wallet) handleTick(msg tau.Tick) {

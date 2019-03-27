@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/renproject/libbtc-go"
 	"github.com/renproject/libeth-go"
+	"github.com/renproject/libzec-go"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -55,6 +56,28 @@ func (wallet *wallet) BitcoinAccount(password string) (libbtc.Account, error) {
 		return nil, err
 	}
 	return libbtc.NewAccount(client, privKey, logger), nil
+}
+
+// ZCashAccount returns the zcash account
+func (wallet *wallet) ZCashAccount(password string) (libzec.Account, error) {
+	var derivationPath []uint32
+	switch wallet.config.ZCash.Network.Name {
+	case "testnet", "testnet3":
+		derivationPath = []uint32{44, 1, 0, 0, 0}
+	case "mainnet":
+		derivationPath = []uint32{44, 133, 0, 0, 0}
+	}
+	privKey, err := wallet.loadECDSAKey(password, derivationPath)
+	if err != nil {
+		return nil, err
+	}
+	logger := wallet.logger.WithField("token", "zcash")
+	logger = logger.WithField("network", wallet.config.ZCash.Network.Name)
+	client, err := libzec.NewMercuryClient(wallet.config.ZCash.Network.Name)
+	if err != nil {
+		return nil, err
+	}
+	return libzec.NewAccount(client, privKey, logger), nil
 }
 
 func (wallet *wallet) loadECDSAKey(password string, path []uint32) (*ecdsa.PrivateKey, error) {

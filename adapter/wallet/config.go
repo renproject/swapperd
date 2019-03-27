@@ -7,6 +7,11 @@ var Testnet = Config{
 			Name: "testnet",
 		},
 	},
+	ZCash: BlockchainConfig{
+		Network: Network{
+			Name: "testnet",
+		},
+	},
 	Ethereum: BlockchainConfig{
 		Network: Network{
 			Name: "kovan",
@@ -18,6 +23,11 @@ var Testnet = Config{
 // Mainnet is the Swapperd's mainnet config object
 var Mainnet = Config{
 	Bitcoin: BlockchainConfig{
+		Network: Network{
+			Name: "mainnet",
+		},
+	},
+	ZCash: BlockchainConfig{
 		Network: Network{
 			Name: "mainnet",
 		},

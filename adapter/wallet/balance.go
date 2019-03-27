@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/renproject/libbtc-go"
 	"github.com/renproject/libeth-go"
+	"github.com/renproject/libzec-go"
 	"github.com/renproject/swapperd/adapter/binder/erc20"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/tokens"
@@ -42,6 +43,8 @@ func (wallet *wallet) Balance(password string, token tokens.Token) (blockchain.B
 	switch token.Blockchain {
 	case tokens.BITCOIN:
 		return wallet.balanceBTC(address)
+	case tokens.ZCASH:
+		return wallet.balanceZEC(address)
 	case tokens.ETHEREUM:
 		return wallet.balanceETH(address)
 	case tokens.ERC20:
@@ -68,6 +71,27 @@ func (wallet *wallet) balanceBTC(address string) (blockchain.Balance, error) {
 	return blockchain.Balance{
 		Address:  address,
 		Decimals: int(tokens.BTC.Decimals),
+		Amount:   big.NewInt(balance).String(),
+	}, nil
+}
+
+func (wallet *wallet) balanceZEC(address string) (blockchain.Balance, error) {
+	zecClient, err := libzec.NewMercuryClient(wallet.config.ZCash.Network.Name)
+	if err != nil {
+		return blockchain.Balance{}, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	balance, err := zecClient.Balance(ctx, address, 0)
+	if err != nil {
+		return blockchain.Balance{}, err
+	}
+
+	return blockchain.Balance{
+		Address:  address,
+		Decimals: int(tokens.ZEC.Decimals),
 		Amount:   big.NewInt(balance).String(),
 	}, nil
 }

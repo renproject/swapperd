@@ -8,6 +8,7 @@ import (
 	"github.com/renproject/swapperd/adapter/binder/btc"
 	"github.com/renproject/swapperd/adapter/binder/erc20"
 	"github.com/renproject/swapperd/adapter/binder/eth"
+	"github.com/renproject/swapperd/adapter/binder/zec"
 	"github.com/renproject/swapperd/adapter/wallet"
 	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
 	"github.com/renproject/swapperd/foundation/blockchain"
@@ -52,6 +53,12 @@ func (builder *builder) buildBinder(swap swap.Swap, cost blockchain.Cost, passwo
 			return nil, err
 		}
 		return btc.NewBTCSwapContractBinder(btcAccount, swap, cost, builder.FieldLogger)
+	case tokens.ZCASH:
+		zecAccount, err := builder.ZCashAccount(password)
+		if err != nil {
+			return nil, err
+		}
+		return zec.NewZECSwapContractBinder(zecAccount, swap, cost, builder.FieldLogger)
 	case tokens.ETHEREUM:
 		ethAccount, err := builder.EthereumAccount(password)
 		if err != nil {
