@@ -6,11 +6,17 @@ version: 2.1
 orbs:
     core: ren/circleci-orbs@dev:first
 
-_defaults: &defaults
+
+executors:
+  machine_exec:
     machine: true
     working_directory: ~/.go_workspace/src/github.com/renproject/swapperd
     environment:
       - GOPATH: /home/circleci/.go_workspace
+  go_exec:
+    docker:
+      - image: circleci/golang:1.9
+    working_directory: /go/src/github.com/renproject/swapperd
 
 commands:
   dep_ensure:
@@ -34,24 +40,8 @@ commands:
           key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
           paths:
               - ~/.go_workspace/src/github.com/renproject/swapperd/vendor
-  nightly_release:
-    description: Creating Github Pre-release
-    steps:
-      - run:
-          name: Check nightly branch
-          command: |
-            if [ "${CIRCLE_BRANCH}" != "nightly" ]; then
-              exit 0
-            fi
-      - core/install_ghr
-      - core/github_release:
-          tag: nightly
-          filelist: ./RELEASE
-          prerelease: true
-
-jobs:
   build:
-    <<: *defaults
+    description: Building binaries
     steps:
       - checkout
       - run:
@@ -69,12 +59,27 @@ jobs:
           name: Build binaries
           command: |
             make
+  nightly_release:
+    description: Creating Github Pre-release
+    steps:
+      - core/install_ghr
+      - core/github_release:
+          tag: nightly
+          filelist: ./RELEASE
+          prerelease: true
+
+jobs:
+  build:
+    executor: machine_exec
+    steps:
+      - build
+  build_release:
+    executor: machine_exec
+    steps:
+      - build
       - nightly_release
   test:
-    docker:
-      # specify the version
-      - image: circleci/golang:1.9
-    working_directory: /go/src/github.com/renproject/swapperd
+    executor: go_exec
     steps:
       - checkout
       - run:
@@ -93,3 +98,23 @@ workflows:
       - build:
           requires:
             - test
+          filters:
+            branches:
+              ignore: nightly
+      - build_release:
+          requires:
+            - test
+          filters:
+            branches:
+              only: nightly
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 2 * * *" # every night at 02:00
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - core/merge_nightly:
+          executor: go_exec
