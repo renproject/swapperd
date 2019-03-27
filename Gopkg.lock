@@ -30,11 +30,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:63884c5eaac4a4688edde1c85ad1cc8cc9b3e972aac40468c8c0e1b87c2bd4f1"
+  digest = "1:219b84f8c6b3456cd33a87e5ca3281f02a67595d8ccd5658204e041bacb9e9a4"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
   pruneopts = "T"
-  revision = "4bf08e1eff2ff060e477c4e96e515b6cc51145d5"
+  revision = "a123909ec740ba2ed43a293e3febaf7618aa67d5"
 
 [[projects]]
   branch = "master"
@@ -298,7 +298,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e44251c76af3c801bb5e6d06c8b063d84dbb28745778b3ec53f0d188275e3066"
+  digest = "1:3645fb22bfc7a5b716ac573af2f1802ef8e12807c88586b1e0061754f3b28226"
   name = "github.com/renproject/libzec-go"
   packages = [
     ".",
@@ -306,26 +306,26 @@
     "errors",
   ]
   pruneopts = "T"
-  revision = "fea10acae9e9db16f18cfa39aa0ecb60aa29807c"
+  revision = "8848336c662815311adf3054998c51afc95ebda9"
 
 [[projects]]
   branch = "master"
-  digest = "1:b848b1803fff92ea771c63ce8d6cb3bc0423cda1ee72a97ef86478e22ccd8de1"
+  digest = "1:37c4ec6ae8418d8ebdb092406ee502575cfc5af6cc08bdd38b650ad5a6c1ee8c"
   name = "github.com/renproject/mercury"
   packages = [
     ".",
     "btc",
   ]
   pruneopts = "T"
-  revision = "ef109637dede3793841977a4590b6465d788210f"
+  revision = "78ddbc0c1470adf25eafb041b77cec7dd68991b9"
 
 [[projects]]
   branch = "master"
-  digest = "1:4a56eff0a83650cdbcf060833a6280f9f92fb8da87ce7d0fe1931a5321ad676d"
+  digest = "1:ccf4d788d210576d614371c82f4113345b6c5cc60f51ec9a6820c4d9b5bcf112"
   name = "github.com/renproject/tokens"
   packages = ["."]
   pruneopts = "T"
-  revision = "ad1b6d47e1386f9893a460d7aa60e9c1c7854c6a"
+  revision = "18deb2462040fd609303ff873b4fedb423846f67"
 
 [[projects]]
   branch = "master"
@@ -421,7 +421,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5d99d9b38456133a69cdbf023268e63a8ecd6f4ba863bc212677111aa1807b10"
+  digest = "1:287367cdf1d4ad1b717dcc43a31f500eb36a2bdfc1ad3305fc023e58e1ece269"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
@@ -433,11 +433,11 @@
     "ssh/terminal",
   ]
   pruneopts = "T"
-  revision = "b7391e95e576cacdcdd422573063bc057239113d"
+  revision = "a5d413f7728c81fb97d96a2b722368945f651e78"
 
 [[projects]]
   branch = "master"
-  digest = "1:9b3df15b0a09e54fe69672646e7fd91217867d6728028d532213b46d49b04a02"
+  digest = "1:97a82d1b06223dada4445c4ee6823a22a35dd1f962ede510fbd6126c5460e370"
   name = "golang.org/x/net"
   packages = [
     "html",
@@ -446,7 +446,7 @@
     "websocket",
   ]
   pruneopts = "T"
-  revision = "addf6b3196f61cd44ce5a76657913698c73479d0"
+  revision = "74e053c68e2965fe54b49e4d18cb37db34288db2"
 
 [[projects]]
   branch = "master"
