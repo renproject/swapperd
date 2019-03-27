@@ -21,6 +21,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+bool DISABLE_NIGHTLY_AUTOUPDATE = true
+
 type Updater struct {
 	homeDir string
 	logger  logrus.FieldLogger
@@ -250,6 +252,9 @@ func compareTags(curr, latest []string) (bool, error) {
 	currType, err := convertTypeToNumber(curr[0])
 	if err != nil {
 		return false, err
+	}
+	if DISABLE_NIGHTLY_AUTOUPDATE && currType == 1 {
+		return false, nil
 	}
 
 	latestType, err := convertTypeToNumber(latest[0])
