@@ -13,7 +13,6 @@ import (
 
 var ErrSwapExpired = fmt.Errorf("swap expired")
 var ErrAuditPending = fmt.Errorf("audit pending")
-var ErrAlreadyInitiated = error(nil)
 
 type Contract interface {
 	Initiate() error
@@ -43,6 +42,7 @@ func New(cap int, builder ContractBuilder, wallet Wallet, logger logrus.FieldLog
 	return tau.New(tau.NewIO(cap), &swapper{
 		builder: builder,
 		swapMap: map[swap.SwapID]SwapRequest{},
+		wallet:  wallet,
 		logger:  logger,
 	})
 }
