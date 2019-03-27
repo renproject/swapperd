@@ -108,18 +108,12 @@ func (atom *ethSwapContractBinder) Initiate() error {
 			atom.logger.Info(msg)
 			return tx, nil
 		},
-		func() bool {
-			initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
-			if err != nil {
-				return false
-			}
-			return !initiatable
-		},
+		nil,
 		0,
 	)
 	if err != nil {
 		if err == libeth.ErrPreConditionCheckFailed {
-			return immediate.ErrAlreadyInitiated
+			return nil
 		}
 		return err
 	}

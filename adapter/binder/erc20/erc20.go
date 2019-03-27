@@ -128,18 +128,12 @@ func (atom *erc20SwapContractBinder) Initiate() error {
 			atom.logger.Info(msg)
 			return tx, nil
 		},
-		func() bool {
-			initiatable, err := atom.swapperBinder.Initiatable(&bind.CallOpts{}, atom.id)
-			if err != nil {
-				return false
-			}
-			return !initiatable
-		},
+		nil,
 		1,
 	)
 	if err != nil {
 		if err == libeth.ErrPreConditionCheckFailed {
-			return immediate.ErrAlreadyInitiated
+			return nil
 		}
 		return err
 	}
@@ -254,6 +248,7 @@ func (atom *erc20SwapContractBinder) Audit() error {
 
 // Redeem an Atom swap by calling a function on ethereum
 func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
+	atom.logger.Info(fmt.Sprintf("Redeeming on the Ethereum blockchain"))
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	tx, err := atom.account.Transact(
@@ -271,7 +266,6 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 			if err != nil {
 				return nil, err
 			}
-
 			msg, _ := atom.account.FormatTransactionView("Redeemed the atomic swap on Ethereum blockchain", tx.Hash().String())
 			atom.logger.Info(msg)
 			return tx, nil
@@ -290,6 +284,7 @@ func (atom *erc20SwapContractBinder) Redeem(secret [32]byte) error {
 			return err
 		}
 		atom.logger.Info("Skipping redeem on Ethereum Blockchain")
+		return nil
 	}
 	atom.cost[tokens.NameETH] = new(big.Int).Add(atom.cost[tokens.NameETH], tx.Cost())
 	return nil

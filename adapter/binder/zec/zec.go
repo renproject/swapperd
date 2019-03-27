@@ -105,18 +105,12 @@ func (atom *zecSwapContractBinder) Initiate() error {
 			return !funded
 		},
 		nil,
-		func(tx *wire.MsgTx) bool {
-			funded, _, err := atom.ScriptFunded(ctx, atom.scriptAddr, atom.swap.Value.Int64())
-			if err != nil {
-				return false
-			}
-			return funded
-		},
+		nil,
 		false,
 	)
 	if err != nil {
 		if err == libzec.ErrPreConditionCheckFailed {
-			return immediate.ErrAlreadyInitiated
+			return nil
 		}
 		return err
 	}
