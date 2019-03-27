@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# allow $RELEASES_URL to be manually specified if desired
 if [[ -z "${RELEASES_URL}" ]]; then
   RELEASES_URL="https://github.com/renproject/swapperd/releases/latest"
 fi
