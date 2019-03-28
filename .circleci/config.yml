@@ -67,6 +67,7 @@ commands:
           tag: latest_nightly
           filelist: ./RELEASE
           prerelease: true
+          replace: true
   stable_release:
     description: Creating Github Release
     steps:
