@@ -12,13 +12,20 @@ LINUX_TARGET = swapper_linux_amd64.zip
 DARWIN_TARGET = swapper_darwin_amd64.zip
 WIN_TARGET = swapper_windows_amd64.zip
 
-all: $(DARWIN_TARGET) $(WIN_TARGET) $(LINUX_TARGET)
+INSTALL_SCRIPT = install.sh
+
+all: $(DARWIN_TARGET) $(WIN_TARGET) $(LINUX_TARGET) $(INSTALL_SCRIPT)
 
 $(DARWIN_TARGET): darwin
 
 $(LINUX_TARGET): linux
 
 $(WIN_TARGET): windows
+
+$(INSTALL_SCRIPT): script
+
+script:
+	@sh generate_install.sh > ${INSTALL_SCRIPT}
 
 darwin: build-unix
 	@mkdir -p bin
@@ -119,5 +126,5 @@ build-win:
 	$(call build_win,./cmd/updater-win)
 	$(call build_win,./cmd/uninstaller)
 
-.PHONY: all build build-unix build-win windows linux darwin version clean installer updater swapperd swapperd-updater uninstaller
+.PHONY: all build build-unix build-win windows linux darwin version clean installer updater swapperd swapperd-updater uninstaller script
 
