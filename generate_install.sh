@@ -65,7 +65,6 @@ cp \$HOME/.swapperd/mainnet.json \$HOME/.swapperd_backup/mainnet-\$(timestamp).j
 
 # clean up
 rm swapper.zip
-rm bin/installer
 
 echo "Swapperd is installed now. Great!"
 EOF
