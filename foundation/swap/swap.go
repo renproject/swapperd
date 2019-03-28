@@ -58,7 +58,7 @@ type SwapBlob struct {
 	ShouldInitiateFirst bool   `json:"shouldInitiateFirst"`
 
 	Delay            bool            `json:"delay,omitempty"`
-	DelayRange       int64           `json:"delayRange,omitempty"`
+	DelayPriceRange  int64           `json:"delayPriceRange,omitempty"`
 	DelayInfo        json.RawMessage `json:"delayInfo,omitempty"`
 	DelayCallbackURL string          `json:"delayCallbackUrl,omitempty"`
 

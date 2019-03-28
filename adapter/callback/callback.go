@@ -82,7 +82,7 @@ func verifyDelaySwap(partialSwap, filledSwap swap.SwapBlob) (swap.SwapBlob, erro
 		return partialSwap, fmt.Errorf("invalid filled swap receive value too low or send value too high %v %v %v %v", initialMinReceiveValue, filledReceiveValue, initialSendValue, filledSendValue)
 	}
 
-	if validatePrice(filledReceiveValue, filledSendValue, initialRecvValue, initialSendValue, partialSwap.DelayRange) {
+	if validatePrice(filledReceiveValue, filledSendValue, initialRecvValue, initialSendValue, partialSwap.DelayPriceRange) {
 		return partialSwap, fmt.Errorf("invalid filled swap unfavorable price")
 	}
 
@@ -91,5 +91,5 @@ func verifyDelaySwap(partialSwap, filledSwap swap.SwapBlob) (swap.SwapBlob, erro
 }
 
 func validatePrice(filledReceiveValue, filledSendValue, initialRecvValue, initialSendValue *big.Int, delayRange int64) bool {
-	return new(big.Int).Mul(new(big.Int).Mul(filledReceiveValue, initialSendValue), big.NewInt(10000)).Cmp(new(big.Int).Mul(new(big.Int).Mul(initialRecvValue, filledSendValue), big.NewInt(10000-delayRange))) >= 0
+	return new(big.Int).Mul(new(big.Int).Mul(filledReceiveValue, initialSendValue), big.NewInt(10000)).Cmp(new(big.Int).Mul(new(big.Int).Mul(initialRecvValue, filledSendValue), big.NewInt(10000-delayRange))) < 0
 }
