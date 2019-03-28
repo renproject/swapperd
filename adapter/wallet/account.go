@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/renproject/libbtc-go"
@@ -24,7 +25,7 @@ func (wallet *wallet) EthereumAccount(password string) (libeth.Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	ethClient, err := libeth.NewInfuraClient(wallet.config.Ethereum.Network.Name, "172978c53e244bd78388e6d50a4ae2fa")
+	ethClient, err := wallet.ethereumClient()
 	if err != nil {
 		return nil, err
 	}
@@ -50,11 +51,26 @@ func (wallet *wallet) BitcoinAccount(password string) (libbtc.Account, error) {
 	}
 	logger := wallet.logger.WithField("token", "bitcoin")
 	logger = logger.WithField("network", wallet.config.Bitcoin.Network.Name)
-	client, err := libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name)
+	client, err := wallet.bitcoinClient()
 	if err != nil {
 		return nil, err
 	}
 	return libbtc.NewAccount(client, privKey, logger), nil
+}
+
+func (wallet *wallet) ethereumClient() (libeth.Client, error) {
+	return libeth.NewMercuryClient(wallet.config.Ethereum.Network.Name, "swapperd")
+}
+
+func (wallet *wallet) bitcoinClient() (libbtc.Client, error) {
+	switch wallet.config.Bitcoin.Network.Name {
+	case "mainnet":
+		return libbtc.NewBlockchainInfoClient("mainnet")
+	case "testnet", "testnet3":
+		return libbtc.NewMercuryClient("testnet")
+	default:
+		return nil, fmt.Errorf("unsupported network: %s", wallet.config.Bitcoin.Network.Name)
+	}
 }
 
 func (wallet *wallet) loadECDSAKey(password string, path []uint32) (*ecdsa.PrivateKey, error) {
