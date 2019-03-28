@@ -28,21 +28,25 @@ type Wallet interface {
 }
 
 type swapper struct {
-	delayedSwapper   tau.Task
-	immediateSwapper tau.Task
-	storage          Storage
-	wallet           Wallet
-	logger           logrus.FieldLogger
+	delayedSwapper    tau.Task
+	immediateSwappers []tau.Task
+	immediateSelector int
+	storage           Storage
+	wallet            Wallet
+	logger            logrus.FieldLogger
 }
 
 func New(cap int, storage Storage, wallet Wallet, builder immediate.ContractBuilder, callback delayed.DelayCallback, logger logrus.FieldLogger) tau.Task {
 	delayedSwapperTask := delayed.New(cap, callback, logger)
-	immediateSwapperTask := immediate.New(cap, builder, wallet, logger)
-	return tau.New(tau.NewIO(cap), NewSwapper(delayedSwapperTask, immediateSwapperTask, wallet, storage, logger), delayedSwapperTask, immediateSwapperTask)
+	immediateSwapperTasks := make([]tau.Task, 10)
+	for i := range immediateSwapperTasks {
+		immediateSwapperTasks[i] = immediate.New(cap, builder, wallet, logger)
+	}
+	return tau.New(tau.NewIO(cap), NewSwapper(delayedSwapperTask, immediateSwapperTasks, wallet, storage, logger), append(immediateSwapperTasks, delayedSwapperTask)...)
 }
 
-func NewSwapper(delayedSwapperTask, immediateSwapperTask tau.Task, wallet Wallet, storage Storage, logger logrus.FieldLogger) tau.Reducer {
-	return &swapper{delayedSwapperTask, immediateSwapperTask, storage, wallet, logger}
+func NewSwapper(delayedSwapperTask tau.Task, immediateSwapperTasks []tau.Task, wallet Wallet, storage Storage, logger logrus.FieldLogger) tau.Reducer {
+	return &swapper{delayedSwapperTask, immediateSwapperTasks, 0, storage, wallet, logger}
 }
 
 func (swapper *swapper) Reduce(msg tau.Message) tau.Message {
@@ -71,7 +75,9 @@ func (swapper *swapper) Reduce(msg tau.Message) tau.Message {
 }
 
 func (swapper *swapper) handleTick(msg tau.Message) tau.Message {
-	swapper.immediateSwapper.Send(msg)
+	for _, immediateSwapper := range swapper.immediateSwappers {
+		immediateSwapper.Send(msg)
+	}
 	swapper.delayedSwapper.Send(msg)
 	return nil
 }
@@ -91,7 +97,9 @@ func (swapper *swapper) handleSwapRequest(msg SwapRequest) tau.Message {
 	}
 
 	sendCost, receiveCost := swapper.storage.LoadCosts(msg.ID)
-	swapper.immediateSwapper.Send(immediate.NewSwapRequest(swap.SwapBlob(msg), sendCost, receiveCost))
+	swapper.immediateSwappers[swapper.immediateSelector].
+		Send(immediate.NewSwapRequest(swap.SwapBlob(msg), sendCost, receiveCost))
+	swapper.immediateSelector = (swapper.immediateSelector + 1) % 10
 	return nil
 }
 
