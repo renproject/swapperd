@@ -1,5 +1,17 @@
 #!/bin/sh
 
+# allow $RELEASES_URL to be manually specified if desired
+if [[ -z "${RELEASES_URL}" ]]; then
+  RELEASES_URL="https://github.com/renproject/swapperd/releases/latest"
+fi
+
+latest_version() {
+  curl -sL -o /dev/null -w %{url_effective} "${RELEASES_URL}" | 
+    rev | 
+    cut -f1 -d'/'| 
+    rev
+}
+
 timestamp() {
   date +"%Y-%m-%d_%H-%M-%S"
 }
@@ -18,12 +30,18 @@ cd $HOME/.swapperd
 ostype="$(uname -s)"
 cputype="$(uname -m)"
 
-echo "Latest version of swapperd is v1.0.1-stable-dd60dab"
+VERSION=$(latest_version)
+if [ "$VERSION" = '' ]; then 
+  echo "Cannot get the latest version from Github"
+  exit 1
+fi
+
+echo "Latest version of swapperd is $VERSION"
 # download swapperd binary depending on the system and architecture
 if [ "$ostype" = 'Linux' -a "$cputype" = 'x86_64' ]; then
-  curl -#L "https://github.com/renproject/swapperd/releases/download/v1.0.1-stable-dd60dab/swapper_linux_amd64.zip" > swapper.zip
+  curl -#L "https://github.com/renproject/swapperd/releases/download/$VERSION/swapper_linux_amd64.zip" > swapper.zip
 elif [ "$ostype" = 'Darwin' -a "$cputype" = 'x86_64' ]; then
-  curl -#L "https://github.com/renproject/swapperd/releases/download/v1.0.1-stable-dd60dab/swapper_darwin_amd64.zip" > swapper.zip
+  curl -#L "https://github.com/renproject/swapperd/releases/download/$VERSION/swapper_darwin_amd64.zip" > swapper.zip
 else
   echo 'unsupported OS type or architecture'
   cd ..
@@ -60,3 +78,4 @@ rm swapper.zip
 rm bin/installer
 
 echo "Swapperd is installed now. Great!"
+
