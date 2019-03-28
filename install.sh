@@ -1,12 +1,8 @@
 #!/bin/sh
 
-# allow $RELEASES_URL to be manually specified if desired
-if [[ -z "${RELEASES_URL}" ]]; then
-  RELEASES_URL="https://github.com/renproject/swapperd/releases/latest"
-fi
-
+RELEASES_URL="https://github.com/renproject/swapperd/releases"
 latest_version() {
-  curl -sL -o /dev/null -w %{url_effective} "${RELEASES_URL}" | 
+  curl -sL -o /dev/null -w %{url_effective} "$RELEASES_URL/latest" | 
     rev | 
     cut -f1 -d'/'| 
     rev
@@ -78,4 +74,3 @@ rm swapper.zip
 rm bin/installer
 
 echo "Swapperd is installed now. Great!"
-
