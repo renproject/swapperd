@@ -1,7 +1,14 @@
 #!/bin/sh
 
 RELEASES_URL="https://github.com/renproject/swapperd/releases"
-BRANCH=$(git branch | grep \* | cut -d ' ' -f2)
+
+if [ -z "$1" ]
+then
+  BRANCH=$(git branch | grep \* | cut -d ' ' -f2)
+else
+  BRANCH=$1
+fi
+
 if [ "$BRANCH" == "nightly" ]; then
   VERSION=nightly
 else

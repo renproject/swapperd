@@ -25,7 +25,7 @@ $(WIN_TARGET): windows
 $(INSTALL_SCRIPT): script
 
 script:
-	@sh generate_install.sh > ${INSTALL_SCRIPT}
+	@sh generate_install.sh ${BRANCH} > ${INSTALL_SCRIPT}
 
 darwin: build-unix
 	@mkdir -p bin
