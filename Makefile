@@ -78,7 +78,7 @@ zip: installer updater swapperd swapperd-updater uninstaller
 	@echo "Compiled ${LOCAL_TARGET} (${FULL_VERSION})"
 
 clean:
-	rm -rf ${DARWIN_TARGET} ${WIN_TARGET} ${LINUX_TARGET}
+	rm -rf ${DARWIN_TARGET} ${WIN_TARGET} ${LINUX_TARGET} ${INSTALL_SCRIPT}
 
 version:
 	@echo ${FULL_VERSION}
