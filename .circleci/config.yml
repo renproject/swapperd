@@ -68,7 +68,7 @@ commands:
           filelist: ./RELEASE
           prerelease: true
   stable_release:
-    description: Creating Github Pre-release
+    description: Creating Github Release
     steps:
       - core/install_ghr
       - run:
