@@ -199,7 +199,7 @@ func (updater *Updater) downloadSwapperd(version string) error {
 }
 
 func compareVersions(curr, latest string) (bool, error) {
-	rgx, err := regexp.Compile("v([0-9]+).([0-9]+).([0-9]+)(-(nightly|beta|stable)(.([0-9]+))?)?")
+	rgx, err := regexp.Compile("v([0-9]+).([0-9]+).([0-9]+)(-(nightly|beta|stable)(.([[:xdigit:]]+))?)?")
 	if err != nil {
 		return false, err
 	}
@@ -274,17 +274,7 @@ func compareTags(curr, latest []string) (bool, error) {
 		return true, nil
 	}
 
-	currTypePatch, err := strconv.ParseInt(curr[2], 10, 64)
-	if err != nil {
-		return false, err
-	}
-
-	latestTypePatch, err := strconv.ParseInt(latest[2], 10, 64)
-	if err != nil {
-		return false, err
-	}
-
-	if currTypePatch > latestTypePatch {
+	if curr[2] == latest[2] {
 		return false, nil
 	}
 	return true, nil
