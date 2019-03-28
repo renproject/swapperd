@@ -3,12 +3,20 @@
 # https://github.com/billziss-gh/cgofuse/blob/9b5a7c093a2b5da9dc74494e4c7714af8c82de93/.circleci/config.yml
 version: 2.1
 
-_defaults: &defaults
+orbs:
+    core: ren/circleci-orbs@dev:first
+
+
+executors:
+  machine_exec:
     machine: true
     working_directory: ~/.go_workspace/src/github.com/renproject/swapperd
     environment:
       - GOPATH: /home/circleci/.go_workspace
-
+  go_exec:
+    docker:
+      - image: circleci/golang:1.9
+    working_directory: /go/src/github.com/renproject/swapperd
 
 commands:
   dep_ensure:
@@ -18,15 +26,11 @@ commands:
           key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
           paths:
               - ~/.go_workspace/src/github.com/renproject/swapperd/vendor
+      - core/install_dep
       - run:
           name: Download dependencies
           command: |
             if [ ! -d ~/.go_workspace/src/github.com/renproject/swapperd/vendor ]; then
-                if ! [ -x "$(command -v dep)" ]; then
-                    mkdir -p ~/.go_workspace/bin
-                    curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-                    export PATH=~/.go_workspace/bin:$PATH
-                fi
                 dep ensure -v -update
                 dep ensure -v
             else
@@ -36,16 +40,14 @@ commands:
           key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
           paths:
               - ~/.go_workspace/src/github.com/renproject/swapperd/vendor
-
-jobs:
   build:
-    <<: *defaults
+    description: Building binaries
     steps:
       - checkout
       - run:
           name: Building Docker image
           command: |
-            docker build -t karalabe/xgo-latest .
+            docker pull karalabe/xgo-latest
       - dep_ensure
       - run:
           name: Installing xgo
@@ -57,11 +59,43 @@ jobs:
           name: Build binaries
           command: |
             make
+  nightly_prerelease:
+    description: Creating Github Pre-release
+    steps:
+      - core/install_ghr
+      - core/github_release:
+          tag: nightly
+          filelist: ./RELEASE
+          prerelease: true
+  stable_release:
+    description: Creating Github Pre-release
+    steps:
+      - core/install_ghr
+      - run:
+          name: Getting version name
+          command: |
+            export RELEASE_VERSION="v$(make version)"
+      - core/github_release:
+          tag: ${RELEASE_VERSION}
+          filelist: ./RELEASE
+
+jobs:
+  build:
+    executor: machine_exec
+    steps:
+      - build
+  build_prerelease:
+    executor: machine_exec
+    steps:
+      - build
+      - nightly_prerelease
+  build_release:
+    executor: machine_exec
+    steps:
+      - build
+      - stable_release
   test:
-    docker:
-      # specify the version
-      - image: circleci/golang:1.9
-    working_directory: /go/src/github.com/renproject/swapperd
+    executor: go_exec
     steps:
       - checkout
       - run:
@@ -80,3 +114,46 @@ workflows:
       - build:
           requires:
             - test
+          filters:
+            branches:
+              ignore:
+                - nightly
+                - stable
+      - build_prerelease:
+          requires:
+            - test
+          filters:
+            branches:
+              only: nightly
+      - build_release:
+          requires:
+            - test
+          filters:
+            branches:
+              only: stable
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 2 * * *" # every night at 02:00
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - core/merge_nightly:
+          executor: go_exec
+  monthly:
+    triggers:
+      - schedule:
+          cron: "0 0 1 * *" # on the 1st of every month at 00:00
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - core/merge_stable:
+          executor: go_exec
+      - core/merge_beta:
+          executor: go_exec
+          requires:
+            - core/merge_stable
