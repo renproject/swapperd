@@ -5,7 +5,7 @@ BRANCH=$(git branch | grep \* | cut -d ' ' -f2)
 if [ "$BRANCH" == "nightly" ]; then
   VERSION=nightly
 else
-  VERSION="v$(make version)"
+  VERSION="v$(make --no-print-directory version)"
 fi
 
 cat  << EOF
