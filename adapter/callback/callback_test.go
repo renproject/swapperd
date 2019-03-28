@@ -86,7 +86,7 @@ var _ = Describe("Server Adapter", func() {
 		{"100", "1000", "1000"},
 	}
 
-	dprOprions := []int64{
+	dprOptions := []int64{
 		0, // 100, 300,
 	}
 
@@ -130,7 +130,7 @@ var _ = Describe("Server Adapter", func() {
 	partialSwaps := []swap.SwapBlob{}
 	for _, tokenPairOption := range tokenPairOptions {
 		for i, amountOption := range amountOptions {
-			for _, dprOption := range dprOprions {
+			for _, dprOption := range dprOptions {
 				for _, initiationOption := range initiationOptions {
 					delayInfo, _ := json.Marshal(TestDelayInfo{i})
 					swap := swap.SwapBlob{
