@@ -64,7 +64,7 @@ commands:
     steps:
       - core/install_ghr
       - core/github_release:
-          tag: nightly
+          tag: latest_nightly
           filelist: ./RELEASE
           prerelease: true
   stable_release:
