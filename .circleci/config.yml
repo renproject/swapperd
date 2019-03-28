@@ -23,7 +23,7 @@ commands:
     description: Installing dependencies
     steps:
       - restore_cache:
-          key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          key: gopkg-v1-{{ checksum "Gopkg.lock" }}
           paths:
               - ~/.go_workspace/src/github.com/renproject/swapperd/vendor
       - core/install_dep
@@ -37,7 +37,7 @@ commands:
                 echo "Dependencies were restored from cache."
             fi
       - save_cache:
-          key: gopkg-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          key: gopkg-v1-{{ checksum "Gopkg.lock" }}
           paths:
               - ~/.go_workspace/src/github.com/renproject/swapperd/vendor
   build:
@@ -68,7 +68,7 @@ commands:
           filelist: ./RELEASE
           prerelease: true
   stable_release:
-    description: Creating Github Pre-release
+    description: Creating Github Release
     steps:
       - core/install_ghr
       - run:
