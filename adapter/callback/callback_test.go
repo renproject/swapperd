@@ -86,28 +86,36 @@ var _ = Describe("Server Adapter", func() {
 		{"100", "1000", "1000"},
 	}
 
-	honestUpdateAmountOptions := []struct {
-		sendAmount, receiveAmount string
-	}{
-		{"800", "60"},
-		{"100", "10"},
-		{"80", "100"},
-
-		{"80", "950"},
-		{"10", "100"},
-		{"8", "1200"},
+	dprOprions := []int64{
+		0, // 100, 300,
 	}
 
-	maliciousUpdateAmountOptions := []struct {
+	type UpdateAmountOptions struct {
 		sendAmount, receiveAmount string
-	}{
-		{"1200", "100"},
-		{"1000", "120"},
-		{"100", "10"},
+	}
 
-		{"100", "800"},
-		{"120", "1000"},
-		{"10", "100"},
+	honestUpdateAmountOptions := map[int64][]UpdateAmountOptions{
+		0: []UpdateAmountOptions{
+			{"800", "85"},
+			{"100", "10"},
+			{"80", "100"},
+
+			{"80", "950"},
+			{"10", "100"},
+			{"8", "1200"},
+		},
+	}
+
+	maliciousUpdateAmountOptions := map[int64][]UpdateAmountOptions{
+		0: []UpdateAmountOptions{
+			{"1200", "100"},
+			{"1000", "80"},
+			{"900", "90"},
+
+			{"100", "800"},
+			{"120", "1000"},
+			{"10", "100"},
+		},
 	}
 
 	initiationOptions := []bool{
@@ -122,26 +130,29 @@ var _ = Describe("Server Adapter", func() {
 	partialSwaps := []swap.SwapBlob{}
 	for _, tokenPairOption := range tokenPairOptions {
 		for i, amountOption := range amountOptions {
-			for _, initiationOption := range initiationOptions {
-				delayInfo, _ := json.Marshal(TestDelayInfo{i})
-				swap := swap.SwapBlob{
-					ID:                   swap.SwapID(randomString()),
-					SendToken:            tokenPairOption.sendToken,
-					ReceiveToken:         tokenPairOption.receiveToken,
-					SendAmount:           amountOption.sendAmount,
-					ReceiveAmount:        amountOption.receiveAmount,
-					MinimumReceiveAmount: amountOption.minReceiveAmount,
-					ShouldInitiateFirst:  initiationOption,
-					Delay:                true,
-					DelayInfo:            delayInfo,
-				}
+			for _, dprOption := range dprOprions {
+				for _, initiationOption := range initiationOptions {
+					delayInfo, _ := json.Marshal(TestDelayInfo{i})
+					swap := swap.SwapBlob{
+						ID:                   swap.SwapID(randomString()),
+						SendToken:            tokenPairOption.sendToken,
+						ReceiveToken:         tokenPairOption.receiveToken,
+						SendAmount:           amountOption.sendAmount,
+						ReceiveAmount:        amountOption.receiveAmount,
+						MinimumReceiveAmount: amountOption.minReceiveAmount,
+						ShouldInitiateFirst:  initiationOption,
+						DelayPriceRange:      dprOption,
+						Delay:                true,
+						DelayInfo:            delayInfo,
+					}
 
-				if initiationOption {
-					swap.SecretHash = randomString()
-					swap.TimeLock = time.Now().Unix()
-				}
+					if initiationOption {
+						swap.SecretHash = randomString()
+						swap.TimeLock = time.Now().Unix()
+					}
 
-				partialSwaps = append(partialSwaps, swap)
+					partialSwaps = append(partialSwaps, swap)
+				}
 			}
 		}
 	}
@@ -200,8 +211,8 @@ var _ = Describe("Server Adapter", func() {
 					return
 				}
 
-				swap.SendAmount = honestUpdateAmountOptions[testDelayInfo.Index].sendAmount
-				swap.ReceiveAmount = honestUpdateAmountOptions[testDelayInfo.Index].receiveAmount
+				swap.SendAmount = honestUpdateAmountOptions[swap.DelayPriceRange][testDelayInfo.Index].sendAmount
+				swap.ReceiveAmount = honestUpdateAmountOptions[swap.DelayPriceRange][testDelayInfo.Index].receiveAmount
 
 				if !swap.ShouldInitiateFirst {
 					swap.SecretHash = randomString()
@@ -245,8 +256,8 @@ var _ = Describe("Server Adapter", func() {
 					return
 				}
 
-				swap.SendAmount = maliciousUpdateAmountOptions[testDelayInfo.Index].sendAmount
-				swap.ReceiveAmount = maliciousUpdateAmountOptions[testDelayInfo.Index].receiveAmount
+				swap.SendAmount = maliciousUpdateAmountOptions[swap.DelayPriceRange][testDelayInfo.Index].sendAmount
+				swap.ReceiveAmount = maliciousUpdateAmountOptions[swap.DelayPriceRange][testDelayInfo.Index].receiveAmount
 
 				if !swap.ShouldInitiateFirst {
 					swap.SecretHash = randomString()
