@@ -30,10 +30,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ff4e1049338aaaa374250d874f65496d95e12798d67de5a6fe3956faf0f353b6"
+  digest = "1:219b84f8c6b3456cd33a87e5ca3281f02a67595d8ccd5658204e041bacb9e9a4"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "489128639c407ec675e1068bb55f1515bc22f8fc"
+  pruneopts = "T"
+  revision = "a123909ec740ba2ed43a293e3febaf7618aa67d5"
 
 [[projects]]
   branch = "master"
@@ -48,6 +49,7 @@
     "txscript",
     "wire",
   ]
+  pruneopts = "T"
   revision = "aa6e0f35703c1438cc45860ddc0c3f6e6c633c93"
 
 [[projects]]
@@ -67,19 +69,8 @@
     "base58",
     "bech32",
   ]
+  pruneopts = "T"
   revision = "3ac1210f4b38284536002486ef8a21ac54c14497"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/btcsuite/go-socks"
-  packages = ["socks"]
-  revision = "4720035b7bfd2a9bb130b1c184f8bbe41b6f0d0f"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/btcsuite/websocket"
-  packages = ["."]
-  revision = "31079b6807923eb23992c421b114992b95131b55"
 
 [[projects]]
   branch = "master"
@@ -168,6 +159,7 @@
   digest = "1:582b704bebaa06b48c29b0cec224a6058a09c86883aaddabde889cd1a5f73e1b"
   name = "github.com/google/uuid"
   packages = ["."]
+  pruneopts = "T"
   revision = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4"
   version = "v1.1.1"
 
@@ -186,6 +178,7 @@
     ".",
     "simplelru",
   ]
+  pruneopts = "T"
   revision = "7087cb70de9f7a8bc0a10c375cb0d2280a8edf9c"
   version = "v0.5.1"
 
@@ -207,6 +200,7 @@
   digest = "1:31e761d97c76151dde79e9d28964a812c46efc5baee4085b86f68f0c654450de"
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
+  pruneopts = "T"
   revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
   version = "v1.0.2"
 
@@ -233,6 +227,7 @@
     "reporters/stenographer/support/go-isatty",
     "types",
   ]
+  pruneopts = "T"
   revision = "eea6ad008b96acdaa524f5b409513bf062b500ad"
   version = "v1.8.0"
 
@@ -253,6 +248,7 @@
     "matchers/support/goraph/util",
     "types",
   ]
+  pruneopts = "T"
   revision = "90e289841c1ed79b7a598a7cd9959750cb5e89e2"
   version = "v1.5.0"
 
@@ -266,29 +262,42 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e7768d38be84e37d8b8e8102793279d13de6b3e16cde5d8099799dbe8054ef66"
+  digest = "1:def9d47a57c1aaaa6d9ac0f8a6ba0c0bd2f5e61095ab363035137b8d612ae00b"
   name = "github.com/renproject/libbtc-go"
   packages = [
     ".",
     "clients",
-    "errors"
+    "errors",
   ]
-  revision = "31d5549e856aad50d159d0924299a6114aca9841"
+  pruneopts = "T"
+  revision = "bce1edb3de69104f2eed126bc25d2ae5bbe490a3"
 
 [[projects]]
   branch = "master"
-  digest = "1:53242b4bf69c1338eea1906e3027029b4c0207ffef01897d173dcd2d829f26c9"
+  digest = "1:572a577922bb7a0db8144d9682eedf3fff8e5ec1b65587ad750c46f6b71f2b34"
   name = "github.com/renproject/libeth-go"
   packages = ["."]
-  revision = "702ea0e5c26ba66610effd0938793498c0623a6a"
+  pruneopts = "T"
+  revision = "8ff82bee6c22ffd330223dac4384081961645f6d"
 
 [[projects]]
   branch = "master"
-  digest = "1:6127942b9053d523f115ae451c51640e27f21d2556322067b907dab6c2769a96"
+  digest = "1:8cb04d694711ec3d7c036373d0bcb0a5ee20623cf72d6cecbd306d2919e4aac7"
+  name = "github.com/renproject/mercury"
+  packages = [
+    ".",
+    "btc",
+  ]
+  pruneopts = "T"
+  revision = "63f53d16a44c387d59296cb4832deb7b7c29cbcc"
+
+[[projects]]
+  branch = "master"
+  digest = "1:ccf4d788d210576d614371c82f4113345b6c5cc60f51ec9a6820c4d9b5bcf112"
   name = "github.com/renproject/tokens"
   packages = ["."]
   pruneopts = "T"
-  revision = "0152b52f5e4f1fe8b206dfe502d69cf649be0e5a"
+  revision = "18deb2462040fd609303ff873b4fedb423846f67"
 
 [[projects]]
   branch = "master"
@@ -330,6 +339,7 @@
   digest = "1:e943eb8262b5644f4b5808d6b092df55df6f0961219fb19f49401f0df0cc625e"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
+  pruneopts = "T"
   revision = "dae0fa8d5b0c810a8ab733fbd5510c7cae84eca4"
   version = "v1.4.0"
 
@@ -383,7 +393,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:dbdd3d55a39f0e4a14ae23fe3238ee957797b46fd69bc7eeed6af070d431bd32"
+  digest = "1:287367cdf1d4ad1b717dcc43a31f500eb36a2bdfc1ad3305fc023e58e1ece269"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
@@ -394,11 +404,12 @@
     "sha3",
     "ssh/terminal",
   ]
-  revision = "a1f597ede03a7bef967a422b5b3a5bd08805a01e"
+  pruneopts = "T"
+  revision = "a5d413f7728c81fb97d96a2b722368945f651e78"
 
 [[projects]]
   branch = "master"
-  digest = "1:e5e3e04beb1a46f1f7978f21187dc6038eae0c5f888d3738eceaab77c76472f2"
+  digest = "1:95b2a8f83570762e6211c5d5823840d64e04f85fec8adc32735f6b702c858872"
   name = "golang.org/x/net"
   packages = [
     "html",
@@ -406,11 +417,12 @@
     "html/charset",
     "websocket",
   ]
-  revision = "d196dffd7c2beec1957382065df08bcc353b9706"
+  pruneopts = "T"
+  revision = "63eda1eb0650888965ead1296efd04d0b2b61128"
 
 [[projects]]
   branch = "master"
-  digest = "1:d05370bdec80b8b10345b2c6efb578f040ef973fa21423f19d5506fa47ce8717"
+  digest = "1:92d28915fed72feacdea31a00dbe77b86eca8e0b4530ce125442119d4af0ae6b"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -422,7 +434,8 @@
     "windows/svc/eventlog",
     "windows/svc/mgr",
   ]
-  revision = "6c81ef8f67ca3f42fc9cd71dfbd5f35b0c4b5771"
+  pruneopts = "T"
+  revision = "f49334f85ddcf0f08d7fb6dd7363e9e6d6b777eb"
 
 [[projects]]
   digest = "1:6164911cb5e94e8d8d5131d646613ff82c14f5a8ce869de2f6d80d9889df8c5a"
@@ -449,6 +462,14 @@
   pruneopts = "T"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:e0f36994991ebdfd681f71d5378b496462e960858036a252ca30be6d8d58f35b"
+  name = "golang.org/x/time"
+  packages = ["rate"]
+  pruneopts = "T"
+  revision = "9d24e82272b4f38b78bc8cff74fa936d31ccd8ef"
 
 [[projects]]
   digest = "1:7fc160b460a6fc506b37fcca68332464c3f2cd57b6e3f111f26c5bbfd2d5518e"
