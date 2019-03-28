@@ -74,7 +74,7 @@ commands:
       - run:
           name: Getting version name
           command: |
-            export RELEASE_VERSION=$(make version)
+            export RELEASE_VERSION="v$(make version)"
       - core/github_release:
           tag: ${RELEASE_VERSION}
           filelist: ./RELEASE
