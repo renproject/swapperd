@@ -71,12 +71,8 @@ commands:
     description: Creating Github Release
     steps:
       - core/install_ghr
-      - run:
-          name: Getting version name
-          command: |
-            export RELEASE_VERSION="v$(make version)"
       - core/github_release:
-          tag: ${RELEASE_VERSION}
+          tag: v$(make version)
           filelist: ./RELEASE
 
 jobs:
