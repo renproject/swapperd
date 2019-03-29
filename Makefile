@@ -1,5 +1,6 @@
 MAIN_VERSION = $(shell cat ./VERSION)
-BRANCH = $(shell git branch | grep \* | cut -d ' ' -f2)
+# BRANCH = $(shell git branch | grep \* | cut -d ' ' -f2)
+BRANCH = nightly
 COMMIT_HASH = $(shell git describe --always --long)
 FULL_VERSION = ${MAIN_VERSION}-${BRANCH}-${COMMIT_HASH}
 
@@ -25,6 +26,8 @@ $(WIN_TARGET): windows
 $(INSTALL_SCRIPT): script
 
 script:
+	@echo ${BRANCH}
+	@sh generate_install.sh ${BRANCH}
 	@sh generate_install.sh ${BRANCH} > ${INSTALL_SCRIPT}
 
 darwin: build-unix
