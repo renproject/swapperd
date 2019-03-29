@@ -10,7 +10,7 @@ else
 fi
 
 if [ "$BRANCH" == "nightly" ]; then
-  VERSION=nightly
+  VERSION=latest_nightly
 else
   VERSION="v$(make --no-print-directory version)"
 fi
