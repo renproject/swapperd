@@ -59,7 +59,7 @@ func (wallet *wallet) BitcoinAccount(password string) (libbtc.Account, error) {
 }
 
 func (wallet *wallet) ethereumClient() (libeth.Client, error) {
-	return libeth.NewMercuryClient(wallet.config.Ethereum.Network.Name, "swapperd")
+	return libeth.NewInfuraClient(wallet.config.Ethereum.Network.Name, "172978c53e244bd78388e6d50a4ae2fa")
 }
 
 func (wallet *wallet) bitcoinClient() (libbtc.Client, error) {
