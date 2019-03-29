@@ -25,7 +25,7 @@ $(WIN_TARGET): windows
 $(INSTALL_SCRIPT): script
 
 script:
-	@sh generate_install.sh ${BRANCH} > ${INSTALL_SCRIPT}
+	@sh generate_install.sh > ${INSTALL_SCRIPT}
 
 darwin: build-unix
 	@mkdir -p bin
@@ -78,7 +78,7 @@ zip: installer updater swapperd swapperd-updater uninstaller
 	@echo "Compiled ${LOCAL_TARGET} (${FULL_VERSION})"
 
 clean:
-	rm -rf ${DARWIN_TARGET} ${WIN_TARGET} ${LINUX_TARGET} ${INSTALL_SCRIPT}
+	rm -rf ${DARWIN_TARGET} ${WIN_TARGET} ${LINUX_TARGET}
 
 version:
 	@echo ${FULL_VERSION}
