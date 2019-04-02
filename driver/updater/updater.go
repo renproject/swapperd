@@ -22,8 +22,10 @@ import (
 )
 
 const DisableNightlyAutoUpdate = true
+const NightlyTag = "latest_nightly"
 
 type Updater struct {
+	nightly bool
 	homeDir string
 	logger  logrus.FieldLogger
 }
@@ -41,14 +43,19 @@ func New() (*Updater, error) {
 	logger := logrus.New()
 	logger.SetOutput(logFile)
 	return &Updater{
+		nightly: false,
 		homeDir: homeDir,
 		logger:  logger,
 	}, nil
 }
 
+func (updater *Updater) UseNightlyChannel() {
+	updater.nightly = true
+}
+
 func (updater *Updater) Update() error {
 	updater.logger.Info("looking for latest version ...")
-	latVer, err := getLatestVersion()
+	latVer, err := updater.getLatestVersion()
 	if err != nil {
 		return err
 	}
@@ -104,11 +111,15 @@ func (updater *Updater) updateSwapperd(ver string) error {
 	return nil
 }
 
-func getLatestVersion() (string, error) {
+func (updater *Updater) getLatestVersion() (string, error) {
 	release := struct {
 		TagName string `json:"tag_name"`
 	}{}
-	resp, err := http.DefaultClient.Get("https://api.github.com/repos/renproject/swapperd/releases/latest")
+	downloadURL := "https://api.github.com/repos/renproject/swapperd/releases/latest"
+	if updater.nightly {
+		downloadURL = "https://api.github.com/repos/renproject/swapperd/releases/tags/" + NightlyTag
+	}
+	resp, err := http.DefaultClient.Get(downloadURL)
 	if err != nil {
 		return release.TagName, err
 	}
@@ -171,8 +182,12 @@ func (updater *Updater) unzipSwapperd() error {
 }
 
 func (updater *Updater) downloadSwapperd(version string) error {
+	channel := version
+	if updater.nightly {
+		channel = NightlyTag
+	}
 	// Get the data
-	resp, err := http.Get(fmt.Sprintf("https://github.com/renproject/swapperd/releases/download/%s/swapper_%s_amd64.zip", version, runtime.GOOS))
+	resp, err := http.Get(fmt.Sprintf("https://github.com/renproject/swapperd/releases/download/%s/swapper_%s_amd64.zip", channel, runtime.GOOS))
 	if err != nil {
 		return err
 	}

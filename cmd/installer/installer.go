@@ -55,6 +55,7 @@ func updateSwapperd(binDir string) error {
 	service.Delete("swapperd-updater")
 	service.Delete("swapperd")
 	updater, err := updater.New()
+	updater.UseNightlyChannel()
 	if err != nil {
 		return err
 	}
