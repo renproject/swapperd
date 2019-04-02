@@ -8,15 +8,12 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/renproject/swapperd/driver/keystore"
 	"github.com/renproject/swapperd/driver/service"
 	"github.com/renproject/swapperd/driver/updater"
 	"github.com/tyler-smith/go-bip39"
 )
-
-var version = "undefined"
 
 const reset = "\033[m"
 const cyan = "\033[36m"
@@ -53,9 +50,6 @@ func main() {
 }
 
 func updateSwapperd(binDir string) error {
-	if strings.Contains(version, "nightly") && updater.DisableNightlyAutoUpdate {
-		return nil
-	}
 	service.Stop("swapperd-updater")
 	service.Stop("swapperd")
 	service.Delete("swapperd-updater")
