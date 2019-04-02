@@ -53,15 +53,14 @@ func main() {
 }
 
 func updateSwapperd(binDir string) error {
-	if strings.Contains(version, "nightly") && updater.DisableNightlyAutoUpdate {
-		return nil
-	}
 	service.Stop("swapperd-updater")
 	service.Stop("swapperd")
 	service.Delete("swapperd-updater")
 	service.Delete("swapperd")
 	updater, err := updater.New()
-	updater.UseNightlyChannel()
+	if strings.Contains(version, "nightly") {
+		updater.UseNightlyChannel()
+	}
 	if err != nil {
 		return err
 	}
