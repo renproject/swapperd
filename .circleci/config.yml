@@ -116,18 +116,18 @@ workflows:
               ignore:
                 - nightly
                 - stable
-      - build_prerelease:
-          requires:
-            - test
-          filters:
-            branches:
-              only: nightly
-      - build_release:
-          requires:
-            - test
-          filters:
-            branches:
-              only: stable
+      # - build_prerelease:
+      #     requires:
+      #       - test
+      #     filters:
+      #       branches:
+      #         only: nightly
+      # - build_release:
+      #     requires:
+      #       - test
+      #     filters:
+      #       branches:
+      #         only: stable
   nightly:
     triggers:
       - schedule:
