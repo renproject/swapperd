@@ -2,15 +2,13 @@ package wallet
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/renproject/libbtc-go"
-	"github.com/renproject/libeth-go"
-	"github.com/renproject/libzec-go"
 	"github.com/renproject/swapperd/adapter/binder/erc20"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/tokens"
@@ -34,34 +32,90 @@ func (wallet *wallet) Balances(password string) (map[tokens.Name]blockchain.Bala
 	return balanceMap, nil
 }
 
+func (wallet *wallet) LockedBalances() map[tokens.Name]*big.Int {
+	balancesCopy := map[tokens.Name]*big.Int{}
+	for token, balance := range balancesCopy {
+		balancesCopy[token] = new(big.Int).SetBytes(balance.Bytes())
+	}
+	return balancesCopy
+}
+
+func (wallet *wallet) LockBalance(token tokens.Name, value string) error {
+	val, ok := new(big.Int).SetString(value, 10)
+	if !ok {
+		return fmt.Errorf("invalid amount: %s", value)
+	}
+	wallet.mu.Lock()
+	defer wallet.mu.Unlock()
+	wallet.lockedBalances[token] = new(big.Int).Add(wallet.lockedBalances[token], val)
+	return nil
+}
+
+func (wallet *wallet) UnlockBalance(token tokens.Name, value string) error {
+	val, ok := new(big.Int).SetString(value, 10)
+	if !ok {
+		return fmt.Errorf("invalid amount: %s", value)
+	}
+	wallet.mu.Lock()
+	defer wallet.mu.Unlock()
+	wallet.lockedBalances[token] = new(big.Int).Sub(wallet.lockedBalances[token], val)
+	return nil
+}
+
+func (wallet *wallet) AvailableBalance(password string, token tokens.Token) (*big.Int, error) {
+	wallet.mu.RLock()
+	defer wallet.mu.RUnlock()
+
+	balance, err := wallet.Balance(password, token)
+	if err != nil {
+		return nil, err
+	}
+	balanceAmount, ok := new(big.Int).SetString(balance.Amount, 10)
+	if !ok {
+		return nil, fmt.Errorf("unable to decode balance: %s", balance.Amount)
+	}
+	return new(big.Int).Add(wallet.lockedBalances[token.Name], balanceAmount), nil
+}
+
 func (wallet *wallet) Balance(password string, token tokens.Token) (blockchain.Balance, error) {
 	address, err := wallet.GetAddress(password, token.Blockchain)
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
 
+	var balance blockchain.Balance
 	switch token.Blockchain {
 	case tokens.BITCOIN:
-		return wallet.balanceBTC(address)
+		balance, err = wallet.balanceBTC(address)
 	case tokens.ZCASH:
-		return wallet.balanceZEC(address)
+		balance, err = wallet.balanceZEC(address)
 	case tokens.ETHEREUM:
-		return wallet.balanceETH(address)
+		balance, err = wallet.balanceETH(address)
 	case tokens.ERC20:
-		return wallet.balanceERC20(token, address)
+		balance, err = wallet.balanceERC20(token, address)
 	default:
 		return blockchain.Balance{}, tokens.NewErrUnsupportedBlockchain(token.Blockchain)
 	}
-}
-
-func (wallet *wallet) balanceBTC(address string) (blockchain.Balance, error) {
-	btcClient, err := libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name)
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
 
+	val, ok := new(big.Int).SetString(balance.FullAmount, 10)
+	if !ok {
+		return blockchain.Balance{}, fmt.Errorf("invalid balance: %d", val)
+	}
+	balance.Amount = new(big.Int).Sub(val, wallet.lockedBalances[token.Name]).String()
+	return balance, nil
+}
+
+func (wallet *wallet) balanceBTC(address string) (blockchain.Balance, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
+
+	btcClient, err := wallet.bitcoinClient()
+	if err != nil {
+		return blockchain.Balance{}, err
+	}
 
 	balance, err := btcClient.Balance(ctx, address, 0)
 	if err != nil {
@@ -69,14 +123,14 @@ func (wallet *wallet) balanceBTC(address string) (blockchain.Balance, error) {
 	}
 
 	return blockchain.Balance{
-		Address:  address,
-		Decimals: int(tokens.BTC.Decimals),
-		Amount:   big.NewInt(balance).String(),
+		Address:    address,
+		Decimals:   int(tokens.BTC.Decimals),
+		FullAmount: big.NewInt(balance).String(),
 	}, nil
 }
 
 func (wallet *wallet) balanceZEC(address string) (blockchain.Balance, error) {
-	zecClient, err := libzec.NewMercuryClient(wallet.config.ZCash.Network.Name)
+	zecClient, err := wallet.zcashClient()
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
@@ -90,14 +144,14 @@ func (wallet *wallet) balanceZEC(address string) (blockchain.Balance, error) {
 	}
 
 	return blockchain.Balance{
-		Address:  address,
-		Decimals: int(tokens.ZEC.Decimals),
-		Amount:   big.NewInt(balance).String(),
+		Address:    address,
+		Decimals:   int(tokens.ZEC.Decimals),
+		FullAmount: big.NewInt(balance).String(),
 	}, nil
 }
 
 func (wallet *wallet) balanceETH(address string) (blockchain.Balance, error) {
-	client, err := libeth.NewInfuraClient(wallet.config.Ethereum.Network.Name, "172978c53e244bd78388e6d50a4ae2fa")
+	client, err := wallet.ethereumClient()
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
@@ -111,14 +165,14 @@ func (wallet *wallet) balanceETH(address string) (blockchain.Balance, error) {
 	}
 
 	return blockchain.Balance{
-		Address:  address,
-		Decimals: int(tokens.ETH.Decimals),
-		Amount:   balance.String(),
+		Address:    address,
+		Decimals:   int(tokens.ETH.Decimals),
+		FullAmount: balance.String(),
 	}, nil
 }
 
 func (wallet *wallet) balanceERC20(token tokens.Token, address string) (blockchain.Balance, error) {
-	client, err := libeth.NewInfuraClient(wallet.config.Ethereum.Network.Name, "172978c53e244bd78388e6d50a4ae2fa")
+	client, err := wallet.ethereumClient()
 	if err != nil {
 		return blockchain.Balance{}, err
 	}
@@ -147,8 +201,8 @@ func (wallet *wallet) balanceERC20(token tokens.Token, address string) (blockcha
 	}
 
 	return blockchain.Balance{
-		Address:  address,
-		Decimals: int(token.Decimals),
-		Amount:   balance.String(),
+		Address:    address,
+		Decimals:   int(token.Decimals),
+		FullAmount: balance.String(),
 	}, nil
 }

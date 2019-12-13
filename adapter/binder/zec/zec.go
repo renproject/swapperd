@@ -105,21 +105,16 @@ func (atom *zecSwapContractBinder) Initiate() error {
 			return !funded
 		},
 		nil,
-		func(tx *wire.MsgTx) bool {
-			funded, _, err := atom.ScriptFunded(ctx, atom.scriptAddr, atom.swap.Value.Int64())
-			if err != nil {
-				return false
-			}
-			return funded
-		},
+		nil,
 		false,
 	)
 	if err != nil {
-		if err != libzec.ErrPreConditionCheckFailed {
-			return err
+		if err == libzec.ErrPreConditionCheckFailed {
+			return nil
 		}
-		return nil
+		return err
 	}
+
 	atom.cost[tokens.NameZEC] = new(big.Int).Add(big.NewInt(txFee), atom.cost[tokens.NameZEC])
 	atom.cost[tokens.NameZEC] = new(big.Int).Add(atom.swap.BrokerFee, atom.cost[tokens.NameZEC])
 	atom.Info(atom.FormatTransactionView("Initiated on Zcash blockchain", txHash))

@@ -123,7 +123,7 @@ func (wallet *wallet) Lookup(token tokens.Token, txHash string) (transfer.Update
 }
 
 func (wallet *wallet) ethereumLookup(txHash string) (transfer.UpdateReceipt, error) {
-	client, err := libeth.NewInfuraClient(wallet.config.Ethereum.Network.Name, "172978c53e244bd78388e6d50a4ae2fa")
+	client, err := wallet.ethereumClient()
 	if err != nil {
 		return transfer.UpdateReceipt{}, err
 	}
@@ -148,7 +148,7 @@ func (wallet *wallet) ethereumLookup(txHash string) (transfer.UpdateReceipt, err
 }
 
 func (wallet *wallet) bitcoinLookup(txHash string) (transfer.UpdateReceipt, error) {
-	client, err := libbtc.NewBlockchainInfoClient(wallet.config.Bitcoin.Network.Name)
+	client, err := wallet.bitcoinClient()
 	if err != nil {
 		return transfer.UpdateReceipt{}, err
 	}
@@ -167,7 +167,7 @@ func (wallet *wallet) bitcoinLookup(txHash string) (transfer.UpdateReceipt, erro
 }
 
 func (wallet *wallet) zcashLookup(txHash string) (transfer.UpdateReceipt, error) {
-	client, err := libzec.NewMercuryClient(wallet.config.Bitcoin.Network.Name)
+	client, err := wallet.zcashClient()
 	if err != nil {
 		return transfer.UpdateReceipt{}, err
 	}

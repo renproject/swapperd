@@ -4,10 +4,13 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/renproject/swapperd/core/wallet/swapper/delayed"
 	"github.com/renproject/swapperd/core/wallet/swapper/immediate"
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/renproject/tokens"
 	"github.com/republicprotocol/tau"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -19,20 +22,27 @@ type Storage interface {
 	PendingSwaps() ([]swap.SwapBlob, error)
 }
 
+type Wallet interface {
+	LockBalance(token tokens.Name, value string) error
+	immediate.Wallet
+}
+
 type swapper struct {
 	delayedSwapper   tau.Task
 	immediateSwapper tau.Task
 	storage          Storage
+	wallet           Wallet
+	logger           logrus.FieldLogger
 }
 
-func New(cap int, storage Storage, builder immediate.ContractBuilder, callback delayed.DelayCallback) tau.Task {
-	delayedSwapperTask := delayed.New(cap, callback)
-	immediateSwapperTask := immediate.New(cap, builder)
-	return tau.New(tau.NewIO(cap), NewSwapper(delayedSwapperTask, immediateSwapperTask, storage), delayedSwapperTask, immediateSwapperTask)
+func New(cap int, storage Storage, wallet Wallet, builder immediate.ContractBuilder, callback delayed.DelayCallback, logger logrus.FieldLogger) tau.Task {
+	delayedSwapperTask := delayed.New(cap, callback, logger)
+	immediateSwapperTask := immediate.New(cap, builder, wallet, logger)
+	return tau.New(tau.NewIO(cap), NewSwapper(delayedSwapperTask, immediateSwapperTask, wallet, storage, logger), delayedSwapperTask, immediateSwapperTask)
 }
 
-func NewSwapper(delayedSwapperTask, immediateSwapperTask tau.Task, storage Storage) tau.Reducer {
-	return &swapper{delayedSwapperTask, immediateSwapperTask, storage}
+func NewSwapper(delayedSwapperTask, immediateSwapperTask tau.Task, wallet Wallet, storage Storage, logger logrus.FieldLogger) tau.Reducer {
+	return &swapper{delayedSwapperTask, immediateSwapperTask, storage, wallet, logger}
 }
 
 func (swapper *swapper) Reduce(msg tau.Message) tau.Message {
@@ -71,6 +81,10 @@ func (swapper *swapper) handleSwapRequest(msg SwapRequest) tau.Message {
 		return tau.NewError(err)
 	}
 
+	if err := swapper.wallet.LockBalance(msg.SendToken, msg.SendAmount); err != nil {
+		return tau.NewError(err)
+	}
+
 	if msg.Delay {
 		swapper.delayedSwapper.Send(delayed.DelayedSwapRequest(msg))
 		return nil
@@ -98,18 +112,14 @@ func (swapper *swapper) handleBootload(msg Bootload) tau.Message {
 			continue
 		}
 
-		msgs = append(msgs, ReceiptUpdate(swap.NewReceiptUpdate(pendingSwap.ID, func(receipt *swap.SwapReceipt) {
-			receipt.Active = true
-		})))
-
 		pendingSwap.Password = msg.Password
-		if pendingSwap.Delay {
-			swapper.delayedSwapper.Send(delayed.DelayedSwapRequest(pendingSwap))
-			continue
-		}
-
-		sendCost, receiveCost := swapper.storage.LoadCosts(pendingSwap.ID)
-		swapper.immediateSwapper.Send(immediate.NewSwapRequest(pendingSwap, sendCost, receiveCost))
+		msgs = append(
+			msgs,
+			ReceiptUpdate(swap.NewReceiptUpdate(pendingSwap.ID, func(receipt *swap.SwapReceipt) {
+				receipt.Active = true
+			})),
+			swapper.handleSwapRequest(SwapRequest(pendingSwap)),
+		)
 	}
 
 	return tau.NewMessageBatch(msgs)

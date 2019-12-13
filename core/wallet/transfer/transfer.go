@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/tokens"
 	"github.com/republicprotocol/tau"
@@ -26,10 +28,11 @@ type Blockchain interface {
 type transfers struct {
 	blockchain Blockchain
 	storage    Storage
+	logger     logrus.FieldLogger
 }
 
-func New(cap int, bc Blockchain, storage Storage) tau.Task {
-	return tau.New(tau.NewIO(cap), &transfers{bc, storage})
+func New(cap int, bc Blockchain, storage Storage, logger logrus.FieldLogger) tau.Task {
+	return tau.New(tau.NewIO(cap), &transfers{bc, storage, logger})
 }
 
 func (transfers *transfers) Reduce(msg tau.Message) tau.Message {

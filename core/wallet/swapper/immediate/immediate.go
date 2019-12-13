@@ -5,7 +5,9 @@ import (
 
 	"github.com/renproject/swapperd/foundation/blockchain"
 	"github.com/renproject/swapperd/foundation/swap"
+	"github.com/renproject/tokens"
 	"github.com/republicprotocol/tau"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -25,15 +27,23 @@ type ContractBuilder interface {
 	BuildSwapContracts(request SwapRequest) (Contract, Contract, error)
 }
 
-type swapper struct {
-	builder ContractBuilder
-	swapMap map[swap.SwapID]SwapRequest
+type Wallet interface {
+	UnlockBalance(token tokens.Name, value string) error
 }
 
-func New(cap int, builder ContractBuilder) tau.Task {
+type swapper struct {
+	builder ContractBuilder
+	wallet  Wallet
+	swapMap map[swap.SwapID]SwapRequest
+	logger  logrus.FieldLogger
+}
+
+func New(cap int, builder ContractBuilder, wallet Wallet, logger logrus.FieldLogger) tau.Task {
 	return tau.New(tau.NewIO(cap), &swapper{
 		builder: builder,
 		swapMap: map[swap.SwapID]SwapRequest{},
+		wallet:  wallet,
+		logger:  logger,
 	})
 }
 
@@ -70,22 +80,27 @@ func (swapper *swapper) handleSwap(req SwapRequest) tau.Message {
 func (swapper *swapper) initiate(req SwapRequest, native, foreign Contract) tau.Message {
 	secret := sha3.Sum256(append([]byte(req.Blob.Password), []byte(req.Blob.ID)...))
 	if err := native.Initiate(); err != nil {
-		return swapper.handleResult(req, swap.Inactive, native, foreign, err, false)
+		return swapper.handleResult(req, swap.Inactive, native, foreign, tau.NewError(err), false)
 	}
+
+	if err := swapper.wallet.UnlockBalance(req.Blob.SendToken, req.Blob.SendAmount); err != nil {
+		return swapper.handleResult(req, swap.Initiated, native, foreign, tau.NewError(err), false)
+	}
+
 	if err := foreign.Audit(); err != nil {
 		if err == ErrAuditPending {
 			return swapper.handleResult(req, swap.AuditPending, native, foreign, nil, false)
 		}
 		if err != ErrSwapExpired {
-			return swapper.handleResult(req, swap.AuditPending, native, foreign, err, false)
+			return swapper.handleResult(req, swap.AuditPending, native, foreign, tau.NewError(err), false)
 		}
 		if err := native.Refund(); err != nil {
-			return swapper.handleResult(req, swap.RefundFailed, native, foreign, err, false)
+			return swapper.handleResult(req, swap.RefundFailed, native, foreign, tau.NewError(err), false)
 		}
 		return swapper.handleResult(req, swap.Refunded, native, foreign, nil, true)
 	}
 	if err := foreign.Redeem(secret); err != nil {
-		return swapper.handleResult(req, swap.Audited, native, foreign, err, false)
+		return swapper.handleResult(req, swap.Audited, native, foreign, tau.NewError(err), false)
 	}
 	return swapper.handleResult(req, swap.Redeemed, native, foreign, nil, true)
 }
@@ -96,13 +111,17 @@ func (swapper *swapper) respond(req SwapRequest, native, foreign Contract) tau.M
 			return swapper.handleResult(req, swap.AuditPending, native, foreign, nil, false)
 		}
 		if err == ErrSwapExpired {
-			return swapper.handleResult(req, swap.Expired, native, foreign, err, true)
+			return swapper.handleResult(req, swap.Expired, native, foreign, tau.NewError(err), true)
 		}
-		return swapper.handleResult(req, swap.AuditPending, native, foreign, err, false)
+		return swapper.handleResult(req, swap.AuditPending, native, foreign, tau.NewError(err), false)
 	}
 
 	if err := native.Initiate(); err != nil {
-		return swapper.handleResult(req, swap.Audited, native, foreign, err, false)
+		return swapper.handleResult(req, swap.Audited, native, foreign, tau.NewError(err), false)
+	}
+
+	if err := swapper.wallet.UnlockBalance(req.Blob.SendToken, req.Blob.SendAmount); err != nil {
+		return swapper.handleResult(req, swap.Initiated, native, foreign, tau.NewError(err), false)
 	}
 	secret, err := native.AuditSecret()
 	if err != nil {
@@ -110,24 +129,24 @@ func (swapper *swapper) respond(req SwapRequest, native, foreign Contract) tau.M
 			return swapper.handleResult(req, swap.AuditPending, native, foreign, nil, false)
 		}
 		if err != ErrSwapExpired {
-			return swapper.handleResult(req, swap.Initiated, native, foreign, err, false)
+			return swapper.handleResult(req, swap.Initiated, native, foreign, tau.NewError(err), false)
 		}
 		if err := native.Refund(); err != nil {
-			return swapper.handleResult(req, swap.RefundFailed, native, foreign, err, false)
+			return swapper.handleResult(req, swap.RefundFailed, native, foreign, tau.NewError(err), false)
 		}
 		return swapper.handleResult(req, swap.Refunded, native, foreign, nil, true)
 	}
 	if err := foreign.Redeem(secret); err != nil {
-		return swapper.handleResult(req, swap.AuditedSecret, native, foreign, err, false)
+		return swapper.handleResult(req, swap.AuditedSecret, native, foreign, tau.NewError(err), false)
 	}
 	return swapper.handleResult(req, swap.Redeemed, native, foreign, nil, true)
 }
 
-func (swapper *swapper) handleResult(req SwapRequest, status int, native, foreign Contract, err error, remove bool) tau.Message {
+func (swapper *swapper) handleResult(req SwapRequest, status int, native, foreign Contract, msg tau.Message, remove bool) tau.Message {
 	messages := []tau.Message{}
 	messages = append(messages, NewReceiptUpdate(req.Blob.ID, status, native, foreign))
-	if err != nil {
-		messages = append(messages, tau.NewError(err))
+	if msg != nil {
+		messages = append(messages, msg)
 	}
 	if remove {
 		delete(swapper.swapMap, req.Blob.ID)
@@ -143,7 +162,7 @@ type SwapRequest struct {
 	ReceiveCost blockchain.Cost
 }
 
-func (msg SwapRequest) IsMessage() {
+func (SwapRequest) IsMessage() {
 }
 
 func NewSwapRequest(blob swap.SwapBlob, sendCost, receiveCost blockchain.Cost) SwapRequest {
@@ -156,7 +175,7 @@ func NewSwapRequest(blob swap.SwapBlob, sendCost, receiveCost blockchain.Cost) S
 
 type ReceiptUpdate swap.ReceiptUpdate
 
-func (msg ReceiptUpdate) IsMessage() {
+func (ReceiptUpdate) IsMessage() {
 }
 
 func NewReceiptUpdate(id swap.SwapID, status int, native, foreign Contract) ReceiptUpdate {
@@ -171,5 +190,5 @@ type DeleteSwap struct {
 	ID swap.SwapID
 }
 
-func (msg DeleteSwap) IsMessage() {
+func (DeleteSwap) IsMessage() {
 }

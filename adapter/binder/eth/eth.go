@@ -108,20 +108,14 @@ func (atom *ethSwapContractBinder) Initiate() error {
 			atom.logger.Info(msg)
 			return tx, nil
 		},
-		func() bool {
-			initiatable, err := atom.binder.Initiatable(&bind.CallOpts{}, atom.id)
-			if err != nil {
-				return false
-			}
-			return !initiatable
-		},
+		nil,
 		0,
 	)
 	if err != nil {
-		if err != libeth.ErrPreConditionCheckFailed {
-			return err
+		if err == libeth.ErrPreConditionCheckFailed {
+			return nil
 		}
-		return nil
+		return err
 	}
 	txFee := new(big.Int).Mul(tx.GasPrice(), big.NewInt(int64(tx.Gas())))
 	atom.cost[tokens.NameETH] = new(big.Int).Add(atom.cost[tokens.NameETH], txFee)

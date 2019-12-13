@@ -10,6 +10,7 @@ import (
 	"github.com/renproject/swapperd/core/wallet/transfer"
 	"github.com/renproject/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
+	"github.com/sirupsen/logrus"
 )
 
 type Storage interface {
@@ -22,13 +23,20 @@ type wallet struct {
 	swapStatusTask tau.Task
 	swapperTask    tau.Task
 	transferTask   tau.Task
+
+	logger logrus.FieldLogger
 }
 
-func New(cap int, storage Storage, bc transfer.Blockchain, builder immediate.ContractBuilder, callback delayed.DelayCallback) tau.Task {
-	swapperTask := swapper.New(cap, storage, builder, callback)
-	swapStatusTask := status.New(cap, storage)
-	transferTask := transfer.New(cap, bc, storage)
-	return tau.New(tau.NewIO(cap), &wallet{swapStatusTask, swapperTask, transferTask}, swapStatusTask, swapperTask, transferTask)
+type Wallet interface {
+	transfer.Blockchain
+	swapper.Wallet
+}
+
+func New(cap int, storage Storage, w Wallet, builder immediate.ContractBuilder, callback delayed.DelayCallback, logger logrus.FieldLogger) tau.Task {
+	swapperTask := swapper.New(cap, storage, w, builder, callback, logger)
+	swapStatusTask := status.New(cap, storage, logger)
+	transferTask := transfer.New(cap, w, storage, logger)
+	return tau.New(tau.NewIO(cap), &wallet{swapStatusTask, swapperTask, transferTask, logger}, swapStatusTask, swapperTask, transferTask)
 }
 
 func (wallet *wallet) Reduce(msg tau.Message) tau.Message {

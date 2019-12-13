@@ -5,6 +5,7 @@ import (
 
 	"github.com/renproject/swapperd/foundation/swap"
 	"github.com/republicprotocol/tau"
+	"github.com/sirupsen/logrus"
 )
 
 type Storage interface {
@@ -14,14 +15,15 @@ type Storage interface {
 
 type statuses struct {
 	storage Storage
+	logger  logrus.FieldLogger
 }
 
-func New(cap int, storage Storage) tau.Task {
-	return tau.New(tau.NewIO(cap), NewReducer(storage))
+func New(cap int, storage Storage, logger logrus.FieldLogger) tau.Task {
+	return tau.New(tau.NewIO(cap), NewReducer(storage, logger))
 }
 
-func NewReducer(storage Storage) *statuses {
-	return &statuses{storage}
+func NewReducer(storage Storage, logger logrus.FieldLogger) *statuses {
+	return &statuses{storage, logger}
 }
 
 func (statuses *statuses) Reduce(msg tau.Message) tau.Message {
